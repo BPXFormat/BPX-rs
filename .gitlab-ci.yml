@@ -89,7 +89,7 @@ publish:
 create-release:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
-  dependencies:
+  needs:
     - get-version
   only:
     - master
