@@ -1,0 +1,18 @@
+[package]
+name = "bpx"
+version = "1.0.0"
+authors = ["Yuri Edward <yuri6037@outlook.com>"]
+edition = "2018"
+description = "BPX official rust implementation"
+license = "./LICENSE.txt"
+repository = "https://gitlab.com/bp3d/bpx/bpx-rs"
+readme = "./README.MD"
+keywords = ["BPX", "encoder", "decoder"]
+categories = ["encoding", "rendering::data-formats", "parser-implementations"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tempfile = "3.0.7"
+byteorder = "1"
+xz = "0.1.0"
