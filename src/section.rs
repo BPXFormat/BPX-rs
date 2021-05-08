@@ -351,6 +351,7 @@ fn read_chksum(data: &[u8]) -> Wrapping<u32>
 const FLAG_COMPRESS_XZ: u8 = 0x2;
 const FLAG_CHECK_WEAK: u8 = 0x8;
 const READ_BLOCK_SIZE: usize = 8192;
+const COMPRESSION_THRESHOLD: usize = 65536;
 
 fn block_based_deflate(input: &mut dyn Read, output: &mut dyn Write, inflated_size: usize) -> io::Result<(usize, u32)>
 {
@@ -467,7 +468,7 @@ pub fn create_section(header: &BPXSectionHeader) -> io::Result<Box<dyn Section>>
 
 pub fn write_section(section: &mut Box<dyn Section>, out: &mut dyn Write) -> io::Result<(usize, u32, u8)>
 {
-    if section.size() < READ_BLOCK_SIZE
+    if section.size() < COMPRESSION_THRESHOLD
     {
         let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
         let mut count: usize = 0;

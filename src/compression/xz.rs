@@ -76,6 +76,7 @@ fn new_encoder() -> Result<lzma_stream>
         let res;
         if mt.threads == 0
         {
+            println!("Intel core i7 is not supported");
             res = lzma_stream_encoder(&mut stream, std::ptr::null(), LZMA_CHECK_NONE);
         }
         else
@@ -95,7 +96,7 @@ fn new_encoder() -> Result<lzma_stream>
             LZMA_MEM_ERROR => return Err(Error::new(ErrorKind::Other, "Memory allocation failure")),
             LZMA_OPTIONS_ERROR => return Err(Error::new(ErrorKind::InvalidInput, "Specified filter chain is not supported")),
             LZMA_UNSUPPORTED_CHECK => return Err(Error::new(ErrorKind::InvalidInput, "Specified integrity check is not supported")),
-            _ => return Err(Error::new(ErrorKind::Other, "Unknown error, possibly a bug"))
+            e => return Err(Error::new(ErrorKind::Other, format!("Unknown error, possibly a bug ({})", e)))
         };
     }
 }
@@ -115,7 +116,7 @@ fn new_decoder() -> Result<lzma_stream>
             LZMA_MEM_ERROR => return Err(Error::new(ErrorKind::Other, "Memory allocation failure")),
             LZMA_OPTIONS_ERROR => return Err(Error::new(ErrorKind::InvalidInput, "Specified filter chain is not supported")),
             LZMA_UNSUPPORTED_CHECK => return Err(Error::new(ErrorKind::InvalidInput, "Specified integrity check is not supported")),
-            _ => return Err(Error::new(ErrorKind::Other, "Unknown error, possibly a bug"))
+            e => return Err(Error::new(ErrorKind::Other, format!("Unknown error, possibly a bug ({})", e)))
         };
     }
 }
@@ -171,7 +172,7 @@ fn do_deflate(stream: &mut lzma_stream, input: &mut dyn Read, output: &mut dyn W
                 {
                     LZMA_MEM_ERROR => return Err(Error::new(ErrorKind::Other, "Memory allocation failure")),
                     LZMA_DATA_ERROR => return Err(Error::new(ErrorKind::InvalidData, "LZMA data error")),
-                    _ => return Err(Error::new(ErrorKind::Other, "Unknown error, possibly a bug"))
+                    e => return Err(Error::new(ErrorKind::Other, format!("Unknown error, possibly a bug ({})", e)))
                 };
             }
         }
@@ -224,7 +225,7 @@ fn do_inflate(stream: &mut lzma_stream, input: &mut dyn Read, output: &mut dyn W
                 {
                     LZMA_MEM_ERROR => return Err(Error::new(ErrorKind::Other, "Memory allocation failure")),
                     LZMA_DATA_ERROR => return Err(Error::new(ErrorKind::InvalidData, "LZMA data error")),
-                    _ => return Err(Error::new(ErrorKind::Other, "Unknown error, possibly a bug"))
+                    e => return Err(Error::new(ErrorKind::Other, format!("Unknown error, possibly a bug ({})", e)))
                 };
             }
         }
