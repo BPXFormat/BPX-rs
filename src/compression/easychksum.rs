@@ -26,25 +26,38 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::Read;
-use std::io::Write;
-use std::io::Result;
+use std::num::Wrapping;
 
-mod easychksum;
-mod xz;
+use crate::compression::Checksum;
 
-pub trait Checksum
+pub struct EasyChecksum
 {
-    fn push(&mut self, buffer: &[u8]);
-    fn finish(self) -> u32;
+    current: Wrapping<u32>
 }
 
-pub trait Inflater
+impl Checksum for EasyChecksum
 {
-    fn inflate(input: &mut dyn Read, output: &mut dyn Write, deflated_size: usize, chksum: &mut dyn Checksum) -> Result<()>;
+    fn push(&mut self, data: &[u8])
+    {
+        for i in 0..data.len()
+        {
+            self.current += Wrapping(data[i] as u32);
+        }
+    }
+
+    fn finish(self) -> u32
+    {
+        return self.current.0;
+    }
 }
 
-pub trait Deflater
+impl Default for EasyChecksum
 {
-    fn deflate(input: &mut dyn Read, output: &mut dyn Write, inflated_size: usize, chksum: &mut dyn Checksum) -> Result<usize>;
+    fn default() -> Self
+    {
+        return EasyChecksum
+        {
+            current: Wrapping(0)
+        };
+    }
 }
