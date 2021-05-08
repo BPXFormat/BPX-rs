@@ -5,6 +5,7 @@ name = "bpx"
 version = "1.0.0"
 dependencies = [
  "byteorder",
+ "lzma-sys",
  "tempfile",
  "xz",
 ]
