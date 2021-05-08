@@ -34,8 +34,13 @@ use std::io::Seek;
 use std::io::Write;
 use std::fs::File;
 use std::boxed::Box;
-use xz::stream::Stream;
 use std::num::Wrapping;
+
+use crate::compression::EasyChecksum;
+use crate::compression::Checksum;
+use crate::compression::XzCompressionMethod;
+use crate::compression::Inflater;
+use crate::compression::Deflater;
 
 pub const SIZE_SECTION_HEADER: usize = 24;
 
@@ -345,85 +350,20 @@ fn read_chksum(data: &[u8]) -> Wrapping<u32>
 
 const FLAG_COMPRESS_XZ: u8 = 0x2;
 const FLAG_CHECK_WEAK: u8 = 0x8;
-const READ_BLOCK_SIZE: usize = 65536;
+const READ_BLOCK_SIZE: usize = 8192;
 
 fn block_based_deflate(input: &mut dyn Read, output: &mut dyn Write, inflated_size: usize) -> io::Result<(usize, u32)>
 {
-    let mut count: usize = 0;
-    let mut encoder = match Stream::new_easy_encoder(0, xz::stream::Check::None)
-    {
-        Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("[BPX] deflate initialization error: {}", e))),
-        Ok(v) => v
-    };
-    let mut chksum: Wrapping<u32> = Wrapping(0);
-    let mut csize: usize = 0;
-
-    while count < inflated_size {
-        let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
-        let mut status = xz::stream::Status::Ok;
-        let mut expected = xz::stream::Status::MemNeeded;
-        let mut action = xz::stream::Action::Run;
-        let mut res = input.read(&mut idata)?;
-        count += res;
-        chksum += read_chksum(&idata);
-        if count >= inflated_size
-        {
-            action = xz::stream::Action::Finish;
-            expected = xz::stream::Status::StreamEnd;
-        }
-        while status != expected
-        {
-            let mut odata: Vec<u8> = Vec::with_capacity(READ_BLOCK_SIZE * 2);
-            match encoder.process_vec(&idata[0..res], &mut odata, action)
-            {
-                Ok(s) => status = s,
-                Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidData, format!("[BPX] deflate error: {}", e)))
-            }
-            res = 0;
-            output.write(&odata)?;
-            csize += odata.len();
-        }
-    }
-    return Ok((csize, chksum.0));
+    let mut chksum = EasyChecksum::new();
+    let size = XzCompressionMethod::deflate(input, output, inflated_size, &mut chksum)?;
+    return Ok((size, chksum.finish()));
 }
 
 fn block_based_inflate(input: &mut dyn Read, output: &mut dyn Write, deflated_size: usize) -> io::Result<u32>
 {
-    let mut decoder = match Stream::new_stream_decoder(u32::MAX as u64, xz::stream::CONCATENATED)
-    {
-        Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidData, format!("[BPX] inflate error: {}", e))),
-        Ok(v) => v
-    };
-    let mut action = xz::stream::Action::Run;
-    let mut expected = xz::stream::Status::MemNeeded;
-    let mut chksum: Wrapping<u32> = Wrapping(0);
-    let mut remaining = deflated_size;
-
-    while remaining > 0 {
-        let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
-        let mut status = xz::stream::Status::Ok;
-        let mut res = input.read(&mut idata[0..std::cmp::min(READ_BLOCK_SIZE, remaining)])?;
-        remaining -= res;
-        if remaining == 0
-        {
-            action = xz::stream::Action::Finish;
-            expected = xz::stream::Status::StreamEnd;
-        }
-        while status != expected
-        {
-            let mut odata: Vec<u8> = Vec::with_capacity(READ_BLOCK_SIZE * 16);
-            match decoder.process_vec(&idata[0..res], &mut odata, action)
-            {
-                Ok(s) => status = s,
-                Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidData, format!("[BPX] inflate error: {}", e)))
-            }
-            res = 0;
-            chksum += read_chksum(&odata);
-            output.write(&odata)?;
-        }
-    }
-    output.flush()?;
-    return Ok(chksum.0);
+    let mut chksum = EasyChecksum::new();
+    XzCompressionMethod::inflate(input, output, deflated_size, &mut chksum)?;
+    return Ok(chksum.finish());    
 }
 
 fn load_section_in_memory(bpx: &mut File, header: &BPXSectionHeader) -> io::Result<InMemorySection>

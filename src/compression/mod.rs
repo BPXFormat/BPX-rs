@@ -33,6 +33,9 @@ use std::io::Result;
 mod easychksum;
 mod xz;
 
+pub use easychksum::EasyChecksum;
+pub use self::xz::XzCompressionMethod;
+
 pub trait Checksum
 {
     fn push(&mut self, buffer: &[u8]);

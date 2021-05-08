@@ -51,9 +51,9 @@ impl Checksum for EasyChecksum
     }
 }
 
-impl Default for EasyChecksum
+impl EasyChecksum
 {
-    fn default() -> Self
+    pub fn new() -> Self
     {
         return EasyChecksum
         {
