@@ -45,7 +45,7 @@ use crate::header::FLAG_COMPRESS_ZLIB;
 use crate::section::new_section_data;
 use crate::compression::Checksum;
 use crate::compression::Deflater;
-use crate::compression::EasyChecksum;
+use crate::compression::WeakChecksum;
 use crate::compression::XzCompressionMethod;
 use crate::Interface;
 use crate::SectionHandle;
@@ -104,7 +104,7 @@ impl Encoder
                 panic!("BPX cannot support individual sections with size exceeding 4Gb (2 pow 32)");
             }
             self.sections_data[i].seek(io::SeekFrom::Start(0))?;
-            let mut chksum = EasyChecksum::new();
+            let mut chksum = WeakChecksum::new();
             let csize;
             let flags = get_flags(&self.sections[i], self.sections_data[i].size() as u32);
             if flags & FLAG_COMPRESS_XZ != 0

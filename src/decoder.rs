@@ -41,7 +41,7 @@ use crate::section::SectionData;
 use crate::section::new_section_data;
 use crate::compression::XzCompressionMethod;
 use crate::compression::Checksum;
-use crate::compression::EasyChecksum;
+use crate::compression::WeakChecksum;
 use crate::compression::Inflater;
 use crate::Interface;
 use crate::SectionHandle;
@@ -168,7 +168,7 @@ impl Interface for Decoder
 
 fn load_section<TBpx: io::Seek + io::Read>(file: &mut TBpx, section: &SectionHeader) -> io::Result<Box<dyn SectionData>>
 {
-    let mut chksum = EasyChecksum::new();
+    let mut chksum = WeakChecksum::new();
     if section.flags & FLAG_CHECK_CRC32 != 0
     {
         //TODO: Implement CRC checksum

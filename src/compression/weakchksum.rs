@@ -30,12 +30,12 @@ use std::num::Wrapping;
 
 use crate::compression::Checksum;
 
-pub struct EasyChecksum
+pub struct WeakChecksum
 {
     current: Wrapping<u32>
 }
 
-impl Checksum for EasyChecksum
+impl Checksum for WeakChecksum
 {
     fn push(&mut self, data: &[u8])
     {
@@ -51,11 +51,11 @@ impl Checksum for EasyChecksum
     }
 }
 
-impl EasyChecksum
+impl WeakChecksum
 {
     pub fn new() -> Self
     {
-        return EasyChecksum
+        return WeakChecksum
         {
             current: Wrapping(0)
         };
