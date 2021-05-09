@@ -40,6 +40,7 @@ pub mod utils;
 pub mod encoder;
 pub mod decoder;
 pub mod header;
+pub mod builder;
 
 pub type SectionHandle = usize;
 
@@ -50,6 +51,7 @@ pub trait BPX
     fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>;
     fn get_section_header(&self, handle: SectionHandle) -> &header::SectionHeader;
     fn open_section(&mut self, handle: SectionHandle) -> std::io::Result<&mut dyn section::SectionData>;
+    fn get_main_header(&self) -> &header::MainHeader;
 }
 
 pub trait OptionExtension<T>

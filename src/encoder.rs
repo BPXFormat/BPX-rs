@@ -50,12 +50,11 @@ use crate::compression::XzCompressionMethod;
 use crate::BPX;
 use crate::SectionHandle;
 
-const COMPRESSION_THRESHOLD: usize = 65536;
 const READ_BLOCK_SIZE: usize = 8192;
 
 pub struct Encoder
 {
-    pub main_header: MainHeader,
+    main_header: MainHeader,
     sections: Vec<SectionHeader>,
     sections_data: Vec<Box<dyn SectionData>>,
     file: File
@@ -73,6 +72,11 @@ impl Encoder
             sections_data: Vec::new(),
             file: fle
         });
+    }
+
+    pub fn set_main_header(&mut self, main_header: MainHeader)
+    {
+        self.main_header = main_header;
     }
 
     //Adds a new section; returns a reference to the new section for use in edit_section
@@ -205,6 +209,11 @@ impl BPX for Encoder
     fn open_section(&mut self, handle: SectionHandle) -> io::Result<&mut dyn SectionData>
     {
         return Ok(self.sections_data[handle].as_mut());
+    }
+
+    fn get_main_header(&self) -> &MainHeader
+    {
+        return &self.main_header;
     }
 }
 

@@ -175,15 +175,15 @@ impl SectionHeader
         }));
     }
 
-    pub fn new(size: u32, btype: u8) -> SectionHeader
+    pub fn new() -> SectionHeader
     {
         return SectionHeader
         {
             pointer: 0, //+0
             csize: 0, //+8
-            size: size, //+12
+            size: 0, //+12
             chksum: 0, //+16
-            btype: btype, //+20
+            btype: 0, //+20
             flags: FLAG_CHECK_WEAK // +21
         };
     }

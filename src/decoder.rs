@@ -51,7 +51,7 @@ const READ_BLOCK_SIZE: usize = 8192;
 
 pub struct Decoder
 {
-    pub main_header: MainHeader,
+    main_header: MainHeader,
     sections: Vec<SectionHeader>,
     sections_data: Vec<Option<Box<dyn SectionData>>>,
     file: File
@@ -158,6 +158,11 @@ impl BPX for Decoder
         let file = &mut self.file;
         let object = self.sections_data[handle].get_or_insert_with_err(|| load_section(file, header))?;
         return Ok(object.as_mut());
+    }
+
+    fn get_main_header(&self) -> &MainHeader
+    {
+        return &self.main_header;
     }
 }
 
