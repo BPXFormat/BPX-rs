@@ -47,7 +47,7 @@ use crate::compression::Checksum;
 use crate::compression::Deflater;
 use crate::compression::EasyChecksum;
 use crate::compression::XzCompressionMethod;
-use crate::BPX;
+use crate::Interface;
 use crate::SectionHandle;
 
 const READ_BLOCK_SIZE: usize = 8192;
@@ -164,7 +164,7 @@ impl Encoder
     }
 }
 
-impl BPX for Encoder
+impl Interface for Encoder
 {
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {

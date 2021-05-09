@@ -43,7 +43,7 @@ use crate::compression::XzCompressionMethod;
 use crate::compression::Checksum;
 use crate::compression::EasyChecksum;
 use crate::compression::Inflater;
-use crate::BPX;
+use crate::Interface;
 use crate::SectionHandle;
 use crate::OptionExtension;
 
@@ -110,7 +110,7 @@ impl Decoder
     }
 }
 
-impl BPX for Decoder
+impl Interface for Decoder
 {
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {

@@ -44,7 +44,7 @@ pub mod builder;
 
 pub type SectionHandle = usize;
 
-pub trait BPX
+pub trait Interface
 {
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>;
     fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>;
