@@ -37,13 +37,14 @@ use crate::header::FLAG_COMPRESS_ZLIB;
 use crate::header::FLAG_COMPRESS_XZ;
 use crate::header::FLAG_CHECK_CRC32;
 use crate::header::FLAG_CHECK_WEAK;
-use crate::header::SECTION_TYPE_STRING;
 use crate::section::SectionData;
 use crate::section::new_section_data;
 use crate::compression::XzCompressionMethod;
 use crate::compression::Checksum;
 use crate::compression::EasyChecksum;
 use crate::compression::Inflater;
+use crate::BPX;
+use crate::SectionHandle;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -51,6 +52,7 @@ pub struct Decoder
 {
     pub main_header: MainHeader,
     sections: Vec<SectionHeader>,
+    sections_data: Vec<Option<Box<dyn SectionData>>>,
     file: File
 }
 
@@ -81,46 +83,7 @@ impl Decoder
         return Ok(());
     }
 
-    pub fn find_section_by_type(&self, btype: u8) -> Option<SectionHeader>
-    {
-        for v in &self.sections
-        {
-            if v.btype == btype
-            {
-                return Some(*v);
-            }
-        }
-        return None;
-    }
-
-    pub fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHeader>
-    {
-        let mut v = Vec::new();
-        for s in &self.sections
-        {
-            if s.btype == btype
-            {
-                v.push(*s);
-            }
-        }        
-        return v;
-    }
-
-    pub fn find_section_by_index(&self, index: usize) -> Option<SectionHeader>
-    {
-        return match self.sections.get(index)
-        {
-            Some(section) => Some(*section),
-            None => None
-        };
-    }
-
-    pub fn get_section_by_index(&self, index: usize) -> SectionHeader
-    {
-        return self.sections[index];
-    }
-
-    pub fn open_section(&mut self, section: &SectionHeader) -> io::Result<Box<dyn SectionData>>
+    fn load_section(&mut self, section: &SectionHeader) -> io::Result<Box<dyn SectionData>>
     {
         let mut chksum = EasyChecksum::new();
         let mut data = new_section_data(Some(section.size))?;
@@ -141,14 +104,14 @@ impl Decoder
         return Ok(data);
     }
 
-    pub fn load_string_section(&mut self) -> io::Result<Box<dyn SectionData>>
+    /*pub fn load_string_section(&mut self) -> io::Result<Box<dyn SectionData>>
     {
         if let Some(section) = self.find_section_by_type(SECTION_TYPE_STRING)
         {
             return self.open_section(&section);
         }
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "[BPX] could not locate string section"));
-    }
+    }*/
 
     pub fn new(file: &Path) -> io::Result<Decoder>
     {
@@ -159,10 +122,64 @@ impl Decoder
         {
             file: fle,
             main_header: header,
-            sections: Vec::with_capacity(num as usize)
+            sections: Vec::with_capacity(num as usize),
+            sections_data: vec![None; num as usize]
         };
         decoder.read_section_header_table(checksum)?;
         return Ok(decoder);
+    }
+}
+
+impl BPX for Decoder
+{
+    fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
+    {
+        for i in 0..self.sections.len()
+        {
+            if self.sections[i].btype == btype
+            {
+                return Some(i);
+            }
+        }
+        return None;
+    }
+
+    fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>
+    {
+        let mut v = Vec::new();
+
+        for i in 0..self.sections.len()
+        {
+            if self.sections[i].btype == btype
+            {
+                v.push(i);
+            }
+        }
+        return v;
+    }
+
+    fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>
+    {
+        if let Some(_) = self.sections.get(index as usize)
+        {
+            return Some(index as SectionHandle);
+        }
+        return None;
+    }
+
+    fn get_section_header(&self, handle: SectionHandle) -> &SectionHeader
+    {
+        return &self.sections[handle];
+    }
+
+    fn open_section(&mut self, handle: SectionHandle) -> io::Result<&mut dyn SectionData>
+    {
+        if let Some(v) = self.sections_data[handle]
+        {
+            return Ok(v.as_mut());
+        }
+        self.sections_data[handle] = Some(self.load_section(&self.sections[handle])?);
+        return Ok(self.sections_data[handle].unwrap().as_mut());
     }
 }
 

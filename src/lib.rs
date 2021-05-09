@@ -26,6 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use std::vec::Vec;
+
 mod garraylen;
 mod compression;
 //pub mod bpx;
@@ -37,3 +39,14 @@ pub mod utils;
 pub mod encoder;
 pub mod decoder;
 pub mod header;
+
+pub type SectionHandle = usize;
+
+pub trait BPX
+{
+    fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>;
+    fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>;
+    fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>;
+    fn get_section_header(&self, handle: SectionHandle) -> &header::SectionHeader;
+    fn open_section(&mut self, handle: SectionHandle) -> std::io::Result<&mut dyn section::SectionData>;
+}

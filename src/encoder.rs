@@ -45,6 +45,8 @@ use crate::compression::Checksum;
 use crate::compression::Deflater;
 use crate::compression::EasyChecksum;
 use crate::compression::XzCompressionMethod;
+use crate::BPX;
+use crate::SectionHandle;
 
 const COMPRESSION_THRESHOLD: usize = 65536;
 const READ_BLOCK_SIZE: usize = 8192;
@@ -72,32 +74,14 @@ impl Encoder
     }
 
     //Adds a new section; returns a reference to the new section for use in edit_section
-    pub fn add_section(&mut self, btype: u8, size: u32 /* use 0 for automatic size */) -> io::Result<usize>
+    pub fn create_section(&mut self, header: SectionHeader) -> io::Result<SectionHandle>
     {
         self.main_header.section_num += 1;
-        let header = SectionHeader::new(size, btype);
         let section = create_section(&header)?;
         self.sections.push(header);
         let r = self.sections.len() - 1;
         self.sections_data.push(section);
         return Ok(r);
-    }
-
-    pub fn find_section_by_type(&mut self, btype: u8) -> Option<usize>
-    {
-        for i in 0..self.sections.len()
-        {
-            if self.sections[i].btype == btype
-            {
-                return Some(i);
-            }
-        }
-        return None;
-    }
-
-    pub fn get_section_by_index(&mut self, index: usize) -> &mut Box<dyn SectionData>
-    {
-        return &mut self.sections_data[index];
     }
 
     fn write_sections(&mut self) -> io::Result<(File, u32, usize)>
@@ -167,6 +151,54 @@ impl Encoder
         }
         self.write_data_file(&mut main_data, all_sections_size)?;
         return Ok(());
+    }
+}
+
+impl BPX for Encoder
+{
+    fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
+    {
+        for i in 0..self.sections.len()
+        {
+            if self.sections[i].btype == btype
+            {
+                return Some(i);
+            }
+        }
+        return None;
+    }
+
+    fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>
+    {
+        let mut v = Vec::new();
+
+        for i in 0..self.sections.len()
+        {
+            if self.sections[i].btype == btype
+            {
+                v.push(i);
+            }
+        }
+        return v;
+    }
+
+    fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>
+    {
+        if let Some(_) = self.sections.get(index as usize)
+        {
+            return Some(index as SectionHandle);
+        }
+        return None;
+    }
+
+    fn get_section_header(&self, handle: SectionHandle) -> &SectionHeader
+    {
+        return &self.sections[handle];
+    }
+
+    fn open_section(&mut self, handle: SectionHandle) -> io::Result<&mut dyn SectionData>
+    {
+        return Ok(self.sections_data[handle].as_mut());
     }
 }
 
