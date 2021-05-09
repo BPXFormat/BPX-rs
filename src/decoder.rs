@@ -45,6 +45,7 @@ use crate::compression::EasyChecksum;
 use crate::compression::Inflater;
 use crate::BPX;
 use crate::SectionHandle;
+use crate::OptionExtension;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -83,27 +84,6 @@ impl Decoder
         return Ok(());
     }
 
-    fn load_section(&mut self, section: &SectionHeader) -> io::Result<Box<dyn SectionData>>
-    {
-        let mut chksum = EasyChecksum::new();
-        let mut data = new_section_data(Some(section.size))?;
-        data.seek(io::SeekFrom::Start(0))?;
-        if section.flags & FLAG_COMPRESS_XZ != 0
-        {
-            load_section_compressed::<XzCompressionMethod, _>(&mut self.file, &section, &mut data, &mut chksum)?;
-        }
-        else
-        {
-            load_section_uncompressed(&mut self.file, &section, &mut data, &mut chksum)?;
-        }
-        let v = chksum.finish();
-        if v != section.chksum
-        {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, format!("[BPX] checksum validation failed {} != {}", v, section.chksum)));
-        }
-        return Ok(data);
-    }
-
     /*pub fn load_string_section(&mut self) -> io::Result<Box<dyn SectionData>>
     {
         if let Some(section) = self.find_section_by_type(SECTION_TYPE_STRING)
@@ -123,7 +103,7 @@ impl Decoder
             file: fle,
             main_header: header,
             sections: Vec::with_capacity(num as usize),
-            sections_data: vec![None; num as usize]
+            sections_data: std::iter::repeat_with(|| None).take(num as usize).collect()
         };
         decoder.read_section_header_table(checksum)?;
         return Ok(decoder);
@@ -174,13 +154,42 @@ impl BPX for Decoder
 
     fn open_section(&mut self, handle: SectionHandle) -> io::Result<&mut dyn SectionData>
     {
-        if let Some(v) = self.sections_data[handle]
-        {
-            return Ok(v.as_mut());
-        }
-        self.sections_data[handle] = Some(self.load_section(&self.sections[handle])?);
-        return Ok(self.sections_data[handle].unwrap().as_mut());
+        let header = &self.sections[handle];
+        let file = &mut self.file;
+        let object = self.sections_data[handle].get_or_insert_with_err(|| load_section(file, header))?;
+        return Ok(object.as_mut());
     }
+}
+
+fn load_section<TBpx: io::Seek + io::Read>(file: &mut TBpx, section: &SectionHeader) -> io::Result<Box<dyn SectionData>>
+{
+    let mut chksum = EasyChecksum::new();
+    if section.flags & FLAG_CHECK_CRC32 != 0
+    {
+        //TODO: Implement CRC checksum
+        panic!("[BPX] CRC32 check not yet supported!");
+    }
+    let mut data = new_section_data(Some(section.size))?;
+    data.seek(io::SeekFrom::Start(0))?;
+    if section.flags & FLAG_COMPRESS_XZ != 0
+    {
+        load_section_compressed::<XzCompressionMethod, _>(file, &section, &mut data, &mut chksum)?;
+    }
+    else if section.flags & FLAG_COMPRESS_ZLIB != 0
+    {
+        //TODO: Implement Zlib compression
+        panic!("[BPX] ZLib compression not yet supported!");
+    }
+    else
+    {
+        load_section_uncompressed(file, &section, &mut data, &mut chksum)?;
+    }
+    let v = chksum.finish();
+    if (section.flags & FLAG_CHECK_CRC32 != 0 || section.flags & FLAG_CHECK_WEAK != 0) && v != section.chksum
+    {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, format!("[BPX] checksum validation failed {} != {}", v, section.chksum)));
+    }
+    return Ok(data);
 }
 
 fn load_section_uncompressed<TBpx: io::Read + io::Seek>(bpx: &mut TBpx, header: &SectionHeader, output: &mut dyn Write, chksum: &mut dyn Checksum) -> io::Result<()>

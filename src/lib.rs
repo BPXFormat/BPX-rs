@@ -28,6 +28,7 @@
 
 use std::vec::Vec;
 
+//mod extension;
 mod garraylen;
 mod compression;
 //pub mod bpx;
@@ -49,4 +50,26 @@ pub trait BPX
     fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>;
     fn get_section_header(&self, handle: SectionHandle) -> &header::SectionHeader;
     fn open_section(&mut self, handle: SectionHandle) -> std::io::Result<&mut dyn section::SectionData>;
+}
+
+pub trait OptionExtension<T>
+{
+    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>;
+}
+
+impl <T> OptionExtension<T> for Option<T>
+{
+    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>
+    {
+        if let None = *self {
+            *self = Some(f()?);
+        }
+    
+        match self {
+            Some(v) => Ok(v),
+            // SAFETY: a `None` variant for `self` would have been replaced by a `Some`
+            // variant in the code above.
+            None => unsafe { std::hint::unreachable_unchecked() },
+        }    
+    }
 }

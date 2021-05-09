@@ -39,7 +39,9 @@ use crate::section::SectionData;
 use crate::header::SIZE_MAIN_HEADER;
 use crate::header::SIZE_SECTION_HEADER;
 use crate::header::FLAG_CHECK_WEAK;
+use crate::header::FLAG_CHECK_CRC32;
 use crate::header::FLAG_COMPRESS_XZ;
+use crate::header::FLAG_COMPRESS_ZLIB;
 use crate::section::new_section_data;
 use crate::compression::Checksum;
 use crate::compression::Deflater;
@@ -100,11 +102,15 @@ impl Encoder
             self.sections_data[i].seek(io::SeekFrom::Start(0))?;
             let mut chksum = EasyChecksum::new();
             let csize;
-            let mut flags = FLAG_CHECK_WEAK;
-            if self.sections_data[i].size() > COMPRESSION_THRESHOLD
+            let flags = get_flags(&self.sections[i], self.sections_data[i].size() as u32);
+            if flags & FLAG_COMPRESS_XZ != 0
             {
                 csize = write_section_compressed::<XzCompressionMethod>(self.sections_data[i].as_mut(), &mut f, &mut chksum)?;
-                flags |= FLAG_COMPRESS_XZ;
+            }
+            else if flags & FLAG_COMPRESS_ZLIB != 0
+            {
+                //TODO: Implement Zlib compression
+                panic!("[BPX] ZLib compression not yet supported!");
             }
             else
             {
@@ -200,6 +206,28 @@ impl BPX for Encoder
     {
         return Ok(self.sections_data[handle].as_mut());
     }
+}
+
+fn get_flags(header: &SectionHeader, size: u32) -> u8
+{
+    let mut flags = 0;
+    if header.flags & FLAG_CHECK_WEAK != 0
+    {
+        flags |= FLAG_CHECK_WEAK;
+    }
+    else if header.flags & FLAG_CHECK_CRC32 != 0
+    {
+        flags |= FLAG_CHECK_CRC32;
+    }
+    if header.flags & FLAG_COMPRESS_XZ != 0 && size > header.csize
+    {
+        flags |= FLAG_COMPRESS_XZ;
+    }
+    else if header.flags & FLAG_COMPRESS_ZLIB != 0 && size > header.csize
+    {
+        flags |= FLAG_COMPRESS_ZLIB;
+    }
+    return flags;
 }
 
 fn create_section(header: &SectionHeader) -> io::Result<Box<dyn SectionData>>
