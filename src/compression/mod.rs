@@ -26,11 +26,28 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-mod garraylen;
-mod compression;
-pub mod bpx;
-pub mod bpxp;
-pub mod section;
-pub mod strings;
-pub mod sd;
-pub mod utils;
+use std::io::Read;
+use std::io::Write;
+use std::io::Result;
+
+mod easychksum;
+mod xz;
+
+pub use easychksum::EasyChecksum;
+pub use self::xz::XzCompressionMethod;
+
+pub trait Checksum
+{
+    fn push(&mut self, buffer: &[u8]);
+    fn finish(self) -> u32;
+}
+
+pub trait Inflater
+{
+    fn inflate(input: &mut dyn Read, output: &mut dyn Write, deflated_size: usize, chksum: &mut dyn Checksum) -> Result<()>;
+}
+
+pub trait Deflater
+{
+    fn deflate(input: &mut dyn Read, output: &mut dyn Write, inflated_size: usize, chksum: &mut dyn Checksum) -> Result<usize>;
+}
