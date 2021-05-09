@@ -31,12 +31,12 @@ use std::io::Result;
 use std::string::String;
 use std::io::Error;
 use std::io::ErrorKind;
-use super::section::Section;
+use super::section::SectionData;
 use std::boxed::Box;
 use std::path::Path;
 use std::fs::DirEntry;
 
-pub fn get_string(ptr: u32, string_section: &mut Box<dyn Section>) -> Result<String>
+pub fn get_string(ptr: u32, string_section: &mut Box<dyn SectionData>) -> Result<String>
 {
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
@@ -59,7 +59,7 @@ pub fn get_string(ptr: u32, string_section: &mut Box<dyn Section>) -> Result<Str
     }
 }
 
-pub fn write_string(s: &str, string_section: &mut Box<dyn Section>) -> Result<u32>
+pub fn write_string(s: &str, string_section: &mut Box<dyn SectionData>) -> Result<u32>
 {
     let ptr = string_section.size() as u32;
     string_section.write(s.as_bytes())?;

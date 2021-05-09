@@ -1,5 +1,5 @@
-use bpx::bpx::Encoder;
-use bpx::bpx::Decoder;
+use bpx::encoder::Encoder;
+use bpx::decoder::Decoder;
 
 #[test]
 fn attempt_write_empty_bpxp()

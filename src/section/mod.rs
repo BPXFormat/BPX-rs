@@ -26,14 +26,36 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-mod garraylen;
-mod compression;
-//pub mod bpx;
-//pub mod bpxp;
-pub mod section;
-pub mod strings;
-pub mod sd;
-pub mod utils;
-pub mod encoder;
-pub mod decoder;
-pub mod header;
+use std::io::Read;
+use std::io::Write;
+use std::io::Seek;
+use std::io::Result;
+use std::vec::Vec;
+use std::boxed::Box;
+
+mod memory;
+mod file;
+
+const MEMORY_THRESHOLD: u32 = 100000000;
+
+pub trait SectionData : Read + Write + Seek
+{
+    fn load_in_memory(&mut self) -> Result<Vec<u8>>;
+    fn size(&self) -> usize; //The computed size of the section
+}
+
+pub fn new_section_data(size: Option<u32>) -> Result<Box<dyn SectionData>>
+{
+    if let Some(s) = size
+    {
+        if s > MEMORY_THRESHOLD
+        {
+            return Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)));
+        }
+        else
+        {
+            return Ok(Box::new(memory::InMemorySection::new(vec![0; s as usize])));
+        }
+    }
+    return Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)));
+}
