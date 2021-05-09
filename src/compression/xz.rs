@@ -35,20 +35,19 @@ use lzma_sys::lzma_stream;
 use lzma_sys::lzma_mt;
 use lzma_sys::LZMA_CHECK_NONE;
 use lzma_sys::LZMA_PRESET_EXTREME;
-use lzma_sys::lzma_cputhreads;
 use lzma_sys::lzma_stream_encoder_mt;
 use lzma_sys::LZMA_OK;
 use lzma_sys::LZMA_MEM_ERROR;
 use lzma_sys::LZMA_OPTIONS_ERROR;
 use lzma_sys::LZMA_UNSUPPORTED_CHECK;
-use lzma_sys::lzma_stream_encoder;
+use lzma_sys::lzma_stream_decoder;
 use lzma_sys::LZMA_RUN;
 use lzma_sys::lzma_end;
 use lzma_sys::LZMA_FINISH;
 use lzma_sys::lzma_code;
 use lzma_sys::LZMA_STREAM_END;
 use lzma_sys::LZMA_DATA_ERROR;
-use lzma_sys::lzma_stream_decoder;
+use lzma_sys::lzma_easy_encoder;
 use lzma_sys::LZMA_CONCATENATED;
 
 use crate::compression::Deflater;
@@ -72,12 +71,11 @@ fn new_encoder() -> Result<lzma_stream>
         mt.preset = LZMA_PRESET_EXTREME;
         mt.filters = std::ptr::null();
         mt.check = LZMA_CHECK_NONE;
-        mt.threads = lzma_cputhreads();
+        mt.threads = num_cpus::get() as u32;
         let res;
-        if mt.threads == 0
+        if mt.threads == 0 || mt.threads == 1
         {
-            println!("Intel core i7 is not supported");
-            res = lzma_stream_encoder(&mut stream, std::ptr::null(), LZMA_CHECK_NONE);
+            res = lzma_easy_encoder(&mut stream, LZMA_PRESET_EXTREME, LZMA_CHECK_NONE);
         }
         else
         {

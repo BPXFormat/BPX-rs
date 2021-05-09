@@ -16,3 +16,4 @@ categories = ["encoding", "rendering::data-formats", "parser-implementations"]
 tempfile = "3.0.7"
 byteorder = "1"
 lzma-sys = "0.1.17"
+num_cpus = "1.13.0"
