@@ -27,7 +27,6 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::fs::File;
-use std::path::Path;
 use std::io;
 use std::io::Seek;
 use std::io::Read;
@@ -52,25 +51,24 @@ use crate::SectionHandle;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
-pub struct Encoder
+pub struct Encoder<'a, TBpx: io::Write>
 {
     main_header: MainHeader,
     sections: Vec<SectionHeader>,
     sections_data: Vec<Box<dyn SectionData>>,
-    file: File
+    file: &'a mut TBpx
 }
 
-impl Encoder
+impl <'a, TBpx: io::Write> Encoder<'a, TBpx>
 {
-    pub fn new(file: &Path) -> io::Result<Encoder>
+    pub fn new(file: &'a mut TBpx) -> io::Result<Encoder<'a, TBpx>>
     {
-        let fle = File::create(file)?;
         return Ok(Encoder
         {
             main_header: MainHeader::new(),
             sections: Vec::new(),
             sections_data: Vec::new(),
-            file: fle
+            file: file
         });
     }
 
@@ -164,7 +162,7 @@ impl Encoder
     }
 }
 
-impl Interface for Encoder
+impl <'a, TBpx: io::Write> Interface for Encoder<'a, TBpx>
 {
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {

@@ -26,8 +26,6 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::fs::File;
-use std::path::Path;
 use std::io;
 use std::io::Write;
 
@@ -49,15 +47,15 @@ use crate::OptionExtension;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
-pub struct Decoder
+pub struct Decoder<'a, TBpx: io::Seek + io::Read>
 {
     main_header: MainHeader,
     sections: Vec<SectionHeader>,
     sections_data: Vec<Option<Box<dyn SectionData>>>,
-    file: File
+    file: &'a mut TBpx
 }
 
-impl Decoder
+impl <'a, TBpx: io::Seek + io::Read> Decoder<'a, TBpx>
 {
     fn read_section_header_table(&mut self, checksum: u32) -> io::Result<()>
     {
@@ -93,14 +91,13 @@ impl Decoder
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "[BPX] could not locate string section"));
     }*/
 
-    pub fn new(file: &Path) -> io::Result<Decoder>
+    pub fn new(file: &'a mut TBpx) -> io::Result<Decoder<'a, TBpx>>
     {
-        let mut fle = File::open(file)?;
-        let (checksum, header) = MainHeader::read(&mut fle)?;
+        let (checksum, header) = MainHeader::read(file)?;
         let num = header.section_num;
         let mut decoder = Decoder
         {
-            file: fle,
+            file: file,
             main_header: header,
             sections: Vec::with_capacity(num as usize),
             sections_data: std::iter::repeat_with(|| None).take(num as usize).collect()
@@ -110,7 +107,7 @@ impl Decoder
     }
 }
 
-impl Interface for Decoder
+impl <'a, TBpx: io::Seek + io::Read> Interface for Decoder<'a, TBpx>
 {
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {
