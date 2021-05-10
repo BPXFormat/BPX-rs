@@ -31,12 +31,67 @@ use std::io::Result;
 use std::string::String;
 use std::io::Error;
 use std::io::ErrorKind;
-use super::section::SectionData;
-use std::boxed::Box;
 use std::path::Path;
 use std::fs::DirEntry;
+use std::collections::HashMap;
 
-pub fn get_string(ptr: u32, string_section: &mut Box<dyn SectionData>) -> Result<String>
+use crate::section::SectionData;
+use crate::header::SECTION_TYPE_STRING;
+use crate::Interface;
+use crate::SectionHandle;
+
+pub struct StringSection
+{
+    handle: SectionHandle,
+    cache: HashMap<u32, String>
+}
+
+impl StringSection
+{
+    pub fn new(hdl: SectionHandle) -> StringSection
+    {
+        return StringSection
+        {
+            handle: hdl,
+            cache: HashMap::new()
+        };
+    }
+
+    pub fn open_from_interface(interface: &mut dyn Interface) -> Result<StringSection>
+    {
+        if let Some(hdl) = interface.find_section_by_type(SECTION_TYPE_STRING)
+        {
+            return Ok(StringSection
+            {
+                handle: hdl,
+                cache: HashMap::new()
+            });
+        }
+        return Err(Error::new(ErrorKind::InvalidInput, "[BPX] Could not find any string section"));
+    }
+
+    pub fn get(&mut self, interface: &mut dyn Interface, address: u32) -> Result<String>
+    {
+        if let Some(s) = self.cache.get(&address)
+        {
+            return Ok(s.clone());
+        }
+        let data = interface.open_section(self.handle)?;
+        let s = low_level_read_string(address, data)?;
+        self.cache.insert(address, s.clone());
+        return Ok(s);
+    }
+
+    pub fn put(&mut self, interface: &mut dyn Interface, s: &str) -> Result<u32>
+    {
+        let data = interface.open_section(self.handle)?;
+        let address = low_level_write_string(s, data)?;
+        self.cache.insert(address, String::from(s));
+        return Ok(address);
+    }
+}
+
+fn low_level_read_string(ptr: u32, string_section: &mut dyn SectionData) -> Result<String>
 {
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
@@ -59,7 +114,7 @@ pub fn get_string(ptr: u32, string_section: &mut Box<dyn SectionData>) -> Result
     }
 }
 
-pub fn write_string(s: &str, string_section: &mut Box<dyn SectionData>) -> Result<u32>
+fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Result<u32>
 {
     let ptr = string_section.size() as u32;
     string_section.write(s.as_bytes())?;
