@@ -26,6 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use std::string::String;
+
 use crate::sd::Array;
 use crate::sd::Object;
 
@@ -47,4 +49,149 @@ pub enum Value
     String(String),
     Array(Array),
     Object(Object)
+}
+
+impl From<bool> for Value
+{
+    fn from(v: bool) -> Self
+    {
+        return Value::Bool(v);
+    }
+}
+
+impl From<u8> for Value
+{
+    fn from(v: u8) -> Self
+    {
+        return Value::Uint8(v);
+    }
+}
+
+impl From<u16> for Value
+{
+    fn from(v: u16) -> Self
+    {
+        return Value::Uint16(v);
+    }
+}
+
+impl From<u32> for Value
+{
+    fn from(v: u32) -> Self
+    {
+        return Value::Uint32(v);
+    }
+}
+
+impl From<u64> for Value
+{
+    fn from(v: u64) -> Self
+    {
+        return Value::Uint64(v);
+    }
+}
+
+impl From<i8> for Value
+{
+    fn from(v: i8) -> Self
+    {
+        return Value::Int8(v);
+    }
+}
+
+impl From<i16> for Value
+{
+    fn from(v: i16) -> Self
+    {
+        return Value::Int16(v);
+    }
+}
+
+impl From<i32> for Value
+{
+    fn from(v: i32) -> Self
+    {
+        return Value::Int32(v);
+    }
+}
+
+impl From<i64> for Value
+{
+    fn from(v: i64) -> Self
+    {
+        return Value::Int64(v);
+    }
+}
+
+impl From<f32> for Value
+{
+    fn from(v: f32) -> Self
+    {
+        return Value::Float(v);
+    }
+}
+
+impl From<f64> for Value
+{
+    fn from(v: f64) -> Self
+    {
+        return Value::Double(v);
+    }
+}
+
+impl From<&str> for Value
+{
+    fn from(v: &str) -> Self
+    {
+        return Value::String(String::from(v));
+    }
+}
+
+impl From<String> for Value
+{
+    fn from(v: String) -> Self
+    {
+        return Value::String(v);
+    }
+}
+
+impl From<Array> for Value
+{
+    fn from(v: Array) -> Self
+    {
+        return Value::Array(v);
+    }
+}
+
+impl From<Object> for Value
+{
+    fn from(v: Object) -> Self
+    {
+        return Value::Object(v);
+    }
+}
+
+impl <T: Into<Value>> From<Option<T>> for Value
+{
+    fn from(v: Option<T>) -> Self
+    {
+        if let Some(v) = v
+        {
+            return v.into();
+        }
+        return Value::Null;
+    }
+}
+
+impl <T: Into<Value>> From<Vec<T>> for Value
+{
+    fn from(v: Vec<T>) -> Self
+    {
+        let mut arr = Array::new();
+        for v1 in v
+        {
+            arr.add(v1.into());
+        }
+        return Value::Array(arr);
+    }
 }
