@@ -26,37 +26,25 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::num::Wrapping;
+use crate::sd::Array;
+use crate::sd::Object;
 
-pub fn hash(s: &str) -> u64
+#[derive(PartialEq, Clone)]
+pub enum Value
 {
-    let mut val: Wrapping<u64> = Wrapping(5381);
-
-    for v in s.as_bytes()
-    {
-        val = ((val << 5) + val) + Wrapping(*v as u64);
-    }
-    return val.0;
-}
-
-pub trait OptionExtension<T>
-{
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>;
-}
-
-impl <T> OptionExtension<T> for Option<T>
-{
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>
-    {
-        if let None = *self {
-            *self = Some(f()?);
-        }
-    
-        match self {
-            Some(v) => Ok(v),
-            // SAFETY: a `None` variant for `self` would have been replaced by a `Some`
-            // variant in the code above.
-            None => unsafe { std::hint::unreachable_unchecked() },
-        }    
-    }
+    Null,
+    Bool(bool),
+    Uint8(u8),
+    Uint16(u16),
+    Uint32(u32),
+    Uint64(u64),
+    Int8(i8),
+    Int16(i16),
+    Int32(i32),
+    Int64(i64),
+    Float(f32),
+    Double(f64),
+    String(String),
+    Array(Array),
+    Object(Object)
 }

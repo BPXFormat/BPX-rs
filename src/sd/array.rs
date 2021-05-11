@@ -26,37 +26,74 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::num::Wrapping;
+use std::vec::Vec;
+use std::ops::Index;
+use std::ops::IndexMut;
 
-pub fn hash(s: &str) -> u64
+use crate::sd::Value;
+
+#[derive(PartialEq, Clone)]
+pub struct Array
 {
-    let mut val: Wrapping<u64> = Wrapping(5381);
-
-    for v in s.as_bytes()
-    {
-        val = ((val << 5) + val) + Wrapping(*v as u64);
-    }
-    return val.0;
+    data: Vec<Value>
 }
 
-pub trait OptionExtension<T>
+impl Array
 {
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>;
-}
-
-impl <T> OptionExtension<T> for Option<T>
-{
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>
+    pub fn new() -> Array
     {
-        if let None = *self {
-            *self = Some(f()?);
+        return Array
+        {
+            data: Vec::new()
         }
-    
-        match self {
-            Some(v) => Ok(v),
-            // SAFETY: a `None` variant for `self` would have been replaced by a `Some`
-            // variant in the code above.
-            None => unsafe { std::hint::unreachable_unchecked() },
-        }    
+    }
+
+    pub fn add(&mut self, v: Value)
+    {
+        self.data.push(v);
+    }
+
+    pub fn remove_at(&mut self, pos: usize)
+    {
+        self.data.remove(pos);
+    }
+
+    pub fn remove(&mut self, item: Value)
+    {
+        for i in 0..self.data.len()
+        {
+            if self.data[i] == item
+            {
+                self.data.remove(i);
+            }
+        }
+    }
+
+    pub fn get(&self, pos: usize) -> Option<&Value>
+    {
+        return self.data.get(pos);
+    }
+
+    pub fn len(&self) -> usize
+    {
+        return self.data.len();
+    }
+}
+
+impl Index<usize> for Array
+{
+    type Output = Value;
+
+    fn index<'a>(&'a self, i: usize) -> &'a Value
+    {
+        return &self.data[i];
+    }
+}
+
+impl IndexMut<usize> for Array
+{
+    fn index_mut<'a>(&'a mut self, i: usize) -> &'a mut Value
+    {
+        return &mut self.data[i];
     }
 }

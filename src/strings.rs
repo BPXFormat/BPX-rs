@@ -34,6 +34,8 @@ use std::io::ErrorKind;
 use std::path::Path;
 use std::fs::DirEntry;
 use std::collections::HashMap;
+use std::convert::From;
+use std::convert::TryFrom;
 
 use crate::section::SectionData;
 use crate::header::SECTION_TYPE_STRING;
@@ -46,9 +48,9 @@ pub struct StringSection
     cache: HashMap<u32, String>
 }
 
-impl StringSection
+impl From<SectionHandle> for StringSection
 {
-    pub fn new(hdl: SectionHandle) -> StringSection
+    fn from(hdl: SectionHandle) -> Self
     {
         return StringSection
         {
@@ -56,8 +58,13 @@ impl StringSection
             cache: HashMap::new()
         };
     }
+}
 
-    pub fn open_from_interface(interface: &mut dyn Interface) -> Result<StringSection>
+impl TryFrom<&mut dyn Interface> for StringSection
+{
+    type Error = Error;
+
+    fn try_from(interface: &mut dyn Interface) -> Result<Self>
     {
         if let Some(hdl) = interface.find_section_by_type(SECTION_TYPE_STRING)
         {
@@ -69,7 +76,10 @@ impl StringSection
         }
         return Err(Error::new(ErrorKind::InvalidInput, "[BPX] Could not find any string section"));
     }
+}
 
+impl StringSection
+{
     pub fn get(&mut self, interface: &mut dyn Interface, address: u32) -> Result<String>
     {
         if let Some(s) = self.cache.get(&address)

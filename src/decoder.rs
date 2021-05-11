@@ -43,7 +43,7 @@ use crate::compression::WeakChecksum;
 use crate::compression::Inflater;
 use crate::Interface;
 use crate::SectionHandle;
-use crate::OptionExtension;
+use crate::utils::OptionExtension;
 
 const READ_BLOCK_SIZE: usize = 8192;
 

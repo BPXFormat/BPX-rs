@@ -53,25 +53,3 @@ pub trait Interface
     fn open_section(&mut self, handle: SectionHandle) -> std::io::Result<&mut dyn section::SectionData>;
     fn get_main_header(&self) -> &header::MainHeader;
 }
-
-pub trait OptionExtension<T>
-{
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>;
-}
-
-impl <T> OptionExtension<T> for Option<T>
-{
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>
-    {
-        if let None = *self {
-            *self = Some(f()?);
-        }
-    
-        match self {
-            Some(v) => Ok(v),
-            // SAFETY: a `None` variant for `self` would have been replaced by a `Some`
-            // variant in the code above.
-            None => unsafe { std::hint::unreachable_unchecked() },
-        }    
-    }
-}

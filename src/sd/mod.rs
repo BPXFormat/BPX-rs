@@ -26,37 +26,14 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::num::Wrapping;
+// The BPX Structured Data format (BPXSD)
 
-pub fn hash(s: &str) -> u64
-{
-    let mut val: Wrapping<u64> = Wrapping(5381);
+mod value;
+mod array;
+mod object;
+mod encoder;
+mod decoder;
 
-    for v in s.as_bytes()
-    {
-        val = ((val << 5) + val) + Wrapping(*v as u64);
-    }
-    return val.0;
-}
-
-pub trait OptionExtension<T>
-{
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>;
-}
-
-impl <T> OptionExtension<T> for Option<T>
-{
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>
-    {
-        if let None = *self {
-            *self = Some(f()?);
-        }
-    
-        match self {
-            Some(v) => Ok(v),
-            // SAFETY: a `None` variant for `self` would have been replaced by a `Some`
-            // variant in the code above.
-            None => unsafe { std::hint::unreachable_unchecked() },
-        }    
-    }
-}
+pub use value::Value;
+pub use object::Object;
+pub use array::Array;
