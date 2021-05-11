@@ -41,6 +41,7 @@ pub mod encoder;
 pub mod decoder;
 pub mod header;
 pub mod builder;
+pub mod error;
 
 pub type SectionHandle = usize;
 
@@ -53,3 +54,5 @@ pub trait Interface
     fn open_section(&mut self, handle: SectionHandle) -> std::io::Result<&mut dyn section::SectionData>;
     fn get_main_header(&self) -> &header::MainHeader;
 }
+
+pub type Result<T> = std::result::Result<T, error::Error>;
