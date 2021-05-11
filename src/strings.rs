@@ -27,10 +27,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::SeekFrom;
-use std::io::Result;
 use std::string::String;
-use std::io::Error;
-use std::io::ErrorKind;
 use std::path::Path;
 use std::fs::DirEntry;
 use std::collections::HashMap;
@@ -38,6 +35,8 @@ use std::collections::HashMap;
 use crate::section::SectionData;
 use crate::Interface;
 use crate::SectionHandle;
+use crate::Result;
+use crate::error::Error;
 
 pub struct StringSection
 {
@@ -90,12 +89,12 @@ fn low_level_read_string(ptr: u32, string_section: &mut dyn SectionData) -> Resu
         let res = string_section.read(&mut chr)?;
         if res != 1
         {
-            return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Reached EOS before null byte, are you sure this BPX is not corrupted/truncated?"));
+            return Err(Error::Truncation("string secton read"));
         }
     }
     match String::from_utf8(curs)
     {
-        Err(e) => return Err(Error::new(ErrorKind::InvalidData, format!("[BPX] error loading utf8 string: {}", e))),
+        Err(e) => return Err(Error::Utf8("string section read")),
         Ok(v) => return Ok(v)
     }
 }
@@ -119,7 +118,7 @@ pub fn get_name_from_path(path: &Path) -> Result<String>
             // The reason BPXP cannot support non-unicode strings in paths is simply because this would be incompatible with unicode systems
             None => panic!("Non unicode paths operating systems cannot run BPXP")
         },
-        None => return Err(Error::new(ErrorKind::InvalidInput, "[BPX] incorrect path format")),
+        None => return Err(Error::from("incorrect path format")),
     }
 }
 

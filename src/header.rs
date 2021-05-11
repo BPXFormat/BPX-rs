@@ -30,6 +30,8 @@ use byteorder::LittleEndian;
 use byteorder::ByteOrder;
 use std::io;
 
+use crate::Result;
+use crate::error::Error;
 use super::garraylen::*;
 
 pub const SIZE_MAIN_HEADER: usize = 40;
@@ -57,7 +59,7 @@ pub struct MainHeader
 
 impl MainHeader
 {
-    pub fn read<TReader: io::Read>(reader: &mut TReader) -> io::Result<(u32, MainHeader)>
+    pub fn read<TReader: io::Read>(reader: &mut TReader) -> Result<(u32, MainHeader)>
     {
         let mut buf: [u8;SIZE_MAIN_HEADER] = [0;SIZE_MAIN_HEADER];
         let mut checksum: u32 = 0;
@@ -81,11 +83,11 @@ impl MainHeader
         };
         if head.signature[0] != 'B' as u8 || head.signature[1] != 'P' as u8 || head.signature[2] != 'X' as u8
         {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "[BPX] File is not a BPX: incorrect signature"));
+            return Err(Error::Corruption(format!("incorrect signature, expected {}{}{}, got {}{}{}", 'B' as u8, 'P' as u8, 'X' as u8, head.signature[0], head.signature[1], head.signature[2])));
         }
         if head.version != 0x1
         {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("[BPX] Unsupported version of BPX: {}", head.version)));
+            return Err(Error::Unsupported(format!("unsupported version {}", head.version)));
         }
         return Ok((checksum, head));
     }

@@ -33,6 +33,7 @@ use std::collections::hash_map::Keys;
 use crate::sd::Value;
 use crate::sd::Array;
 use crate::utils;
+use crate::Result;
 
 #[derive(PartialEq, Clone)]
 pub struct Object
@@ -89,12 +90,12 @@ impl Object
         self.set("__debug__", Value::Array(prop_names));
     }
 
-    pub fn write(&self, dest: &mut dyn std::io::Write) -> std::io::Result<()>
+    pub fn write(&self, dest: &mut dyn std::io::Write) -> Result<()>
     {
         return super::encoder::write_structured_data(dest, self);
     }
 
-    pub fn read(source: &mut dyn std::io::Read) -> std::io::Result<Object>
+    pub fn read(source: &mut dyn std::io::Read) -> Result<Object>
     {
         return super::decoder::read_structured_data(source);
     }

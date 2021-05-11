@@ -28,7 +28,8 @@
 
 use std::io::Read;
 use std::io::Write;
-use std::io::Result;
+
+use crate::Result;
 
 mod weakchksum;
 mod xz;

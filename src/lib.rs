@@ -51,7 +51,7 @@ pub trait Interface
     fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>;
     fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>;
     fn get_section_header(&self, handle: SectionHandle) -> &header::SectionHeader;
-    fn open_section(&mut self, handle: SectionHandle) -> std::io::Result<&mut dyn section::SectionData>;
+    fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn section::SectionData>;
     fn get_main_header(&self) -> &header::MainHeader;
 }
 

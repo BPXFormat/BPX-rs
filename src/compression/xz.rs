@@ -28,9 +28,6 @@
 
 use std::io::Read;
 use std::io::Write;
-use std::io::Result;
-use std::io::Error;
-use std::io::ErrorKind;
 use lzma_sys::lzma_stream;
 use lzma_sys::lzma_mt;
 use lzma_sys::LZMA_CHECK_NONE;
@@ -53,6 +50,8 @@ use lzma_sys::LZMA_CONCATENATED;
 use crate::compression::Deflater;
 use crate::compression::Checksum;
 use crate::compression::Inflater;
+use crate::Result;
+use crate::error::Error;
 
 const THREADS_MAX: u32 = 8;
 const ENCODER_BUF_SIZE: usize = 8192;
@@ -91,10 +90,10 @@ fn new_encoder() -> Result<lzma_stream>
         }
         match res
         {
-            LZMA_MEM_ERROR => return Err(Error::new(ErrorKind::Other, "Memory allocation failure")),
-            LZMA_OPTIONS_ERROR => return Err(Error::new(ErrorKind::InvalidInput, "Specified filter chain is not supported")),
-            LZMA_UNSUPPORTED_CHECK => return Err(Error::new(ErrorKind::InvalidInput, "Specified integrity check is not supported")),
-            e => return Err(Error::new(ErrorKind::Other, format!("Unknown error, possibly a bug ({})", e)))
+            LZMA_MEM_ERROR => return Err(Error::Deflate("Memory allocation failure")),
+            LZMA_OPTIONS_ERROR => return Err(Error::Deflate("Specified filter chain is not supported")),
+            LZMA_UNSUPPORTED_CHECK => return Err(Error::Deflate("Specified integrity check is not supported")),
+            _ => return Err(Error::Deflate("Unknown error, possibly a bug"))
         };
     }
 }
@@ -111,10 +110,10 @@ fn new_decoder() -> Result<lzma_stream>
         }
         match res
         {
-            LZMA_MEM_ERROR => return Err(Error::new(ErrorKind::Other, "Memory allocation failure")),
-            LZMA_OPTIONS_ERROR => return Err(Error::new(ErrorKind::InvalidInput, "Specified filter chain is not supported")),
-            LZMA_UNSUPPORTED_CHECK => return Err(Error::new(ErrorKind::InvalidInput, "Specified integrity check is not supported")),
-            e => return Err(Error::new(ErrorKind::Other, format!("Unknown error, possibly a bug ({})", e)))
+            LZMA_MEM_ERROR => return Err(Error::Inflate("Memory allocation failure")),
+            LZMA_OPTIONS_ERROR => return Err(Error::Inflate("Specified filter chain is not supported")),
+            LZMA_UNSUPPORTED_CHECK => return Err(Error::Inflate("Specified integrity check is not supported")),
+            _ => return Err(Error::Inflate("Unknown error, possibly a bug"))
         };
     }
 }
@@ -168,9 +167,9 @@ fn do_deflate(stream: &mut lzma_stream, input: &mut dyn Read, output: &mut dyn W
                 }
                 match res
                 {
-                    LZMA_MEM_ERROR => return Err(Error::new(ErrorKind::Other, "Memory allocation failure")),
-                    LZMA_DATA_ERROR => return Err(Error::new(ErrorKind::InvalidData, "LZMA data error")),
-                    e => return Err(Error::new(ErrorKind::Other, format!("Unknown error, possibly a bug ({})", e)))
+                    LZMA_MEM_ERROR => return Err(Error::Deflate("Memory allocation failure")),
+                    LZMA_DATA_ERROR => return Err(Error::Deflate("LZMA data error")),
+                    _ => return Err(Error::Deflate("Unknown error, possibly a bug"))
                 };
             }
         }
@@ -221,9 +220,9 @@ fn do_inflate(stream: &mut lzma_stream, input: &mut dyn Read, output: &mut dyn W
                 }
                 match res
                 {
-                    LZMA_MEM_ERROR => return Err(Error::new(ErrorKind::Other, "Memory allocation failure")),
-                    LZMA_DATA_ERROR => return Err(Error::new(ErrorKind::InvalidData, "LZMA data error")),
-                    e => return Err(Error::new(ErrorKind::Other, format!("Unknown error, possibly a bug ({})", e)))
+                    LZMA_MEM_ERROR => return Err(Error::Inflate("Memory allocation failure")),
+                    LZMA_DATA_ERROR => return Err(Error::Inflate("LZMA data error")),
+                    _ => return Err(Error::Inflate("Unknown error, possibly a bug"))
                 };
             }
         }

@@ -27,15 +27,14 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::Read;
-use std::io::Result;
-use std::io::Error;
-use std::io::ErrorKind;
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
 
 use crate::sd::Value;
 use crate::sd::Object;
 use crate::sd::Array;
+use crate::error::Error;
+use crate::Result;
 
 fn read_bool(stream: &mut dyn Read) -> Result<Value>
 {
@@ -43,7 +42,7 @@ fn read_bool(stream: &mut dyn Read) -> Result<Value>
 
     if stream.read(&mut flag)? != 1
     {
-        return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Value"));
+        return Err(Error::Truncation("Read Structured Data Value (bool)"));
     }
     return Ok(Value::Bool(flag[0] == 1));
 }
@@ -54,7 +53,7 @@ fn read_uint8(stream: &mut dyn Read) -> Result<Value>
 
     if stream.read(&mut val)? != 1
     {
-        return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Value"));
+        return Err(Error::Truncation("Read Structured Data Value (uint8)"));
     }
     return Ok(Value::Uint8(val[0]));
 }
@@ -65,7 +64,7 @@ fn read_int8(stream: &mut dyn Read) -> Result<Value>
 
     if stream.read(&mut val)? != 1
     {
-        return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Value"));
+        return Err(Error::Truncation("Read Structured Data Value (int8)"));
     }
     return Ok(Value::Int8(val[0] as i8));
 }
@@ -76,7 +75,7 @@ fn read_uint16(stream: &mut dyn Read) -> Result<Value>
 
     if stream.read(&mut val)? != 2
     {
-        return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Value"));
+        return Err(Error::Truncation("Read Structured Data Value (uint16)"));
     }
     return Ok(Value::Uint16(LittleEndian::read_u16(&val)));
 }
@@ -87,7 +86,7 @@ fn read_int16(stream: &mut dyn Read) -> Result<Value>
 
     if stream.read(&mut val)? != 2
     {
-        return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Value"));
+        return Err(Error::Truncation("Read Structured Data Value (int16)"));
     }
     return Ok(Value::Int16(LittleEndian::read_i16(&val)));
 }
@@ -98,7 +97,7 @@ fn read_uint32(stream: &mut dyn Read) -> Result<Value>
 
     if stream.read(&mut val)? != 4
     {
-        return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Value"));
+        return Err(Error::Truncation("Read Structured Data Value (uint32)"));
     }
     return Ok(Value::Uint32(LittleEndian::read_u32(&val)));
 }
@@ -109,7 +108,7 @@ fn read_int32(stream: &mut dyn Read) -> Result<Value>
 
     if stream.read(&mut val)? != 4
     {
-        return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Value"));
+        return Err(Error::Truncation("Read Structured Data Value (int32)"));
     }
     return Ok(Value::Int32(LittleEndian::read_i32(&val)));
 }
@@ -120,7 +119,7 @@ fn read_uint64(stream: &mut dyn Read) -> Result<Value>
 
     if stream.read(&mut val)? != 8
     {
-        return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Value"));
+        return Err(Error::Truncation("Read Structured Data Value (uint64)"));
     }
     return Ok(Value::Uint64(LittleEndian::read_u64(&val)));
 }
@@ -131,7 +130,7 @@ fn read_int64(stream: &mut dyn Read) -> Result<Value>
 
     if stream.read(&mut val)? != 8
     {
-        return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Value"));
+        return Err(Error::Truncation("Read Structured Data Value (int64)"));
     }
     return Ok(Value::Int64(LittleEndian::read_i64(&val)));
 }
@@ -142,7 +141,7 @@ fn read_float(stream: &mut dyn Read) -> Result<Value>
 
     if stream.read(&mut val)? != 4
     {
-        return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Value"));
+        return Err(Error::Truncation("Read Structured Data Value (float)"));
     }
     return Ok(Value::Float(LittleEndian::read_f32(&val)));
 }
@@ -153,7 +152,7 @@ fn read_double(stream: &mut dyn Read) -> Result<Value>
 
     if stream.read(&mut val)? != 8
     {
-        return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Value"));
+        return Err(Error::Truncation("Read Structured Data Value (double)"));
     }
     return Ok(Value::Double(LittleEndian::read_f64(&val)));
 }
@@ -170,12 +169,12 @@ fn read_string(stream: &mut dyn Read) -> Result<Value>
         let res = stream.read(&mut chr)?;
         if res != 1
         {
-            return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Value"));
+            return Err(Error::Truncation("Read Structured Data Value (string)"));
         }
     }
     match String::from_utf8(curs)
     {
-        Err(e) => return Err(Error::new(ErrorKind::InvalidData, format!("[BPX] error loading utf8 string: {}", e))),
+        Err(e) => return Err(Error::Utf8("Read Structured Data Value (string)")),
         Ok(v) => return Ok(Value::String(v))
     }
 }
@@ -188,7 +187,7 @@ fn parse_object(stream: &mut dyn Read) -> Result<Object>
         let mut buf: [u8; 1] = [0; 1];
         if stream.read(&mut buf)? != 1
         {
-            return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Object"));
+            return Err(Error::Truncation("Read Structured Data Value (object)"));
         }
         buf[0]
     };
@@ -198,14 +197,14 @@ fn parse_object(stream: &mut dyn Read) -> Result<Object>
         let mut prop: [u8; 9] = [0; 9];
         if stream.read(&mut prop)? != 9
         {
-            return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Object"));
+            return Err(Error::Truncation("Read Structured Data Value (object)"));
         }
         let hash = LittleEndian::read_u64(&prop[0..8]);
         let type_code = prop[8];
         match get_value_parser(type_code)
         {
             Some(func) => obj.raw_set(hash, func(stream)?),
-            None => return Err(Error::new(ErrorKind::InvalidData, format!("[BPX] Got unexpected unknown type code ({}) from Structured Data Object", type_code)))
+            None => return Err(Error::Corruption(format!("Got unexpected unknown type code ({}) while reading Structured Data Object", type_code)))
         }
         count -= 1;
     }
@@ -220,7 +219,7 @@ fn parse_array(stream: &mut dyn Read) -> Result<Array>
         let mut buf: [u8; 1] = [0; 1];
         if stream.read(&mut buf)? != 1
         {
-            return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Object"));
+            return Err(Error::Truncation("Read Structured Data Value (array)"));
         }
         buf[0]
     };
@@ -230,12 +229,12 @@ fn parse_array(stream: &mut dyn Read) -> Result<Array>
         let mut type_code: [u8; 1] = [0; 1];
         if stream.read(&mut type_code)? != 1
         {
-            return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Unexpected end of input while reading Structured Data Object"));
+            return Err(Error::Truncation("Read Structured Data Value (array)"));
         }
         match get_value_parser(type_code[0])
         {
             Some(func) => arr.add(func(stream)?),
-            None => return Err(Error::new(ErrorKind::InvalidData, format!("[BPX] Got unexpected unknown type code ({}) from Structured Data Object", type_code[0])))
+            None => return Err(Error::Corruption(format!("Got unexpected unknown type code ({}) while reading Structured Data Array", type_code[0])))
         }
         count -= 1;
     }

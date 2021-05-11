@@ -44,6 +44,8 @@ use crate::compression::Inflater;
 use crate::Interface;
 use crate::SectionHandle;
 use crate::utils::OptionExtension;
+use crate::Result;
+use crate::error::Error;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -57,7 +59,7 @@ pub struct Decoder<'a, TBpx: io::Seek + io::Read>
 
 impl <'a, TBpx: io::Seek + io::Read> Decoder<'a, TBpx>
 {
-    fn read_section_header_table(&mut self, checksum: u32) -> io::Result<()>
+    fn read_section_header_table(&mut self, checksum: u32) -> Result<()>
     {
         let mut final_checksum = checksum;
 
@@ -66,23 +68,23 @@ impl <'a, TBpx: io::Seek + io::Read> Decoder<'a, TBpx>
             let (checksum, header) = SectionHeader::read(&mut self.file)?;
             if header.flags & FLAG_COMPRESS_ZLIB == FLAG_COMPRESS_ZLIB
             {
-                return Err(io::Error::new(io::ErrorKind::InvalidInput, "[BPX] zlib compression is not supported by FPKG"));
+                return Err(Error::Unsupported(String::from("FLAG_COMPRESS_ZLIB")));
             }
             if header.flags & FLAG_CHECK_CRC32 == FLAG_CHECK_CRC32
             {
-                return Err(io::Error::new(io::ErrorKind::InvalidInput, "[BPX] crc32 checksum is not supported by FPKG"));
+                return Err(Error::Unsupported(String::from("FLAG_CHECK_CRC32")));
             }
             final_checksum += checksum;
             self.sections.push(header);
         }
         if final_checksum != self.main_header.chksum
         {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "[BPX] checksum validation failed"));
+            return Err(Error::Checksum(final_checksum, self.main_header.chksum));
         }
         return Ok(());
     }
 
-    pub fn new(file: &'a mut TBpx) -> io::Result<Decoder<'a, TBpx>>
+    pub fn new(file: &'a mut TBpx) -> Result<Decoder<'a, TBpx>>
     {
         let (checksum, header) = MainHeader::read(file)?;
         let num = header.section_num;
@@ -140,7 +142,7 @@ impl <'a, TBpx: io::Seek + io::Read> Interface for Decoder<'a, TBpx>
         return &self.sections[handle];
     }
 
-    fn open_section(&mut self, handle: SectionHandle) -> io::Result<&mut dyn SectionData>
+    fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData>
     {
         let header = &self.sections[handle];
         let file = &mut self.file;
@@ -154,13 +156,13 @@ impl <'a, TBpx: io::Seek + io::Read> Interface for Decoder<'a, TBpx>
     }
 }
 
-fn load_section<TBpx: io::Seek + io::Read>(file: &mut TBpx, section: &SectionHeader) -> io::Result<Box<dyn SectionData>>
+fn load_section<TBpx: io::Seek + io::Read>(file: &mut TBpx, section: &SectionHeader) -> Result<Box<dyn SectionData>>
 {
     let mut chksum = WeakChecksum::new();
     if section.flags & FLAG_CHECK_CRC32 != 0
     {
         //TODO: Implement CRC checksum
-        panic!("[BPX] CRC32 check not yet supported!");
+        return Err(Error::Unsupported(String::from("FLAG_CHECK_CRC32")));
     }
     let mut data = new_section_data(Some(section.size))?;
     data.seek(io::SeekFrom::Start(0))?;
@@ -171,7 +173,7 @@ fn load_section<TBpx: io::Seek + io::Read>(file: &mut TBpx, section: &SectionHea
     else if section.flags & FLAG_COMPRESS_ZLIB != 0
     {
         //TODO: Implement Zlib compression
-        panic!("[BPX] ZLib compression not yet supported!");
+        return Err(Error::Unsupported(String::from("FLAG_COMPRESS_ZLIB")));
     }
     else
     {
@@ -180,7 +182,7 @@ fn load_section<TBpx: io::Seek + io::Read>(file: &mut TBpx, section: &SectionHea
     let v = chksum.finish();
     if (section.flags & FLAG_CHECK_CRC32 != 0 || section.flags & FLAG_CHECK_WEAK != 0) && v != section.chksum
     {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, format!("[BPX] checksum validation failed {} != {}", v, section.chksum)));
+        return Err(Error::Checksum(v, section.chksum));
     }
     return Ok(data);
 }
@@ -203,7 +205,7 @@ fn load_section_uncompressed<TBpx: io::Read + io::Seek>(bpx: &mut TBpx, header: 
     return Ok(());
 }
 
-fn load_section_compressed<TMethod: Inflater, TBpx: io::Read + io::Seek>(bpx: &mut TBpx, header: &SectionHeader, output: &mut dyn Write, chksum: &mut dyn Checksum) -> io::Result<()>
+fn load_section_compressed<TMethod: Inflater, TBpx: io::Read + io::Seek>(bpx: &mut TBpx, header: &SectionHeader, output: &mut dyn Write, chksum: &mut dyn Checksum) -> Result<()>
 {
     bpx.seek(io::SeekFrom::Start(header.pointer))?;
     XzCompressionMethod::inflate(bpx, output, header.size as usize, chksum)?;

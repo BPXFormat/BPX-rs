@@ -27,7 +27,9 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::convert::From;
+use std::string::String;
 
+#[derive(Debug)]
 pub enum Error
 {
     /// Describes a checksum error
@@ -65,8 +67,8 @@ pub enum Error
     /// Describes a data truncation error, this means an impossible byte or sequence of bytes has been found
     /// 
     /// #### Arguments
-    /// * last operation name before failure
-    Corruption(&'static str),
+    /// * message
+    Corruption(String),
 
     /// Describes an utf8 decoding/encoding error
     /// 
@@ -77,8 +79,8 @@ pub enum Error
     /// Describes an operation or flag that is currently unsupported
     /// 
     /// #### Arguments
-    /// * name of operation/flag
-    Unsupported(&'static str),
+    /// * message
+    Unsupported(String),
 
     /// Describes a section that is too large to be written (ie exceeds 2 pow 32 / 4Gb)
     /// 
@@ -97,6 +99,12 @@ pub enum Error
     /// #### Arguments
     /// * error description string
     Inflate(&'static str),
+
+    /// Describes a generic unknown error
+    /// 
+    /// #### Arguments
+    /// * error message
+    Other(String)
 }
 
 impl From<std::io::Error> for Error
@@ -104,5 +112,13 @@ impl From<std::io::Error> for Error
     fn from(e: std::io::Error) -> Self
     {
         return Error::Io(e);
+    }
+}
+
+impl From<&str> for Error
+{
+    fn from(e: &str) -> Self
+    {
+        return Error::Other(String::from(e));
     }
 }

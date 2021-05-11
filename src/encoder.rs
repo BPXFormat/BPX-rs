@@ -48,6 +48,8 @@ use crate::compression::WeakChecksum;
 use crate::compression::XzCompressionMethod;
 use crate::Interface;
 use crate::SectionHandle;
+use crate::Result;
+use crate::error::Error;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -61,7 +63,7 @@ pub struct Encoder<'a, TBpx: io::Write>
 
 impl <'a, TBpx: io::Write> Encoder<'a, TBpx>
 {
-    pub fn new(file: &'a mut TBpx) -> io::Result<Encoder<'a, TBpx>>
+    pub fn new(file: &'a mut TBpx) -> Result<Encoder<'a, TBpx>>
     {
         return Ok(Encoder
         {
@@ -78,7 +80,7 @@ impl <'a, TBpx: io::Write> Encoder<'a, TBpx>
     }
 
     //Adds a new section; returns a reference to the new section for use in edit_section
-    pub fn create_section(&mut self, header: SectionHeader) -> io::Result<SectionHandle>
+    pub fn create_section(&mut self, header: SectionHeader) -> Result<SectionHandle>
     {
         self.main_header.section_num += 1;
         let section = create_section(&header)?;
@@ -88,7 +90,7 @@ impl <'a, TBpx: io::Write> Encoder<'a, TBpx>
         return Ok(r);
     }
 
-    fn write_sections(&mut self) -> io::Result<(File, u32, usize)>
+    fn write_sections(&mut self) -> Result<(File, u32, usize)>
     {
         let mut all_sections_size: usize = 0;
         let mut chksum_sht: u32 = 0;
@@ -99,7 +101,7 @@ impl <'a, TBpx: io::Write> Encoder<'a, TBpx>
         {
             if self.sections_data[i].size() > u32::MAX as usize
             {
-                panic!("BPX cannot support individual sections with size exceeding 4Gb (2 pow 32)");
+                return Err(Error::Capacity(self.sections_data[i].size()));
             }
             self.sections_data[i].seek(io::SeekFrom::Start(0))?;
             let mut chksum = WeakChecksum::new();
@@ -112,7 +114,7 @@ impl <'a, TBpx: io::Write> Encoder<'a, TBpx>
             else if flags & FLAG_COMPRESS_ZLIB != 0
             {
                 //TODO: Implement Zlib compression
-                panic!("[BPX] ZLib compression not yet supported!");
+                return Err(Error::Unsupported(String::from("FLAG_COMPRESS_ZLIB")));
             }
             else
             {
@@ -131,7 +133,7 @@ impl <'a, TBpx: io::Write> Encoder<'a, TBpx>
         return Ok((f, chksum_sht, all_sections_size));
     }
 
-    fn write_data_file(&mut self, fle: &mut File, all_sections_size: usize) -> io::Result<()>
+    fn write_data_file(&mut self, fle: &mut File, all_sections_size: usize) -> Result<()>
     {
         let mut idata: [u8; 8192] = [0; 8192];
         let mut count: usize = 0;
@@ -146,7 +148,7 @@ impl <'a, TBpx: io::Write> Encoder<'a, TBpx>
         return Ok(());
     }
 
-    pub fn save(&mut self) -> io::Result<()>
+    pub fn save(&mut self) -> Result<()>
     {
         let (mut main_data, chksum_sht, all_sections_size) = self.write_sections()?;
 
@@ -204,7 +206,7 @@ impl <'a, TBpx: io::Write> Interface for Encoder<'a, TBpx>
         return &self.sections[handle];
     }
 
-    fn open_section(&mut self, handle: SectionHandle) -> io::Result<&mut dyn SectionData>
+    fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData>
     {
         return Ok(self.sections_data[handle].as_mut());
     }
@@ -237,7 +239,7 @@ fn get_flags(header: &SectionHeader, size: u32) -> u8
     return flags;
 }
 
-fn create_section(header: &SectionHeader) -> io::Result<Box<dyn SectionData>>
+fn create_section(header: &SectionHeader) -> Result<Box<dyn SectionData>>
 {
     if header.size == 0
     {
@@ -253,7 +255,7 @@ fn create_section(header: &SectionHeader) -> io::Result<Box<dyn SectionData>>
     }
 }
 
-fn write_section_uncompressed(section: &mut dyn SectionData, out: &mut dyn Write, chksum: &mut dyn Checksum) -> io::Result<usize>
+fn write_section_uncompressed(section: &mut dyn SectionData, out: &mut dyn Write, chksum: &mut dyn Checksum) -> Result<usize>
 {
     let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
     let mut count: usize = 0;
@@ -268,7 +270,7 @@ fn write_section_uncompressed(section: &mut dyn SectionData, out: &mut dyn Write
     return Ok(section.size());
 }
 
-fn write_section_compressed<TMethod: Deflater>(mut section: &mut dyn SectionData, out: &mut dyn Write, chksum: &mut dyn Checksum) -> io::Result<usize>
+fn write_section_compressed<TMethod: Deflater>(mut section: &mut dyn SectionData, out: &mut dyn Write, chksum: &mut dyn Checksum) -> Result<usize>
 {
     let size = section.size();
     let csize = TMethod::deflate(&mut section, out, size, chksum)?;

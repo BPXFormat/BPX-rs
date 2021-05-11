@@ -27,15 +27,14 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::Write;
-use std::io::Result;
-use std::io::Error;
-use std::io::ErrorKind;
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
 
 use crate::sd::Value;
 use crate::sd::Object;
 use crate::sd::Array;
+use crate::error::Error;
+use crate::Result;
 
 fn get_value_type_code(val: &Value) -> u8
 {
@@ -145,7 +144,7 @@ fn write_object(obj: &Object) -> Result<Vec<u8>>
 
     if count > 255
     {
-        return Err(Error::new(ErrorKind::InvalidInput, format!("[BPX] Structured Data only supports up to 255 maximum values in either array or object, got {} values", count)));
+        return Err(Error::PropCountExceeded(count));
     }
     v.push(count as u8);
     for hash in obj.get_keys()
@@ -167,7 +166,7 @@ fn write_array(arr: &Array) -> Result<Vec<u8>>
 
     if count > 255
     {
-        return Err(Error::new(ErrorKind::InvalidInput, format!("[BPX] Structured Data only supports up to 255 maximum values in either array or object, got {} values", count)));
+        return Err(Error::PropCountExceeded(count));
     }
     v.push(count as u8);
     for i in 0..count
