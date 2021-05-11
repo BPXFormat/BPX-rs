@@ -82,15 +82,6 @@ impl <'a, TBpx: io::Seek + io::Read> Decoder<'a, TBpx>
         return Ok(());
     }
 
-    /*pub fn load_string_section(&mut self) -> io::Result<Box<dyn SectionData>>
-    {
-        if let Some(section) = self.find_section_by_type(SECTION_TYPE_STRING)
-        {
-            return self.open_section(&section);
-        }
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "[BPX] could not locate string section"));
-    }*/
-
     pub fn new(file: &'a mut TBpx) -> io::Result<Decoder<'a, TBpx>>
     {
         let (checksum, header) = MainHeader::read(file)?;

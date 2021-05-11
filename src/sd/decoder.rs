@@ -32,7 +32,6 @@ use std::io::Error;
 use std::io::ErrorKind;
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
-use std::convert::TryFrom;
 
 use crate::sd::Value;
 use crate::sd::Object;
@@ -266,17 +265,7 @@ fn get_value_parser(type_code: u8) -> Option<fn (stream: &mut dyn Read) -> Resul
     }
 }
 
-fn read_structured_data(source: &mut dyn Read) -> Result<Object>
+pub fn read_structured_data(source: &mut dyn Read) -> Result<Object>
 {
     return parse_object(source);
-}
-
-impl TryFrom<&mut dyn Read> for Object
-{
-    type Error = Error;
-
-    fn try_from(source: &mut dyn Read) -> Result<Self>
-    {
-        return read_structured_data(source);
-    }
 }

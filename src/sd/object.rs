@@ -93,6 +93,11 @@ impl Object
     {
         return super::encoder::write_structured_data(dest, self);
     }
+
+    pub fn read(source: &mut dyn std::io::Read) -> std::io::Result<Object>
+    {
+        return super::decoder::read_structured_data(source);
+    }
 }
 
 impl Index<&str> for Object
