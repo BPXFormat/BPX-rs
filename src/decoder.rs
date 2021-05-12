@@ -49,15 +49,18 @@ use crate::error::Error;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
-pub struct Decoder<'a, TBpx: io::Seek + io::Read>
+pub trait IoBackend : io::Seek + io::Read {}
+impl <T: io::Seek + io::Read> IoBackend for T {}
+
+pub struct Decoder<'a, TBackend: IoBackend>
 {
     main_header: MainHeader,
     sections: Vec<SectionHeader>,
     sections_data: Vec<Option<Box<dyn SectionData>>>,
-    file: &'a mut TBpx
+    file: &'a mut TBackend
 }
 
-impl <'a, TBpx: io::Seek + io::Read> Decoder<'a, TBpx>
+impl <'a, TBackend: IoBackend> Decoder<'a, TBackend>
 {
     fn read_section_header_table(&mut self, checksum: u32) -> Result<()>
     {
@@ -84,7 +87,7 @@ impl <'a, TBpx: io::Seek + io::Read> Decoder<'a, TBpx>
         return Ok(());
     }
 
-    pub fn new(file: &'a mut TBpx) -> Result<Decoder<'a, TBpx>>
+    pub fn new(file: &'a mut TBackend) -> Result<Decoder<'a, TBackend>>
     {
         let (checksum, header) = MainHeader::read(file)?;
         let num = header.section_num;
@@ -100,7 +103,7 @@ impl <'a, TBpx: io::Seek + io::Read> Decoder<'a, TBpx>
     }
 }
 
-impl <'a, TBpx: io::Seek + io::Read> Interface for Decoder<'a, TBpx>
+impl <'a, TBackend: IoBackend> Interface for Decoder<'a, TBackend>
 {
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {
@@ -156,7 +159,7 @@ impl <'a, TBpx: io::Seek + io::Read> Interface for Decoder<'a, TBpx>
     }
 }
 
-fn load_section<TBpx: io::Seek + io::Read>(file: &mut TBpx, section: &SectionHeader) -> Result<Box<dyn SectionData>>
+fn load_section<TBackend: IoBackend>(file: &mut TBackend, section: &SectionHeader) -> Result<Box<dyn SectionData>>
 {
     let mut chksum = WeakChecksum::new();
     if section.flags & FLAG_CHECK_CRC32 != 0
@@ -187,7 +190,7 @@ fn load_section<TBpx: io::Seek + io::Read>(file: &mut TBpx, section: &SectionHea
     return Ok(data);
 }
 
-fn load_section_uncompressed<TBpx: io::Read + io::Seek>(bpx: &mut TBpx, header: &SectionHeader, output: &mut dyn Write, chksum: &mut dyn Checksum) -> io::Result<()>
+fn load_section_uncompressed<TBackend: io::Read + io::Seek>(bpx: &mut TBackend, header: &SectionHeader, output: &mut dyn Write, chksum: &mut dyn Checksum) -> io::Result<()>
 {
     let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
     let mut count: usize = 0;
@@ -205,7 +208,7 @@ fn load_section_uncompressed<TBpx: io::Read + io::Seek>(bpx: &mut TBpx, header: 
     return Ok(());
 }
 
-fn load_section_compressed<TMethod: Inflater, TBpx: io::Read + io::Seek>(bpx: &mut TBpx, header: &SectionHeader, output: &mut dyn Write, chksum: &mut dyn Checksum) -> Result<()>
+fn load_section_compressed<TMethod: Inflater, TBackend: io::Read + io::Seek>(bpx: &mut TBackend, header: &SectionHeader, output: &mut dyn Write, chksum: &mut dyn Checksum) -> Result<()>
 {
     bpx.seek(io::SeekFrom::Start(header.pointer))?;
     XzCompressionMethod::inflate(bpx, output, header.size as usize, chksum)?;

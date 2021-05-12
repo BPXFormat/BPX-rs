@@ -53,17 +53,20 @@ use crate::error::Error;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
-pub struct Encoder<'a, TBpx: io::Write>
+pub trait IoBackend : io::Write {}
+impl <T: io::Write> IoBackend for T {}
+
+pub struct Encoder<'a, TBackend: IoBackend>
 {
     main_header: MainHeader,
     sections: Vec<SectionHeader>,
     sections_data: Vec<Box<dyn SectionData>>,
-    file: &'a mut TBpx
+    file: &'a mut TBackend
 }
 
-impl <'a, TBpx: io::Write> Encoder<'a, TBpx>
+impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
 {
-    pub fn new(file: &'a mut TBpx) -> Result<Encoder<'a, TBpx>>
+    pub fn new(file: &'a mut TBackend) -> Result<Encoder<'a, TBackend>>
     {
         return Ok(Encoder
         {
@@ -164,7 +167,7 @@ impl <'a, TBpx: io::Write> Encoder<'a, TBpx>
     }
 }
 
-impl <'a, TBpx: io::Write> Interface for Encoder<'a, TBpx>
+impl <'a, TBackend: IoBackend> Interface for Encoder<'a, TBackend>
 {
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {
