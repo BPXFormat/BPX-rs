@@ -28,3 +28,21 @@
 
 pub mod encoder;
 pub mod decoder;
+
+pub enum Architecture
+{
+    X86_64,
+    Aarch64,
+    X86,
+    Armv7hl,
+    Any
+}
+
+pub enum Platform
+{
+    Linux,
+    Mac,
+    Windows,
+    Android,
+    Any
+}
