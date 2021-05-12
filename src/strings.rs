@@ -94,7 +94,7 @@ fn low_level_read_string(ptr: u32, string_section: &mut dyn SectionData) -> Resu
     }
     match String::from_utf8(curs)
     {
-        Err(e) => return Err(Error::Utf8("string section read")),
+        Err(_) => return Err(Error::Utf8("string section read")),
         Ok(v) => return Ok(v)
     }
 }
