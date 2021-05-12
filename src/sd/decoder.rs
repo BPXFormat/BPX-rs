@@ -174,7 +174,7 @@ fn read_string(stream: &mut dyn Read) -> Result<Value>
     }
     match String::from_utf8(curs)
     {
-        Err(e) => return Err(Error::Utf8("Read Structured Data Value (string)")),
+        Err(_) => return Err(Error::Utf8("Read Structured Data Value (string)")),
         Ok(v) => return Ok(Value::String(v))
     }
 }
