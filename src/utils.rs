@@ -28,6 +28,11 @@
 
 use std::num::Wrapping;
 
+/// Hash text using BPX defined hash function for strings
+/// 
+/// # Arguments
+/// 
+/// * `s` - the string to compute hash for
 pub fn hash(s: &str) -> u64
 {
     let mut val: Wrapping<u64> = Wrapping(5381);
@@ -39,6 +44,7 @@ pub fn hash(s: &str) -> u64
     return val.0;
 }
 
+/// Extension to include get_or_insert_with but with support for Result and errors
 pub trait OptionExtension<T>
 {
     fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>;

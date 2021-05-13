@@ -38,12 +38,35 @@ mod file;
 
 const MEMORY_THRESHOLD: u32 = 100000000;
 
+/// Opaque type intended to manipulate section data in the form of standard IO operations
 pub trait SectionData : Read + Write + Seek
 {
+    /// Loads this section into memory
+    /// 
+    /// # Returns
+    /// 
+    /// * a new [Vec](std::vec::Vec) of u8 binary data
+    /// * an [Error](crate::error::Error) if the section could not be loaded
     fn load_in_memory(&mut self) -> Result<Vec<u8>>;
-    fn size(&self) -> usize; //The computed size of the section
+
+    /// Gets the current size of this section
+    /// 
+    /// # Returns
+    /// 
+    /// * the size in bytes of the section so far
+    fn size(&self) -> usize;
 }
 
+/// Creates new section data by automatically choosing the right container given a section size
+/// 
+/// # Arguments
+/// 
+/// * `size` - optional size of section, if None the section will automatically reallocate to fit its content
+/// 
+/// # Returns
+/// 
+/// * a [Box](std::boxed::Box) of an opaque SectionData object
+/// * an [Error](std::io::Error) in case the temporary file could not be created
 pub fn new_section_data(size: Option<u32>) -> Result<Box<dyn SectionData>>
 {
     if let Some(s) = size

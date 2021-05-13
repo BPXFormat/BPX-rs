@@ -38,6 +38,7 @@ use crate::SectionHandle;
 use crate::Result;
 use crate::error::Error;
 
+/// Helper class to manage a BPX string section
 pub struct StringSection
 {
     handle: SectionHandle,
@@ -46,6 +47,15 @@ pub struct StringSection
 
 impl StringSection
 {
+    /// Create a new string section from a handle
+    /// 
+    /// # Arguments
+    /// 
+    /// * `hdl` - handle to the string section
+    /// 
+    /// # Returns
+    /// 
+    /// * a new StringSection
     pub fn new(hdl: SectionHandle) -> StringSection
     {
         return StringSection
@@ -55,6 +65,17 @@ impl StringSection
         };
     }
 
+    /// Reads a string from the section
+    /// 
+    /// # Arguments
+    /// 
+    /// * `interface` - the BPX IO interface
+    /// * `address` - the offset to the start of the string
+    /// 
+    /// # Returns
+    /// 
+    /// * the string read
+    /// * an [Error](crate::error::Error) if the string could not be read or the section is corrupted/truncated
     pub fn get(&mut self, interface: &mut dyn Interface, address: u32) -> Result<String>
     {
         if let Some(s) = self.cache.get(&address)
@@ -67,6 +88,17 @@ impl StringSection
         return Ok(s);
     }
 
+    /// Writes a new string into the section
+    /// 
+    /// # Arguments
+    /// 
+    /// * `interface` - the BPX IO interface
+    /// * `s` - the string to write
+    /// 
+    /// # Returns
+    /// 
+    /// * the offset to the start of the newly written string
+    /// * an [Error](crate::error::Error) if the string could not be written
     pub fn put(&mut self, interface: &mut dyn Interface, s: &str) -> Result<u32>
     {
         let data = interface.open_section(self.handle)?;
@@ -107,6 +139,16 @@ fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Resu
     return Ok(ptr);
 }
 
+/// Returns the file name as a UTF-8 string from a rust Path or panics if the path is not unicode compatible (BPX only supports UTF-8)
+/// 
+/// # Arguments
+/// 
+/// * `path` - the rust Path
+/// 
+/// # Returns
+/// 
+/// * the file name as UTF-8 string
+/// * an [Error](crate::error::Error) if the given Path does not have a file name
 pub fn get_name_from_path(path: &Path) -> Result<String>
 {
     match path.file_name()
@@ -122,7 +164,16 @@ pub fn get_name_from_path(path: &Path) -> Result<String>
     }
 }
 
-pub fn get_name_from_dir_entry(entry: &DirEntry) -> String //Rust wants reallocation and slow code then give it fuck at the end
+/// Returns the file name as a UTF-8 string from a rust DirEntry or panics if the path is not unicode compatible (BPX only supports UTF-8)
+/// 
+/// # Arguments
+/// 
+/// * `entry` - the rust DirEntry
+/// 
+/// # Returns
+/// 
+/// * the file name as UTF-8 string
+pub fn get_name_from_dir_entry(entry: &DirEntry) -> String
 {
     match entry.file_name().to_str()
     {
