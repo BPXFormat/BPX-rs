@@ -53,8 +53,8 @@ use crate::strings::StringSection;
 use crate::strings::get_name_from_dir_entry;
 use crate::strings::get_name_from_path;
 use crate::header::SectionHeader;
+use crate::bpxp::DATA_SECTION_TYPE;
 
-const DATA_SECTION_TYPE: u8 = 0x1;
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
 const MAX_DATA_SECTION_SIZE: usize = 200000000 - MIN_DATA_REMAINING_SIZE; //200MB
@@ -87,7 +87,7 @@ impl PackageBuilder
         return self;
     }
 
-    pub fn with_type(mut self, type_code: [u8; 2]) -> Self
+    pub fn with_variant(mut self, type_code: [u8; 2]) -> Self
     {
         self.type_code = type_code;
         return self;

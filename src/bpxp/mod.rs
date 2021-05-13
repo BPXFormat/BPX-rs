@@ -29,6 +29,9 @@
 pub mod encoder;
 pub mod decoder;
 
+pub const DATA_SECTION_TYPE: u8 = 0x1;
+
+#[derive(Clone, Copy)]
 pub enum Architecture
 {
     X86_64,
@@ -38,6 +41,7 @@ pub enum Architecture
     Any
 }
 
+#[derive(Clone, Copy)]
 pub enum Platform
 {
     Linux,
