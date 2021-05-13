@@ -28,10 +28,8 @@
 
 use std::vec::Vec;
 
-//mod extension;
 mod garraylen;
 mod compression;
-//pub mod bpx;
 pub mod bpxp;
 pub mod section;
 pub mod strings;
