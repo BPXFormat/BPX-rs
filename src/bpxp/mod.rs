@@ -26,37 +26,27 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::num::Wrapping;
+pub mod encoder;
+pub mod decoder;
 
-pub fn hash(s: &str) -> u64
+pub const DATA_SECTION_TYPE: u8 = 0x1;
+
+#[derive(Clone, Copy)]
+pub enum Architecture
 {
-    let mut val: Wrapping<u64> = Wrapping(5381);
-
-    for v in s.as_bytes()
-    {
-        val = ((val << 5) + val) + Wrapping(*v as u64);
-    }
-    return val.0;
+    X86_64,
+    Aarch64,
+    X86,
+    Armv7hl,
+    Any
 }
 
-pub trait OptionExtension<T>
+#[derive(Clone, Copy)]
+pub enum Platform
 {
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>;
-}
-
-impl <T> OptionExtension<T> for Option<T>
-{
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>
-    {
-        if let None = *self {
-            *self = Some(f()?);
-        }
-    
-        match self {
-            Some(v) => Ok(v),
-            // SAFETY: a `None` variant for `self` would have been replaced by a `Some`
-            // variant in the code above.
-            None => unsafe { std::hint::unreachable_unchecked() },
-        }    
-    }
+    Linux,
+    Mac,
+    Windows,
+    Android,
+    Any
 }

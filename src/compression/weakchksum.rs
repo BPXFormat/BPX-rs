@@ -28,35 +28,36 @@
 
 use std::num::Wrapping;
 
-pub fn hash(s: &str) -> u64
-{
-    let mut val: Wrapping<u64> = Wrapping(5381);
+use crate::compression::Checksum;
 
-    for v in s.as_bytes()
-    {
-        val = ((val << 5) + val) + Wrapping(*v as u64);
-    }
-    return val.0;
+pub struct WeakChecksum
+{
+    current: Wrapping<u32>
 }
 
-pub trait OptionExtension<T>
+impl Checksum for WeakChecksum
 {
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>;
-}
-
-impl <T> OptionExtension<T> for Option<T>
-{
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>
+    fn push(&mut self, data: &[u8])
     {
-        if let None = *self {
-            *self = Some(f()?);
+        for i in 0..data.len()
+        {
+            self.current += Wrapping(data[i] as u32);
         }
-    
-        match self {
-            Some(v) => Ok(v),
-            // SAFETY: a `None` variant for `self` would have been replaced by a `Some`
-            // variant in the code above.
-            None => unsafe { std::hint::unreachable_unchecked() },
-        }    
+    }
+
+    fn finish(self) -> u32
+    {
+        return self.current.0;
+    }
+}
+
+impl WeakChecksum
+{
+    pub fn new() -> Self
+    {
+        return WeakChecksum
+        {
+            current: Wrapping(0)
+        };
     }
 }

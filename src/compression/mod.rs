@@ -28,12 +28,13 @@
 
 use std::io::Read;
 use std::io::Write;
-use std::io::Result;
 
-mod easychksum;
+use crate::Result;
+
+mod weakchksum;
 mod xz;
 
-pub use easychksum::EasyChecksum;
+pub use weakchksum::WeakChecksum;
 pub use self::xz::XzCompressionMethod;
 
 pub trait Checksum

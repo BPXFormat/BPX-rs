@@ -26,38 +26,14 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::num::Wrapping;
+// The BPX Structured Data format (BPXSD)
 
-use crate::compression::Checksum;
+mod value;
+mod array;
+mod object;
+mod encoder;
+mod decoder;
 
-pub struct EasyChecksum
-{
-    current: Wrapping<u32>
-}
-
-impl Checksum for EasyChecksum
-{
-    fn push(&mut self, data: &[u8])
-    {
-        for i in 0..data.len()
-        {
-            self.current += Wrapping(data[i] as u32);
-        }
-    }
-
-    fn finish(self) -> u32
-    {
-        return self.current.0;
-    }
-}
-
-impl EasyChecksum
-{
-    pub fn new() -> Self
-    {
-        return EasyChecksum
-        {
-            current: Wrapping(0)
-        };
-    }
-}
+pub use value::Value;
+pub use object::Object;
+pub use array::Array;

@@ -27,16 +27,56 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::SeekFrom;
-use std::io::Result;
 use std::string::String;
-use std::io::Error;
-use std::io::ErrorKind;
-use super::section::Section;
-use std::boxed::Box;
 use std::path::Path;
 use std::fs::DirEntry;
+use std::collections::HashMap;
 
-pub fn get_string(ptr: u32, string_section: &mut Box<dyn Section>) -> Result<String>
+use crate::section::SectionData;
+use crate::Interface;
+use crate::SectionHandle;
+use crate::Result;
+use crate::error::Error;
+
+pub struct StringSection
+{
+    handle: SectionHandle,
+    cache: HashMap<u32, String>
+}
+
+impl StringSection
+{
+    pub fn new(hdl: SectionHandle) -> StringSection
+    {
+        return StringSection
+        {
+            handle: hdl,
+            cache: HashMap::new()
+        };
+    }
+
+    pub fn get(&mut self, interface: &mut dyn Interface, address: u32) -> Result<String>
+    {
+        if let Some(s) = self.cache.get(&address)
+        {
+            return Ok(s.clone());
+        }
+        let data = interface.open_section(self.handle)?;
+        let s = low_level_read_string(address, data)?;
+        self.cache.insert(address, s.clone());
+        return Ok(s);
+    }
+
+    pub fn put(&mut self, interface: &mut dyn Interface, s: &str) -> Result<u32>
+    {
+        let data = interface.open_section(self.handle)?;
+        let address = low_level_write_string(s, data)?;
+        self.cache.insert(address, String::from(s));
+        return Ok(address);
+    }
+}
+
+fn low_level_read_string(ptr: u32, string_section: &mut dyn SectionData) -> Result<String>
 {
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
@@ -49,17 +89,17 @@ pub fn get_string(ptr: u32, string_section: &mut Box<dyn Section>) -> Result<Str
         let res = string_section.read(&mut chr)?;
         if res != 1
         {
-            return Err(Error::new(ErrorKind::UnexpectedEof, "[BPX] Reached EOS before null byte, are you sure this BPX is not corrupted/truncated?"));
+            return Err(Error::Truncation("string secton read"));
         }
     }
     match String::from_utf8(curs)
     {
-        Err(e) => return Err(Error::new(ErrorKind::InvalidData, format!("[BPX] error loading utf8 string: {}", e))),
+        Err(_) => return Err(Error::Utf8("string section read")),
         Ok(v) => return Ok(v)
     }
 }
 
-pub fn write_string(s: &str, string_section: &mut Box<dyn Section>) -> Result<u32>
+fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Result<u32>
 {
     let ptr = string_section.size() as u32;
     string_section.write(s.as_bytes())?;
@@ -78,7 +118,7 @@ pub fn get_name_from_path(path: &Path) -> Result<String>
             // The reason BPXP cannot support non-unicode strings in paths is simply because this would be incompatible with unicode systems
             None => panic!("Non unicode paths operating systems cannot run BPXP")
         },
-        None => return Err(Error::new(ErrorKind::InvalidInput, "[BPX] incorrect path format")),
+        None => return Err(Error::from("incorrect path format")),
     }
 }
 

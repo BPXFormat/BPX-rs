@@ -26,37 +26,36 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::num::Wrapping;
+use std::io::Read;
+use std::io::Write;
+use std::io::Seek;
+use std::io::Result;
+use std::vec::Vec;
+use std::boxed::Box;
 
-pub fn hash(s: &str) -> u64
+mod memory;
+mod file;
+
+const MEMORY_THRESHOLD: u32 = 100000000;
+
+pub trait SectionData : Read + Write + Seek
 {
-    let mut val: Wrapping<u64> = Wrapping(5381);
-
-    for v in s.as_bytes()
-    {
-        val = ((val << 5) + val) + Wrapping(*v as u64);
-    }
-    return val.0;
+    fn load_in_memory(&mut self) -> Result<Vec<u8>>;
+    fn size(&self) -> usize; //The computed size of the section
 }
 
-pub trait OptionExtension<T>
+pub fn new_section_data(size: Option<u32>) -> Result<Box<dyn SectionData>>
 {
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>;
-}
-
-impl <T> OptionExtension<T> for Option<T>
-{
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>
+    if let Some(s) = size
     {
-        if let None = *self {
-            *self = Some(f()?);
+        if s > MEMORY_THRESHOLD
+        {
+            return Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)));
         }
-    
-        match self {
-            Some(v) => Ok(v),
-            // SAFETY: a `None` variant for `self` would have been replaced by a `Some`
-            // variant in the code above.
-            None => unsafe { std::hint::unreachable_unchecked() },
-        }    
+        else
+        {
+            return Ok(Box::new(memory::InMemorySection::new(vec![0; s as usize])));
+        }
     }
+    return Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)));
 }
