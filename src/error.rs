@@ -29,6 +29,7 @@
 use std::convert::From;
 use std::string::String;
 
+/// Represents a BPX error
 #[derive(Debug)]
 pub enum Error
 {
