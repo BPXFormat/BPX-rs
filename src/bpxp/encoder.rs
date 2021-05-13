@@ -69,6 +69,17 @@ pub struct PackageBuilder
 
 impl PackageBuilder
 {
+    pub fn new() -> PackageBuilder
+    {
+        return PackageBuilder
+        {
+            architecture: Architecture::Any,
+            platform: Platform::Any,
+            metadata: None,
+            type_code: [0x50, 0x48]
+        }
+    }
+
     pub fn with_architecture(mut self, arch: Architecture) -> Self
     {
         self.architecture = arch;
