@@ -49,9 +49,11 @@ use crate::error::Error;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
+/// Represents the IO backend for a BPX decoder
 pub trait IoBackend : io::Seek + io::Read {}
 impl <T: io::Seek + io::Read> IoBackend for T {}
 
+/// The BPX decoder
 pub struct Decoder<'a, TBackend: IoBackend>
 {
     main_header: MainHeader,
@@ -87,6 +89,16 @@ impl <'a, TBackend: IoBackend> Decoder<'a, TBackend>
         return Ok(());
     }
 
+    /// Creates a new BPX decoder
+    /// 
+    /// # Arguments
+    /// 
+    /// * `file` - a reference to an [IoBackend](self::IoBackend) to use for reading the data
+    /// 
+    /// # Returns
+    /// 
+    /// * a new BPX decoder
+    /// * an [Error](crate::error::Error) if some headers could not be read or if the header data is corrupted
     pub fn new(file: &'a mut TBackend) -> Result<Decoder<'a, TBackend>>
     {
         let (checksum, header) = MainHeader::read(file)?;

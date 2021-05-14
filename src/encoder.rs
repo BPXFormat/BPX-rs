@@ -68,7 +68,7 @@ pub struct Encoder<'a, TBackend: IoBackend>
 
 impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
 {
-    /// Create a new BPX encoder
+    /// Creates a new BPX encoder
     /// 
     /// # Arguments
     /// 
