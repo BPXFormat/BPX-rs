@@ -53,9 +53,11 @@ use crate::error::Error;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
+/// Represents the IO backend for a BPX encoder
 pub trait IoBackend : io::Write {}
 impl <T: io::Write> IoBackend for T {}
 
+/// The BPX encoder
 pub struct Encoder<'a, TBackend: IoBackend>
 {
     main_header: MainHeader,
@@ -66,6 +68,15 @@ pub struct Encoder<'a, TBackend: IoBackend>
 
 impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
 {
+    /// Create a new BPX encoder
+    /// 
+    /// # Arguments
+    /// 
+    /// * `file` - a reference to an [IoBackend](self::IoBackend) to use for writing the data
+    /// 
+    /// # Returns
+    /// 
+    /// * a new BPX encoder
     pub fn new(file: &'a mut TBackend) -> Result<Encoder<'a, TBackend>>
     {
         return Ok(Encoder
@@ -77,12 +88,26 @@ impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
         });
     }
 
+    /// Sets the BPX Main Header
+    /// 
+    /// # Arguments
+    /// 
+    /// * `main_header` - the new [MainHeader](crate::header::MainHeader)
     pub fn set_main_header(&mut self, main_header: MainHeader)
     {
         self.main_header = main_header;
     }
 
-    //Adds a new section; returns a reference to the new section for use in edit_section
+    /// Creates a new section in the BPX
+    /// 
+    /// # Arguments
+    /// 
+    /// * `header` - the [SectionHeader](crate::header::SectionHeader) of the new section
+    /// 
+    /// # Returns
+    /// 
+    /// * a [SectionHandle](crate::SectionHandle) to the newly created section
+    /// * an [Error](crate::error::Error) if the section could not be created
     pub fn create_section(&mut self, header: SectionHeader) -> Result<SectionHandle>
     {
         self.main_header.section_num += 1;
@@ -151,6 +176,12 @@ impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
         return Ok(());
     }
 
+    /// Writes all sections to the underlying IO backend
+    /// 
+    /// # Returns
+    /// 
+    /// * Nothing if the operation succeeded
+    /// * an [Error](crate::error::Error) if the data is too large or if the data could not be written
     pub fn save(&mut self) -> Result<()>
     {
         let (mut main_data, chksum_sht, all_sections_size) = self.write_sections()?;
