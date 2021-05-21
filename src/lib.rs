@@ -41,10 +41,24 @@ pub mod header;
 pub mod builder;
 pub mod error;
 
+/// Represents a pointer to a section
+///
+/// *Allows indirect access to a given section instead of sharing mutable references in user code*
 pub type SectionHandle = usize;
 
+/// The interface implemented by both the BPX encoder and decoder
 pub trait Interface
 {
+    /// Searches for the first section of a given type
+    ///
+    /// # Arguments
+    ///
+    /// * `btype` - section type byte
+    ///
+    /// # Returns
+    ///
+    /// * None if no section could be found
+    /// * a handle to the section
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>;
     fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>;
     fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>;
