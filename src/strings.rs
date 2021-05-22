@@ -26,6 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! A set of helpers to manipulate BPX strings sections
+
 use std::io::SeekFrom;
 use std::string::String;
 use std::path::Path;

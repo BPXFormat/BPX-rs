@@ -26,6 +26,10 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! Contains various utilities to be used by other modules
+//!
+//! *this module is not intended for direct use*
+
 use std::num::Wrapping;
 
 /// Hash text using BPX defined hash function for strings

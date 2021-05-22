@@ -26,6 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! Declarations for basic constants and low-level file headers
+
 use byteorder::LittleEndian;
 use byteorder::ByteOrder;
 use std::io;
