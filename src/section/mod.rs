@@ -26,6 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! Utilities to manipulate the content of sections
+
 use std::io::Read;
 use std::io::Write;
 use std::io::Seek;
@@ -58,6 +60,8 @@ pub trait SectionData : Read + Write + Seek
 }
 
 /// Creates new section data by automatically choosing the right container given a section size
+///
+/// *this function is not intended for direct use*
 /// 
 /// # Arguments
 /// 
