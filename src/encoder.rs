@@ -177,11 +177,13 @@ impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
     }
 
     /// Writes all sections to the underlying IO backend
+    ///
+    /// *this functions prints some information to standard output as a way to debug data compression issues*
     /// 
     /// # Returns
     /// 
     /// * Nothing if the operation succeeded
-    /// * an [Error](crate::error::Error) if the data is too large or if the data could not be written
+    /// * an [Error](crate::error::Error) if the data could not be written
     pub fn save(&mut self) -> Result<()>
     {
         let (mut main_data, chksum_sht, all_sections_size) = self.write_sections()?;
