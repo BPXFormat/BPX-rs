@@ -60,11 +60,65 @@ pub trait Interface
     /// * None if no section could be found
     /// * a handle to the section
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>;
+
+    /// Searches for all sections of a given type
+    ///
+    /// # Arguments
+    ///
+    /// * `btype` - section type byte
+    ///
+    /// # Returns
+    ///
+    /// * a list of handles from all sections matching the given type
     fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>;
+
+    /// Locates a section by its index in the file
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - the section index to search for
+    ///
+    /// # Returns
+    ///
+    /// * None if the section does not exist
+    /// * a handle to the section
     fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>;
+
+    /// Gets the BPX section header
+    ///
+    /// *panics if the given section handle is invalid*
+    ///
+    /// # Arguments
+    ///
+    /// * `handle` - a handle to the section
+    ///
+    /// # Returns
+    ///
+    /// * read-only reference to the BPX section header
     fn get_section_header(&self, handle: SectionHandle) -> &header::SectionHeader;
+
+    /// Opens a section for read and/or write
+    ///
+    /// *panics if the given section handle is invalid*
+    ///
+    /// # Arguments
+    ///
+    /// * `handle` - a handle to the section
+    ///
+    /// # Returns
+    ///
+    /// * reference to the section data
     fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn section::SectionData>;
+
+    /// Gets the BPX main header
+    ///
+    /// # Returns
+    ///
+    /// * read-only reference to the BPX main header
     fn get_main_header(&self) -> &header::MainHeader;
 }
 
+/// Represents a result from this library
+///
+/// *this acts as a shortcut to [Result](std::result::Result)<T, [Error](error::Error)>*
 pub type Result<T> = std::result::Result<T, error::Error>;
