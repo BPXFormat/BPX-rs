@@ -36,28 +36,63 @@ use crate::sd::Object;
 use crate::error::Error;
 use crate::Result;
 
+/// Represents a BPXSD value
 #[derive(PartialEq, Clone)]
 pub enum Value
 {
+    /// NULL (0x0)
     Null,
+
+    /// bool (0x1)
     Bool(bool),
+
+    /// u8 (0x2)
     Uint8(u8),
+
+    /// u16 (0x3)
     Uint16(u16),
+
+    /// u32 (0x4)
     Uint32(u32),
+
+    /// u64 (0x5)
     Uint64(u64),
+
+    /// i8 (0x6)
     Int8(i8),
+
+    /// i16 (0x7)
     Int16(i16),
+
+    /// i32 (0x8)
     Int32(i32),
+
+    /// i64 (0x9)
     Int64(i64),
+
+    /// f32 (0xA)
     Float(f32),
+
+    /// f64 (0xB)
     Double(f64),
+
+    /// [String](std::string::String) (0xC)
     String(String),
+
+    /// [Array](crate::sd::Array) (0xD)
     Array(Array),
+
+    /// [Object](crate::sd::Object) (0xE)
     Object(Object)
 }
 
 impl Value
 {
+    /// Gets the type name of this Value
+    /// 
+    /// # Returns
+    /// 
+    /// * a static string reference to the type name
     pub fn get_type_name(&self) -> &'static str
     {
         return match self

@@ -32,6 +32,7 @@ use std::ops::IndexMut;
 
 use crate::sd::Value;
 
+/// Represents a BPX Structured Data Array
 #[derive(PartialEq, Clone)]
 pub struct Array
 {
@@ -40,6 +41,11 @@ pub struct Array
 
 impl Array
 {
+    /// Creates a new array
+    /// 
+    /// # Returns
+    /// 
+    /// * a new BPXSD array
     pub fn new() -> Array
     {
         return Array
@@ -48,16 +54,31 @@ impl Array
         }
     }
 
+    /// Adds a value at the end of the array
+    /// 
+    /// # Arguments
+    /// 
+    /// * `v` - the [Value](crate::sd::Value) to add
     pub fn add(&mut self, v: Value)
     {
         self.data.push(v);
     }
 
+    /// Removes a value from the array
+    /// 
+    /// # Arguments
+    /// 
+    /// * `pos` - the position of the item in the array to remove
     pub fn remove_at(&mut self, pos: usize)
     {
         self.data.remove(pos);
     }
 
+    /// Removes a range of values from the array
+    /// 
+    /// # Arguments
+    /// 
+    /// * `item` - the [Value](crate::sd::Value) to remove
     pub fn remove(&mut self, item: Value)
     {
         for i in 0..self.data.len()
@@ -69,11 +90,26 @@ impl Array
         }
     }
 
+    /// Attempts to get an item at a given position
+    /// 
+    /// # Arguments
+    /// 
+    /// * `pos` - the position of the item
+    /// 
+    /// # Returns
+    /// 
+    /// * a reference to the [Value](crate::sd::Value) at the given position
+    /// * None if no value could be found at the given position
     pub fn get(&self, pos: usize) -> Option<&Value>
     {
         return self.data.get(pos);
     }
 
+    /// Gets the length of the array
+    /// 
+    /// # Returns
+    /// 
+    /// * the length of the array
     pub fn len(&self) -> usize
     {
         return self.data.len();

@@ -51,6 +51,7 @@ use crate::strings::StringSection;
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
+/// Represents a BPX Package decoder
 pub struct PackageDecoder
 {
     type_code: [u8; 2],
@@ -87,6 +88,16 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Pl
 
 impl PackageDecoder
 {
+    /// Creates a new PackageDecoder by reading from a BPX decoder
+    ///
+    /// # Arguments
+    ///
+    /// * `decoder` - the BPX [Decoder](crate::decoder::Decoder) backend to use
+    ///
+    /// # Returns
+    ///
+    /// * a new PackageDecoder if the file header was successfully parsed
+    /// * an [Error](crate::error::Error) in case of corruption or system error
     pub fn read<TBackend: IoBackend>(decoder: &mut Decoder<TBackend>) -> Result<PackageDecoder>
     {
         if decoder.get_main_header().btype != 'P' as u8
@@ -108,21 +119,46 @@ impl PackageDecoder
         });
     }
 
+    /// Gets the two bytes of BPXP variant
+    ///
+    /// # Returns
+    ///
+    /// * an array with 2 bytes
     pub fn get_variant(&self) -> [u8; 2]
     {
         return self.type_code;
     }
 
+    /// Gets the target CPU architecture for this BPXP
+    ///
+    /// # Returns
+    ///
+    /// * an [Architecture](crate::bpxp::Architecture) enum
     pub fn get_architecture(&self) -> Architecture
     {
         return self.architecture;
     }
 
+    /// Gets the target platform for this BPXP
+    ///
+    /// # Returns
+    ///
+    /// * a [Platform](crate::bpxp::Platform) enum
     pub fn get_platform(&self) -> Platform
     {
         return self.platform;
     }
 
+    /// Reads the metadata section of this BPXP if any
+    ///
+    /// # Arguments
+    ///
+    /// * `decoder` - the BPX [Decoder](crate::decoder::Decoder) backend to use
+    ///
+    /// # Returns
+    ///
+    /// * an [Option](std::option::Option) of the decoded BPXSD [Object](crate::sd::Object)
+    /// * an [Error](crate::error::Error) in case of corruption or system error
     pub fn read_metadata<TBackend: IoBackend>(&self, decoder: &mut Decoder<TBackend>) -> Result<Option<Object>>
     {
         if let Some(handle) = decoder.find_section_by_type(SECTION_TYPE_SD)
@@ -186,6 +222,19 @@ impl PackageDecoder
         return Ok(0);
     }
 
+    /// Unpacks this BPXP
+    ///
+    /// *this functions prints some information to standard output as a way to debug a broken or incorrectly packed BPXP*
+    ///
+    /// # Arguments
+    ///
+    /// * `decoder` - the BPX [Decoder](crate::decoder::Decoder) backend to use
+    /// * `target` - the target [Path](std::path::Path) to extract the content to
+    ///
+    /// # Returns
+    ///
+    /// * nothing if the operation succeeded
+    /// * an [Error](crate::error::Error) in case of corruption or system error
     pub fn unpack<TBackend: IoBackend>(&self, decoder: &mut Decoder<TBackend>, target: &Path) -> Result<()>
     {
         let mut strings = StringSection::new(self.strings);

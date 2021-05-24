@@ -59,6 +59,7 @@ const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
 const MAX_DATA_SECTION_SIZE: usize = 200000000 - MIN_DATA_REMAINING_SIZE; //200MB
 
+/// Utility to easily generate a [PackageEncoder](crate::bpxp::encoder::PackageEncoder)
 pub struct PackageBuilder
 {
     architecture: Architecture,
@@ -69,6 +70,11 @@ pub struct PackageBuilder
 
 impl PackageBuilder
 {
+    /// Creates a new BPX Package builder
+    ///
+    /// # Returns
+    ///
+    /// * the new BPX Package builder
     pub fn new() -> PackageBuilder
     {
         return PackageBuilder
@@ -80,30 +86,68 @@ impl PackageBuilder
         }
     }
 
+    /// Defines the CPU architecture that the package is targeting
+    ///
+    /// - *By default, no CPU architecture is targeted*
+    ///
+    /// # Arguments
+    ///
+    /// * `arch` - the new [Architecture](crate::bpxp::Architecture)
     pub fn with_architecture(mut self, arch: Architecture) -> Self
     {
         self.architecture = arch;
         return self;
     }
 
+    /// Defines the platform that the package is targeting
+    ///
+    /// - *By default, no platform is targeted*
+    ///
+    /// # Arguments
+    ///
+    /// * `platform` - the new [Platform](crate::bpxp::Platform)
     pub fn with_platform(mut self, platform: Platform) -> Self
     {
         self.platform = platform;
         return self;
     }
 
+    /// Defines the metadata for the package
+    ///
+    /// - *By default, no metadata object is set*
+    ///
+    /// # Arguments
+    ///
+    /// * `obj` - the new BPXSD [Object](crate::sd::Object) metadata
     pub fn with_metadata(mut self, obj: Object) -> Self
     {
         self.metadata = Some(obj);
         return self;
     }
 
+    /// Defines the variant of the package
+    ///
+    /// - *By default, the package variant is 'PK' to identify a package destined for FPKG C++ package manager*
+    ///
+    /// # Arguments
+    ///
+    /// * `type_code` - an array with 2 bytes
     pub fn with_variant(mut self, type_code: [u8; 2]) -> Self
     {
         self.type_code = type_code;
         return self;
     }
 
+    /// Builds the corresponding [PackageEncoder](crate::bpxp::encoder::PackageEncoder)
+    ///
+    /// # Arguments
+    ///
+    /// * `encoder` - the BPX [Encoder](crate::encoder::Encoder) backend to use
+    ///
+    /// # Returns
+    ///
+    /// * the new [PackageEncoder](crate::bpxp::encoder::PackageEncoder) if the operation succeeded
+    /// * an [Error](crate::error::Error) in case of system error
     pub fn build<'a, TBackend: IoBackend>(self, encoder: &mut Encoder<TBackend>) -> Result<PackageEncoder>
     {
         let mut type_ext: [u8; 16] = [0; 16];
@@ -153,6 +197,7 @@ impl PackageBuilder
     }
 }
 
+/// Represents a BPX Package encoder
 pub struct PackageEncoder
 {
     strings: SectionHandle
@@ -232,6 +277,20 @@ impl PackageEncoder
         return Ok(());
     }
 
+    /// Packs a file or folder in this BPXP with the given virtual name
+    ///
+    /// *this functions prints some information to standard output as a way to debug data compression issues*
+    ///
+    /// # Arguments
+    ///
+    /// * `encoder` - the BPX [Encoder](crate::encoder::Encoder) backend to use
+    /// * `source` - the source [Path](std::path::Path) to pack
+    /// * `vname` - the virtual name for the root source path
+    ///
+    /// # Returns
+    ///
+    /// * nothing if the operation succeeded
+    /// * an [Error](crate::error::Error) in case of system error
     pub fn pack_vname<TBackend: IoBackend>(&self, encoder: &mut Encoder<TBackend>, source: &Path, vname: &str) -> Result<()>
     {
         let mut strings = StringSection::new(self.strings);
@@ -247,7 +306,20 @@ impl PackageEncoder
             return self.pack_dir(encoder, source, String::from(vname), data_section, &mut strings);
         }
     }
-    
+
+    /// Packs a file or folder in this BPXP, automatically computing the virtual name from the source path file name
+    ///
+    /// *this functions prints some information to standard output as a way to debug data compression issues*
+    ///
+    /// # Arguments
+    ///
+    /// * `encoder` - the BPX [Encoder](crate::encoder::Encoder) backend to use
+    /// * `source` - the source [Path](std::path::Path) to pack
+    ///
+    /// # Returns
+    ///
+    /// * nothing if the operation succeeded
+    /// * an [Error](crate::error::Error) in case of system error
     pub fn pack<TBackend: IoBackend>(&self, encoder: &mut Encoder<TBackend>, source: &Path) -> Result<()>
     {
         let mut strings = StringSection::new(self.strings);

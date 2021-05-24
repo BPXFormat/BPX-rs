@@ -26,27 +26,76 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! An implementation of the BPX type P (Package) specification
+
 pub mod encoder;
 pub mod decoder;
 
+/// The standard type for a data section in a BPX Package (type P)
 pub const DATA_SECTION_TYPE: u8 = 0x1;
 
+/// Enum of all supported processor architectures by BPXP
 #[derive(Clone, Copy)]
 pub enum Architecture
 {
+    /// x86_64
+    ///
+    /// *x86 extension for 64 bits originally made by AMD*
+    ///
+    /// *This architecture is now the standard for all new desktops and laptops*
     X86_64,
+
+    /// aarch64
+    ///
+    /// *commonly known as ARM64 (64 bits)*
+    ///
+    /// *This architecture is usually found in newer smartphones and some embedded devices*
     Aarch64,
+
+    /// x86
+    ///
+    /// *original Intel architecture*
+    ///
+    /// *The predecessor of x86_64*
     X86,
+
+    /// armv7hl
+    ///
+    /// *commonly known as ARM (32 bits)*
+    ///
+    /// *This architecture is usually found in older smartphones and other embedded devices*
     Armv7hl,
+
+    /// The package does not have a target architecture and by extension can be loaded on any CPU
     Any
 }
 
+/// Enum of all supported platforms by BPXP
 #[derive(Clone, Copy)]
 pub enum Platform
 {
+    /// GNU / Linux
+    ///
+    /// *matches any distribution with or without desktop environment*
     Linux,
+
+    /// Mac OS
+    ///
+    /// *if this platform is set alongside x86_64 architecture, Mac OS X is assumed*
+    ///
+    /// *if this platform is set alongside aarch64 architecture, Apple Silicon with Mac OS 11 (Big Sur) is assumed*
     Mac,
+
+    /// Windows
+    ///
+    /// *refers to Windows 7 or later, compatibility with Windows XP and older is not guaranteed*
     Windows,
+
+    /// Android OS based on a Linux kernel
+    ///
+    /// *refers to Android API level 21+, compatibility with older versions is not guaranteed*
     Android,
+
+    /// The package does not have a target platform and by extension can be loaded on any platform
     Any
 }
