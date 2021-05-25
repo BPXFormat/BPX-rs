@@ -26,11 +26,26 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use libz_sys::{z_stream, deflateInit_, Z_DEFAULT_COMPRESSION, Z_VERSION_ERROR, Z_STREAM_ERROR, Z_MEM_ERROR, Z_OK, Z_FINISH, Z_NO_FLUSH, deflate};
+use libz_sys::z_stream;
+use libz_sys::deflateInit_;
+use libz_sys::Z_DEFAULT_COMPRESSION;
+use libz_sys::Z_VERSION_ERROR;
+use libz_sys::Z_STREAM_ERROR;
+use libz_sys::Z_MEM_ERROR;
+use libz_sys::Z_OK;
+use libz_sys::Z_FINISH;
+use libz_sys::Z_NO_FLUSH;
+use libz_sys::Z_DATA_ERROR;
+use libz_sys::Z_NEED_DICT;
+use libz_sys::deflate;
+use libz_sys::inflateInit_;
+use libz_sys::inflate;
+use std::io::Read;
+use std::io::Write;
+
 use crate::Result;
 use crate::error::Error;
-use crate::compression::{Checksum};
-use std::io::{Read, Write};
+use crate::compression::Checksum;
 
 const ENCODER_BUF_SIZE: usize = 8192;
 const DECODER_BUF_SIZE: usize = ENCODER_BUF_SIZE * 2;
@@ -50,9 +65,6 @@ fn new_encoder() -> Result<z_stream>
     unsafe
     {
         let mut stream: z_stream = zstream_zeroed();
-        //stream.zalloc = std::ptr::null() as _;
-        //stream.zfree = std::ptr::null() as _;
-        //stream.opaque = std::ptr::null() as _;
         let err = deflateInit_(&mut stream as _, Z_DEFAULT_COMPRESSION, "1.1.3".as_ptr() as _, std::mem::size_of::<z_stream>() as _);
         if err == Z_OK
         {
@@ -62,6 +74,26 @@ fn new_encoder() -> Result<z_stream>
         {
             Z_MEM_ERROR => return Err(Error::Deflate("Memory allocation failure")),
             Z_STREAM_ERROR=> return Err(Error::Deflate("Invalid compression level")),
+            Z_VERSION_ERROR => return Err(Error::Deflate("Version mismatch")),
+            _ => return Err(Error::Deflate("Unknown error, possibly a bug"))
+        }
+    }
+}
+
+fn new_decoder() -> Result<z_stream>
+{
+    unsafe
+    {
+        let mut stream: z_stream = zstream_zeroed();
+        let err = inflateInit_(&mut stream as _, "1.1.3".as_ptr() as _, std::mem::size_of::<z_stream>() as _);
+        if err == Z_OK
+        {
+            return Ok(stream);
+        }
+        match err
+        {
+            Z_MEM_ERROR => return Err(Error::Deflate("Memory allocation failure")),
+            Z_DATA_ERROR=> return Err(Error::Deflate("ZLIB data error")),
             Z_VERSION_ERROR => return Err(Error::Deflate("Version mismatch")),
             _ => return Err(Error::Deflate("Unknown error, possibly a bug"))
         }
@@ -125,6 +157,50 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(stream: &mut z_st
         }
     }
     return Ok(csize);
+}
+
+fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(stream: &mut z_stream, input: &mut TRead, output: &mut TWrite, deflated_size: usize, chksum: &mut TChecksum) -> Result<()>
+{
+    let mut inbuf: [u8; DECODER_BUF_SIZE] = [0; DECODER_BUF_SIZE];
+    let mut outbuf: [u8; DECODER_BUF_SIZE] = [0; DECODER_BUF_SIZE];
+    let mut remaining = deflated_size;
+
+    loop
+    {
+        let len = input.read(&mut inbuf)?;
+        remaining -= len;
+        if len == 0
+        {
+            break;
+        }
+        stream.avail_in = len as _;
+        stream.next_in = inbuf.as_mut_ptr();
+        loop
+        {
+            stream.avail_out = DECODER_BUF_SIZE as _;
+            stream.next_out = outbuf.as_mut_ptr();
+            unsafe
+            {
+                let err = inflate(stream, Z_NO_FLUSH);
+                match err
+                {
+                    Z_MEM_ERROR => return Err(Error::Deflate("Memory allocation failure")),
+                    Z_DATA_ERROR=> return Err(Error::Deflate("ZLIB data error")),
+                    Z_NEED_DICT=> return Err(Error::Deflate("ZLIB data error")),
+                    Z_VERSION_ERROR => return Err(Error::Deflate("Version mismatch")),
+                    _ => ()
+                }
+            }
+            let len = DECODER_BUF_SIZE - stream.avail_out as usize;
+            chksum.push(&outbuf[0..len]);
+            output.write(&outbuf[0..len])?;
+            if stream.avail_out == 0
+            {
+                break;
+            }
+        }
+    }
+    return Ok(());
 }
 
 pub struct ZlibCompressionMethod
