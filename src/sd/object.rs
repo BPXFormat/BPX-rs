@@ -166,7 +166,7 @@ impl Index<&str> for Object
 {
     type Output = Value;
 
-    fn index<'a>(&'a self, name: &str) -> &'a Value
+    fn index(&self, name: &str) -> &Value
     {
         return &self.props.index(&utils::hash(name));
     }
@@ -176,7 +176,7 @@ impl Index<u64> for Object
 {
     type Output = Value;
 
-    fn index<'a>(&'a self, hash: u64) -> &'a Value
+    fn index(&self, hash: u64) -> &Value
     {
         return &self.props.index(&hash);
     }
