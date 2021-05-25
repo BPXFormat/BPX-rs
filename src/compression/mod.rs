@@ -33,6 +33,7 @@ use crate::Result;
 
 mod weakchksum;
 mod xz;
+mod zlib;
 
 pub use weakchksum::WeakChecksum;
 pub use self::xz::XzCompressionMethod;
