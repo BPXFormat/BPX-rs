@@ -45,10 +45,10 @@ pub trait Checksum
 
 pub trait Inflater
 {
-    fn inflate<TRead: Read, TWrite: Write>(input: &mut TRead, output: &mut TWrite, deflated_size: usize, chksum: &mut dyn Checksum) -> Result<()>;
+    fn inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(input: &mut TRead, output: &mut TWrite, deflated_size: usize, chksum: &mut TChecksum) -> Result<()>;
 }
 
 pub trait Deflater
 {
-    fn deflate<TRead: Read, TWrite: Write>(input: &mut TRead, output: &mut TWrite, inflated_size: usize, chksum: &mut dyn Checksum) -> Result<usize>;
+    fn deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(input: &mut TRead, output: &mut TWrite, inflated_size: usize, chksum: &mut TChecksum) -> Result<usize>;
 }

@@ -122,7 +122,7 @@ pub struct XzCompressionMethod
 {
 }
 
-fn do_deflate<TRead: Read, TWrite: Write>(stream: &mut lzma_stream, input: &mut TRead, output: &mut TWrite, inflated_size: usize, chksum: &mut dyn Checksum) -> Result<usize>
+fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(stream: &mut lzma_stream, input: &mut TRead, output: &mut TWrite, inflated_size: usize, chksum: &mut TChecksum) -> Result<usize>
 {
     let mut action = LZMA_RUN;
     let mut inbuf: [u8; ENCODER_BUF_SIZE] = [0; ENCODER_BUF_SIZE];
@@ -177,7 +177,7 @@ fn do_deflate<TRead: Read, TWrite: Write>(stream: &mut lzma_stream, input: &mut 
     return Ok(csize);
 }
 
-fn do_inflate<TRead: Read, TWrite: Write>(stream: &mut lzma_stream, input: &mut TRead, output: &mut TWrite, deflated_size: usize, chksum: &mut dyn Checksum) -> Result<()>
+fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(stream: &mut lzma_stream, input: &mut TRead, output: &mut TWrite, deflated_size: usize, chksum: &mut TChecksum) -> Result<()>
 {
     let mut action = LZMA_RUN;
     let mut inbuf: [u8; ENCODER_BUF_SIZE] = [0; ENCODER_BUF_SIZE];
@@ -232,7 +232,7 @@ fn do_inflate<TRead: Read, TWrite: Write>(stream: &mut lzma_stream, input: &mut 
 
 impl Deflater for XzCompressionMethod
 {
-    fn deflate<TRead: Read, TWrite: Write>(input: &mut TRead, output: &mut TWrite, inflated_size: usize, chksum: &mut dyn Checksum) -> Result<usize>
+    fn deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(input: &mut TRead, output: &mut TWrite, inflated_size: usize, chksum: &mut TChecksum) -> Result<usize>
     {
         let mut stream = new_encoder()?;
         let res = do_deflate(&mut stream, input, output, inflated_size, chksum);
@@ -246,7 +246,7 @@ impl Deflater for XzCompressionMethod
 
 impl Inflater for XzCompressionMethod
 {
-    fn inflate<TRead: Read, TWrite: Write>(input: &mut TRead, output: &mut TWrite, deflated_size: usize, chksum: &mut dyn Checksum) -> Result<()>
+    fn inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(input: &mut TRead, output: &mut TWrite, deflated_size: usize, chksum: &mut TChecksum) -> Result<()>
     {
         let mut stream = new_decoder()?;
         let res = do_inflate(&mut stream, input, output, deflated_size, chksum);

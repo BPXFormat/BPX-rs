@@ -139,7 +139,7 @@ impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
             let flags = get_flags(&self.sections[i], self.sections_data[i].size() as u32);
             if flags & FLAG_COMPRESS_XZ != 0
             {
-                csize = write_section_compressed::<XzCompressionMethod, _>(self.sections_data[i].as_mut(), &mut f, &mut chksum)?;
+                csize = write_section_compressed::<XzCompressionMethod, _, _>(self.sections_data[i].as_mut(), &mut f, &mut chksum)?;
             }
             else if flags & FLAG_COMPRESS_ZLIB != 0
             {
@@ -293,7 +293,7 @@ fn create_section(header: &SectionHeader) -> Result<Box<dyn SectionData>>
     }
 }
 
-fn write_section_uncompressed<TWrite: Write>(section: &mut dyn SectionData, out: &mut TWrite, chksum: &mut dyn Checksum) -> Result<usize>
+fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(section: &mut dyn SectionData, out: &mut TWrite, chksum: &mut TChecksum) -> Result<usize>
 {
     let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
     let mut count: usize = 0;
@@ -308,7 +308,7 @@ fn write_section_uncompressed<TWrite: Write>(section: &mut dyn SectionData, out:
     return Ok(section.size());
 }
 
-fn write_section_compressed<TMethod: Deflater, TWrite: Write>(mut section: &mut dyn SectionData, out: &mut TWrite, chksum: &mut dyn Checksum) -> Result<usize>
+fn write_section_compressed<TMethod: Deflater, TWrite: Write, TChecksum: Checksum>(mut section: &mut dyn SectionData, out: &mut TWrite, chksum: &mut TChecksum) -> Result<usize>
 {
     let size = section.size();
     let csize = TMethod::deflate(&mut section, out, size, chksum)?;
