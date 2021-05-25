@@ -36,13 +36,10 @@ use std::io::{Read};
 // Because this z_stream struct is repr(C) rust must guarantee ABI compatibility with C.
 // That is must use pointers for function pointer. If it doesn't do this anymore, then this will cause UB in low-level C code.
 // Will obviously fail on platforms/architectures not using 0 to represent NULL pointers.
-fn zstream_zeroed() -> z_stream
+unsafe fn zstream_zeroed() -> z_stream
 {
     let arr: [u8; std::mem::size_of::<z_stream>()] = [0; std::mem::size_of::<z_stream>()];
-    unsafe
-    {
-        return std::mem::transmute(arr);
-    }
+    return std::mem::transmute(arr);
 }
 
 fn new_encoder() -> Result<z_stream>
