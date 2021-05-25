@@ -185,7 +185,7 @@ fn load_section<TBackend: IoBackend>(file: &mut TBackend, section: &SectionHeade
     data.seek(io::SeekFrom::Start(0))?;
     if section.flags & FLAG_COMPRESS_XZ != 0
     {
-        load_section_compressed::<XzCompressionMethod, _>(file, &section, &mut data, &mut chksum)?;
+        load_section_compressed::<XzCompressionMethod, _, _, _>(file, &section, &mut data, &mut chksum)?;
     }
     else if section.flags & FLAG_COMPRESS_ZLIB != 0
     {
@@ -204,7 +204,7 @@ fn load_section<TBackend: IoBackend>(file: &mut TBackend, section: &SectionHeade
     return Ok(data);
 }
 
-fn load_section_uncompressed<TBackend: io::Read + io::Seek>(bpx: &mut TBackend, header: &SectionHeader, output: &mut dyn Write, chksum: &mut dyn Checksum) -> io::Result<()>
+fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(bpx: &mut TBackend, header: &SectionHeader, output: &mut TWrite, chksum: &mut TChecksum) -> io::Result<()>
 {
     let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
     let mut count: usize = 0;
@@ -222,7 +222,7 @@ fn load_section_uncompressed<TBackend: io::Read + io::Seek>(bpx: &mut TBackend, 
     return Ok(());
 }
 
-fn load_section_compressed<TMethod: Inflater, TBackend: io::Read + io::Seek>(bpx: &mut TBackend, header: &SectionHeader, output: &mut dyn Write, chksum: &mut dyn Checksum) -> Result<()>
+fn load_section_compressed<TMethod: Inflater, TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(bpx: &mut TBackend, header: &SectionHeader, output: &mut TWrite, chksum: &mut TChecksum) -> Result<()>
 {
     bpx.seek(io::SeekFrom::Start(header.pointer))?;
     XzCompressionMethod::inflate(bpx, output, header.size as usize, chksum)?;

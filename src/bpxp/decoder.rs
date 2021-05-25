@@ -170,7 +170,7 @@ impl PackageDecoder
         return Ok(None);
     }
 
-    fn extract_file(&self, source: &mut dyn Read, dest: &PathBuf, size: u64) -> io::Result<Option<(u64, File)>>
+    fn extract_file<TRead: Read>(&self, source: &mut TRead, dest: &PathBuf, size: u64) -> io::Result<Option<(u64, File)>>
     {
         if let Some(v) = dest.parent()
         {
@@ -199,7 +199,7 @@ impl PackageDecoder
         return Ok(None);
     }
 
-    fn continue_file(&self, source: &mut dyn Read, out: &mut dyn Write, size: u64) -> io::Result<u64>
+    fn continue_file<TRead: Read, TWrite: Write>(&self, source: &mut TRead, out: &mut TWrite, size: u64) -> io::Result<u64>
     {
         let mut v: Vec<u8> = Vec::with_capacity(DATA_READ_BUFFER_SIZE);
         let mut count: u64 = 0;

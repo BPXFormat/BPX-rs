@@ -178,7 +178,7 @@ fn write_array(arr: &Array) -> Result<Vec<u8>>
     return Ok(v);
 }
 
-pub fn write_structured_data(dest: &mut dyn Write, obj: &Object) -> Result<()>
+pub fn write_structured_data<TWrite: Write>(dest: &mut TWrite, obj: &Object) -> Result<()>
 {
     let bytes = write_object(obj)?;
     dest.write(&bytes)?;

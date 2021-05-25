@@ -78,7 +78,7 @@ impl StringSection
     /// 
     /// * the string read
     /// * an [Error](crate::error::Error) if the string could not be read or the section is corrupted/truncated
-    pub fn get(&mut self, interface: &mut dyn Interface, address: u32) -> Result<String>
+    pub fn get<TInterface: Interface>(&mut self, interface: &mut TInterface, address: u32) -> Result<String>
     {
         if let Some(s) = self.cache.get(&address)
         {
@@ -101,7 +101,7 @@ impl StringSection
     /// 
     /// * the offset to the start of the newly written string
     /// * an [Error](crate::error::Error) if the string could not be written
-    pub fn put(&mut self, interface: &mut dyn Interface, s: &str) -> Result<u32>
+    pub fn put<TInterface: Interface>(&mut self, interface: &mut TInterface, s: &str) -> Result<u32>
     {
         let data = interface.open_section(self.handle)?;
         let address = low_level_write_string(s, data)?;
