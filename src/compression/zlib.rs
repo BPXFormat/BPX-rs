@@ -26,11 +26,14 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use libz_sys::{z_stream, deflateInit_, Z_DEFAULT_COMPRESSION, Z_VERSION_ERROR, Z_STREAM_ERROR, Z_MEM_ERROR, Z_OK};
+use libz_sys::{z_stream, deflateInit_, Z_DEFAULT_COMPRESSION, Z_VERSION_ERROR, Z_STREAM_ERROR, Z_MEM_ERROR, Z_OK, Z_FINISH, Z_NO_FLUSH, deflate};
 use crate::Result;
 use crate::error::Error;
 use crate::compression::{Checksum};
-use std::io::{Read};
+use std::io::{Read, Write};
+
+const ENCODER_BUF_SIZE: usize = 8192;
+const DECODER_BUF_SIZE: usize = ENCODER_BUF_SIZE * 2;
 
 // Needed to bypass rust new "feature" to prevent users from using std::mem::zeroed() on UB types.
 // Because this z_stream struct is repr(C) rust must guarantee ABI compatibility with C.
@@ -63,6 +66,65 @@ fn new_encoder() -> Result<z_stream>
             _ => return Err(Error::Deflate("Unknown error, possibly a bug"))
         }
     }
+}
+
+fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(stream: &mut z_stream, input: &mut TRead, output: &mut TWrite, inflated_size: usize, chksum: &mut TChecksum) -> Result<usize>
+{
+    let mut inbuf: [u8; ENCODER_BUF_SIZE] = [0; ENCODER_BUF_SIZE];
+    let mut outbuf: [u8; ENCODER_BUF_SIZE] = [0; ENCODER_BUF_SIZE];
+    let mut count: usize = 0;
+    let mut csize: usize = 0;
+
+    loop
+    {
+        let len = input.read(&mut inbuf)?;
+        count += len;
+        chksum.push(&inbuf[0..len]);
+        stream.avail_in = len as _;
+        let action =
+        {
+            if count == inflated_size
+            {
+                Z_FINISH
+            }
+            else
+            {
+                Z_NO_FLUSH
+            }
+        };
+        stream.next_in = inbuf.as_mut_ptr();
+        loop
+        {
+            stream.avail_out = ENCODER_BUF_SIZE as _;
+            stream.next_out = outbuf.as_mut_ptr();
+            unsafe
+            {
+                let err = deflate(stream, action);
+                if err != Z_OK
+                {
+                    match err
+                    {
+                        Z_MEM_ERROR => return Err(Error::Deflate("Memory allocation failure")),
+                        Z_STREAM_ERROR=> return Err(Error::Deflate("Invalid compression level")),
+                        Z_VERSION_ERROR => return Err(Error::Deflate("Version mismatch")),
+                        _ => return Err(Error::Deflate("Unknown error, possibly a bug"))
+                    }
+                }
+            }
+            let len = ENCODER_BUF_SIZE - stream.avail_out as usize;
+            output.write(&outbuf[0..len])?;
+            csize += len;
+            if stream.avail_out == 0
+            {
+                break;
+            }
+        }
+        if action == Z_FINISH
+        {
+            break;
+        }
+    }
+    return Ok(csize);
 }
 
 pub struct ZlibCompressionMethod
