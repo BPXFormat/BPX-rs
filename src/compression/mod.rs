@@ -35,7 +35,7 @@ mod weakchksum;
 mod xz;
 
 pub use weakchksum::WeakChecksum;
-pub use self::xz::XzCompressionMethod;
+pub use xz::XzCompressionMethod;
 
 pub trait Checksum
 {
