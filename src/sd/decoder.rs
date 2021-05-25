@@ -36,7 +36,7 @@ use crate::sd::Array;
 use crate::error::Error;
 use crate::Result;
 
-fn read_bool(stream: &mut dyn Read) -> Result<Value>
+fn read_bool<TRead: Read>(stream: &mut TRead) -> Result<Value>
 {
     let mut flag: [u8; 1] = [0; 1];
 
@@ -47,7 +47,7 @@ fn read_bool(stream: &mut dyn Read) -> Result<Value>
     return Ok(Value::Bool(flag[0] == 1));
 }
 
-fn read_uint8(stream: &mut dyn Read) -> Result<Value>
+fn read_uint8<TRead: Read>(stream: &mut TRead) -> Result<Value>
 {
     let mut val: [u8; 1] = [0; 1];
 
@@ -58,7 +58,7 @@ fn read_uint8(stream: &mut dyn Read) -> Result<Value>
     return Ok(Value::Uint8(val[0]));
 }
 
-fn read_int8(stream: &mut dyn Read) -> Result<Value>
+fn read_int8<TRead: Read>(stream: &mut TRead) -> Result<Value>
 {
     let mut val: [u8; 1] = [0; 1];
 
@@ -69,7 +69,7 @@ fn read_int8(stream: &mut dyn Read) -> Result<Value>
     return Ok(Value::Int8(val[0] as i8));
 }
 
-fn read_uint16(stream: &mut dyn Read) -> Result<Value>
+fn read_uint16<TRead: Read>(stream: &mut TRead) -> Result<Value>
 {
     let mut val: [u8; 2] = [0; 2];
 
@@ -80,7 +80,7 @@ fn read_uint16(stream: &mut dyn Read) -> Result<Value>
     return Ok(Value::Uint16(LittleEndian::read_u16(&val)));
 }
 
-fn read_int16(stream: &mut dyn Read) -> Result<Value>
+fn read_int16<TRead: Read>(stream: &mut TRead) -> Result<Value>
 {
     let mut val: [u8; 2] = [0; 2];
 
@@ -91,7 +91,7 @@ fn read_int16(stream: &mut dyn Read) -> Result<Value>
     return Ok(Value::Int16(LittleEndian::read_i16(&val)));
 }
 
-fn read_uint32(stream: &mut dyn Read) -> Result<Value>
+fn read_uint32<TRead: Read>(stream: &mut TRead) -> Result<Value>
 {
     let mut val: [u8; 4] = [0; 4];
 
@@ -102,7 +102,7 @@ fn read_uint32(stream: &mut dyn Read) -> Result<Value>
     return Ok(Value::Uint32(LittleEndian::read_u32(&val)));
 }
 
-fn read_int32(stream: &mut dyn Read) -> Result<Value>
+fn read_int32<TRead: Read>(stream: &mut TRead) -> Result<Value>
 {
     let mut val: [u8; 4] = [0; 4];
 
@@ -113,7 +113,7 @@ fn read_int32(stream: &mut dyn Read) -> Result<Value>
     return Ok(Value::Int32(LittleEndian::read_i32(&val)));
 }
 
-fn read_uint64(stream: &mut dyn Read) -> Result<Value>
+fn read_uint64<TRead: Read>(stream: &mut TRead) -> Result<Value>
 {
     let mut val: [u8; 8] = [0; 8];
 
@@ -124,7 +124,7 @@ fn read_uint64(stream: &mut dyn Read) -> Result<Value>
     return Ok(Value::Uint64(LittleEndian::read_u64(&val)));
 }
 
-fn read_int64(stream: &mut dyn Read) -> Result<Value>
+fn read_int64<TRead: Read>(stream: &mut TRead) -> Result<Value>
 {
     let mut val: [u8; 8] = [0; 8];
 
@@ -135,7 +135,7 @@ fn read_int64(stream: &mut dyn Read) -> Result<Value>
     return Ok(Value::Int64(LittleEndian::read_i64(&val)));
 }
 
-fn read_float(stream: &mut dyn Read) -> Result<Value>
+fn read_float<TRead: Read>(stream: &mut TRead) -> Result<Value>
 {
     let mut val: [u8; 4] = [0; 4];
 
@@ -146,7 +146,7 @@ fn read_float(stream: &mut dyn Read) -> Result<Value>
     return Ok(Value::Float(LittleEndian::read_f32(&val)));
 }
 
-fn read_double(stream: &mut dyn Read) -> Result<Value>
+fn read_double<TRead: Read>(stream: &mut TRead) -> Result<Value>
 {
     let mut val: [u8; 8] = [0; 8];
 
@@ -157,7 +157,7 @@ fn read_double(stream: &mut dyn Read) -> Result<Value>
     return Ok(Value::Double(LittleEndian::read_f64(&val)));
 }
 
-fn read_string(stream: &mut dyn Read) -> Result<Value>
+fn read_string<TRead: Read>(stream: &mut TRead) -> Result<Value>
 {
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
@@ -179,7 +179,7 @@ fn read_string(stream: &mut dyn Read) -> Result<Value>
     }
 }
 
-fn parse_object(stream: &mut dyn Read) -> Result<Object>
+fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object>
 {
     let mut obj = Object::new();
     let mut count =
@@ -211,7 +211,7 @@ fn parse_object(stream: &mut dyn Read) -> Result<Object>
     return Ok(obj);
 }
 
-fn parse_array(stream: &mut dyn Read) -> Result<Array>
+fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array>
 {
     let mut arr = Array::new();
     let mut count =
@@ -241,7 +241,7 @@ fn parse_array(stream: &mut dyn Read) -> Result<Array>
     return Ok(arr);
 }
 
-fn get_value_parser(type_code: u8) -> Option<fn (stream: &mut dyn Read) -> Result<Value>>
+fn get_value_parser<TRead: Read>(type_code: u8) -> Option<fn (stream: &mut TRead) -> Result<Value>>
 {
     match type_code
     {
@@ -264,7 +264,7 @@ fn get_value_parser(type_code: u8) -> Option<fn (stream: &mut dyn Read) -> Resul
     }
 }
 
-pub fn read_structured_data(source: &mut dyn Read) -> Result<Object>
+pub fn read_structured_data<TRead: Read>(source: &mut TRead) -> Result<Object>
 {
     return parse_object(source);
 }

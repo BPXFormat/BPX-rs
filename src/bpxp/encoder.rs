@@ -215,7 +215,7 @@ fn create_data_section_header() -> SectionHeader
 
 impl PackageEncoder
 {
-    fn write_file<TBackend: IoBackend>(&self, encoder: &mut Encoder<TBackend>, source: &mut dyn Read, data_id: SectionHandle) -> Result<bool>
+    fn write_file<TBackend: IoBackend, TRead: Read>(&self, encoder: &mut Encoder<TBackend>, source: &mut TRead, data_id: SectionHandle) -> Result<bool>
     {
         let data = encoder.open_section(data_id)?;
         let mut buf: [u8; DATA_WRITE_BUFFER_SIZE] = [0; DATA_WRITE_BUFFER_SIZE];

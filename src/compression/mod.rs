@@ -35,7 +35,7 @@ mod weakchksum;
 mod xz;
 
 pub use weakchksum::WeakChecksum;
-pub use self::xz::XzCompressionMethod;
+pub use xz::XzCompressionMethod;
 
 pub trait Checksum
 {
@@ -45,10 +45,10 @@ pub trait Checksum
 
 pub trait Inflater
 {
-    fn inflate(input: &mut dyn Read, output: &mut dyn Write, deflated_size: usize, chksum: &mut dyn Checksum) -> Result<()>;
+    fn inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(input: &mut TRead, output: &mut TWrite, deflated_size: usize, chksum: &mut TChecksum) -> Result<()>;
 }
 
 pub trait Deflater
 {
-    fn deflate(input: &mut dyn Read, output: &mut dyn Write, inflated_size: usize, chksum: &mut dyn Checksum) -> Result<usize>;
+    fn deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(input: &mut TRead, output: &mut TWrite, inflated_size: usize, chksum: &mut TChecksum) -> Result<usize>;
 }

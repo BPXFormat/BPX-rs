@@ -145,7 +145,7 @@ impl Object
     /// 
     /// * nothing if the operation succeeded
     /// * an [Error](crate::error::Error) if the data could not be written
-    pub fn write(&self, dest: &mut dyn std::io::Write) -> Result<()>
+    pub fn write<TWrite: std::io::Write>(&self, dest: &mut TWrite) -> Result<()>
     {
         return super::encoder::write_structured_data(dest, self);
     }
@@ -156,7 +156,7 @@ impl Object
     /// 
     /// * the new BPXSD object if the operation succeeded
     /// * an [Error](crate::error::Error) if the data could not be read or the data was corrupt/truncated
-    pub fn read(source: &mut dyn std::io::Read) -> Result<Object>
+    pub fn read<TRead: std::io::Read>(source: &mut TRead) -> Result<Object>
     {
         return super::decoder::read_structured_data(source);
     }
@@ -166,7 +166,7 @@ impl Index<&str> for Object
 {
     type Output = Value;
 
-    fn index<'a>(&'a self, name: &str) -> &'a Value
+    fn index(&self, name: &str) -> &Value
     {
         return &self.props.index(&utils::hash(name));
     }
@@ -176,7 +176,7 @@ impl Index<u64> for Object
 {
     type Output = Value;
 
-    fn index<'a>(&'a self, hash: u64) -> &'a Value
+    fn index(&self, hash: u64) -> &Value
     {
         return &self.props.index(&hash);
     }
