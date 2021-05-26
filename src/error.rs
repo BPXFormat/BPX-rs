@@ -28,83 +28,82 @@
 
 //! Error declarations
 
-use std::convert::From;
-use std::string::String;
+use std::{convert::From, string::String};
 
 /// Represents a BPX error
 #[derive(Debug)]
 pub enum Error
 {
     /// Describes a checksum error
-    /// 
+    ///
     /// #### Arguments
     /// * expected checksum value
     /// * actual checksum value
     Checksum(u32, u32),
 
     /// Describes an io error
-    /// 
+    ///
     /// #### Arguments
     /// * the error that occured
     Io(std::io::Error),
 
     /// Describes a type conversion error (Structured Data)
-    /// 
+    ///
     /// #### Arguments
     /// * expected type name
     /// * actual type name
     TypeError(&'static str, &'static str),
 
     /// Describes too many props or values attempted to be written as part of an Object or Array (Structured Data) (ie exceeds 255)
-    /// 
+    ///
     /// #### Arguments
     /// * actual count of props
     PropCountExceeded(usize),
 
     /// Describes a data truncation error, this means a section or the file itself has been truncated
-    /// 
+    ///
     /// #### Arguments
     /// * last operation name before failure
     Truncation(&'static str),
 
     /// Describes a data truncation error, this means an impossible byte or sequence of bytes has been found
-    /// 
+    ///
     /// #### Arguments
     /// * message
     Corruption(String),
 
     /// Describes an utf8 decoding/encoding error
-    /// 
+    ///
     /// #### Arguments
     /// * last operation name before failure
     Utf8(&'static str),
 
     /// Describes an operation or flag that is currently unsupported
-    /// 
+    ///
     /// #### Arguments
     /// * message
     Unsupported(String),
 
     /// Describes a section that is too large to be written (ie exceeds 2 pow 32 / 4Gb)
-    /// 
+    ///
     /// #### Arguments
     /// * actual size of section
     Capacity(usize),
 
     /// Describes a compression error
-    /// 
+    ///
     /// #### Arguments
     /// * error description string
     Deflate(&'static str),
 
     /// Describes a decompression error
-    /// 
+    ///
     /// #### Arguments
     /// * error description string
     Inflate(&'static str),
 
     /// Describes a generic unknown error
-    /// 
+    ///
     /// #### Arguments
     /// * error message
     Other(String)

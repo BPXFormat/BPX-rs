@@ -28,32 +28,26 @@
 
 //! The BPX decoder
 
-use std::io;
-use std::io::Write;
+use std::{io, io::Write};
 
-use crate::header::MainHeader;
-use crate::header::SectionHeader;
-use crate::header::FLAG_COMPRESS_ZLIB;
-use crate::header::FLAG_COMPRESS_XZ;
-use crate::header::FLAG_CHECK_CRC32;
-use crate::header::FLAG_CHECK_WEAK;
-use crate::section::SectionData;
-use crate::section::new_section_data;
-use crate::compression::XzCompressionMethod;
-use crate::compression::Checksum;
-use crate::compression::WeakChecksum;
-use crate::compression::Inflater;
-use crate::Interface;
-use crate::SectionHandle;
-use crate::utils::OptionExtension;
-use crate::Result;
-use crate::error::Error;
+use crate::{
+    compression::{Checksum, Inflater, WeakChecksum, XzCompressionMethod},
+    error::Error,
+    header::{MainHeader, SectionHeader, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB},
+    section::{new_section_data, SectionData},
+    utils::OptionExtension,
+    Interface,
+    Result,
+    SectionHandle
+};
 
 const READ_BLOCK_SIZE: usize = 8192;
 
 /// Represents the IO backend for a BPX decoder
-pub trait IoBackend : io::Seek + io::Read {}
-impl <T: io::Seek + io::Read> IoBackend for T {}
+pub trait IoBackend: io::Seek + io::Read
+{
+}
+impl<T: io::Seek + io::Read> IoBackend for T {}
 
 /// The BPX decoder
 pub struct Decoder<'a, TBackend: IoBackend>
@@ -64,49 +58,44 @@ pub struct Decoder<'a, TBackend: IoBackend>
     file: &'a mut TBackend
 }
 
-impl <'a, TBackend: IoBackend> Decoder<'a, TBackend>
+impl<'a, TBackend: IoBackend> Decoder<'a, TBackend>
 {
     fn read_section_header_table(&mut self, checksum: u32) -> Result<()>
     {
         let mut final_checksum = checksum;
 
-        for _ in 0..self.main_header.section_num
-        {
+        for _ in 0..self.main_header.section_num {
             let (checksum, header) = SectionHeader::read(&mut self.file)?;
-            if header.flags & FLAG_COMPRESS_ZLIB == FLAG_COMPRESS_ZLIB
-            {
+            if header.flags & FLAG_COMPRESS_ZLIB == FLAG_COMPRESS_ZLIB {
                 return Err(Error::Unsupported(String::from("FLAG_COMPRESS_ZLIB")));
             }
-            if header.flags & FLAG_CHECK_CRC32 == FLAG_CHECK_CRC32
-            {
+            if header.flags & FLAG_CHECK_CRC32 == FLAG_CHECK_CRC32 {
                 return Err(Error::Unsupported(String::from("FLAG_CHECK_CRC32")));
             }
             final_checksum += checksum;
             self.sections.push(header);
         }
-        if final_checksum != self.main_header.chksum
-        {
+        if final_checksum != self.main_header.chksum {
             return Err(Error::Checksum(final_checksum, self.main_header.chksum));
         }
         return Ok(());
     }
 
     /// Creates a new BPX decoder
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `file` - a reference to an [IoBackend](self::IoBackend) to use for reading the data
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * a new BPX decoder
     /// * an [Error](crate::error::Error) if some headers could not be read or if the header data is corrupted
     pub fn new(file: &'a mut TBackend) -> Result<Decoder<'a, TBackend>>
     {
         let (checksum, header) = MainHeader::read(file)?;
         let num = header.section_num;
-        let mut decoder = Decoder
-        {
+        let mut decoder = Decoder {
             file: file,
             main_header: header,
             sections: Vec::with_capacity(num as usize),
@@ -117,14 +106,12 @@ impl <'a, TBackend: IoBackend> Decoder<'a, TBackend>
     }
 }
 
-impl <'a, TBackend: IoBackend> Interface for Decoder<'a, TBackend>
+impl<'a, TBackend: IoBackend> Interface for Decoder<'a, TBackend>
 {
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {
-        for i in 0..self.sections.len()
-        {
-            if self.sections[i].btype == btype
-            {
+        for i in 0..self.sections.len() {
+            if self.sections[i].btype == btype {
                 return Some(i);
             }
         }
@@ -135,10 +122,8 @@ impl <'a, TBackend: IoBackend> Interface for Decoder<'a, TBackend>
     {
         let mut v = Vec::new();
 
-        for i in 0..self.sections.len()
-        {
-            if self.sections[i].btype == btype
-            {
+        for i in 0..self.sections.len() {
+            if self.sections[i].btype == btype {
                 v.push(i);
             }
         }
@@ -147,8 +132,7 @@ impl <'a, TBackend: IoBackend> Interface for Decoder<'a, TBackend>
 
     fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>
     {
-        if let Some(_) = self.sections.get(index as usize)
-        {
+        if let Some(_) = self.sections.get(index as usize) {
             return Some(index as SectionHandle);
         }
         return None;
@@ -176,43 +160,40 @@ impl <'a, TBackend: IoBackend> Interface for Decoder<'a, TBackend>
 fn load_section<TBackend: IoBackend>(file: &mut TBackend, section: &SectionHeader) -> Result<Box<dyn SectionData>>
 {
     let mut chksum = WeakChecksum::new();
-    if section.flags & FLAG_CHECK_CRC32 != 0
-    {
+    if section.flags & FLAG_CHECK_CRC32 != 0 {
         //TODO: Implement CRC checksum
         return Err(Error::Unsupported(String::from("FLAG_CHECK_CRC32")));
     }
     let mut data = new_section_data(Some(section.size))?;
     data.seek(io::SeekFrom::Start(0))?;
-    if section.flags & FLAG_COMPRESS_XZ != 0
-    {
+    if section.flags & FLAG_COMPRESS_XZ != 0 {
         load_section_compressed::<XzCompressionMethod, _, _, _>(file, &section, &mut data, &mut chksum)?;
-    }
-    else if section.flags & FLAG_COMPRESS_ZLIB != 0
-    {
+    } else if section.flags & FLAG_COMPRESS_ZLIB != 0 {
         //TODO: Implement Zlib compression
         return Err(Error::Unsupported(String::from("FLAG_COMPRESS_ZLIB")));
-    }
-    else
-    {
+    } else {
         load_section_uncompressed(file, &section, &mut data, &mut chksum)?;
     }
     let v = chksum.finish();
-    if (section.flags & FLAG_CHECK_CRC32 != 0 || section.flags & FLAG_CHECK_WEAK != 0) && v != section.chksum
-    {
+    if (section.flags & FLAG_CHECK_CRC32 != 0 || section.flags & FLAG_CHECK_WEAK != 0) && v != section.chksum {
         return Err(Error::Checksum(v, section.chksum));
     }
     return Ok(data);
 }
 
-fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(bpx: &mut TBackend, header: &SectionHeader, output: &mut TWrite, chksum: &mut TChecksum) -> io::Result<()>
+fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
+    bpx: &mut TBackend,
+    header: &SectionHeader,
+    output: &mut TWrite,
+    chksum: &mut TChecksum
+) -> io::Result<()>
 {
     let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
     let mut count: usize = 0;
     let mut remaining: usize = header.size as usize;
 
     bpx.seek(io::SeekFrom::Start(header.pointer))?;
-    while count < header.size as usize
-    {
+    while count < header.size as usize {
         let res = bpx.read(&mut idata[0..std::cmp::min(READ_BLOCK_SIZE, remaining)])?;
         output.write(&idata[0..res])?;
         chksum.push(&idata[0..res]);
@@ -222,7 +203,12 @@ fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChec
     return Ok(());
 }
 
-fn load_section_compressed<TMethod: Inflater, TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(bpx: &mut TBackend, header: &SectionHeader, output: &mut TWrite, chksum: &mut TChecksum) -> Result<()>
+fn load_section_compressed<TMethod: Inflater, TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
+    bpx: &mut TBackend,
+    header: &SectionHeader,
+    output: &mut TWrite,
+    chksum: &mut TChecksum
+) -> Result<()>
 {
     bpx.seek(io::SeekFrom::Start(header.pointer))?;
     XzCompressionMethod::inflate(bpx, output, header.size as usize, chksum)?;

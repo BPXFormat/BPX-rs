@@ -30,18 +30,18 @@
 
 use std::vec::Vec;
 
-mod garraylen;
-mod compression;
 pub mod bpxp;
+pub mod builder;
+mod compression;
+pub mod decoder;
+pub mod encoder;
+pub mod error;
+mod garraylen;
+pub mod header;
+pub mod sd;
 pub mod section;
 pub mod strings;
-pub mod sd;
 pub mod utils;
-pub mod encoder;
-pub mod decoder;
-pub mod header;
-pub mod builder;
-pub mod error;
 
 /// Represents a pointer to a section
 ///

@@ -26,26 +26,26 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use libz_sys::z_stream;
-use libz_sys::deflateInit_;
-use libz_sys::Z_DEFAULT_COMPRESSION;
-use libz_sys::Z_VERSION_ERROR;
-use libz_sys::Z_STREAM_ERROR;
-use libz_sys::Z_MEM_ERROR;
-use libz_sys::Z_OK;
-use libz_sys::Z_FINISH;
-use libz_sys::Z_NO_FLUSH;
-use libz_sys::Z_DATA_ERROR;
-use libz_sys::Z_NEED_DICT;
-use libz_sys::deflate;
-use libz_sys::inflateInit_;
-use libz_sys::inflate;
-use std::io::Read;
-use std::io::Write;
+use std::io::{Read, Write};
 
-use crate::Result;
-use crate::error::Error;
-use crate::compression::Checksum;
+use libz_sys::{
+    deflate,
+    deflateInit_,
+    inflate,
+    inflateInit_,
+    z_stream,
+    Z_DATA_ERROR,
+    Z_DEFAULT_COMPRESSION,
+    Z_FINISH,
+    Z_MEM_ERROR,
+    Z_NEED_DICT,
+    Z_NO_FLUSH,
+    Z_OK,
+    Z_STREAM_ERROR,
+    Z_VERSION_ERROR
+};
+
+use crate::{compression::Checksum, error::Error, Result};
 
 const ENCODER_BUF_SIZE: usize = 8192;
 const DECODER_BUF_SIZE: usize = ENCODER_BUF_SIZE * 2;
@@ -62,18 +62,20 @@ unsafe fn zstream_zeroed() -> z_stream
 
 fn new_encoder() -> Result<z_stream>
 {
-    unsafe
-    {
+    unsafe {
         let mut stream: z_stream = zstream_zeroed();
-        let err = deflateInit_(&mut stream as _, Z_DEFAULT_COMPRESSION, "1.1.3".as_ptr() as _, std::mem::size_of::<z_stream>() as _);
-        if err == Z_OK
-        {
+        let err = deflateInit_(
+            &mut stream as _,
+            Z_DEFAULT_COMPRESSION,
+            "1.1.3".as_ptr() as _,
+            std::mem::size_of::<z_stream>() as _
+        );
+        if err == Z_OK {
             return Ok(stream);
         }
-        match err
-        {
+        match err {
             Z_MEM_ERROR => return Err(Error::Deflate("Memory allocation failure")),
-            Z_STREAM_ERROR=> return Err(Error::Deflate("Invalid compression level")),
+            Z_STREAM_ERROR => return Err(Error::Deflate("Invalid compression level")),
             Z_VERSION_ERROR => return Err(Error::Deflate("Version mismatch")),
             _ => return Err(Error::Deflate("Unknown error, possibly a bug"))
         }
@@ -82,62 +84,60 @@ fn new_encoder() -> Result<z_stream>
 
 fn new_decoder() -> Result<z_stream>
 {
-    unsafe
-    {
+    unsafe {
         let mut stream: z_stream = zstream_zeroed();
-        let err = inflateInit_(&mut stream as _, "1.1.3".as_ptr() as _, std::mem::size_of::<z_stream>() as _);
-        if err == Z_OK
-        {
+        let err = inflateInit_(
+            &mut stream as _,
+            "1.1.3".as_ptr() as _,
+            std::mem::size_of::<z_stream>() as _
+        );
+        if err == Z_OK {
             return Ok(stream);
         }
-        match err
-        {
+        match err {
             Z_MEM_ERROR => return Err(Error::Deflate("Memory allocation failure")),
-            Z_DATA_ERROR=> return Err(Error::Deflate("ZLIB data error")),
+            Z_DATA_ERROR => return Err(Error::Deflate("ZLIB data error")),
             Z_VERSION_ERROR => return Err(Error::Deflate("Version mismatch")),
             _ => return Err(Error::Deflate("Unknown error, possibly a bug"))
         }
     }
 }
 
-fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(stream: &mut z_stream, input: &mut TRead, output: &mut TWrite, inflated_size: usize, chksum: &mut TChecksum) -> Result<usize>
+fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
+    stream: &mut z_stream,
+    input: &mut TRead,
+    output: &mut TWrite,
+    inflated_size: usize,
+    chksum: &mut TChecksum
+) -> Result<usize>
 {
     let mut inbuf: [u8; ENCODER_BUF_SIZE] = [0; ENCODER_BUF_SIZE];
     let mut outbuf: [u8; ENCODER_BUF_SIZE] = [0; ENCODER_BUF_SIZE];
     let mut count: usize = 0;
     let mut csize: usize = 0;
 
-    loop
-    {
+    loop {
         let len = input.read(&mut inbuf)?;
         count += len;
         chksum.push(&inbuf[0..len]);
         stream.avail_in = len as _;
-        let action =
-        {
-            if count == inflated_size
-            {
+        let action = {
+            if count == inflated_size {
                 Z_FINISH
-            }
-            else
-            {
+            } else {
                 Z_NO_FLUSH
             }
         };
         stream.next_in = inbuf.as_mut_ptr();
-        loop
-        {
+        loop {
             stream.avail_out = ENCODER_BUF_SIZE as _;
             stream.next_out = outbuf.as_mut_ptr();
-            unsafe
-            {
+            unsafe {
                 let err = deflate(stream, action);
-                if err != Z_OK
-                {
-                    match err
-                    {
+                if err != Z_OK {
+                    match err {
                         Z_MEM_ERROR => return Err(Error::Deflate("Memory allocation failure")),
-                        Z_STREAM_ERROR=> return Err(Error::Deflate("Invalid compression level")),
+                        Z_STREAM_ERROR => return Err(Error::Deflate("Invalid compression level")),
                         Z_VERSION_ERROR => return Err(Error::Deflate("Version mismatch")),
                         _ => return Err(Error::Deflate("Unknown error, possibly a bug"))
                     }
@@ -146,47 +146,46 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(stream: &mut z_st
             let len = ENCODER_BUF_SIZE - stream.avail_out as usize;
             output.write(&outbuf[0..len])?;
             csize += len;
-            if stream.avail_out == 0
-            {
+            if stream.avail_out == 0 {
                 break;
             }
         }
-        if action == Z_FINISH
-        {
+        if action == Z_FINISH {
             break;
         }
     }
     return Ok(csize);
 }
 
-fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(stream: &mut z_stream, input: &mut TRead, output: &mut TWrite, deflated_size: usize, chksum: &mut TChecksum) -> Result<()>
+fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
+    stream: &mut z_stream,
+    input: &mut TRead,
+    output: &mut TWrite,
+    deflated_size: usize,
+    chksum: &mut TChecksum
+) -> Result<()>
 {
     let mut inbuf: [u8; DECODER_BUF_SIZE] = [0; DECODER_BUF_SIZE];
     let mut outbuf: [u8; DECODER_BUF_SIZE] = [0; DECODER_BUF_SIZE];
     let mut remaining = deflated_size;
 
-    loop
-    {
+    loop {
         let len = input.read(&mut inbuf)?;
         remaining -= len;
-        if len == 0
-        {
+        if len == 0 {
             break;
         }
         stream.avail_in = len as _;
         stream.next_in = inbuf.as_mut_ptr();
-        loop
-        {
+        loop {
             stream.avail_out = DECODER_BUF_SIZE as _;
             stream.next_out = outbuf.as_mut_ptr();
-            unsafe
-            {
+            unsafe {
                 let err = inflate(stream, Z_NO_FLUSH);
-                match err
-                {
+                match err {
                     Z_MEM_ERROR => return Err(Error::Deflate("Memory allocation failure")),
-                    Z_DATA_ERROR=> return Err(Error::Deflate("ZLIB data error")),
-                    Z_NEED_DICT=> return Err(Error::Deflate("ZLIB data error")),
+                    Z_DATA_ERROR => return Err(Error::Deflate("ZLIB data error")),
+                    Z_NEED_DICT => return Err(Error::Deflate("ZLIB data error")),
                     Z_VERSION_ERROR => return Err(Error::Deflate("Version mismatch")),
                     _ => ()
                 }
@@ -194,8 +193,7 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(stream: &mut z_st
             let len = DECODER_BUF_SIZE - stream.avail_out as usize;
             chksum.push(&outbuf[0..len]);
             output.write(&outbuf[0..len])?;
-            if stream.avail_out == 0
-            {
+            if stream.avail_out == 0 {
                 break;
             }
         }
@@ -203,6 +201,4 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(stream: &mut z_st
     return Ok(());
 }
 
-pub struct ZlibCompressionMethod
-{
-}
+pub struct ZlibCompressionMethod {}

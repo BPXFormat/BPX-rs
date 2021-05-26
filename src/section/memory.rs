@@ -26,11 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::Result;
-use std::io::Read;
-use std::io::Write;
-use std::io::Seek;
-use std::io::SeekFrom;
+use std::io::{Read, Result, Seek, SeekFrom, Write};
 
 use crate::section::SectionData;
 
@@ -45,12 +41,11 @@ impl InMemorySection
 {
     pub fn new(data: Vec<u8>) -> InMemorySection
     {
-        return InMemorySection
-        {
+        return InMemorySection {
             data: data,
             cursor: 0,
             cur_size: 0
-        }
+        };
     }
 }
 
@@ -58,16 +53,14 @@ impl Read for InMemorySection
 {
     fn read(&mut self, data: &mut [u8]) -> Result<usize>
     {
-        for i in 0..data.len()
-        {
-            if self.cursor >= self.data.len()
-            {
+        for i in 0..data.len() {
+            if self.cursor >= self.data.len() {
                 return Ok(i);
             }
             data[i] = self.data[self.cursor];
             self.cursor += 1;
         }
-        return Ok(data.len())
+        return Ok(data.len());
     }
 }
 
@@ -75,20 +68,17 @@ impl Write for InMemorySection
 {
     fn write(&mut self, data: &[u8]) -> Result<usize>
     {
-        for i in 0..data.len()
-        {
-            if self.cursor >= self.data.len()
-            {
+        for i in 0..data.len() {
+            if self.cursor >= self.data.len() {
                 return Ok(i);
             }
             self.data[self.cursor] = data[i];
             self.cursor += 1;
-            if self.cursor >= self.cur_size
-            {
+            if self.cursor >= self.cur_size {
                 self.cur_size += 1
             }
         }
-        return Ok(data.len())
+        return Ok(data.len());
     }
 
     fn flush(&mut self) -> Result<()>
@@ -100,16 +90,11 @@ impl Write for InMemorySection
 fn slow_but_correct_add(value: usize, offset: isize) -> usize
 //Unfortunatly rust requires much slower add operation (another reason to not use rust for large scale projects)
 {
-    if offset < 0
-    {
+    if offset < 0 {
         return value - -offset as usize;
-    }
-    else if offset > 0
-    {
+    } else if offset > 0 {
         return value + offset as usize;
-    }
-    else
-    {
+    } else {
         return value;
     }
 }
@@ -118,8 +103,7 @@ impl Seek for InMemorySection
 {
     fn seek(&mut self, state: SeekFrom) -> Result<u64>
     {
-        match state
-        {
+        match state {
             SeekFrom::Start(pos) => self.cursor = pos as usize,
             SeekFrom::End(pos) => self.cursor = slow_but_correct_add(self.data.len(), pos as isize),
             SeekFrom::Current(pos) => self.cursor = slow_but_correct_add(self.cursor, pos as isize)

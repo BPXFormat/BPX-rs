@@ -28,8 +28,8 @@
 
 //! An implementation of the BPX type P (Package) specification
 
-pub mod encoder;
 pub mod decoder;
+pub mod encoder;
 
 /// The standard type for a data section in a BPX Package (type P)
 pub const DATA_SECTION_TYPE: u8 = 0x1;

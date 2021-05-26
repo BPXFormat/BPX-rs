@@ -26,14 +26,16 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::collections::HashMap;
-use std::ops::Index;
-use std::collections::hash_map::Keys;
+use std::{
+    collections::{hash_map::Keys, HashMap},
+    ops::Index
+};
 
-use crate::sd::Value;
-use crate::sd::Array;
-use crate::utils;
-use crate::Result;
+use crate::{
+    sd::{Array, Value},
+    utils,
+    Result
+};
 
 /// Represents a BPX Structured Data Object
 #[derive(PartialEq, Clone)]
@@ -46,23 +48,22 @@ pub struct Object
 impl Object
 {
     /// Creates a new object
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * a new BPXSD object
     pub fn new() -> Object
     {
-        return Object
-        {
+        return Object {
             props: HashMap::new(),
             prop_names: Array::new()
-        }
+        };
     }
 
     /// Sets a property in the object
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `hash` - the BPX hash of the property
     /// * `value` - the [Value](crate::sd::Value) to set
     pub fn raw_set(&mut self, hash: u64, value: Value)
@@ -71,9 +72,9 @@ impl Object
     }
 
     /// Sets a property in the object
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `name` - the property name
     /// * `value` - the [Value](crate::sd::Value) to set
     pub fn set(&mut self, name: &str, value: Value)
@@ -83,13 +84,13 @@ impl Object
     }
 
     /// Gets a property in the object
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `hash` - the BPX hash of the property
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * a reference to the [Value](crate::sd::Value)
     /// * None if the property could not be found
     pub fn raw_get(&self, hash: u64) -> Option<&Value>
@@ -98,13 +99,13 @@ impl Object
     }
 
     /// Gets a property in the object
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `name` - the property name
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * a reference to the [Value](crate::sd::Value)
     /// * None if the property could not be found
     pub fn get(&self, name: &str) -> Option<&Value>
@@ -113,9 +114,9 @@ impl Object
     }
 
     /// Gets the length of the object
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * the number of properties in the object
     pub fn prop_count(&self) -> usize
     {
@@ -123,9 +124,9 @@ impl Object
     }
 
     /// Gets the list of all keys in the object
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * a set of all keys in the object
     pub fn get_keys(&self) -> Keys<'_, u64, Value>
     {
@@ -140,9 +141,9 @@ impl Object
     }
 
     /// Writes the object to the given IO backend
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * nothing if the operation succeeded
     /// * an [Error](crate::error::Error) if the data could not be written
     pub fn write<TWrite: std::io::Write>(&self, dest: &mut TWrite) -> Result<()>
@@ -151,9 +152,9 @@ impl Object
     }
 
     /// Reads a BPXSD object from an IO backend
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * the new BPXSD object if the operation succeeded
     /// * an [Error](crate::error::Error) if the data could not be read or the data was corrupt/truncated
     pub fn read<TRead: std::io::Read>(source: &mut TRead) -> Result<Object>

@@ -28,13 +28,12 @@
 
 //! Declarations for basic constants and low-level file headers
 
-use byteorder::LittleEndian;
-use byteorder::ByteOrder;
 use std::io;
 
-use crate::Result;
-use crate::error::Error;
+use byteorder::{ByteOrder, LittleEndian};
+
 use super::garraylen::*;
+use crate::{error::Error, Result};
 
 /// The size in bytes of the BPX Main Header
 pub const SIZE_MAIN_HEADER: usize = 40;
@@ -65,37 +64,37 @@ pub const SECTION_TYPE_SD: u8 = 0xFE;
 pub struct MainHeader
 {
     /// BPX signature
-    /// 
+    ///
     /// Offset: +0
     pub signature: [u8; 3],
 
     /// Type byte
-    /// 
+    ///
     /// Offset: +3
     pub btype: u8,
 
     /// Weak checksum of all headers
-    /// 
+    ///
     /// Offset: +4
     pub chksum: u32,
 
     /// Total size of BPX in bytes
-    /// 
+    ///
     /// Offset: +8
     pub file_size: u64,
 
     /// Number of sections
-    /// 
+    ///
     /// Offset: +16
     pub section_num: u32,
 
     /// Version of BPX (currently only 1)
-    /// 
+    ///
     /// Offset: +20
     pub version: u32,
 
     /// Extended type information
-    /// 
+    ///
     /// Offset: +24
     pub type_ext: [u8; 16]
 }
@@ -103,25 +102,23 @@ pub struct MainHeader
 impl MainHeader
 {
     /// Attempts to read a BPX Main Header from an IO backend
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `reader` - the IO backend to read from
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * the computed checksum of this header and a new MainHeader
     /// * an [Error](crate::error::Error) if the header could not be read or is corrupt
     pub fn read<TReader: io::Read>(reader: &mut TReader) -> Result<(u32, MainHeader)>
     {
-        let mut buf: [u8;SIZE_MAIN_HEADER] = [0;SIZE_MAIN_HEADER];
+        let mut buf: [u8; SIZE_MAIN_HEADER] = [0; SIZE_MAIN_HEADER];
         let mut checksum: u32 = 0;
 
         reader.read(&mut buf)?;
-        for i in 0..SIZE_MAIN_HEADER
-        {
-            if i < 4 || i > 7
-            {
+        for i in 0..SIZE_MAIN_HEADER {
+            if i < 4 || i > 7 {
                 checksum += buf[i] as u32;
             }
         }
@@ -134,34 +131,34 @@ impl MainHeader
             version: LittleEndian::read_u32(&buf[20..24]),
             type_ext: extract_slice::<T16>(&buf, 24)
         };
-        if head.signature[0] != 'B' as u8 || head.signature[1] != 'P' as u8 || head.signature[2] != 'X' as u8
-        {
-            return Err(Error::Corruption(format!("incorrect signature, expected {}{}{}, got {}{}{}", 'B' as u8, 'P' as u8, 'X' as u8, head.signature[0], head.signature[1], head.signature[2])));
+        if head.signature[0] != 'B' as u8 || head.signature[1] != 'P' as u8 || head.signature[2] != 'X' as u8 {
+            return Err(Error::Corruption(format!(
+                "incorrect signature, expected {}{}{}, got {}{}{}",
+                'B' as u8, 'P' as u8, 'X' as u8, head.signature[0], head.signature[1], head.signature[2]
+            )));
         }
-        if head.version != 0x1
-        {
+        if head.version != 0x1 {
             return Err(Error::Unsupported(format!("unsupported version {}", head.version)));
         }
         return Ok((checksum, head));
     }
 
     /// Creates a new empty BPX Main Header
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * a new MainHeader
     pub fn new() -> MainHeader
     {
-        return MainHeader
-        {
+        return MainHeader {
             signature: ['B' as u8, 'P' as u8, 'X' as u8], //+0
-            btype: 'P' as u8, //+3
-            chksum: 0, //+4
-            file_size: SIZE_MAIN_HEADER as u64, //+8
-            section_num: 0, //+16
-            version: 0x1, //+20
+            btype: 'P' as u8,                             //+3
+            chksum: 0,                                    //+4
+            file_size: SIZE_MAIN_HEADER as u64,           //+8
+            section_num: 0,                               //+16
+            version: 0x1,                                 //+20
             type_ext: [0; 16]
-        }
+        };
     }
 
     fn to_bytes(&self) -> [u8; SIZE_MAIN_HEADER]
@@ -175,37 +172,35 @@ impl MainHeader
         LittleEndian::write_u64(&mut block[8..16], self.file_size);
         LittleEndian::write_u32(&mut block[16..20], self.section_num);
         LittleEndian::write_u32(&mut block[20..24], self.version);
-        for i in 24..40
-        {
+        for i in 24..40 {
             block[i] = self.type_ext[i - 24];
         }
         return block;
     }
 
     /// Computes the checksum for this header
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * the computed checksum value
     pub fn get_checksum(&self) -> u32
     {
         let mut checksum: u32 = 0;
         let buf = self.to_bytes();
-        for i in 0..SIZE_MAIN_HEADER
-        {
+        for i in 0..SIZE_MAIN_HEADER {
             checksum += buf[i] as u32;
         }
         return checksum;
     }
 
     /// Attempts to write this header to an IO backend
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `writer` - the IO backend to write to
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * Nothing if the operation succeeded
     /// * an [Error](std::io::Error) if the header could not be written
     pub fn write<TWriter: io::Write>(&self, writer: &mut TWriter) -> io::Result<()>
@@ -222,32 +217,32 @@ impl MainHeader
 pub struct SectionHeader
 {
     /// Data pointer
-    /// 
+    ///
     /// Offset: +0
     pub pointer: u64,
 
     /// Size in bytes after compression
-    /// 
+    ///
     /// Offset: +8
     pub csize: u32,
 
     /// Size in bytes before compression
-    /// 
+    ///
     /// Offset: +12
     pub size: u32,
 
     /// Data checksum
-    /// 
+    ///
     /// Offset: +16
     pub chksum: u32,
 
     /// Type byte
-    /// 
+    ///
     /// Offset: +20
     pub btype: u8,
 
     /// Flags (see FLAG_* constants)
-    /// 
+    ///
     /// Offset: +21
     pub flags: u8
 }
@@ -255,57 +250,58 @@ pub struct SectionHeader
 impl SectionHeader
 {
     /// Attempts to read a BPX Section Header from an IO backend
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `reader` - the IO backend to read from
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * the computed checksum of this header and a new SectionHeader
     /// * an [Error](std::io::Error) if the header could not be read
     pub fn read<TReader: io::Read>(reader: &mut TReader) -> io::Result<(u32, SectionHeader)>
     {
-        let mut buf: [u8;SIZE_SECTION_HEADER] = [0;SIZE_SECTION_HEADER];
+        let mut buf: [u8; SIZE_SECTION_HEADER] = [0; SIZE_SECTION_HEADER];
         let mut checksum: u32 = 0;
 
         reader.read(&mut buf)?;
-        for i in 0..SIZE_SECTION_HEADER
-        {
+        for i in 0..SIZE_SECTION_HEADER {
             checksum += buf[i] as u32;
         }
-        return Ok((checksum, SectionHeader {
-            pointer: LittleEndian::read_u64(&buf[0..8]),
-            csize: LittleEndian::read_u32(&buf[8..12]),
-            size: LittleEndian::read_u32(&buf[12..16]),
-            chksum: LittleEndian::read_u32(&buf[16..20]),
-            btype: buf[20],
-            flags: buf[21]
-        }));
+        return Ok((
+            checksum,
+            SectionHeader {
+                pointer: LittleEndian::read_u64(&buf[0..8]),
+                csize: LittleEndian::read_u32(&buf[8..12]),
+                size: LittleEndian::read_u32(&buf[12..16]),
+                chksum: LittleEndian::read_u32(&buf[16..20]),
+                btype: buf[20],
+                flags: buf[21]
+            }
+        ));
     }
 
     /// Creates a new empty BPX Section Header
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * a new SectionHeader
     pub fn new() -> SectionHeader
     {
-        return SectionHeader
-        {
-            pointer: 0, //+0
-            csize: 0, //+8
-            size: 0, //+12
-            chksum: 0, //+16
-            btype: 0, //+20
-            flags: FLAG_CHECK_WEAK // +21
+        return SectionHeader {
+            pointer: 0,             //+0
+            csize: 0,               //+8
+            size: 0,                //+12
+            chksum: 0,              //+16
+            btype: 0,               //+20
+            flags: FLAG_CHECK_WEAK  // +21
         };
     }
 
     /// Checks if this section is huge (greater than 100Mb)
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * true if this section is huge
     /// * false otherwise
     pub fn is_huge_section(&self) -> bool
@@ -326,29 +322,28 @@ impl SectionHeader
     }
 
     /// Computes the checksum for this header
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * the computed checksum value
     pub fn get_checksum(&self) -> u32
     {
         let mut checksum: u32 = 0;
         let buf = self.to_bytes();
-        for i in 0..SIZE_SECTION_HEADER
-        {
+        for i in 0..SIZE_SECTION_HEADER {
             checksum += buf[i] as u32;
         }
         return checksum;
     }
 
     /// Attempts to write this header to an IO backend
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `writer` - the IO backend to write to
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * Nothing if the operation succeeded
     /// * an [Error](std::io::Error) if the header could not be written
     pub fn write<TWriter: io::Write>(&self, writer: &mut TWriter) -> io::Result<()>

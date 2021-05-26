@@ -26,12 +26,10 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::Result;
-use std::io::Read;
-use std::io::Write;
-use std::io::Seek;
-use std::io::SeekFrom;
-use std::fs::File;
+use std::{
+    fs::File,
+    io::{Read, Result, Seek, SeekFrom, Write}
+};
 
 use crate::section::SectionData;
 
@@ -51,8 +49,7 @@ impl FileBasedSection
 {
     pub fn new(data: File) -> FileBasedSection
     {
-        return FileBasedSection
-        {
+        return FileBasedSection {
             data: data,
             buffer: [0; READ_BLOCK_SIZE],
             written: 0,
@@ -69,15 +66,12 @@ impl Read for FileBasedSection
     {
         let mut cnt: usize = 0;
 
-        for i in 0..data.len()
-        {
-            if self.cursor >= self.written
-            {
+        for i in 0..data.len() {
+            if self.cursor >= self.written {
                 self.cursor = 0;
                 self.written = self.data.read(&mut self.buffer)?;
             }
-            if self.cursor < self.written
-            {
+            if self.cursor < self.written {
                 data[i] = self.buffer[self.cursor];
                 self.cursor += 1;
                 cnt += 1;
@@ -92,8 +86,7 @@ impl Write for FileBasedSection
     fn write(&mut self, data: &[u8]) -> Result<usize>
     {
         let len = self.data.write(data)?;
-        if self.seek_ptr >= self.cur_size as u64
-        {
+        if self.seek_ptr >= self.cur_size as u64 {
             self.cur_size += len;
             self.seek_ptr += len as u64;
         }

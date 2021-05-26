@@ -26,28 +26,26 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::path::PathBuf;
-use std::path::Path;
-use std::io::Read;
-use std::fs::File;
-use std::io;
-use std::io::Write;
-use byteorder::LittleEndian;
-use byteorder::ByteOrder;
+use std::{
+    fs::File,
+    io,
+    io::{Read, Write},
+    path::{Path, PathBuf}
+};
 
-use crate::decoder::IoBackend;
-use crate::decoder::Decoder;
-use crate::Interface;
-use crate::Result;
-use crate::error::Error;
-use crate::bpxp::Architecture;
-use crate::bpxp::Platform;
-use crate::SectionHandle;
-use crate::header::SECTION_TYPE_STRING;
-use crate::header::SECTION_TYPE_SD;
-use crate::sd::Object;
-use crate::bpxp::DATA_SECTION_TYPE;
-use crate::strings::StringSection;
+use byteorder::{ByteOrder, LittleEndian};
+
+use crate::{
+    bpxp::{Architecture, Platform, DATA_SECTION_TYPE},
+    decoder::{Decoder, IoBackend},
+    error::Error,
+    header::{SECTION_TYPE_SD, SECTION_TYPE_STRING},
+    sd::Object,
+    strings::StringSection,
+    Interface,
+    Result,
+    SectionHandle
+};
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
@@ -65,8 +63,7 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Pl
     let arch;
     let platform;
 
-    match acode
-    {
+    match acode {
         0x0 => arch = Architecture::X86_64,
         0x1 => arch = Architecture::Aarch64,
         0x2 => arch = Architecture::X86,
@@ -74,8 +71,7 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Pl
         0x4 => arch = Architecture::Any,
         _ => return Err(Error::Corruption(String::from("Architecture code does not exist")))
     }
-    match pcode
-    {
+    match pcode {
         0x0 => platform = Platform::Linux,
         0x1 => platform = Platform::Mac,
         0x2 => platform = Platform::Windows,
@@ -100,22 +96,28 @@ impl PackageDecoder
     /// * an [Error](crate::error::Error) in case of corruption or system error
     pub fn read<TBackend: IoBackend>(decoder: &mut Decoder<TBackend>) -> Result<PackageDecoder>
     {
-        if decoder.get_main_header().btype != 'P' as u8
-        {
-            return Err(Error::Corruption(format!("Unknown type of BPX: {}", decoder.get_main_header().btype as char)));
+        if decoder.get_main_header().btype != 'P' as u8 {
+            return Err(Error::Corruption(format!(
+                "Unknown type of BPX: {}",
+                decoder.get_main_header().btype as char
+            )));
         }
-        let (a, p) = get_arch_platform_from_code(decoder.get_main_header().type_ext[0], decoder.get_main_header().type_ext[1])?;
-        let strings = match decoder.find_section_by_type(SECTION_TYPE_STRING)
-        {
+        let (a, p) = get_arch_platform_from_code(
+            decoder.get_main_header().type_ext[0],
+            decoder.get_main_header().type_ext[1]
+        )?;
+        let strings = match decoder.find_section_by_type(SECTION_TYPE_STRING) {
             Some(v) => v,
             None => return Err(Error::Corruption(String::from("Unable to locate strings section")))
         };
-        return Ok(PackageDecoder
-        {
+        return Ok(PackageDecoder {
             architecture: a,
             platform: p,
             strings: strings,
-            type_code: [decoder.get_main_header().type_ext[2], decoder.get_main_header().type_ext[3]]
+            type_code: [
+                decoder.get_main_header().type_ext[2],
+                decoder.get_main_header().type_ext[3]
+            ]
         });
     }
 
@@ -161,8 +163,7 @@ impl PackageDecoder
     /// * an [Error](crate::error::Error) in case of corruption or system error
     pub fn read_metadata<TBackend: IoBackend>(&self, decoder: &mut Decoder<TBackend>) -> Result<Option<Object>>
     {
-        if let Some(handle) = decoder.find_section_by_type(SECTION_TYPE_SD)
-        {
+        if let Some(handle) = decoder.find_section_by_type(SECTION_TYPE_SD) {
             let mut data = decoder.open_section(handle)?;
             let obj = Object::read(&mut data)?;
             return Ok(Some(obj));
@@ -170,26 +171,28 @@ impl PackageDecoder
         return Ok(None);
     }
 
-    fn extract_file<TRead: Read>(&self, source: &mut TRead, dest: &PathBuf, size: u64) -> io::Result<Option<(u64, File)>>
+    fn extract_file<TRead: Read>(
+        &self,
+        source: &mut TRead,
+        dest: &PathBuf,
+        size: u64
+    ) -> io::Result<Option<(u64, File)>>
     {
-        if let Some(v) = dest.parent()
-        {
+        if let Some(v) = dest.parent() {
             std::fs::create_dir_all(v)?;
         }
         let mut fle = File::create(dest)?;
         let mut v: Vec<u8> = Vec::with_capacity(DATA_READ_BUFFER_SIZE);
         let mut count: u64 = 0;
-        while count < size
-        {
+        while count < size {
             let mut byte: [u8; 1] = [0; 1];
-            if source.read(&mut byte)? == 0 && count < size
-            { //Well the file is divided in multiple sections signal the caller of the problen
+            if source.read(&mut byte)? == 0 && count < size {
+                //Well the file is divided in multiple sections signal the caller of the problen
                 fle.write(&v)?;
                 return Ok(Some((size - count, fle)));
             }
             v.push(byte[0]);
-            if v.len() >= DATA_READ_BUFFER_SIZE
-            {
+            if v.len() >= DATA_READ_BUFFER_SIZE {
                 fle.write(&v)?;
                 v = Vec::with_capacity(DATA_READ_BUFFER_SIZE);
             }
@@ -199,21 +202,24 @@ impl PackageDecoder
         return Ok(None);
     }
 
-    fn continue_file<TRead: Read, TWrite: Write>(&self, source: &mut TRead, out: &mut TWrite, size: u64) -> io::Result<u64>
+    fn continue_file<TRead: Read, TWrite: Write>(
+        &self,
+        source: &mut TRead,
+        out: &mut TWrite,
+        size: u64
+    ) -> io::Result<u64>
     {
         let mut v: Vec<u8> = Vec::with_capacity(DATA_READ_BUFFER_SIZE);
         let mut count: u64 = 0;
-        while count < size
-        {
+        while count < size {
             let mut byte: [u8; 1] = [0; 1];
-            if source.read(&mut byte)? == 0 && count < size
-            { //Well the file is divided in multiple sections signal the caller of the problen
+            if source.read(&mut byte)? == 0 && count < size {
+                //Well the file is divided in multiple sections signal the caller of the problen
                 out.write(&v)?;
                 return Ok(size - count);
             }
             v.push(byte[0]);
-            if v.len() >= DATA_READ_BUFFER_SIZE
-            {
+            if v.len() >= DATA_READ_BUFFER_SIZE {
                 out.write(&v)?;
                 v = Vec::with_capacity(DATA_READ_BUFFER_SIZE);
             }
@@ -240,31 +246,30 @@ impl PackageDecoder
         let mut strings = StringSection::new(self.strings);
         let secs = decoder.find_all_sections_of_type(DATA_SECTION_TYPE);
         let mut truncated: Option<(u64, File)> = None;
-        for v in secs
-        {
+        for v in secs {
             let header = *decoder.get_section_header(v);
-            if let Some((remaining, mut file)) = std::mem::replace(&mut truncated, None)
-            {
+            if let Some((remaining, mut file)) = std::mem::replace(&mut truncated, None) {
                 let mut section = decoder.open_section(v)?;
                 let res = self.continue_file(&mut section, &mut file, remaining)?;
-                if res > 0 //Still not finished
+                if res > 0
+                //Still not finished
                 {
                     truncated = Some((res, file));
                     continue;
                 }
             }
             let mut count: u64 = 0;
-            while count < header.size as u64
-            {
+            while count < header.size as u64 {
                 let mut fheader: [u8; 12] = [0; 12];
                 {
                     let section = decoder.open_section(v)?;
                     section.read(&mut fheader)?;
                 }
                 let path = strings.get(decoder, LittleEndian::read_u32(&fheader[8..12]))?;
-                if path == ""
-                {
-                    return Err(Error::Corruption(String::from("Empty path string detected, aborting to prevent damage on host files")));
+                if path == "" {
+                    return Err(Error::Corruption(String::from(
+                        "Empty path string detected, aborting to prevent damage on host files"
+                    )));
                 }
                 let size = LittleEndian::read_u64(&fheader[0..8]);
                 println!("Reading {} with {} byte(s)...", path, size);
@@ -275,8 +280,7 @@ impl PackageDecoder
                     let mut section = decoder.open_section(v)?;
                     truncated = self.extract_file(&mut section, &dest, size)?;
                 }
-                if truncated.is_some()
-                {
+                if truncated.is_some() {
                     break;
                 }
                 count += size + 12;
