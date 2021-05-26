@@ -26,16 +26,17 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::Read;
-use std::io::Write;
+use std::io::{Read, Write};
 
 use crate::Result;
 
 mod weakchksum;
 mod xz;
+mod zlib;
 
 pub use weakchksum::WeakChecksum;
 pub use xz::XzCompressionMethod;
+pub use zlib::ZlibCompressionMethod;
 
 pub trait Checksum
 {
@@ -45,10 +46,20 @@ pub trait Checksum
 
 pub trait Inflater
 {
-    fn inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(input: &mut TRead, output: &mut TWrite, deflated_size: usize, chksum: &mut TChecksum) -> Result<()>;
+    fn inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
+        input: &mut TRead,
+        output: &mut TWrite,
+        deflated_size: usize,
+        chksum: &mut TChecksum
+    ) -> Result<()>;
 }
 
 pub trait Deflater
 {
-    fn deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(input: &mut TRead, output: &mut TWrite, inflated_size: usize, chksum: &mut TChecksum) -> Result<usize>;
+    fn deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
+        input: &mut TRead,
+        output: &mut TWrite,
+        inflated_size: usize,
+        chksum: &mut TChecksum
+    ) -> Result<usize>;
 }

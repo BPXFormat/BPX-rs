@@ -1,8 +1,6 @@
-use bpx::encoder::Encoder;
-use bpx::decoder::Decoder;
-use bpx::Interface;
-use std::fs::File;
-use std::path::Path;
+use std::{fs::File, path::Path};
+
+use bpx::{decoder::Decoder, encoder::Encoder, Interface};
 
 #[test]
 fn attempt_write_empty_bpxp()
@@ -24,8 +22,9 @@ fn attempt_write_empty_bpxp()
 #[test]
 fn sd_api_test()
 {
-    use bpx::sd::Value;
     use std::convert::TryInto;
+
+    use bpx::sd::Value;
 
     let v = Value::from(None as Option<i32>);
     let v1 = Value::from("test");

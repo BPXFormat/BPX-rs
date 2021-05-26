@@ -28,17 +28,9 @@
 
 //! A set of helpers to manipulate BPX strings sections
 
-use std::io::SeekFrom;
-use std::string::String;
-use std::path::Path;
-use std::fs::DirEntry;
-use std::collections::HashMap;
+use std::{collections::HashMap, fs::DirEntry, io::SeekFrom, path::Path, string::String};
 
-use crate::section::SectionData;
-use crate::Interface;
-use crate::SectionHandle;
-use crate::Result;
-use crate::error::Error;
+use crate::{error::Error, section::SectionData, Interface, Result, SectionHandle};
 
 /// Helper class to manage a BPX string section
 pub struct StringSection
@@ -50,38 +42,36 @@ pub struct StringSection
 impl StringSection
 {
     /// Create a new string section from a handle
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `hdl` - handle to the string section
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * a new StringSection
     pub fn new(hdl: SectionHandle) -> StringSection
     {
-        return StringSection
-        {
+        return StringSection {
             handle: hdl,
             cache: HashMap::new()
         };
     }
 
     /// Reads a string from the section
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `interface` - the BPX IO interface
     /// * `address` - the offset to the start of the string
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * the string read
     /// * an [Error](crate::error::Error) if the string could not be read or the section is corrupted/truncated
     pub fn get<TInterface: Interface>(&mut self, interface: &mut TInterface, address: u32) -> Result<String>
     {
-        if let Some(s) = self.cache.get(&address)
-        {
+        if let Some(s) = self.cache.get(&address) {
             return Ok(s.clone());
         }
         let data = interface.open_section(self.handle)?;
@@ -91,14 +81,14 @@ impl StringSection
     }
 
     /// Writes a new string into the section
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `interface` - the BPX IO interface
     /// * `s` - the string to write
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * the offset to the start of the newly written string
     /// * an [Error](crate::error::Error) if the string could not be written
     pub fn put<TInterface: Interface>(&mut self, interface: &mut TInterface, s: &str) -> Result<u32>
@@ -117,17 +107,14 @@ fn low_level_read_string(ptr: u32, string_section: &mut dyn SectionData) -> Resu
 
     string_section.seek(SeekFrom::Start(ptr as u64))?;
     string_section.read(&mut chr)?;
-    while chr[0] != 0x0
-    {
+    while chr[0] != 0x0 {
         curs.push(chr[0]);
         let res = string_section.read(&mut chr)?;
-        if res != 1
-        {
+        if res != 1 {
             return Err(Error::Truncation("string secton read"));
         }
     }
-    match String::from_utf8(curs)
-    {
+    match String::from_utf8(curs) {
         Err(_) => return Err(Error::Utf8("string section read")),
         Ok(v) => return Ok(v)
     }
@@ -142,43 +129,40 @@ fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Resu
 }
 
 /// Returns the file name as a UTF-8 string from a rust Path or panics if the path is not unicode compatible (BPX only supports UTF-8)
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `path` - the rust Path
-/// 
+///
 /// # Returns
-/// 
+///
 /// * the file name as UTF-8 string
 /// * an [Error](crate::error::Error) if the given Path does not have a file name
 pub fn get_name_from_path(path: &Path) -> Result<String>
 {
-    match path.file_name()
-    {
-        Some(v) => match v.to_str()
-        {
+    match path.file_name() {
+        Some(v) => match v.to_str() {
             Some(v) => return Ok(String::from(v)),
             // Panic here as a non Unicode system in all cases could just throw a bunch of broken unicode strings in a BPXP
             // The reason BPXP cannot support non-unicode strings in paths is simply because this would be incompatible with unicode systems
             None => panic!("Non unicode paths operating systems cannot run BPXP")
         },
-        None => return Err(Error::from("incorrect path format")),
+        None => return Err(Error::from("incorrect path format"))
     }
 }
 
 /// Returns the file name as a UTF-8 string from a rust DirEntry or panics if the path is not unicode compatible (BPX only supports UTF-8)
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `entry` - the rust DirEntry
-/// 
+///
 /// # Returns
-/// 
+///
 /// * the file name as UTF-8 string
 pub fn get_name_from_dir_entry(entry: &DirEntry) -> String
 {
-    match entry.file_name().to_str()
-    {
+    match entry.file_name().to_str() {
         Some(v) => return String::from(v),
         None => panic!("Non unicode paths operating systems cannot run BPXP")
     }

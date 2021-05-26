@@ -36,9 +36,7 @@ pub trait GenericArrayLen
     fn from_array(buf: &[u8]) -> Self::TArray;
 }
 
-pub struct T3
-{
-}
+pub struct T3 {}
 
 impl GenericArrayLen for T3
 {
@@ -51,9 +49,7 @@ impl GenericArrayLen for T3
     }
 }
 
-pub struct T16
-{
-}
+pub struct T16 {}
 
 impl GenericArrayLen for T16
 {

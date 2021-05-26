@@ -39,8 +39,7 @@ impl Checksum for WeakChecksum
 {
     fn push(&mut self, data: &[u8])
     {
-        for i in 0..data.len()
-        {
+        for i in 0..data.len() {
             self.current += Wrapping(data[i] as u32);
         }
     }
@@ -55,9 +54,6 @@ impl WeakChecksum
 {
     pub fn new() -> Self
     {
-        return WeakChecksum
-        {
-            current: Wrapping(0)
-        };
+        return WeakChecksum { current: Wrapping(0) };
     }
 }

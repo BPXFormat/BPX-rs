@@ -28,12 +28,12 @@
 
 //! The BPX Structured Data format (BPXSD)
 
-mod value;
 mod array;
-mod object;
-mod encoder;
 mod decoder;
+mod encoder;
+mod object;
+mod value;
 
-pub use value::Value;
-pub use object::Object;
 pub use array::Array;
+pub use object::Object;
+pub use value::Value;

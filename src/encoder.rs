@@ -28,36 +28,39 @@
 
 //! The BPX encoder
 
-use std::fs::File;
-use std::io;
-use std::io::Seek;
-use std::io::Read;
-use std::io::Write;
+use std::{
+    fs::File,
+    io,
+    io::{Read, Seek, Write}
+};
 
-use crate::header::MainHeader;
-use crate::header::SectionHeader;
-use crate::section::SectionData;
-use crate::header::SIZE_MAIN_HEADER;
-use crate::header::SIZE_SECTION_HEADER;
-use crate::header::FLAG_CHECK_WEAK;
-use crate::header::FLAG_CHECK_CRC32;
-use crate::header::FLAG_COMPRESS_XZ;
-use crate::header::FLAG_COMPRESS_ZLIB;
-use crate::section::new_section_data;
-use crate::compression::Checksum;
-use crate::compression::Deflater;
-use crate::compression::WeakChecksum;
-use crate::compression::XzCompressionMethod;
-use crate::Interface;
-use crate::SectionHandle;
-use crate::Result;
-use crate::error::Error;
+use crate::{
+    compression::{Checksum, Deflater, WeakChecksum, XzCompressionMethod},
+    error::Error,
+    header::{
+        MainHeader,
+        SectionHeader,
+        FLAG_CHECK_CRC32,
+        FLAG_CHECK_WEAK,
+        FLAG_COMPRESS_XZ,
+        FLAG_COMPRESS_ZLIB,
+        SIZE_MAIN_HEADER,
+        SIZE_SECTION_HEADER
+    },
+    section::{new_section_data, SectionData},
+    Interface,
+    Result,
+    SectionHandle
+};
+use crate::compression::ZlibCompressionMethod;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
 /// Represents the IO backend for a BPX encoder
-pub trait IoBackend : io::Write {}
-impl <T: io::Write> IoBackend for T {}
+pub trait IoBackend: io::Write
+{
+}
+impl<T: io::Write> IoBackend for T {}
 
 /// The BPX encoder
 pub struct Encoder<'a, TBackend: IoBackend>
@@ -68,21 +71,20 @@ pub struct Encoder<'a, TBackend: IoBackend>
     file: &'a mut TBackend
 }
 
-impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
+impl<'a, TBackend: IoBackend> Encoder<'a, TBackend>
 {
     /// Creates a new BPX encoder
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `file` - a reference to an [IoBackend](self::IoBackend) to use for writing the data
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * a new BPX encoder
     pub fn new(file: &'a mut TBackend) -> Result<Encoder<'a, TBackend>>
     {
-        return Ok(Encoder
-        {
+        return Ok(Encoder {
             main_header: MainHeader::new(),
             sections: Vec::new(),
             sections_data: Vec::new(),
@@ -91,9 +93,9 @@ impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
     }
 
     /// Sets the BPX Main Header
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `main_header` - the new [MainHeader](crate::header::MainHeader)
     pub fn set_main_header(&mut self, main_header: MainHeader)
     {
@@ -101,13 +103,13 @@ impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
     }
 
     /// Creates a new section in the BPX
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header` - the [SectionHeader](crate::header::SectionHeader) of the new section
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * a [SectionHandle](crate::SectionHandle) to the newly created section
     /// * an [Error](crate::error::Error) if the section could not be created
     pub fn create_section(&mut self, header: SectionHeader) -> Result<SectionHandle>
@@ -127,27 +129,28 @@ impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
         let mut ptr: u64 = SIZE_MAIN_HEADER as u64 + (self.sections.len() as u64 * SIZE_SECTION_HEADER as u64);
         let mut f = tempfile::tempfile()?;
 
-        for i in 0..self.sections.len()
-        {
-            if self.sections_data[i].size() > u32::MAX as usize
-            {
+        for i in 0..self.sections.len() {
+            if self.sections_data[i].size() > u32::MAX as usize {
                 return Err(Error::Capacity(self.sections_data[i].size()));
             }
             self.sections_data[i].seek(io::SeekFrom::Start(0))?;
             let mut chksum = WeakChecksum::new();
+            //TODO: Add support for CRC32 checksum
             let csize;
             let flags = get_flags(&self.sections[i], self.sections_data[i].size() as u32);
-            if flags & FLAG_COMPRESS_XZ != 0
-            {
-                csize = write_section_compressed::<XzCompressionMethod, _, _>(self.sections_data[i].as_mut(), &mut f, &mut chksum)?;
-            }
-            else if flags & FLAG_COMPRESS_ZLIB != 0
-            {
-                //TODO: Implement Zlib compression
-                return Err(Error::Unsupported(String::from("FLAG_COMPRESS_ZLIB")));
-            }
-            else
-            {
+            if flags & FLAG_COMPRESS_XZ != 0 {
+                csize = write_section_compressed::<XzCompressionMethod, _, _>(
+                    self.sections_data[i].as_mut(),
+                    &mut f,
+                    &mut chksum
+                )?;
+            } else if flags & FLAG_COMPRESS_ZLIB != 0 {
+                csize = write_section_compressed::<ZlibCompressionMethod, _, _>(
+                    self.sections_data[i].as_mut(),
+                    &mut f,
+                    &mut chksum
+                )?;
+            } else {
                 csize = write_section_uncompressed(self.sections_data[i].as_mut(), &mut f, &mut chksum)?;
             }
             self.sections[i].csize = csize as u32;
@@ -155,7 +158,10 @@ impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
             self.sections[i].chksum = chksum.finish();
             self.sections[i].flags = flags;
             self.sections[i].pointer = ptr;
-            println!("Writing section #{}: Size = {}, Size after compression = {}", i, self.sections[i].size, self.sections[i].csize);
+            println!(
+                "Writing section #{}: Size = {}, Size after compression = {}",
+                i, self.sections[i].size, self.sections[i].csize
+            );
             ptr += csize as u64;
             chksum_sht += self.sections[i].get_checksum();
             all_sections_size += csize;
@@ -169,8 +175,7 @@ impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
         let mut count: usize = 0;
 
         fle.seek(io::SeekFrom::Start(0))?;
-        while count < all_sections_size
-        {
+        while count < all_sections_size {
             let res = fle.read(&mut idata)?;
             self.file.write(&idata[0..res])?;
             count += res;
@@ -181,20 +186,20 @@ impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
     /// Writes all sections to the underlying IO backend
     ///
     /// *this functions prints some information to standard output as a way to debug data compression issues*
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * Nothing if the operation succeeded
     /// * an [Error](crate::error::Error) if the data could not be written
     pub fn save(&mut self) -> Result<()>
     {
         let (mut main_data, chksum_sht, all_sections_size) = self.write_sections()?;
 
-        self.main_header.file_size = all_sections_size as u64 + (self.sections.len() * SIZE_SECTION_HEADER) as u64 + SIZE_MAIN_HEADER as u64;
+        self.main_header.file_size =
+            all_sections_size as u64 + (self.sections.len() * SIZE_SECTION_HEADER) as u64 + SIZE_MAIN_HEADER as u64;
         self.main_header.chksum = chksum_sht + self.main_header.get_checksum();
         self.main_header.write(&mut self.file)?;
-        for v in &self.sections
-        {
+        for v in &self.sections {
             v.write(&mut self.file)?;
         }
         self.write_data_file(&mut main_data, all_sections_size)?;
@@ -202,14 +207,12 @@ impl <'a, TBackend: IoBackend> Encoder<'a, TBackend>
     }
 }
 
-impl <'a, TBackend: IoBackend> Interface for Encoder<'a, TBackend>
+impl<'a, TBackend: IoBackend> Interface for Encoder<'a, TBackend>
 {
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {
-        for i in 0..self.sections.len()
-        {
-            if self.sections[i].btype == btype
-            {
+        for i in 0..self.sections.len() {
+            if self.sections[i].btype == btype {
                 return Some(i);
             }
         }
@@ -220,10 +223,8 @@ impl <'a, TBackend: IoBackend> Interface for Encoder<'a, TBackend>
     {
         let mut v = Vec::new();
 
-        for i in 0..self.sections.len()
-        {
-            if self.sections[i].btype == btype
-            {
+        for i in 0..self.sections.len() {
+            if self.sections[i].btype == btype {
                 v.push(i);
             }
         }
@@ -232,8 +233,7 @@ impl <'a, TBackend: IoBackend> Interface for Encoder<'a, TBackend>
 
     fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>
     {
-        if let Some(_) = self.sections.get(index as usize)
-        {
+        if let Some(_) = self.sections.get(index as usize) {
             return Some(index as SectionHandle);
         }
         return None;
@@ -258,20 +258,14 @@ impl <'a, TBackend: IoBackend> Interface for Encoder<'a, TBackend>
 fn get_flags(header: &SectionHeader, size: u32) -> u8
 {
     let mut flags = 0;
-    if header.flags & FLAG_CHECK_WEAK != 0
-    {
+    if header.flags & FLAG_CHECK_WEAK != 0 {
         flags |= FLAG_CHECK_WEAK;
-    }
-    else if header.flags & FLAG_CHECK_CRC32 != 0
-    {
+    } else if header.flags & FLAG_CHECK_CRC32 != 0 {
         flags |= FLAG_CHECK_CRC32;
     }
-    if header.flags & FLAG_COMPRESS_XZ != 0 && size > header.csize
-    {
+    if header.flags & FLAG_COMPRESS_XZ != 0 && size > header.csize {
         flags |= FLAG_COMPRESS_XZ;
-    }
-    else if header.flags & FLAG_COMPRESS_ZLIB != 0 && size > header.csize
-    {
+    } else if header.flags & FLAG_COMPRESS_ZLIB != 0 && size > header.csize {
         flags |= FLAG_COMPRESS_ZLIB;
     }
     return flags;
@@ -279,26 +273,26 @@ fn get_flags(header: &SectionHeader, size: u32) -> u8
 
 fn create_section(header: &SectionHeader) -> Result<Box<dyn SectionData>>
 {
-    if header.size == 0
-    {
+    if header.size == 0 {
         let mut section = new_section_data(None)?;
         section.seek(io::SeekFrom::Start(0))?;
         return Ok(section);
-    }
-    else
-    {
+    } else {
         let mut section = new_section_data(Some(header.size))?;
         section.seek(io::SeekFrom::Start(0))?;
         return Ok(section);
     }
 }
 
-fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(section: &mut dyn SectionData, out: &mut TWrite, chksum: &mut TChecksum) -> Result<usize>
+fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(
+    section: &mut dyn SectionData,
+    out: &mut TWrite,
+    chksum: &mut TChecksum
+) -> Result<usize>
 {
     let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
     let mut count: usize = 0;
-    while count < section.size() as usize
-    {
+    while count < section.size() as usize {
         let res = section.read(&mut idata)?;
         out.write(&idata[0..res])?;
         chksum.push(&idata[0..res]);
@@ -308,7 +302,11 @@ fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(section: &mut 
     return Ok(section.size());
 }
 
-fn write_section_compressed<TMethod: Deflater, TWrite: Write, TChecksum: Checksum>(mut section: &mut dyn SectionData, out: &mut TWrite, chksum: &mut TChecksum) -> Result<usize>
+fn write_section_compressed<TMethod: Deflater, TWrite: Write, TChecksum: Checksum>(
+    mut section: &mut dyn SectionData,
+    out: &mut TWrite,
+    chksum: &mut TChecksum
+) -> Result<usize>
 {
     let size = section.size();
     let csize = TMethod::deflate(&mut section, out, size, chksum)?;
