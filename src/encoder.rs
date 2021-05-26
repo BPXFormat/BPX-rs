@@ -52,6 +52,7 @@ use crate::{
     Result,
     SectionHandle
 };
+use crate::compression::ZlibCompressionMethod;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -134,6 +135,7 @@ impl<'a, TBackend: IoBackend> Encoder<'a, TBackend>
             }
             self.sections_data[i].seek(io::SeekFrom::Start(0))?;
             let mut chksum = WeakChecksum::new();
+            //TODO: Add support for CRC32 checksum
             let csize;
             let flags = get_flags(&self.sections[i], self.sections_data[i].size() as u32);
             if flags & FLAG_COMPRESS_XZ != 0 {
@@ -143,8 +145,11 @@ impl<'a, TBackend: IoBackend> Encoder<'a, TBackend>
                     &mut chksum
                 )?;
             } else if flags & FLAG_COMPRESS_ZLIB != 0 {
-                //TODO: Implement Zlib compression
-                return Err(Error::Unsupported(String::from("FLAG_COMPRESS_ZLIB")));
+                csize = write_section_compressed::<ZlibCompressionMethod, _, _>(
+                    self.sections_data[i].as_mut(),
+                    &mut f,
+                    &mut chksum
+                )?;
             } else {
                 csize = write_section_uncompressed(self.sections_data[i].as_mut(), &mut f, &mut chksum)?;
             }

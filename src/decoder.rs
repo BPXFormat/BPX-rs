@@ -40,6 +40,7 @@ use crate::{
     Result,
     SectionHandle
 };
+use crate::compression::ZlibCompressionMethod;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -169,8 +170,7 @@ fn load_section<TBackend: IoBackend>(file: &mut TBackend, section: &SectionHeade
     if section.flags & FLAG_COMPRESS_XZ != 0 {
         load_section_compressed::<XzCompressionMethod, _, _, _>(file, &section, &mut data, &mut chksum)?;
     } else if section.flags & FLAG_COMPRESS_ZLIB != 0 {
-        //TODO: Implement Zlib compression
-        return Err(Error::Unsupported(String::from("FLAG_COMPRESS_ZLIB")));
+        load_section_compressed::<ZlibCompressionMethod, _, _, _>(file, &section, &mut data, &mut chksum)?;
     } else {
         load_section_uncompressed(file, &section, &mut data, &mut chksum)?;
     }
