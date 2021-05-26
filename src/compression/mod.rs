@@ -36,6 +36,7 @@ mod zlib;
 
 pub use weakchksum::WeakChecksum;
 pub use xz::XzCompressionMethod;
+pub use zlib::ZlibCompressionMethod;
 
 pub trait Checksum
 {

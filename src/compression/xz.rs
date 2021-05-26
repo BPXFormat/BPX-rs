@@ -110,8 +110,6 @@ fn new_decoder() -> Result<lzma_stream>
     }
 }
 
-pub struct XzCompressionMethod {}
-
 fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
     stream: &mut lzma_stream,
     input: &mut TRead,
@@ -215,6 +213,8 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
     }
     return Ok(());
 }
+
+pub struct XzCompressionMethod {}
 
 impl Deflater for XzCompressionMethod
 {
