@@ -165,20 +165,20 @@ impl PackageBuilder
         encoder.set_main_header(header);
         let strings_header = SectionHeaderBuilder::new()
             .with_checksum(Checksum::Weak)
-            .with_compression(CompressionMethod::Xz) //TODO: replace by Zlib when available
+            .with_compression(CompressionMethod::Zlib)
             .with_type(SECTION_TYPE_STRING)
             .build();
         let strings = encoder.create_section(strings_header)?;
         if let Some(obj) = self.metadata {
             let metadata_header = SectionHeaderBuilder::new()
                 .with_checksum(Checksum::Weak)
-                .with_compression(CompressionMethod::Xz) //TODO: replace by Zlib when available
+                .with_compression(CompressionMethod::Zlib)
                 .with_type(SECTION_TYPE_SD)
                 .build();
             let metadata = encoder.create_section(metadata_header)?;
             obj.write(&mut encoder.open_section(metadata)?)?;
         }
-        return Ok(PackageEncoder { strings: strings });
+        return Ok(PackageEncoder { strings });
     }
 }
 
