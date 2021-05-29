@@ -50,6 +50,7 @@ impl Crc32Checksum
             } else {
                 val >>= 1;
             }
+            table.push(val);
         }
         return Crc32Checksum {
             table,
