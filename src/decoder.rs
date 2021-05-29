@@ -66,12 +66,6 @@ impl<'a, TBackend: IoBackend> Decoder<'a, TBackend>
 
         for _ in 0..self.main_header.section_num {
             let (checksum, header) = SectionHeader::read(&mut self.file)?;
-            if header.flags & FLAG_COMPRESS_ZLIB == FLAG_COMPRESS_ZLIB {
-                return Err(Error::Unsupported(String::from("FLAG_COMPRESS_ZLIB")));
-            }
-            if header.flags & FLAG_CHECK_CRC32 == FLAG_CHECK_CRC32 {
-                return Err(Error::Unsupported(String::from("FLAG_CHECK_CRC32")));
-            }
             final_checksum += checksum;
             self.sections.push(header);
         }
