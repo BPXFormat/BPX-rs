@@ -31,11 +31,7 @@ use std::{
     ops::Index
 };
 
-use crate::{
-    sd::{Array, Value},
-    utils,
-    Result
-};
+use crate::{sd::Value, utils, Result};
 
 /// Represents a BPX Structured Data Object
 #[derive(PartialEq, Clone)]
