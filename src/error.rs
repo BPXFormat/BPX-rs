@@ -60,6 +60,12 @@ pub enum Error
     /// * actual count of props
     PropCountExceeded(usize),
 
+    /// Describes a missing property in an object (Structured Data)
+    ///
+    /// #### Arguments
+    /// * name of missing prop
+    MissingProp(&'static str),
+
     /// Describes a data truncation error, this means a section or the file itself has been truncated
     ///
     /// #### Arguments
