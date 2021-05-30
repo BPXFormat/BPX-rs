@@ -610,7 +610,7 @@ impl TryFrom<&Value> for f64
     }
 }
 
-impl <'a> TryFrom<&'a Value> for &'a str
+impl<'a> TryFrom<&'a Value> for &'a str
 {
     type Error = Error;
 
@@ -623,7 +623,7 @@ impl <'a> TryFrom<&'a Value> for &'a str
     }
 }
 
-impl <'a> TryFrom<&'a Value> for &'a Array
+impl<'a> TryFrom<&'a Value> for &'a Array
 {
     type Error = Error;
 
@@ -636,7 +636,7 @@ impl <'a> TryFrom<&'a Value> for &'a Array
     }
 }
 
-impl <'a> TryFrom<&'a Value> for &'a Object
+impl<'a> TryFrom<&'a Value> for &'a Object
 {
     type Error = Error;
 
@@ -670,9 +670,61 @@ macro_rules! generate_option_try_from {
     };
 }
 
+macro_rules! generate_option_try_from_ref {
+    ($($t:ident)*) => {
+        $(
+            impl <'a> TryFrom<&'a Value> for Option<&'a $t>
+            {
+                type Error = Error;
+
+                fn try_from(v: &'a Value) -> Result<Self>
+                {
+                    if let Value::Null = v
+                    {
+                        return Ok(None);
+                    }
+                    let v = v.try_into()?;
+                    return Ok(Some(v));
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! generate_option_try_from_ref_scalar {
+    ($($t:ident)*) => {
+        $(
+            impl <'a> TryFrom<&'a Value> for Option<$t>
+            {
+                type Error = Error;
+
+                fn try_from(v: &'a Value) -> Result<Self>
+                {
+                    if let Value::Null = v
+                    {
+                        return Ok(None);
+                    }
+                    let v = v.try_into()?;
+                    return Ok(Some(v));
+                }
+            }
+        )*
+    };
+}
+
 generate_option_try_from! {
     u8 u16 u32 u64
     i8 i16 i32 i64
     f32 f64 bool
     String Array Object
+}
+
+generate_option_try_from_ref! {
+    Array Object str
+}
+
+generate_option_try_from_ref_scalar! {
+    u8 u16 u32 u64
+    i8 i16 i32 i64
+    f32 f64 bool
 }
