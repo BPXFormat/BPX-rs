@@ -36,6 +36,7 @@ use crate::{
 };
 
 /// Provides support for debug symbols to BPXSD object
+#[derive(Clone)]
 pub struct DebugSymbols
 {
     symbols_map: HashMap<u64, String>,
