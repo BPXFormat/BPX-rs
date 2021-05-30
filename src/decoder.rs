@@ -31,7 +31,7 @@
 use std::{io, io::Write};
 
 use crate::{
-    compression::{Checksum, Inflater, WeakChecksum, XzCompressionMethod},
+    compression::{Checksum, Crc32Checksum, Inflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod},
     error::Error,
     header::{MainHeader, SectionHeader, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB},
     section::{new_section_data, SectionData},
@@ -40,7 +40,6 @@ use crate::{
     Result,
     SectionHandle
 };
-use crate::compression::ZlibCompressionMethod;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -67,12 +66,6 @@ impl<'a, TBackend: IoBackend> Decoder<'a, TBackend>
 
         for _ in 0..self.main_header.section_num {
             let (checksum, header) = SectionHeader::read(&mut self.file)?;
-            if header.flags & FLAG_COMPRESS_ZLIB == FLAG_COMPRESS_ZLIB {
-                return Err(Error::Unsupported(String::from("FLAG_COMPRESS_ZLIB")));
-            }
-            if header.flags & FLAG_CHECK_CRC32 == FLAG_CHECK_CRC32 {
-                return Err(Error::Unsupported(String::from("FLAG_CHECK_CRC32")));
-            }
             final_checksum += checksum;
             self.sections.push(header);
         }
@@ -97,7 +90,7 @@ impl<'a, TBackend: IoBackend> Decoder<'a, TBackend>
         let (checksum, header) = MainHeader::read(file)?;
         let num = header.section_num;
         let mut decoder = Decoder {
-            file: file,
+            file,
             main_header: header,
             sections: Vec::with_capacity(num as usize),
             sections_data: std::iter::repeat_with(|| None).take(num as usize).collect()
@@ -160,25 +153,44 @@ impl<'a, TBackend: IoBackend> Interface for Decoder<'a, TBackend>
 
 fn load_section<TBackend: IoBackend>(file: &mut TBackend, section: &SectionHeader) -> Result<Box<dyn SectionData>>
 {
-    let mut chksum = WeakChecksum::new();
-    if section.flags & FLAG_CHECK_CRC32 != 0 {
-        //TODO: Implement CRC checksum
-        return Err(Error::Unsupported(String::from("FLAG_CHECK_CRC32")));
-    }
     let mut data = new_section_data(Some(section.size))?;
     data.seek(io::SeekFrom::Start(0))?;
-    if section.flags & FLAG_COMPRESS_XZ != 0 {
-        load_section_compressed::<XzCompressionMethod, _, _, _>(file, &section, &mut data, &mut chksum)?;
-    } else if section.flags & FLAG_COMPRESS_ZLIB != 0 {
-        load_section_compressed::<ZlibCompressionMethod, _, _, _>(file, &section, &mut data, &mut chksum)?;
+    if section.flags & FLAG_CHECK_WEAK != 0 {
+        let mut chksum = WeakChecksum::new();
+        load_section_checked(file, &section, &mut data, &mut chksum)?;
+        let v = chksum.finish();
+        if v != section.chksum {
+            return Err(Error::Checksum(v, section.chksum));
+        }
+    } else if section.flags & FLAG_CHECK_CRC32 != 0 {
+        let mut chksum = Crc32Checksum::new();
+        load_section_checked(file, &section, &mut data, &mut chksum)?;
+        let v = chksum.finish();
+        if v != section.chksum {
+            return Err(Error::Checksum(v, section.chksum));
+        }
     } else {
-        load_section_uncompressed(file, &section, &mut data, &mut chksum)?;
-    }
-    let v = chksum.finish();
-    if (section.flags & FLAG_CHECK_CRC32 != 0 || section.flags & FLAG_CHECK_WEAK != 0) && v != section.chksum {
-        return Err(Error::Checksum(v, section.chksum));
+        let mut chksum = WeakChecksum::new();
+        load_section_checked(file, &section, &mut data, &mut chksum)?;
     }
     return Ok(data);
+}
+
+fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
+    file: &mut TBackend,
+    section: &SectionHeader,
+    out: &mut TWrite,
+    chksum: &mut TChecksum
+) -> Result<()>
+{
+    if section.flags & FLAG_COMPRESS_XZ != 0 {
+        load_section_compressed::<XzCompressionMethod, _, _, _>(file, &section, out, chksum)?;
+    } else if section.flags & FLAG_COMPRESS_ZLIB != 0 {
+        load_section_compressed::<ZlibCompressionMethod, _, _, _>(file, &section, out, chksum)?;
+    } else {
+        load_section_uncompressed(file, &section, out, chksum)?;
+    }
+    return Ok(());
 }
 
 fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
