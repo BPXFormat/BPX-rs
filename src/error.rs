@@ -28,8 +28,11 @@
 
 //! Error declarations
 
-use std::{convert::From, string::String};
-use std::fmt::{Display, Formatter};
+use std::{
+    convert::From,
+    fmt::{Display, Formatter},
+    string::String
+};
 
 /// Represents a BPX error
 #[derive(Debug)]
@@ -137,16 +140,27 @@ impl Display for Error
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         return match self {
-            Error::Checksum(expected, actual) => f.write_str(&format!("checksum validation failed (expected {}, got {})", expected, actual)),
+            Error::Checksum(expected, actual) => f.write_str(&format!(
+                "checksum validation failed (expected {}, got {})",
+                expected, actual
+            )),
             Error::Io(e) => f.write_str(&format!("io error ({})", e)),
-            Error::TypeError(expected, actual) => f.write_str(&format!("incompatible types (expected {}, got {})", expected, actual)),
+            Error::TypeError(expected, actual) => {
+                f.write_str(&format!("incompatible types (expected {}, got {})", expected, actual))
+            },
             Error::PropCountExceeded(v) => f.write_str(&format!("BPXSD - too many props (count {}, max is 256)", v)),
             Error::MissingProp(v) => f.write_str(&format!("BPXSD - missing property {}", v)),
-            Error::Truncation(e) => f.write_str(&format!("unexpected EOF while reading {}, are you sure the data is not truncated?", e)),
+            Error::Truncation(e) => f.write_str(&format!(
+                "unexpected EOF while reading {}, are you sure the data is not truncated?",
+                e
+            )),
             Error::Corruption(e) => f.write_str(&format!("illegal bytes found ({})", e)),
             Error::Utf8(e) => f.write_str(&format!("utf8 decoding/encoding error in {}", e)),
             Error::Unsupported(e) => f.write_str(&format!("unsupported operation {}", e)),
-            Error::Capacity(e) => f.write_str(&format!("section capacity exceeded (found {} bytes, max is 2 pow 32 bytes)", e)),
+            Error::Capacity(e) => f.write_str(&format!(
+                "section capacity exceeded (found {} bytes, max is 2 pow 32 bytes)",
+                e
+            )),
             Error::Deflate(e) => f.write_str(&format!("deflate error ({})", e)),
             Error::Inflate(e) => f.write_str(&format!("inflate error ({})", e)),
             Error::Other(e) => f.write_str(&format!("{}", e))
