@@ -35,7 +35,7 @@ use std::{
 };
 
 use crate::{
-    compression::{Checksum, Deflater, WeakChecksum, XzCompressionMethod},
+    compression::{Checksum, Crc32Checksum, Deflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod},
     error::Error,
     header::{
         MainHeader,
@@ -52,7 +52,6 @@ use crate::{
     Result,
     SectionHandle
 };
-use crate::compression::ZlibCompressionMethod;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -88,7 +87,7 @@ impl<'a, TBackend: IoBackend> Encoder<'a, TBackend>
             main_header: MainHeader::new(),
             sections: Vec::new(),
             sections_data: Vec::new(),
-            file: file
+            file
         });
     }
 
@@ -134,28 +133,11 @@ impl<'a, TBackend: IoBackend> Encoder<'a, TBackend>
                 return Err(Error::Capacity(self.sections_data[i].size()));
             }
             self.sections_data[i].seek(io::SeekFrom::Start(0))?;
-            let mut chksum = WeakChecksum::new();
-            //TODO: Add support for CRC32 checksum
-            let csize;
             let flags = get_flags(&self.sections[i], self.sections_data[i].size() as u32);
-            if flags & FLAG_COMPRESS_XZ != 0 {
-                csize = write_section_compressed::<XzCompressionMethod, _, _>(
-                    self.sections_data[i].as_mut(),
-                    &mut f,
-                    &mut chksum
-                )?;
-            } else if flags & FLAG_COMPRESS_ZLIB != 0 {
-                csize = write_section_compressed::<ZlibCompressionMethod, _, _>(
-                    self.sections_data[i].as_mut(),
-                    &mut f,
-                    &mut chksum
-                )?;
-            } else {
-                csize = write_section_uncompressed(self.sections_data[i].as_mut(), &mut f, &mut chksum)?;
-            }
+            let (csize, chksum) = write_section(flags, self.sections_data[i].as_mut(), &mut f)?;
             self.sections[i].csize = csize as u32;
             self.sections[i].size = self.sections_data[i].size() as u32;
-            self.sections[i].chksum = chksum.finish();
+            self.sections[i].chksum = chksum;
             self.sections[i].flags = flags;
             self.sections[i].pointer = ptr;
             println!(
@@ -311,4 +293,37 @@ fn write_section_compressed<TMethod: Deflater, TWrite: Write, TChecksum: Checksu
     let size = section.size();
     let csize = TMethod::deflate(&mut section, out, size, chksum)?;
     return Ok(csize);
+}
+
+fn write_section_checked<TWrite: Write, TChecksum: Checksum>(
+    flags: u8,
+    section: &mut dyn SectionData,
+    out: &mut TWrite,
+    chksum: &mut TChecksum
+) -> Result<usize>
+{
+    if flags & FLAG_COMPRESS_XZ != 0 {
+        return write_section_compressed::<XzCompressionMethod, _, _>(section, out, chksum);
+    } else if flags & FLAG_COMPRESS_ZLIB != 0 {
+        return write_section_compressed::<ZlibCompressionMethod, _, _>(section, out, chksum);
+    } else {
+        return write_section_uncompressed(section, out, chksum);
+    }
+}
+
+fn write_section<TWrite: Write>(flags: u8, section: &mut dyn SectionData, out: &mut TWrite) -> Result<(usize, u32)>
+{
+    if flags & FLAG_CHECK_CRC32 != 0 {
+        let mut chksum = Crc32Checksum::new();
+        let size = write_section_checked(flags, section, out, &mut chksum)?;
+        return Ok((size, chksum.finish()));
+    } else if flags & FLAG_CHECK_WEAK != 0 {
+        let mut chksum = WeakChecksum::new();
+        let size = write_section_checked(flags, section, out, &mut chksum)?;
+        return Ok((size, chksum.finish()));
+    } else {
+        let mut chksum = WeakChecksum::new();
+        let size = write_section_checked(flags, section, out, &mut chksum)?;
+        return Ok((size, 0));
+    }
 }
