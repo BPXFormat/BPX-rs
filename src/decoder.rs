@@ -173,6 +173,7 @@ fn load_section<TBackend: IoBackend>(file: &mut TBackend, section: &SectionHeade
         let mut chksum = WeakChecksum::new();
         load_section_checked(file, &section, &mut data, &mut chksum)?;
     }
+    data.seek(io::SeekFrom::Start(0))?;
     return Ok(data);
 }
 
