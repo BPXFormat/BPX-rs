@@ -33,7 +33,9 @@ mod decoder;
 mod encoder;
 mod object;
 mod value;
+mod debug;
 
 pub use array::Array;
 pub use object::Object;
 pub use value::Value;
+pub use debug::DebugSymbols;
