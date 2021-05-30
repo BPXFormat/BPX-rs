@@ -28,26 +28,7 @@
 
 use std::io::{Read, Write};
 
-use lzma_sys::{
-    lzma_code,
-    lzma_easy_encoder,
-    lzma_end,
-    lzma_mt,
-    lzma_stream,
-    lzma_stream_decoder,
-    lzma_stream_encoder_mt,
-    LZMA_CHECK_NONE,
-    LZMA_CONCATENATED,
-    LZMA_DATA_ERROR,
-    LZMA_FINISH,
-    LZMA_MEM_ERROR,
-    LZMA_OK,
-    LZMA_OPTIONS_ERROR,
-    LZMA_PRESET_EXTREME,
-    LZMA_RUN,
-    LZMA_STREAM_END,
-    LZMA_UNSUPPORTED_CHECK
-};
+use lzma_sys::{lzma_code, lzma_easy_encoder, lzma_end, lzma_mt, lzma_stream, lzma_stream_decoder, lzma_stream_encoder_mt, LZMA_BUF_ERROR, LZMA_CHECK_NONE, LZMA_CONCATENATED, LZMA_DATA_ERROR, LZMA_FINISH, LZMA_MEM_ERROR, LZMA_OK, LZMA_OPTIONS_ERROR, LZMA_PRESET_EXTREME, LZMA_RUN, LZMA_STREAM_END, LZMA_TELL_NO_CHECK, LZMA_UNSUPPORTED_CHECK, LZMA_NO_CHECK};
 
 use crate::{
     compression::{Checksum, Deflater, Inflater},
@@ -205,7 +186,7 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
                 }
                 match res {
                     LZMA_MEM_ERROR => return Err(Error::Inflate("Memory allocation failure")),
-                    LZMA_DATA_ERROR => return Err(Error::Inflate("LZMA data error")),
+                    LZMA_DATA_ERROR | LZMA_BUF_ERROR => return Err(Error::Inflate("LZMA data error")),
                     _ => return Err(Error::Inflate("Unknown error, possibly a bug"))
                 };
             }
