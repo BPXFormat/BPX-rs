@@ -289,12 +289,12 @@ impl SectionHeader
     pub fn new() -> SectionHeader
     {
         return SectionHeader {
-            pointer: 0,             //+0
-            csize: 0,               //+8
-            size: 0,                //+12
-            chksum: 0,              //+16
-            btype: 0,               //+20
-            flags: FLAG_CHECK_WEAK  // +21
+            pointer: 0, //+0
+            csize: 0,   //+8
+            size: 0,    //+12
+            chksum: 0,  //+16
+            btype: 0,   //+20
+            flags: 0    //+21
         };
     }
 

@@ -193,7 +193,7 @@ fn create_data_section_header() -> SectionHeader
     let header = SectionHeaderBuilder::new()
         .with_type(DATA_SECTION_TYPE)
         .with_compression(CompressionMethod::Xz)
-        .with_checksum(Checksum::Weak) //TODO: change to Crc32 when available
+        .with_checksum(Checksum::Crc32)
         .build();
     return header;
 }
