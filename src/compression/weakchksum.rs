@@ -26,44 +26,34 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::convert::TryInto;
+use std::num::Wrapping;
 
-pub trait GenericArrayLen
+use crate::compression::Checksum;
+
+pub struct WeakChecksum
 {
-    const SIZE: usize;
-    type TArray;
-
-    fn from_array(buf: &[u8]) -> Self::TArray;
+    current: Wrapping<u32>
 }
 
-pub struct T3 {}
-
-impl GenericArrayLen for T3
+impl Checksum for WeakChecksum
 {
-    type TArray = [u8; 3];
-    const SIZE: usize = 3;
-
-    fn from_array(buf: &[u8]) -> Self::TArray
+    fn push(&mut self, data: &[u8])
     {
-        return buf.try_into().unwrap();
+        for i in 0..data.len() {
+            self.current += Wrapping(data[i] as u32);
+        }
+    }
+
+    fn finish(self) -> u32
+    {
+        return self.current.0;
     }
 }
 
-pub struct T16 {}
-
-impl GenericArrayLen for T16
+impl WeakChecksum
 {
-    type TArray = [u8; 16];
-    const SIZE: usize = 16;
-
-    fn from_array(buf: &[u8]) -> Self::TArray
+    pub fn new() -> Self
     {
-        return buf.try_into().unwrap();
+        return WeakChecksum { current: Wrapping(0) };
     }
-}
-
-pub fn extract_slice<TArray: GenericArrayLen>(large_buf: &[u8], offset: usize) -> TArray::TArray
-{
-    let buf = &large_buf[offset..offset + TArray::SIZE];
-    return TArray::from_array(buf);
 }

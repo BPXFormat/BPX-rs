@@ -26,44 +26,52 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::convert::TryInto;
+use std::vec::Vec;
 
-pub trait GenericArrayLen
+use crate::compression::Checksum;
+
+const POLYNOMIAL: u32 = 0xEDB88320;
+
+pub struct Crc32Checksum
 {
-    const SIZE: usize;
-    type TArray;
-
-    fn from_array(buf: &[u8]) -> Self::TArray;
+    table: Vec<u32>,
+    current: u32
 }
 
-pub struct T3 {}
-
-impl GenericArrayLen for T3
+impl Crc32Checksum
 {
-    type TArray = [u8; 3];
-    const SIZE: usize = 3;
-
-    fn from_array(buf: &[u8]) -> Self::TArray
+    pub fn new() -> Crc32Checksum
     {
-        return buf.try_into().unwrap();
+        let mut table = Vec::with_capacity(256);
+        for i in 0..256 {
+            let mut val = i as u32;
+            if (val & 0x1) != 0 {
+                val = (val >> 1) ^ POLYNOMIAL;
+            } else {
+                val >>= 1;
+            }
+            table.push(val);
+        }
+        return Crc32Checksum {
+            table,
+            current: 0xFFFFFFFF
+        };
     }
 }
 
-pub struct T16 {}
-
-impl GenericArrayLen for T16
+impl Checksum for Crc32Checksum
 {
-    type TArray = [u8; 16];
-    const SIZE: usize = 16;
-
-    fn from_array(buf: &[u8]) -> Self::TArray
+    fn push(&mut self, buffer: &[u8])
     {
-        return buf.try_into().unwrap();
+        for byte in buffer {
+            let index = (self.current ^ *byte as u32) & 0xFF;
+            self.current = (self.current >> 8) ^ self.table[index as usize];
+        }
     }
-}
 
-pub fn extract_slice<TArray: GenericArrayLen>(large_buf: &[u8], offset: usize) -> TArray::TArray
-{
-    let buf = &large_buf[offset..offset + TArray::SIZE];
-    return TArray::from_array(buf);
+    fn finish(mut self) -> u32
+    {
+        self.current ^= 0xFFFFFFFF;
+        return self.current;
+    }
 }

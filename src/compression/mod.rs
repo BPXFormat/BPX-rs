@@ -26,44 +26,42 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::convert::TryInto;
+use std::io::{Read, Write};
 
-pub trait GenericArrayLen
+use crate::Result;
+
+mod crc32chksum;
+mod weakchksum;
+mod xz;
+mod zlib;
+
+pub use crc32chksum::Crc32Checksum;
+pub use weakchksum::WeakChecksum;
+pub use xz::XzCompressionMethod;
+pub use zlib::ZlibCompressionMethod;
+
+pub trait Checksum
 {
-    const SIZE: usize;
-    type TArray;
-
-    fn from_array(buf: &[u8]) -> Self::TArray;
+    fn push(&mut self, buffer: &[u8]);
+    fn finish(self) -> u32;
 }
 
-pub struct T3 {}
-
-impl GenericArrayLen for T3
+pub trait Inflater
 {
-    type TArray = [u8; 3];
-    const SIZE: usize = 3;
-
-    fn from_array(buf: &[u8]) -> Self::TArray
-    {
-        return buf.try_into().unwrap();
-    }
+    fn inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
+        input: &mut TRead,
+        output: &mut TWrite,
+        deflated_size: usize,
+        chksum: &mut TChecksum
+    ) -> Result<()>;
 }
 
-pub struct T16 {}
-
-impl GenericArrayLen for T16
+pub trait Deflater
 {
-    type TArray = [u8; 16];
-    const SIZE: usize = 16;
-
-    fn from_array(buf: &[u8]) -> Self::TArray
-    {
-        return buf.try_into().unwrap();
-    }
-}
-
-pub fn extract_slice<TArray: GenericArrayLen>(large_buf: &[u8], offset: usize) -> TArray::TArray
-{
-    let buf = &large_buf[offset..offset + TArray::SIZE];
-    return TArray::from_array(buf);
+    fn deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
+        input: &mut TRead,
+        output: &mut TWrite,
+        inflated_size: usize,
+        chksum: &mut TChecksum
+    ) -> Result<usize>;
 }

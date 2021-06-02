@@ -26,44 +26,16 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::convert::TryInto;
+//! The BPX Structured Data format (BPXSD)
 
-pub trait GenericArrayLen
-{
-    const SIZE: usize;
-    type TArray;
+mod array;
+mod decoder;
+mod encoder;
+mod object;
+mod value;
+mod debug;
 
-    fn from_array(buf: &[u8]) -> Self::TArray;
-}
-
-pub struct T3 {}
-
-impl GenericArrayLen for T3
-{
-    type TArray = [u8; 3];
-    const SIZE: usize = 3;
-
-    fn from_array(buf: &[u8]) -> Self::TArray
-    {
-        return buf.try_into().unwrap();
-    }
-}
-
-pub struct T16 {}
-
-impl GenericArrayLen for T16
-{
-    type TArray = [u8; 16];
-    const SIZE: usize = 16;
-
-    fn from_array(buf: &[u8]) -> Self::TArray
-    {
-        return buf.try_into().unwrap();
-    }
-}
-
-pub fn extract_slice<TArray: GenericArrayLen>(large_buf: &[u8], offset: usize) -> TArray::TArray
-{
-    let buf = &large_buf[offset..offset + TArray::SIZE];
-    return TArray::from_array(buf);
-}
+pub use array::Array;
+pub use object::Object;
+pub use value::Value;
+pub use debug::DebugSymbols;

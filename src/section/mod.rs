@@ -26,44 +26,58 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::convert::TryInto;
+//! Utilities to manipulate the content of sections
 
-pub trait GenericArrayLen
+use std::{
+    boxed::Box,
+    io::{Read, Result, Seek, Write},
+    vec::Vec
+};
+
+mod file;
+mod memory;
+
+const MEMORY_THRESHOLD: u32 = 100000000;
+
+/// Opaque type intended to manipulate section data in the form of standard IO operations
+pub trait SectionData: Read + Write + Seek
 {
-    const SIZE: usize;
-    type TArray;
+    /// Loads this section into memory
+    ///
+    /// # Returns
+    ///
+    /// * a new [Vec](std::vec::Vec) of u8 binary data
+    /// * an [Error](crate::error::Error) if the section could not be loaded
+    fn load_in_memory(&mut self) -> Result<Vec<u8>>;
 
-    fn from_array(buf: &[u8]) -> Self::TArray;
+    /// Gets the current size of this section
+    ///
+    /// # Returns
+    ///
+    /// * the size in bytes of the section so far
+    fn size(&self) -> usize;
 }
 
-pub struct T3 {}
-
-impl GenericArrayLen for T3
+/// Creates new section data by automatically choosing the right container given a section size
+///
+/// *this function is not intended for direct use*
+///
+/// # Arguments
+///
+/// * `size` - optional size of section, if None the section will automatically reallocate to fit its content
+///
+/// # Returns
+///
+/// * a [Box](std::boxed::Box) of an opaque SectionData object
+/// * an [Error](std::io::Error) in case the temporary file could not be created
+pub fn new_section_data(size: Option<u32>) -> Result<Box<dyn SectionData>>
 {
-    type TArray = [u8; 3];
-    const SIZE: usize = 3;
-
-    fn from_array(buf: &[u8]) -> Self::TArray
-    {
-        return buf.try_into().unwrap();
+    if let Some(s) = size {
+        if s > MEMORY_THRESHOLD {
+            return Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)));
+        } else {
+            return Ok(Box::new(memory::InMemorySection::new(vec![0; s as usize])));
+        }
     }
-}
-
-pub struct T16 {}
-
-impl GenericArrayLen for T16
-{
-    type TArray = [u8; 16];
-    const SIZE: usize = 16;
-
-    fn from_array(buf: &[u8]) -> Self::TArray
-    {
-        return buf.try_into().unwrap();
-    }
-}
-
-pub fn extract_slice<TArray: GenericArrayLen>(large_buf: &[u8], offset: usize) -> TArray::TArray
-{
-    let buf = &large_buf[offset..offset + TArray::SIZE];
-    return TArray::from_array(buf);
+    return Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)));
 }
