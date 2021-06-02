@@ -31,18 +31,13 @@ use std::{
     ops::Index
 };
 
-use crate::{
-    sd::{Array, Value},
-    utils,
-    Result
-};
+use crate::{sd::Value, utils, Result};
 
 /// Represents a BPX Structured Data Object
 #[derive(PartialEq, Clone)]
 pub struct Object
 {
-    props: HashMap<u64, Value>,
-    prop_names: Array
+    props: HashMap<u64, Value>
 }
 
 impl Object
@@ -54,10 +49,7 @@ impl Object
     /// * a new BPXSD object
     pub fn new() -> Object
     {
-        return Object {
-            props: HashMap::new(),
-            prop_names: Array::new()
-        };
+        return Object { props: HashMap::new() };
     }
 
     /// Sets a property in the object
@@ -80,7 +72,6 @@ impl Object
     pub fn set(&mut self, name: &str, value: Value)
     {
         self.raw_set(utils::hash(name), value);
-        self.prop_names.add(Value::String(String::from(name)));
     }
 
     /// Gets a property in the object
@@ -131,13 +122,6 @@ impl Object
     pub fn get_keys(&self) -> Keys<'_, u64, Value>
     {
         return self.props.keys();
-    }
-
-    /// Generates debug information for this object
-    pub fn add_debug_info(&mut self)
-    {
-        let prop_names = std::mem::replace(&mut self.prop_names, Array::new());
-        self.set("__debug__", Value::Array(prop_names));
     }
 
     /// Writes the object to the given IO backend

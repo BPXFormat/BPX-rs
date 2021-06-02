@@ -291,10 +291,10 @@ impl TryFrom<Value> for u16
 
     fn try_from(v: Value) -> Result<Self>
     {
-        match v {
-            Value::Uint16(v) => return Ok(v),
-            Value::Uint8(v) => return Ok(v as u16),
-            _ => return Err(Error::TypeError("uint8 or uint16", v.get_type_name()))
+        return match v {
+            Value::Uint16(v) => Ok(v),
+            Value::Uint8(v) => Ok(v as u16),
+            _ => Err(Error::TypeError("uint8 or uint16", v.get_type_name()))
         };
     }
 }
@@ -305,11 +305,11 @@ impl TryFrom<Value> for u32
 
     fn try_from(v: Value) -> Result<Self>
     {
-        match v {
-            Value::Uint32(v) => return Ok(v),
-            Value::Uint16(v) => return Ok(v as u32),
-            Value::Uint8(v) => return Ok(v as u32),
-            _ => return Err(Error::TypeError("uint8, uint16 or uint32", v.get_type_name()))
+        return match v {
+            Value::Uint32(v) => Ok(v),
+            Value::Uint16(v) => Ok(v as u32),
+            Value::Uint8(v) => Ok(v as u32),
+            _ => Err(Error::TypeError("uint8, uint16 or uint32", v.get_type_name()))
         };
     }
 }
@@ -320,12 +320,12 @@ impl TryFrom<Value> for u64
 
     fn try_from(v: Value) -> Result<Self>
     {
-        match v {
-            Value::Uint64(v) => return Ok(v),
-            Value::Uint32(v) => return Ok(v as u64),
-            Value::Uint16(v) => return Ok(v as u64),
-            Value::Uint8(v) => return Ok(v as u64),
-            _ => return Err(Error::TypeError("uint8, uint16, uint32 or uint64", v.get_type_name()))
+        return match v {
+            Value::Uint64(v) => Ok(v),
+            Value::Uint32(v) => Ok(v as u64),
+            Value::Uint16(v) => Ok(v as u64),
+            Value::Uint8(v) => Ok(v as u64),
+            _ => Err(Error::TypeError("uint8, uint16, uint32 or uint64", v.get_type_name()))
         };
     }
 }
@@ -349,10 +349,10 @@ impl TryFrom<Value> for i16
 
     fn try_from(v: Value) -> Result<Self>
     {
-        match v {
-            Value::Int16(v) => return Ok(v),
-            Value::Int8(v) => return Ok(v as i16),
-            _ => return Err(Error::TypeError("int8 or int16", v.get_type_name()))
+        return match v {
+            Value::Int16(v) => Ok(v),
+            Value::Int8(v) => Ok(v as i16),
+            _ => Err(Error::TypeError("int8 or int16", v.get_type_name()))
         };
     }
 }
@@ -363,11 +363,11 @@ impl TryFrom<Value> for i32
 
     fn try_from(v: Value) -> Result<Self>
     {
-        match v {
-            Value::Int32(v) => return Ok(v),
-            Value::Int16(v) => return Ok(v as i32),
-            Value::Int8(v) => return Ok(v as i32),
-            _ => return Err(Error::TypeError("int8, int16 or int32", v.get_type_name()))
+        return match v {
+            Value::Int32(v) => Ok(v),
+            Value::Int16(v) => Ok(v as i32),
+            Value::Int8(v) => Ok(v as i32),
+            _ => Err(Error::TypeError("int8, int16 or int32", v.get_type_name()))
         };
     }
 }
@@ -378,12 +378,12 @@ impl TryFrom<Value> for i64
 
     fn try_from(v: Value) -> Result<Self>
     {
-        match v {
-            Value::Int64(v) => return Ok(v),
-            Value::Int32(v) => return Ok(v as i64),
-            Value::Int16(v) => return Ok(v as i64),
-            Value::Int8(v) => return Ok(v as i64),
-            _ => return Err(Error::TypeError("int8, int16, int32 or int64", v.get_type_name()))
+        return match v {
+            Value::Int64(v) => Ok(v),
+            Value::Int32(v) => Ok(v as i64),
+            Value::Int16(v) => Ok(v as i64),
+            Value::Int8(v) => Ok(v as i64),
+            _ => Err(Error::TypeError("int8, int16, int32 or int64", v.get_type_name()))
         };
     }
 }
@@ -407,10 +407,10 @@ impl TryFrom<Value> for f64
 
     fn try_from(v: Value) -> Result<Self>
     {
-        match v {
-            Value::Double(v) => return Ok(v),
-            Value::Float(v) => return Ok(v as f64),
-            _ => return Err(Error::TypeError("float or double", v.get_type_name()))
+        return match v {
+            Value::Double(v) => Ok(v),
+            Value::Float(v) => Ok(v as f64),
+            _ => Err(Error::TypeError("float or double", v.get_type_name()))
         };
     }
 }
@@ -454,6 +454,201 @@ impl TryFrom<Value> for Object
     }
 }
 
+impl TryFrom<&Value> for bool
+{
+    type Error = Error;
+
+    fn try_from(v: &Value) -> Result<Self>
+    {
+        if let Value::Bool(v) = v {
+            return Ok(*v);
+        }
+        return Err(Error::TypeError("bool", v.get_type_name()));
+    }
+}
+
+impl TryFrom<&Value> for u8
+{
+    type Error = Error;
+
+    fn try_from(v: &Value) -> Result<Self>
+    {
+        if let Value::Uint8(v) = v {
+            return Ok(*v);
+        }
+        return Err(Error::TypeError("uint8", v.get_type_name()));
+    }
+}
+
+impl TryFrom<&Value> for u16
+{
+    type Error = Error;
+
+    fn try_from(v: &Value) -> Result<Self>
+    {
+        return match v {
+            Value::Uint16(v) => Ok(*v),
+            Value::Uint8(v) => Ok(*v as u16),
+            _ => Err(Error::TypeError("uint8 or uint16", v.get_type_name()))
+        };
+    }
+}
+
+impl TryFrom<&Value> for u32
+{
+    type Error = Error;
+
+    fn try_from(v: &Value) -> Result<Self>
+    {
+        return match v {
+            Value::Uint32(v) => Ok(*v),
+            Value::Uint16(v) => Ok(*v as u32),
+            Value::Uint8(v) => Ok(*v as u32),
+            _ => Err(Error::TypeError("uint8, uint16 or uint32", v.get_type_name()))
+        };
+    }
+}
+
+impl TryFrom<&Value> for u64
+{
+    type Error = Error;
+
+    fn try_from(v: &Value) -> Result<Self>
+    {
+        return match v {
+            Value::Uint64(v) => Ok(*v),
+            Value::Uint32(v) => Ok(*v as u64),
+            Value::Uint16(v) => Ok(*v as u64),
+            Value::Uint8(v) => Ok(*v as u64),
+            _ => Err(Error::TypeError("uint8, uint16, uint32 or uint64", v.get_type_name()))
+        };
+    }
+}
+
+impl TryFrom<&Value> for i8
+{
+    type Error = Error;
+
+    fn try_from(v: &Value) -> Result<Self>
+    {
+        if let Value::Int8(v) = v {
+            return Ok(*v);
+        }
+        return Err(Error::TypeError("int8", v.get_type_name()));
+    }
+}
+
+impl TryFrom<&Value> for i16
+{
+    type Error = Error;
+
+    fn try_from(v: &Value) -> Result<Self>
+    {
+        return match v {
+            Value::Int16(v) => Ok(*v),
+            Value::Int8(v) => Ok(*v as i16),
+            _ => Err(Error::TypeError("int8 or int16", v.get_type_name()))
+        };
+    }
+}
+
+impl TryFrom<&Value> for i32
+{
+    type Error = Error;
+
+    fn try_from(v: &Value) -> Result<Self>
+    {
+        return match v {
+            Value::Int32(v) => Ok(*v),
+            Value::Int16(v) => Ok(*v as i32),
+            Value::Int8(v) => Ok(*v as i32),
+            _ => Err(Error::TypeError("int8, int16 or int32", v.get_type_name()))
+        };
+    }
+}
+
+impl TryFrom<&Value> for i64
+{
+    type Error = Error;
+
+    fn try_from(v: &Value) -> Result<Self>
+    {
+        return match v {
+            Value::Int64(v) => Ok(*v),
+            Value::Int32(v) => Ok(*v as i64),
+            Value::Int16(v) => Ok(*v as i64),
+            Value::Int8(v) => Ok(*v as i64),
+            _ => Err(Error::TypeError("int8, int16, int32 or int64", v.get_type_name()))
+        };
+    }
+}
+
+impl TryFrom<&Value> for f32
+{
+    type Error = Error;
+
+    fn try_from(v: &Value) -> Result<Self>
+    {
+        if let Value::Float(v) = v {
+            return Ok(*v);
+        }
+        return Err(Error::TypeError("float", v.get_type_name()));
+    }
+}
+
+impl TryFrom<&Value> for f64
+{
+    type Error = Error;
+
+    fn try_from(v: &Value) -> Result<Self>
+    {
+        return match v {
+            Value::Double(v) => Ok(*v),
+            Value::Float(v) => Ok(*v as f64),
+            _ => Err(Error::TypeError("float or double", v.get_type_name()))
+        };
+    }
+}
+
+impl<'a> TryFrom<&'a Value> for &'a str
+{
+    type Error = Error;
+
+    fn try_from(v: &'a Value) -> Result<Self>
+    {
+        if let Value::String(v) = v {
+            return Ok(&v);
+        }
+        return Err(Error::TypeError("string", v.get_type_name()));
+    }
+}
+
+impl<'a> TryFrom<&'a Value> for &'a Array
+{
+    type Error = Error;
+
+    fn try_from(v: &'a Value) -> Result<Self>
+    {
+        if let Value::Array(v) = v {
+            return Ok(&v);
+        }
+        return Err(Error::TypeError("array", v.get_type_name()));
+    }
+}
+
+impl<'a> TryFrom<&'a Value> for &'a Object
+{
+    type Error = Error;
+
+    fn try_from(v: &'a Value) -> Result<Self>
+    {
+        if let Value::Object(v) = v {
+            return Ok(v);
+        }
+        return Err(Error::TypeError("object", v.get_type_name()));
+    }
+}
+
 macro_rules! generate_option_try_from {
     ($($t:ident)*) => {
         $(
@@ -475,9 +670,61 @@ macro_rules! generate_option_try_from {
     };
 }
 
+macro_rules! generate_option_try_from_ref {
+    ($($t:ident)*) => {
+        $(
+            impl <'a> TryFrom<&'a Value> for Option<&'a $t>
+            {
+                type Error = Error;
+
+                fn try_from(v: &'a Value) -> Result<Self>
+                {
+                    if let Value::Null = v
+                    {
+                        return Ok(None);
+                    }
+                    let v = v.try_into()?;
+                    return Ok(Some(v));
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! generate_option_try_from_ref_scalar {
+    ($($t:ident)*) => {
+        $(
+            impl <'a> TryFrom<&'a Value> for Option<$t>
+            {
+                type Error = Error;
+
+                fn try_from(v: &'a Value) -> Result<Self>
+                {
+                    if let Value::Null = v
+                    {
+                        return Ok(None);
+                    }
+                    let v = v.try_into()?;
+                    return Ok(Some(v));
+                }
+            }
+        )*
+    };
+}
+
 generate_option_try_from! {
     u8 u16 u32 u64
     i8 i16 i32 i64
     f32 f64 bool
     String Array Object
+}
+
+generate_option_try_from_ref! {
+    Array Object str
+}
+
+generate_option_try_from_ref_scalar! {
+    u8 u16 u32 u64
+    i8 i16 i32 i64
+    f32 f64 bool
 }

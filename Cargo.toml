@@ -1,6 +1,6 @@
 [package]
 name = "bpx"
-version = "1.0.0"
+version = "2.0.0"
 authors = ["Yuri Edward <yuri6037@outlook.com>"]
 edition = "2018"
 description = "BPX official rust implementation"
@@ -18,3 +18,6 @@ byteorder = "1"
 lzma-sys = "0.1.17"
 num_cpus = "1.13.0"
 libz-sys = "1.1.3"
+
+[features]
+debug-log = []

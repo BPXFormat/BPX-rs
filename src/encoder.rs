@@ -140,6 +140,7 @@ impl<'a, TBackend: IoBackend> Encoder<'a, TBackend>
             self.sections[i].chksum = chksum;
             self.sections[i].flags = flags;
             self.sections[i].pointer = ptr;
+            #[cfg(feature = "debug-log")]
             println!(
                 "Writing section #{}: Size = {}, Size after compression = {}",
                 i, self.sections[i].size, self.sections[i].csize

@@ -173,6 +173,7 @@ fn load_section<TBackend: IoBackend>(file: &mut TBackend, section: &SectionHeade
         let mut chksum = WeakChecksum::new();
         load_section_checked(file, &section, &mut data, &mut chksum)?;
     }
+    data.seek(io::SeekFrom::Start(0))?;
     return Ok(data);
 }
 
@@ -223,6 +224,6 @@ fn load_section_compressed<TMethod: Inflater, TBackend: io::Read + io::Seek, TWr
 ) -> Result<()>
 {
     bpx.seek(io::SeekFrom::Start(header.pointer))?;
-    XzCompressionMethod::inflate(bpx, output, header.size as usize, chksum)?;
+    XzCompressionMethod::inflate(bpx, output, header.csize as usize, chksum)?;
     return Ok(());
 }

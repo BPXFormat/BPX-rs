@@ -272,6 +272,7 @@ impl PackageDecoder
                     )));
                 }
                 let size = LittleEndian::read_u64(&fheader[0..8]);
+                #[cfg(feature = "debug-log")]
                 println!("Reading {} with {} byte(s)...", path, size);
                 let mut dest = PathBuf::new();
                 dest.push(target);

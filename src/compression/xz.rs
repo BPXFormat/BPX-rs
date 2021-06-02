@@ -36,6 +36,7 @@ use lzma_sys::{
     lzma_stream,
     lzma_stream_decoder,
     lzma_stream_encoder_mt,
+    LZMA_BUF_ERROR,
     LZMA_CHECK_NONE,
     LZMA_CONCATENATED,
     LZMA_DATA_ERROR,
@@ -205,7 +206,7 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
                 }
                 match res {
                     LZMA_MEM_ERROR => return Err(Error::Inflate("Memory allocation failure")),
-                    LZMA_DATA_ERROR => return Err(Error::Inflate("LZMA data error")),
+                    LZMA_DATA_ERROR | LZMA_BUF_ERROR => return Err(Error::Inflate("LZMA data error")),
                     _ => return Err(Error::Inflate("Unknown error, possibly a bug"))
                 };
             }
