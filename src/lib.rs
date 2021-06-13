@@ -30,7 +30,7 @@
 
 use std::vec::Vec;
 
-pub mod bpxp;
+pub mod variant;
 pub mod builder;
 mod compression;
 pub mod decoder;
@@ -51,11 +51,11 @@ pub type SectionHandle = usize;
 /// The interface implemented by both the BPX encoder and decoder
 pub trait Interface
 {
-    /// Searches for the first section of a given type
+    /// Searches for the first section of a given variant
     ///
     /// # Arguments
     ///
-    /// * `btype` - section type byte
+    /// * `btype` - section variant byte
     ///
     /// # Returns
     ///
@@ -63,15 +63,15 @@ pub trait Interface
     /// * a handle to the section
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>;
 
-    /// Searches for all sections of a given type
+    /// Searches for all sections of a given variant
     ///
     /// # Arguments
     ///
-    /// * `btype` - section type byte
+    /// * `btype` - section variant byte
     ///
     /// # Returns
     ///
-    /// * a list of handles from all sections matching the given type
+    /// * a list of handles from all sections matching the given variant
     fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>;
 
     /// Locates a section by its index in the file

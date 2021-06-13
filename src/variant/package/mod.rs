@@ -26,12 +26,16 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! An implementation of the BPX type P (Package) specification
+//! An implementation of the BPX variant P (Package) specification
 
-pub mod decoder;
-pub mod encoder;
+mod decoder;
+mod encoder;
 
-/// The standard type for a data section in a BPX Package (type P)
+pub use decoder::PackageDecoder;
+pub use encoder::PackageEncoder;
+pub use encoder::PackageBuilder;
+
+/// The standard variant for a data section in a BPX Package (variant P)
 pub const DATA_SECTION_TYPE: u8 = 0x1;
 
 /// Enum of all supported processor architectures by BPXP

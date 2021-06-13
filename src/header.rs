@@ -53,10 +53,10 @@ pub const FLAG_COMPRESS_ZLIB: u8 = 0x1;
 /// Section CRC32 checksum enable flag
 pub const FLAG_CHECK_CRC32: u8 = 0x4;
 
-/// The standard type for a BPX Strings section
+/// The standard variant for a BPX Strings section
 pub const SECTION_TYPE_STRING: u8 = 0xFF;
 
-/// The standard type for a BPX Structured Data section
+/// The standard variant for a BPX Structured Data section
 pub const SECTION_TYPE_SD: u8 = 0xFE;
 
 /// The BPX Main Header
@@ -93,7 +93,7 @@ pub struct MainHeader
     /// Offset: +20
     pub version: u32,
 
-    /// Extended type information
+    /// Extended variant information
     ///
     /// Offset: +24
     pub type_ext: [u8; 16]

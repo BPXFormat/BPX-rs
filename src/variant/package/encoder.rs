@@ -36,7 +36,7 @@ use std::{
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
-    bpxp::{Architecture, Platform, DATA_SECTION_TYPE},
+    variant::package::{Architecture, Platform, DATA_SECTION_TYPE},
     builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
     encoder::{Encoder, IoBackend},
     header::{SectionHeader, SECTION_TYPE_SD, SECTION_TYPE_STRING},

@@ -36,7 +36,7 @@ use std::{
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
-    bpxp::{Architecture, Platform, DATA_SECTION_TYPE},
+    variant::package::{Architecture, Platform, DATA_SECTION_TYPE},
     decoder::{Decoder, IoBackend},
     error::Error,
     header::{SECTION_TYPE_SD, SECTION_TYPE_STRING},
@@ -98,7 +98,7 @@ impl PackageDecoder
     {
         if decoder.get_main_header().btype != 'P' as u8 {
             return Err(Error::Corruption(format!(
-                "Unknown type of BPX: {}",
+                "Unknown variant of BPX: {}",
                 decoder.get_main_header().btype as char
             )));
         }
