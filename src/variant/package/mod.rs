@@ -28,13 +28,6 @@
 
 //! An implementation of the BPX variant P (Package) specification
 
-mod decoder;
-mod encoder;
-
-pub use decoder::PackageDecoder;
-pub use encoder::PackageEncoder;
-pub use encoder::PackageBuilder;
-
 /// The standard variant for a data section in a BPX Package (variant P)
 pub const DATA_SECTION_TYPE: u8 = 0x1;
 
@@ -103,3 +96,10 @@ pub enum Platform
     /// The package does not have a target platform and by extension can be loaded on any platform
     Any
 }
+
+#[deprecated(since = "3.0.0", note = "Please use revision 2")]
+pub mod rev1;
+
+pub mod rev2;
+
+
