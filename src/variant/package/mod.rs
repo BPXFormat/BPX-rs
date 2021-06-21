@@ -30,13 +30,35 @@
 
 mod decoder;
 mod encoder;
+pub mod utils;
 
 pub use decoder::PackageDecoder;
 pub use encoder::PackageEncoder;
 pub use encoder::PackageBuilder;
 
 /// The standard type for a data section in a BPX Package (type P)
-pub const DATA_SECTION_TYPE: u8 = 0x1;
+pub const SECTION_TYPE_DATA: u8 = 0x1;
+
+/// The standard type for the object table section in a BPX Package (type P)
+pub const SECTION_TYPE_OBJECT_TABLE: u8 = 0x2;
+
+/// Represents an object header
+///
+/// *This is a low-level header used internally in the encoder/decoder*
+pub struct ObjectHeader
+{
+    /// The size of the object in bytes
+    size: u64,
+
+    /// A pointer to the name string of the object
+    name: u32,
+
+    /// The index of the start section
+    start: u32,
+
+    /// The offset in the start section
+    offset: u32
+}
 
 /// Enum of all supported processor architectures by BPXP
 #[derive(Clone, Copy)]
