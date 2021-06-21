@@ -26,9 +26,16 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! An implementation of the BPX variant P (Package) specification
+//! An implementation of the BPX type P (Package) specification
 
-/// The standard variant for a data section in a BPX Package (variant P)
+mod decoder;
+mod encoder;
+
+pub use decoder::PackageDecoder;
+pub use encoder::PackageEncoder;
+pub use encoder::PackageBuilder;
+
+/// The standard type for a data section in a BPX Package (type P)
 pub const DATA_SECTION_TYPE: u8 = 0x1;
 
 /// Enum of all supported processor architectures by BPXP
@@ -96,10 +103,3 @@ pub enum Platform
     /// The package does not have a target platform and by extension can be loaded on any platform
     Any
 }
-
-#[deprecated(since = "3.0.0", note = "Please use revision 2")]
-pub mod rev1;
-
-pub mod rev2;
-
-

@@ -59,7 +59,8 @@ pub const SECTION_TYPE_STRING: u8 = 0xFF;
 /// The standard variant for a BPX Structured Data section
 pub const SECTION_TYPE_SD: u8 = 0xFE;
 
-const KNOWN_VERSIONS: &'static [u32] = &[0x1, 0x2];
+/// The BPX version this crate supports
+pub const BPX_VERSION: u32 = 0x2;
 
 /// The BPX Main Header
 #[derive(Copy, Clone)]
@@ -139,7 +140,7 @@ impl MainHeader
                 'B' as u8, 'P' as u8, 'X' as u8, head.signature[0], head.signature[1], head.signature[2]
             )));
         }
-        if KNOWN_VERSIONS.into_iter().find(|v| **v == head.version).is_none() {
+        if head.version != BPX_VERSION {
             return Err(Error::Unsupported(format!("unsupported version {}", head.version)));
         }
         return Ok((checksum, head));
