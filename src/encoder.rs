@@ -227,6 +227,11 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
         return &self.sections[handle];
     }
 
+    fn get_section_index(&self, handle: SectionHandle) -> u32
+    {
+        return handle as u32;
+    }
+
     fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData>
     {
         return Ok(self.sections_data[handle].as_mut());

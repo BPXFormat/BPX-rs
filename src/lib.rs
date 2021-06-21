@@ -99,6 +99,20 @@ pub trait Interface
     /// * read-only reference to the BPX section header
     fn get_section_header(&self, handle: SectionHandle) -> &header::SectionHeader;
 
+
+    /// Gets the section index from a section handle
+    ///
+    /// *panics if the given section handle is invalid*
+    ///
+    /// # Arguments
+    ///
+    /// * `handle` - a handle to the section
+    ///
+    /// # Returns
+    ///
+    /// * the index of the section
+    fn get_section_index(&self, handle: SectionHandle) -> u32;
+
     /// Opens a section for read and/or write
     ///
     /// *panics if the given section handle is invalid*

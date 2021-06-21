@@ -149,6 +149,11 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
     {
         return &self.main_header;
     }
+
+    fn get_section_index(&self, handle: SectionHandle) -> u32
+    {
+        return handle as u32;
+    }
 }
 
 fn load_section<TBackend: IoBackend>(file: &mut TBackend, section: &SectionHeader) -> Result<Box<dyn SectionData>>
