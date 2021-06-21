@@ -50,12 +50,13 @@ use crate::{
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
 /// Represents a BPX Package decoder
-pub struct PackageDecoder
+pub struct PackageDecoder<'a, TBackend: IoBackend>
 {
     type_code: [u8; 2],
     architecture: Architecture,
     platform: Platform,
-    strings: SectionHandle
+    strings: SectionHandle,
+    decoder: &'a mut Decoder<TBackend>
 }
 
 fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Platform)>
@@ -82,7 +83,7 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Pl
     return Ok((arch, platform));
 }
 
-impl PackageDecoder
+impl <'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
 {
     /// Creates a new PackageDecoder by reading from a BPX decoder
     ///
@@ -94,7 +95,7 @@ impl PackageDecoder
     ///
     /// * a new PackageDecoder if the file header was successfully parsed
     /// * an [Error](crate::error::Error) in case of corruption or system error
-    pub fn read<TBackend: IoBackend>(decoder: &mut Decoder<TBackend>) -> Result<PackageDecoder>
+    pub fn read(decoder: &mut Decoder<TBackend>) -> Result<PackageDecoder<TBackend>>
     {
         if decoder.get_main_header().btype != 'P' as u8 {
             return Err(Error::Corruption(format!(
@@ -117,7 +118,8 @@ impl PackageDecoder
             type_code: [
                 decoder.get_main_header().type_ext[2],
                 decoder.get_main_header().type_ext[3]
-            ]
+            ],
+            decoder
         });
     }
 
@@ -161,17 +163,17 @@ impl PackageDecoder
     ///
     /// * an [Option](std::option::Option) of the decoded BPXSD [Object](crate::sd::Object)
     /// * an [Error](crate::error::Error) in case of corruption or system error
-    pub fn read_metadata<TBackend: IoBackend>(&self, decoder: &mut Decoder<TBackend>) -> Result<Option<Object>>
+    pub fn read_metadata(&mut self) -> Result<Option<Object>>
     {
-        if let Some(handle) = decoder.find_section_by_type(SECTION_TYPE_SD) {
-            let mut data = decoder.open_section(handle)?;
+        if let Some(handle) = self.decoder.find_section_by_type(SECTION_TYPE_SD) {
+            let mut data = self.decoder.open_section(handle)?;
             let obj = Object::read(&mut data)?;
             return Ok(Some(obj));
         }
         return Ok(None);
     }
 
-    fn extract_file<TRead: Read>(
+    fn extract_to_file<TRead: Read>(
         &self,
         source: &mut TRead,
         dest: &PathBuf,
@@ -241,7 +243,7 @@ impl PackageDecoder
     ///
     /// * nothing if the operation succeeded
     /// * an [Error](crate::error::Error) in case of corruption or system error
-    pub fn unpack<TBackend: IoBackend>(&self, decoder: &mut Decoder<TBackend>, target: &Path) -> Result<()>
+    pub fn unpack(&self, decoder: &mut Decoder<TBackend>, target: &Path) -> Result<()>
     {
         let mut strings = StringSection::new(self.strings);
         let secs = decoder.find_all_sections_of_type(DATA_SECTION_TYPE);
@@ -279,7 +281,7 @@ impl PackageDecoder
                 dest.push(path);
                 {
                     let mut section = decoder.open_section(v)?;
-                    truncated = self.extract_file(&mut section, &dest, size)?;
+                    truncated = self.extract_to_file(&mut section, &dest, size)?;
                 }
                 if truncated.is_some() {
                     break;
