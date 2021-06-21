@@ -36,12 +36,12 @@ use std::{
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
-    variant::package::{Architecture, Platform, DATA_SECTION_TYPE},
     builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
     encoder::{Encoder, IoBackend},
     header::{SectionHeader, SECTION_TYPE_SD, SECTION_TYPE_STRING},
     sd::Object,
     strings::{get_name_from_dir_entry, get_name_from_path, StringSection},
+    variant::package::{Architecture, Platform, DATA_SECTION_TYPE},
     Interface,
     Result,
     SectionHandle
@@ -139,7 +139,7 @@ impl PackageBuilder
     ///
     /// * the new [PackageEncoder](crate::bpxp::encoder::PackageEncoder) if the operation succeeded
     /// * an [Error](crate::error::Error) in case of system error
-    pub fn build<'a, TBackend: IoBackend>(self, encoder: &mut Encoder<TBackend>) -> Result<PackageEncoder>
+    pub fn build<TBackend: IoBackend>(self, encoder: &mut Encoder<TBackend>) -> Result<PackageEncoder<TBackend>>
     {
         let mut type_ext: [u8; 16] = [0; 16];
         match self.architecture {
@@ -178,14 +178,15 @@ impl PackageBuilder
             let metadata = encoder.create_section(metadata_header)?;
             obj.write(&mut encoder.open_section(metadata)?)?;
         }
-        return Ok(PackageEncoder { strings });
+        return Ok(PackageEncoder { strings, encoder });
     }
 }
 
 /// Represents a BPX Package encoder
-pub struct PackageEncoder
+pub struct PackageEncoder<'a, TBackend: IoBackend>
 {
-    strings: SectionHandle
+    strings: SectionHandle,
+    encoder: &'a mut Encoder<TBackend>
 }
 
 fn create_data_section_header() -> SectionHeader
@@ -198,16 +199,11 @@ fn create_data_section_header() -> SectionHeader
     return header;
 }
 
-impl PackageEncoder
+impl<'a, TBackend: IoBackend> PackageEncoder<'a, TBackend>
 {
-    fn write_file<TBackend: IoBackend, TRead: Read>(
-        &self,
-        encoder: &mut Encoder<TBackend>,
-        source: &mut TRead,
-        data_id: SectionHandle
-    ) -> Result<bool>
+    fn write_object<TRead: Read>(&mut self, source: &mut TRead, data_id: SectionHandle) -> Result<bool>
     {
-        let data = encoder.open_section(data_id)?;
+        let data = self.encoder.open_section(data_id)?;
         let mut buf: [u8; DATA_WRITE_BUFFER_SIZE] = [0; DATA_WRITE_BUFFER_SIZE];
         let mut res = source.read(&mut buf)?;
 
@@ -223,9 +219,8 @@ impl PackageEncoder
         return Ok(true);
     }
 
-    fn pack_file<TBackend: IoBackend>(
-        &self,
-        encoder: &mut Encoder<TBackend>,
+    fn pack_file(
+        &mut self,
         source: &Path,
         name: String,
         data_id1: SectionHandle,
@@ -240,20 +235,19 @@ impl PackageEncoder
         #[cfg(feature = "debug-log")]
         println!("Writing file {} with {} byte(s)", name, size);
         LittleEndian::write_u64(&mut buf[0..8], size);
-        LittleEndian::write_u32(&mut buf[8..12], strings.put(encoder, &name)?);
+        LittleEndian::write_u32(&mut buf[8..12], strings.put(self.encoder, &name)?);
         {
-            let data = encoder.open_section(data_id)?;
+            let data = self.encoder.open_section(data_id)?;
             data.write(&buf)?;
         }
-        while !self.write_file(encoder, &mut fle, data_id)? {
-            data_id = encoder.create_section(create_data_section_header())?;
+        while !self.write_object(&mut fle, data_id)? {
+            data_id = self.encoder.create_section(create_data_section_header())?;
         }
         return Ok(data_id);
     }
 
-    fn pack_dir<TBackend: IoBackend>(
-        &self,
-        encoder: &mut Encoder<TBackend>,
+    fn pack_dir(
+        &mut self,
         source: &Path,
         name: String,
         data_id1: SectionHandle,
@@ -269,9 +263,9 @@ impl PackageEncoder
             s.push('/');
             s.push_str(&get_name_from_dir_entry(&entry));
             if entry.file_type()?.is_dir() {
-                self.pack_dir(encoder, &entry.path(), s, data_id, strings)?
+                self.pack_dir(&entry.path(), s, data_id, strings)?
             } else {
-                data_id = self.pack_file(encoder, &entry.path(), s, data_id, strings)?;
+                data_id = self.pack_file(&entry.path(), s, data_id, strings)?;
             }
         }
         return Ok(());
@@ -291,21 +285,16 @@ impl PackageEncoder
     ///
     /// * nothing if the operation succeeded
     /// * an [Error](crate::error::Error) in case of system error
-    pub fn pack_vname<TBackend: IoBackend>(
-        &self,
-        encoder: &mut Encoder<TBackend>,
-        source: &Path,
-        vname: &str
-    ) -> Result<()>
+    pub fn pack_vname(&mut self, source: &Path, vname: &str) -> Result<()>
     {
         let mut strings = StringSection::new(self.strings);
         let md = metadata(source)?;
-        let data_section = encoder.create_section(create_data_section_header())?;
+        let data_section = self.encoder.create_section(create_data_section_header())?;
         if md.is_file() {
-            self.pack_file(encoder, source, String::from(vname), data_section, &mut strings)?;
+            self.pack_file(source, String::from(vname), data_section, &mut strings)?;
             return Ok(());
         } else {
-            return self.pack_dir(encoder, source, String::from(vname), data_section, &mut strings);
+            return self.pack_dir(source, String::from(vname), data_section, &mut strings);
         }
     }
 
@@ -322,16 +311,16 @@ impl PackageEncoder
     ///
     /// * nothing if the operation succeeded
     /// * an [Error](crate::error::Error) in case of system error
-    pub fn pack<TBackend: IoBackend>(&self, encoder: &mut Encoder<TBackend>, source: &Path) -> Result<()>
+    pub fn pack(&mut self, source: &Path) -> Result<()>
     {
         let mut strings = StringSection::new(self.strings);
         let md = metadata(source)?;
-        let data_section = encoder.create_section(create_data_section_header())?;
+        let data_section = self.encoder.create_section(create_data_section_header())?;
         if md.is_file() {
-            self.pack_file(encoder, source, get_name_from_path(source)?, data_section, &mut strings)?;
+            self.pack_file(source, get_name_from_path(source)?, data_section, &mut strings)?;
             return Ok(());
         } else {
-            return self.pack_dir(encoder, source, get_name_from_path(source)?, data_section, &mut strings);
+            return self.pack_dir(source, get_name_from_path(source)?, data_section, &mut strings);
         }
     }
 }
