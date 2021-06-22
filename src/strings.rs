@@ -69,15 +69,15 @@ impl StringSection
     ///
     /// * the string read
     /// * an [Error](crate::error::Error) if the string could not be read or the section is corrupted/truncated
-    pub fn get<TInterface: Interface>(&mut self, interface: &mut TInterface, address: u32) -> Result<String>
+    pub fn get<TInterface: Interface>(&mut self, interface: &mut TInterface, address: u32) -> Result<&str>
     {
         if let Some(s) = self.cache.get(&address) {
-            return Ok(s.clone());
+            return Ok(&s);
         }
         let data = interface.open_section(self.handle)?;
         let s = low_level_read_string(address, data)?;
-        self.cache.insert(address, s.clone());
-        return Ok(s);
+        self.cache.insert(address, s);
+        return Ok(&self.cache.get(&address).unwrap());
     }
 
     /// Writes a new string into the section
@@ -114,9 +114,9 @@ fn low_level_read_string(ptr: u32, string_section: &mut dyn SectionData) -> Resu
             return Err(Error::Truncation("string secton read"));
         }
     }
-    match String::from_utf8(curs) {
-        Err(_) => return Err(Error::Utf8("string section read")),
-        Ok(v) => return Ok(v)
+    return match String::from_utf8(curs) {
+        Err(_) => Err(Error::Utf8("string section read")),
+        Ok(v) => Ok(v)
     }
 }
 
