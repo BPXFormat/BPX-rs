@@ -26,22 +26,22 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::{
-    fs::File,
-    io,
-    io::{Read, Write},
-    path::{Path, PathBuf}
-};
+use std::io::{SeekFrom, Write};
 
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
-    variant::package::{Architecture, Platform, DATA_SECTION_TYPE},
     decoder::{Decoder, IoBackend},
     error::Error,
     header::{SECTION_TYPE_SD, SECTION_TYPE_STRING},
     sd::Object,
     strings::StringSection,
+    variant::package::{
+        object::{ObjectHeader, ObjectTable},
+        Architecture,
+        Platform,
+        SECTION_TYPE_OBJECT_TABLE
+    },
     Interface,
     Result,
     SectionHandle
@@ -55,8 +55,9 @@ pub struct PackageDecoder<'a, TBackend: IoBackend>
     type_code: [u8; 2],
     architecture: Architecture,
     platform: Platform,
-    strings: SectionHandle,
-    decoder: &'a mut Decoder<TBackend>
+    strings: StringSection,
+    decoder: &'a mut Decoder<TBackend>,
+    object_table: SectionHandle
 }
 
 fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Platform)>
@@ -83,7 +84,7 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Pl
     return Ok((arch, platform));
 }
 
-impl <'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
+impl<'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
 {
     /// Creates a new PackageDecoder by reading from a BPX decoder
     ///
@@ -111,15 +112,20 @@ impl <'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
             Some(v) => v,
             None => return Err(Error::Corruption(String::from("Unable to locate strings section")))
         };
+        let object_table = match decoder.find_section_by_type(SECTION_TYPE_OBJECT_TABLE) {
+            Some(v) => v,
+            None => return Err(Error::Corruption(String::from("Unable to locate BPXP object table")))
+        };
         return Ok(PackageDecoder {
             architecture: a,
             platform: p,
-            strings: strings,
+            strings: StringSection::new(strings),
             type_code: [
                 decoder.get_main_header().type_ext[2],
                 decoder.get_main_header().type_ext[3]
             ],
-            decoder
+            decoder,
+            object_table
         });
     }
 
@@ -155,10 +161,6 @@ impl <'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
 
     /// Reads the metadata section of this BPXP if any
     ///
-    /// # Arguments
-    ///
-    /// * `decoder` - the BPX [Decoder](crate::decoder::Decoder) backend to use
-    ///
     /// # Returns
     ///
     /// * an [Option](std::option::Option) of the decoded BPXSD [Object](crate::sd::Object)
@@ -173,122 +175,107 @@ impl <'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
         return Ok(None);
     }
 
-    fn extract_to_file<TRead: Read>(
-        &self,
-        source: &mut TRead,
-        dest: &PathBuf,
-        size: u64
-    ) -> io::Result<Option<(u64, File)>>
-    {
-        if let Some(v) = dest.parent() {
-            std::fs::create_dir_all(v)?;
-        }
-        let mut fle = File::create(dest)?;
-        let mut v: Vec<u8> = Vec::with_capacity(DATA_READ_BUFFER_SIZE);
-        let mut count: u64 = 0;
-        while count < size {
-            let mut byte: [u8; 1] = [0; 1];
-            if source.read(&mut byte)? == 0 && count < size {
-                //Well the file is divided in multiple sections signal the caller of the problen
-                fle.write(&v)?;
-                return Ok(Some((size - count, fle)));
-            }
-            v.push(byte[0]);
-            if v.len() >= DATA_READ_BUFFER_SIZE {
-                fle.write(&v)?;
-                v = Vec::with_capacity(DATA_READ_BUFFER_SIZE);
-            }
-            count += 1;
-        }
-        fle.write(&v)?;
-        return Ok(None);
-    }
-
-    fn continue_file<TRead: Read, TWrite: Write>(
-        &self,
-        source: &mut TRead,
-        out: &mut TWrite,
-        size: u64
-    ) -> io::Result<u64>
-    {
-        let mut v: Vec<u8> = Vec::with_capacity(DATA_READ_BUFFER_SIZE);
-        let mut count: u64 = 0;
-        while count < size {
-            let mut byte: [u8; 1] = [0; 1];
-            if source.read(&mut byte)? == 0 && count < size {
-                //Well the file is divided in multiple sections signal the caller of the problen
-                out.write(&v)?;
-                return Ok(size - count);
-            }
-            v.push(byte[0]);
-            if v.len() >= DATA_READ_BUFFER_SIZE {
-                out.write(&v)?;
-                v = Vec::with_capacity(DATA_READ_BUFFER_SIZE);
-            }
-            count += 1;
-        }
-        return Ok(0);
-    }
-
-    /// Unpacks this BPXP
-    ///
-    /// *this functions prints some information to standard output as a way to debug a broken or incorrectly packed BPXP*
-    ///
-    /// # Arguments
-    ///
-    /// * `decoder` - the BPX [Decoder](crate::decoder::Decoder) backend to use
-    /// * `target` - the target [Path](std::path::Path) to extract the content to
+    /// Reads the object table of this BPXP
     ///
     /// # Returns
     ///
-    /// * nothing if the operation succeeded
+    /// * the decoded [ObjectTable](crate::variant::package::object::ObjectTable)
     /// * an [Error](crate::error::Error) in case of corruption or system error
-    pub fn unpack(&self, decoder: &mut Decoder<TBackend>, target: &Path) -> Result<()>
+    pub fn read_object_table(&mut self) -> Result<ObjectTable>
     {
-        let mut strings = StringSection::new(self.strings);
-        let secs = decoder.find_all_sections_of_type(DATA_SECTION_TYPE);
-        let mut truncated: Option<(u64, File)> = None;
-        for v in secs {
-            let header = *decoder.get_section_header(v);
-            if let Some((remaining, mut file)) = std::mem::replace(&mut truncated, None) {
-                let mut section = decoder.open_section(v)?;
-                let res = self.continue_file(&mut section, &mut file, remaining)?;
-                if res > 0
-                //Still not finished
-                {
-                    truncated = Some((res, file));
-                    continue;
-                }
+        let mut v = Vec::new();
+        let count = self.decoder.get_section_header(self.object_table).size / 20;
+        let object_table = self.decoder.open_section(self.object_table)?;
+
+        for _ in 0..count {
+            let mut buf: [u8; 20] = [0; 20];
+            if object_table.read(&mut buf)? != 20 {
+                return Err(Error::Truncation("read object table"));
             }
-            let mut count: u64 = 0;
-            while count < header.size as u64 {
-                let mut fheader: [u8; 12] = [0; 12];
-                {
-                    let section = decoder.open_section(v)?;
-                    section.read(&mut fheader)?;
-                }
-                let path = strings.get(decoder, LittleEndian::read_u32(&fheader[8..12]))?;
-                if path == "" {
-                    return Err(Error::Corruption(String::from(
-                        "Empty path string detected, aborting to prevent damage on host files"
-                    )));
-                }
-                let size = LittleEndian::read_u64(&fheader[0..8]);
-                #[cfg(feature = "debug-log")]
-                println!("Reading {} with {} byte(s)...", path, size);
-                let mut dest = PathBuf::new();
-                dest.push(target);
-                dest.push(path);
-                {
-                    let mut section = decoder.open_section(v)?;
-                    truncated = self.extract_to_file(&mut section, &dest, size)?;
-                }
-                if truncated.is_some() {
-                    break;
-                }
-                count += size + 12;
-            }
+            let size = LittleEndian::read_u64(&buf[0..8]);
+            let name_ptr = LittleEndian::read_u32(&buf[8..12]);
+            let start = LittleEndian::read_u32(&buf[12..16]);
+            let offset = LittleEndian::read_u32(&buf[16..20]);
+            v.push(ObjectHeader {
+                size,
+                name: name_ptr,
+                start,
+                offset
+            })
         }
-        return Ok(());
+        return Ok(ObjectTable::new(v));
+    }
+
+    /// Gets the name of an object, loads the string if its not yet loaded
+    ///
+    /// # Arguments
+    ///
+    /// * `obj` - the object header to load the actual name for
+    ///
+    /// # Returns
+    ///
+    /// * the name of the object
+    /// * an error if the name could not be read
+    pub fn get_object_name(&mut self, obj: &ObjectHeader) -> Result<&str>
+    {
+        return self.strings.get(self.decoder, obj.name);
+    }
+
+    fn load_from_section<TWrite: Write>(
+        &mut self,
+        handle: SectionHandle,
+        offset: u32,
+        size: u32,
+        out: &mut TWrite
+    ) -> Result<u32>
+    {
+        let mut len = 0;
+        let mut buf: [u8; DATA_READ_BUFFER_SIZE] = [0; DATA_READ_BUFFER_SIZE];
+        let data = self.decoder.open_section(handle)?;
+
+        data.seek(SeekFrom::Start(offset as u64))?;
+        while len < size {
+            let s = std::cmp::min(size - len, DATA_READ_BUFFER_SIZE as u32);
+            let val = data.read(&mut buf[0..s as usize])?;
+            len += val as u32;
+            out.write(&buf[0..val])?;
+        }
+        return Ok(len);
+    }
+
+    /// Unpacks an object to a raw stream
+    ///
+    /// # Arguments
+    ///
+    /// * `obj` - the object header
+    /// * `out` - the raw [Write](std::io::Write)
+    ///
+    /// # Returns
+    ///
+    /// * the number of bytes read if the operation succeeded
+    /// * an error if the object could not be unpacked
+    pub fn unpack_object<TWrite: Write>(&mut self, obj: &ObjectHeader, out: &mut TWrite) -> Result<u64>
+    {
+        let mut section_id = obj.start;
+        let mut offset = obj.offset;
+        let mut len = obj.size;
+
+        while len > 0 {
+            let handle = match self.decoder.find_section_by_index(section_id) {
+                Some(i) => i,
+                None => break
+            };
+            let remaining_section_size = self.decoder.get_section_header(handle).size - offset;
+            let val = self.load_from_section(
+                handle,
+                offset,
+                std::cmp::min(remaining_section_size as u64, len) as u32,
+                out
+            )?;
+            len -= val as u64;
+            offset = 0;
+            section_id += 1;
+        }
+        return Ok(obj.size);
     }
 }
