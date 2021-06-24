@@ -246,8 +246,9 @@ impl<'a, TBackend: IoBackend> PackageEncoder<'a, TBackend>
     pub fn pack_object<TRead: Read>(&mut self, name: &str, source: &mut TRead) -> Result<()>
     {
         let mut object_size = 0;
+        let useless = &mut self.encoder;
         let mut data_section = *Option::get_or_insert_with_err(&mut self.last_data_section, || {
-            self.encoder.create_section(create_data_section_header())
+            useless.create_section(create_data_section_header())
         })?;
         let start = self.encoder.get_section_index(data_section);
         let offset = self.encoder.open_section(data_section)?.size() as u32;
