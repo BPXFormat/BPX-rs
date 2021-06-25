@@ -1,6 +1,6 @@
 use std::{fs::File, path::Path};
 
-use bpx::{decoder::Decoder, encoder::Encoder, Interface};
+use bpx::{decoder::Decoder, encoder::Encoder, header::BPX_CURRENT_VERSION, Interface};
 
 #[test]
 fn attempt_write_empty_bpxp()
@@ -14,7 +14,7 @@ fn attempt_write_empty_bpxp()
         let mut file = File::open(Path::new("./the_very_first_bpx.bpx")).unwrap();
         let decoder = Decoder::new(&mut file).unwrap();
         assert_eq!(decoder.get_main_header().section_num, 0);
-        assert_eq!(decoder.get_main_header().version, 1);
+        assert_eq!(decoder.get_main_header().version, BPX_CURRENT_VERSION);
         assert_eq!(decoder.get_main_header().file_size, 40);
     }
 }
