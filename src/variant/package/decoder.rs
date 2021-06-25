@@ -151,7 +151,7 @@ impl<'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
     ///
     /// # Returns
     ///
-    /// * an [Architecture](crate::bpxp::Architecture) enum
+    /// * an [Architecture](crate::variant::package::Architecture) enum
     pub fn get_architecture(&self) -> Architecture
     {
         return self.architecture;
@@ -161,7 +161,7 @@ impl<'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
     ///
     /// # Returns
     ///
-    /// * a [Platform](crate::bpxp::Platform) enum
+    /// * a [Platform](crate::variant::package::Platform) enum
     pub fn get_platform(&self) -> Platform
     {
         return self.platform;

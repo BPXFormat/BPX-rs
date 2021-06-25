@@ -48,7 +48,7 @@ const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
 const MAX_DATA_SECTION_SIZE: usize = 200000000 - MIN_DATA_REMAINING_SIZE; //200MB
 
-/// Utility to easily generate a [PackageEncoder](crate::bpxp::encoder::PackageEncoder)
+/// Utility to easily generate a [PackageEncoder](crate::variant::package::PackageEncoder)
 pub struct PackageBuilder
 {
     architecture: Architecture,
@@ -80,7 +80,7 @@ impl PackageBuilder
     ///
     /// # Arguments
     ///
-    /// * `arch` - the new [Architecture](crate::bpxp::Architecture)
+    /// * `arch` - the new [Architecture](crate::variant::package::Architecture)
     pub fn with_architecture(mut self, arch: Architecture) -> Self
     {
         self.architecture = arch;
@@ -93,7 +93,7 @@ impl PackageBuilder
     ///
     /// # Arguments
     ///
-    /// * `platform` - the new [Platform](crate::bpxp::Platform)
+    /// * `platform` - the new [Platform](crate::variant::package::Platform)
     pub fn with_platform(mut self, platform: Platform) -> Self
     {
         self.platform = platform;
@@ -126,7 +126,7 @@ impl PackageBuilder
         return self;
     }
 
-    /// Builds the corresponding [PackageEncoder](crate::bpxp::encoder::PackageEncoder)
+    /// Builds the corresponding [PackageEncoder](crate::variant::package::PackageEncoder)
     ///
     /// # Arguments
     ///
@@ -134,7 +134,7 @@ impl PackageBuilder
     ///
     /// # Returns
     ///
-    /// * the new [PackageEncoder](crate::bpxp::encoder::PackageEncoder) if the operation succeeded
+    /// * the new [PackageEncoder](crate::variant::package::PackageEncoder) if the operation succeeded
     /// * an [Error](crate::error::Error) in case of system error
     pub fn build<TBackend: IoBackend>(self, encoder: &mut Encoder<TBackend>) -> Result<PackageEncoder<TBackend>>
     {
