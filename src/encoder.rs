@@ -62,15 +62,15 @@ pub trait IoBackend: io::Write
 impl<T: io::Write> IoBackend for T {}
 
 /// The BPX encoder
-pub struct Encoder<'a, TBackend: IoBackend>
+pub struct Encoder<TBackend: IoBackend>
 {
     main_header: MainHeader,
     sections: Vec<SectionHeader>,
     sections_data: Vec<Box<dyn SectionData>>,
-    file: &'a mut TBackend
+    file: TBackend
 }
 
-impl<'a, TBackend: IoBackend> Encoder<'a, TBackend>
+impl<TBackend: IoBackend> Encoder<TBackend>
 {
     /// Creates a new BPX encoder
     ///
@@ -81,7 +81,7 @@ impl<'a, TBackend: IoBackend> Encoder<'a, TBackend>
     /// # Returns
     ///
     /// * a new BPX encoder
-    pub fn new(file: &'a mut TBackend) -> Result<Encoder<'a, TBackend>>
+    pub fn new(file: TBackend) -> Result<Encoder<TBackend>>
     {
         return Ok(Encoder {
             main_header: MainHeader::new(),
@@ -190,7 +190,7 @@ impl<'a, TBackend: IoBackend> Encoder<'a, TBackend>
     }
 }
 
-impl<'a, TBackend: IoBackend> Interface for Encoder<'a, TBackend>
+impl<TBackend: IoBackend> Interface for Encoder<TBackend>
 {
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {
@@ -225,6 +225,11 @@ impl<'a, TBackend: IoBackend> Interface for Encoder<'a, TBackend>
     fn get_section_header(&self, handle: SectionHandle) -> &SectionHeader
     {
         return &self.sections[handle];
+    }
+
+    fn get_section_index(&self, handle: SectionHandle) -> u32
+    {
+        return handle as u32;
     }
 
     fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData>

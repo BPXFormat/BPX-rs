@@ -187,7 +187,7 @@ fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object>
             Some(func) => obj.raw_set(hash, func(stream)?),
             None => {
                 return Err(Error::Corruption(format!(
-                    "Got unexpected unknown type code ({}) while reading Structured Data Object",
+                    "Got unexpected unknown variant code ({}) while reading Structured Data Object",
                     type_code
                 )))
             },
@@ -217,7 +217,7 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array>
             Some(func) => arr.add(func(stream)?),
             None => {
                 return Err(Error::Corruption(format!(
-                    "Got unexpected unknown type code ({}) while reading Structured Data Array",
+                    "Got unexpected unknown variant code ({}) while reading Structured Data Array",
                     type_code[0]
                 )))
             },

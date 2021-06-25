@@ -89,11 +89,11 @@ pub enum Value
 
 impl Value
 {
-    /// Gets the type name of this Value
+    /// Gets the variant name of this Value
     ///
     /// # Returns
     ///
-    /// * a static string reference to the type name
+    /// * a static string reference to the variant name
     pub fn get_type_name(&self) -> &'static str
     {
         return match self {

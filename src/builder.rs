@@ -100,13 +100,13 @@ impl SectionHeaderBuilder
         return self;
     }
 
-    /// Defines the type byte of the section
+    /// Defines the variant byte of the section
     ///
-    /// - *The default value of the type byte is 0*
+    /// - *The default value of the variant byte is 0*
     ///
     /// # Arguments
     ///
-    /// * `typeb` - the type byte of the section
+    /// * `typeb` - the variant byte of the section
     pub fn with_type(mut self, typeb: u8) -> Self
     {
         self.header.btype = typeb;
@@ -191,13 +191,13 @@ impl MainHeaderBuilder
         };
     }
 
-    /// Defines the BPX type byte
+    /// Defines the BPX variant byte
     ///
-    /// - *The default value of the type byte is 0*
+    /// - *The default value of the variant byte is 0*
     ///
     /// # Arguments
     ///
-    /// * `typeb` - the BPX type byte
+    /// * `typeb` - the BPX variant byte
     pub fn with_type(mut self, typeb: u8) -> Self
     {
         self.header.btype = typeb;
@@ -206,7 +206,7 @@ impl MainHeaderBuilder
 
     /// Defines the Extended Type Information field of the BPX
     ///
-    /// - *The default value of the type byte is 0*
+    /// - *The default value of the variant byte is 0*
     ///
     /// # Arguments
     ///
@@ -214,6 +214,19 @@ impl MainHeaderBuilder
     pub fn with_type_ext(mut self, type_ext: [u8; 16]) -> Self
     {
         self.header.type_ext = type_ext;
+        return self;
+    }
+
+    /// Defines the version of the BPX
+    ///
+    /// - *The default value of the version int is given by [BPX_CURRENT_VERSION](crate::header::BPX_CURRENT_VERSION)*
+    ///
+    /// # Arguments
+    ///
+    /// * `type_ext` - the Extended Type Information block
+    pub fn with_version(mut self, version: u32) -> Self
+    {
+        self.header.version = version;
         return self;
     }
 
