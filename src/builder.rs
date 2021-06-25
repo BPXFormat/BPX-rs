@@ -217,6 +217,19 @@ impl MainHeaderBuilder
         return self;
     }
 
+    /// Defines the version of the BPX
+    ///
+    /// - *The default value of the version int is given by [BPX_CURRENT_VERSION](crate::header::BPX_CURRENT_VERSION)*
+    ///
+    /// # Arguments
+    ///
+    /// * `type_ext` - the Extended Type Information block
+    pub fn with_version(mut self, version: u32) -> Self
+    {
+        self.header.version = version;
+        return self;
+    }
+
     /// Consumes self and returns the generated [MainHeader](crate::header::MainHeader)
     ///
     /// # Returns

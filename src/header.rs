@@ -60,7 +60,10 @@ pub const SECTION_TYPE_STRING: u8 = 0xFF;
 pub const SECTION_TYPE_SD: u8 = 0xFE;
 
 /// The BPX version this crate supports
-pub const BPX_VERSION: u32 = 0x2;
+pub const BPX_CURRENT_VERSION: u32 = 0x2;
+
+/// The values allowed for the version field in BPX main header
+pub const KNOWN_VERSIONS: &[u32] = &[0x1, 0x2];
 
 /// The BPX Main Header
 #[derive(Copy, Clone)]
@@ -140,7 +143,7 @@ impl MainHeader
                 'B' as u8, 'P' as u8, 'X' as u8, head.signature[0], head.signature[1], head.signature[2]
             )));
         }
-        if head.version != BPX_VERSION {
+        if !KNOWN_VERSIONS.contains(&head.version) {
             return Err(Error::Unsupported(format!("unsupported version {}", head.version)));
         }
         return Ok((checksum, head));
@@ -159,7 +162,7 @@ impl MainHeader
             chksum: 0,                                    //+4
             file_size: SIZE_MAIN_HEADER as u64,           //+8
             section_num: 0,                               //+16
-            version: 0x1,                                 //+20
+            version: BPX_CURRENT_VERSION,                 //+20
             type_ext: [0; 16]
         };
     }
