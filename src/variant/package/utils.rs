@@ -28,22 +28,23 @@
 
 use std::{
     fs::{metadata, read_dir, File},
-    path::Path
+    path::{Path, PathBuf}
 };
 
 use crate::{
+    error::Error,
     strings::{get_name_from_dir_entry, get_name_from_path},
-    variant::package::PackageEncoder,
+    variant::package::{object::ObjectHeader, PackageDecoder, PackageEncoder},
     Result
 };
 
-/// Packs a file or folder in this BPXP with the given virtual name
+/// Packs a file or folder in a BPXP with the given virtual name
 ///
 /// *this functions prints some information to standard output as a way to debug data compression issues*
 ///
 /// # Arguments
 ///
-/// * `encoder` - the BPX [Encoder](crate::encoder::Encoder) backend to use
+/// * `package` - the BPXP [PackageEncoder](crate::variant::package::PackageEncoder) to use
 /// * `source` - the source [Path](std::path::Path) to pack
 /// * `vname` - the virtual name for the root source path
 ///
@@ -76,13 +77,13 @@ pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
     return Ok(());
 }
 
-/// Packs a file or folder in this BPXP, automatically computing the virtual name from the source path file name
+/// Packs a file or folder in a BPXP, automatically computing the virtual name from the source path file name
 ///
 /// *this functions prints some information to standard output as a way to debug data compression issues*
 ///
 /// # Arguments
 ///
-/// * `encoder` - the BPX [Encoder](crate::encoder::Encoder) backend to use
+/// * `package` - the BPXP [PackageEncoder](crate::variant::package::PackageEncoder) to use
 /// * `source` - the source [Path](std::path::Path) to pack
 ///
 /// # Returns
@@ -95,4 +96,91 @@ pub fn pack_file<TBackend: crate::encoder::IoBackend>(
 ) -> Result<()>
 {
     return pack_file_vname(package, &get_name_from_path(source)?, source);
+}
+
+/// Loads an object into memory
+///
+/// # Arguments
+///
+/// * `package` - the BPXP [PackageDecoder](crate::variant::package::PackageDecoder) to use
+/// * `obj` - the object header
+///
+/// # Returns
+///
+/// * the object content as a raw [Vec](std::vec::Vec) of bytes
+/// * an error if the object could not be unpacked
+pub fn unpack_memory<TBackend: crate::decoder::IoBackend>(
+    package: &mut PackageDecoder<TBackend>,
+    obj: &ObjectHeader
+) -> Result<Vec<u8>>
+{
+    let mut v = Vec::with_capacity(obj.size as usize);
+    let len = package.unpack_object(obj, &mut v)?;
+    if len != obj.size {
+        return Err(Error::Truncation("object unpack memory"));
+    }
+    return Ok(v);
+}
+
+/// Unpacks an object to the given file
+///
+/// # Arguments
+///
+/// * `package` - the BPXP [PackageDecoder](crate::variant::package::PackageDecoder) to use
+/// * `obj` - the object header
+/// * `out` - the output file [Path](std::path::Path)
+///
+/// # Returns
+///
+/// * the File that was written
+/// * an error if the object could not be unpacked
+pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
+    package: &mut PackageDecoder<TBackend>,
+    obj: &ObjectHeader,
+    out: &Path
+) -> Result<File>
+{
+    let mut f = File::create(out)?;
+    let len = package.unpack_object(obj, &mut f)?;
+    if len != obj.size {
+        return Err(Error::Truncation("object unpack file"));
+    }
+    return Ok(f);
+}
+
+/// Unpacks a BPXP
+///
+/// *this functions prints some information to standard output as a way to debug a broken or incorrectly packed BPXP*
+///
+/// # Arguments
+///
+/// * `package` - the BPXP [PackageDecoder](crate::variant::package::PackageDecoder) to unpack
+/// * `target` - the target [Path](std::path::Path) to extract the content to
+///
+/// # Returns
+///
+/// * nothing if the operation succeeded
+/// * an [Error](crate::error::Error) in case of corruption or system error
+pub fn unpack<TBackend: crate::decoder::IoBackend>(package: &mut PackageDecoder<TBackend>, target: &Path)
+    -> Result<()>
+{
+    let table = package.read_object_table()?;
+    for v in table.get_objects() {
+        let path = package.get_object_name(v)?;
+        if path == "" {
+            return Err(Error::Corruption(String::from(
+                "Empty path string detected, aborting to prevent damage on host files"
+            )));
+        }
+        #[cfg(feature = "debug-log")]
+        println!("Reading {} with {} byte(s)...", path, v.size);
+        let mut dest = PathBuf::new();
+        dest.push(target);
+        dest.push(Path::new(path));
+        if let Some(v) = dest.parent() {
+            std::fs::create_dir_all(v)?;
+        }
+        unpack_file(package, v, &dest)?;
+    }
+    return Ok(());
 }
