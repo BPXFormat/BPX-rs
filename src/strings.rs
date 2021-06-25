@@ -31,6 +31,7 @@
 use std::{collections::HashMap, fs::DirEntry, io::SeekFrom, path::Path, string::String};
 
 use crate::{error::Error, section::SectionData, Interface, Result, SectionHandle};
+use std::collections::hash_map::Entry;
 
 /// Helper class to manage a BPX string section
 pub struct StringSection
@@ -71,13 +72,15 @@ impl StringSection
     /// * an [Error](crate::error::Error) if the string could not be read or the section is corrupted/truncated
     pub fn get<TInterface: Interface>(&mut self, interface: &mut TInterface, address: u32) -> Result<&str>
     {
-        if let Some(s) = self.cache.get(&address) {
-            return Ok(&s);
-        }
-        let data = interface.open_section(self.handle)?;
-        let s = low_level_read_string(address, data)?;
-        self.cache.insert(address, s);
-        return Ok(&self.cache.get(&address).unwrap());
+        let res = match self.cache.entry(address) {
+            Entry::Occupied(o) => o.into_mut(),
+            Entry::Vacant(o) => {
+                let data = interface.open_section(self.handle)?;
+                let s = low_level_read_string(address, data)?;
+                o.insert(s)
+            }
+        };
+        return Ok(res);
     }
 
     /// Writes a new string into the section
