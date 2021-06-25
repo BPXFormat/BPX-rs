@@ -43,6 +43,9 @@ pub const SECTION_TYPE_DATA: u8 = 0x1;
 /// The standard type for the object table section in a BPX Package (type P)
 pub const SECTION_TYPE_OBJECT_TABLE: u8 = 0x2;
 
+/// The supported BPX version for this package variant decoder/encoder
+pub const SUPPORTED_VERSION: u32 = 0x2;
+
 /// Enum of all supported processor architectures by BPXP
 #[derive(Clone, Copy)]
 pub enum Architecture

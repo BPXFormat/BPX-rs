@@ -42,6 +42,7 @@ use crate::{
     Result,
     SectionHandle
 };
+use crate::variant::package::SUPPORTED_VERSION;
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
@@ -157,6 +158,7 @@ impl PackageBuilder
         let header = MainHeaderBuilder::new()
             .with_type('P' as u8)
             .with_type_ext(type_ext)
+            .with_version(SUPPORTED_VERSION)
             .build();
         encoder.set_main_header(header);
         let strings_header = SectionHeaderBuilder::new()

@@ -40,7 +40,8 @@ use crate::{
         object::{ObjectHeader, ObjectTable},
         Architecture,
         Platform,
-        SECTION_TYPE_OBJECT_TABLE
+        SECTION_TYPE_OBJECT_TABLE,
+        SUPPORTED_VERSION
     },
     Interface,
     Result,
@@ -102,6 +103,13 @@ impl<'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
             return Err(Error::Corruption(format!(
                 "Unknown variant of BPX: {}",
                 decoder.get_main_header().btype as char
+            )));
+        }
+        if decoder.get_main_header().version != SUPPORTED_VERSION {
+            return Err(Error::Unsupported(format!(
+                "This version of the BPX SDK only supports BPXP version {}, you are trying to decode version {} BPXP",
+                SUPPORTED_VERSION,
+                decoder.get_main_header().version
             )));
         }
         let (a, p) = get_arch_platform_from_code(
