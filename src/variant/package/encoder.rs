@@ -224,12 +224,12 @@ impl<'a, TBackend: IoBackend> PackageEncoder<'a, TBackend>
             if data.size() >= MAX_DATA_SECTION_SIZE
             //Split sections (this is to avoid reaching the 4Gb max)
             {
-                return Ok((count, false));
+                return Ok((count, true));
             }
             res = source.read(&mut buf)?;
             count += res;
         }
-        return Ok((count, true));
+        return Ok((count, false));
     }
 
     /// Stores an object in this BPXP with the given name
