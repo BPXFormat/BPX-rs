@@ -51,11 +51,11 @@ pub enum Error
     /// * the error that occured
     Io(std::io::Error),
 
-    /// Describes a type conversion error (Structured Data)
+    /// Describes a variant conversion error (Structured Data)
     ///
     /// #### Arguments
-    /// * expected type name
-    /// * actual type name
+    /// * expected variant name
+    /// * actual variant name
     TypeError(&'static str, &'static str),
 
     /// Describes too many props or values attempted to be written as part of an Object or Array (Structured Data) (ie exceeds 255)

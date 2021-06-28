@@ -39,7 +39,7 @@ mod memory;
 
 const MEMORY_THRESHOLD: u32 = 100000000;
 
-/// Opaque type intended to manipulate section data in the form of standard IO operations
+/// Opaque variant intended to manipulate section data in the form of standard IO operations
 pub trait SectionData: Read + Write + Seek
 {
     /// Loads this section into memory

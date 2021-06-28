@@ -50,15 +50,15 @@ pub trait IoBackend: io::Seek + io::Read
 impl<T: io::Seek + io::Read> IoBackend for T {}
 
 /// The BPX decoder
-pub struct Decoder<'a, TBackend: IoBackend>
+pub struct Decoder<TBackend: IoBackend>
 {
     main_header: MainHeader,
     sections: Vec<SectionHeader>,
     sections_data: Vec<Option<Box<dyn SectionData>>>,
-    file: &'a mut TBackend
+    file: TBackend
 }
 
-impl<'a, TBackend: IoBackend> Decoder<'a, TBackend>
+impl<TBackend: IoBackend> Decoder<TBackend>
 {
     fn read_section_header_table(&mut self, checksum: u32) -> Result<()>
     {
@@ -85,9 +85,9 @@ impl<'a, TBackend: IoBackend> Decoder<'a, TBackend>
     ///
     /// * a new BPX decoder
     /// * an [Error](crate::error::Error) if some headers could not be read or if the header data is corrupted
-    pub fn new(file: &'a mut TBackend) -> Result<Decoder<'a, TBackend>>
+    pub fn new(mut file: TBackend) -> Result<Decoder<TBackend>>
     {
-        let (checksum, header) = MainHeader::read(file)?;
+        let (checksum, header) = MainHeader::read(&mut file)?;
         let num = header.section_num;
         let mut decoder = Decoder {
             file,
@@ -100,7 +100,7 @@ impl<'a, TBackend: IoBackend> Decoder<'a, TBackend>
     }
 }
 
-impl<'a, TBackend: IoBackend> Interface for Decoder<'a, TBackend>
+impl<TBackend: IoBackend> Interface for Decoder<TBackend>
 {
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {
@@ -148,6 +148,11 @@ impl<'a, TBackend: IoBackend> Interface for Decoder<'a, TBackend>
     fn get_main_header(&self) -> &MainHeader
     {
         return &self.main_header;
+    }
+
+    fn get_section_index(&self, handle: SectionHandle) -> u32
+    {
+        return handle as u32;
     }
 }
 
