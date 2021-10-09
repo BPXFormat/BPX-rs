@@ -118,7 +118,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         self.sections.push(header);
         let r = self.sections.len() - 1;
         self.sections_data.push(section);
-        return Ok(r);
+        return Ok(SectionHandle(r));
     }
 
     fn write_sections(&mut self) -> Result<(File, u32, usize)>
@@ -196,7 +196,7 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
     {
         for i in 0..self.sections.len() {
             if self.sections[i].btype == btype {
-                return Some(i);
+                return Some(SectionHandle(i));
             }
         }
         return None;
@@ -208,7 +208,7 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
 
         for i in 0..self.sections.len() {
             if self.sections[i].btype == btype {
-                v.push(i);
+                v.push(SectionHandle(i));
             }
         }
         return v;
@@ -217,24 +217,24 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
     fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>
     {
         if let Some(_) = self.sections.get(index as usize) {
-            return Some(index as SectionHandle);
+            return Some(SectionHandle(index as _));
         }
         return None;
     }
 
     fn get_section_header(&self, handle: SectionHandle) -> &SectionHeader
     {
-        return &self.sections[handle];
+        return &self.sections[handle.0];
     }
 
     fn get_section_index(&self, handle: SectionHandle) -> u32
     {
-        return handle as u32;
+        return handle.0 as u32;
     }
 
     fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData>
     {
-        return Ok(self.sections_data[handle].as_mut());
+        return Ok(self.sections_data[handle.0].as_mut());
     }
 
     fn get_main_header(&self) -> &MainHeader

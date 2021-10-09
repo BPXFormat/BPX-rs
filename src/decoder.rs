@@ -106,7 +106,7 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
     {
         for i in 0..self.sections.len() {
             if self.sections[i].btype == btype {
-                return Some(i);
+                return Some(SectionHandle(i));
             }
         }
         return None;
@@ -118,7 +118,7 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
 
         for i in 0..self.sections.len() {
             if self.sections[i].btype == btype {
-                v.push(i);
+                v.push(SectionHandle(i));
             }
         }
         return v;
@@ -127,21 +127,21 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
     fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>
     {
         if let Some(_) = self.sections.get(index as usize) {
-            return Some(index as SectionHandle);
+            return Some(SectionHandle(index as _));
         }
         return None;
     }
 
     fn get_section_header(&self, handle: SectionHandle) -> &SectionHeader
     {
-        return &self.sections[handle];
+        return &self.sections[handle.0];
     }
 
     fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData>
     {
-        let header = &self.sections[handle];
+        let header = &self.sections[handle.0];
         let file = &mut self.file;
-        let object = self.sections_data[handle].get_or_insert_with_err(|| load_section(file, header))?;
+        let object = self.sections_data[handle.0].get_or_insert_with_err(|| load_section(file, header))?;
         return Ok(object.as_mut());
     }
 
@@ -152,7 +152,7 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
 
     fn get_section_index(&self, handle: SectionHandle) -> u32
     {
-        return handle as u32;
+        return handle.0 as u32;
     }
 }
 
