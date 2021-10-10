@@ -26,14 +26,29 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! A set of helpers to manipulate BPX strings sections
+//! A set of helpers to manipulate BPX string sections.
 
 use std::{collections::HashMap, fs::DirEntry, io::SeekFrom, path::Path, string::String};
 
 use crate::{error::Error, section::SectionData, Interface, Result, SectionHandle};
 use std::collections::hash_map::Entry;
 
-/// Helper class to manage a BPX string section
+/// Helper class to manage a BPX string section.
+///
+/// # Examples
+///
+/// ```
+/// use bpx::encoder::Encoder;
+/// use bpx::header::SectionHeader;
+/// use bpx::strings::StringSection;
+///
+/// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+/// let handle = file.create_section(SectionHeader::new()).unwrap();
+/// let mut strings = StringSection::new(handle);
+/// let offset = strings.put(&mut file, "Test").unwrap();
+/// let str = strings.get(&mut file, offset).unwrap();
+/// assert_eq!(str, "Test");
+/// ```
 pub struct StringSection
 {
     handle: SectionHandle,
@@ -42,15 +57,13 @@ pub struct StringSection
 
 impl StringSection
 {
-    /// Create a new string section from a handle
+    /// Create a new string section from a handle.
     ///
     /// # Arguments
     ///
-    /// * `hdl` - handle to the string section
+    /// * `hdl`: handle to the string section.
     ///
-    /// # Returns
-    ///
-    /// * a new StringSection
+    /// returns: StringSection
     pub fn new(hdl: SectionHandle) -> StringSection
     {
         return StringSection {
@@ -59,17 +72,19 @@ impl StringSection
         };
     }
 
-    /// Reads a string from the section
+    /// Reads a string from the section.
     ///
     /// # Arguments
     ///
-    /// * `interface` - the BPX IO interface
-    /// * `address` - the offset to the start of the string
+    /// * `interface`: the BPX IO interface.
+    /// * `address`: the offset to the start of the string.
     ///
-    /// # Returns
+    /// returns: Result<&str, Error>
     ///
-    /// * the string read
-    /// * an [Error](crate::error::Error) if the string could not be read or the section is corrupted/truncated
+    /// # Errors
+    ///
+    /// Returns an [Error](crate::error::Error) if the string could not be read or the
+    /// section is corrupted/truncated.
     pub fn get<TInterface: Interface>(&mut self, interface: &mut TInterface, address: u32) -> Result<&str>
     {
         let res = match self.cache.entry(address) {
@@ -83,17 +98,18 @@ impl StringSection
         return Ok(res);
     }
 
-    /// Writes a new string into the section
+    /// Writes a new string into the section.
     ///
     /// # Arguments
     ///
-    /// * `interface` - the BPX IO interface
-    /// * `s` - the string to write
+    /// * `interface`: the BPX IO interface.
+    /// * `s`: the string to write.
     ///
-    /// # Returns
+    /// returns: Result<u32, Error>
     ///
-    /// * the offset to the start of the newly written string
-    /// * an [Error](crate::error::Error) if the string could not be written
+    /// # Errors
+    ///
+    /// Returns an [Error](crate::error::Error) if the string could not be written.
     pub fn put<TInterface: Interface>(&mut self, interface: &mut TInterface, s: &str) -> Result<u32>
     {
         let data = interface.open_section(self.handle)?;
@@ -131,16 +147,31 @@ fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Resu
     return Ok(ptr);
 }
 
-/// Returns the file name as a UTF-8 string from a rust Path or panics if the path is not unicode compatible (BPX only supports UTF-8)
+/// Returns the file name as a UTF-8 string from a rust Path.
 ///
 /// # Arguments
 ///
-/// * `path` - the rust Path
+/// * `path`: the rust [Path](std::path::Path).
 ///
-/// # Returns
+/// returns: Result<String, Error>
 ///
-/// * the file name as UTF-8 string
-/// * an [Error](crate::error::Error) if the given Path does not have a file name
+/// # Errors
+///
+/// Returns an [Error](crate::error::Error) if the path does not have a file name.
+///
+/// # Panics
+///
+/// Panics in case `path` is not unicode compatible (BPX only supports UTF-8).
+///
+/// # Examples
+///
+/// ```
+/// use std::path::Path;
+/// use bpx::strings::get_name_from_path;
+///
+/// let str = get_name_from_path(Path::new("test/file.txt")).unwrap();
+/// assert_eq!(str, "file.txt");
+/// ```
 pub fn get_name_from_path(path: &Path) -> Result<String>
 {
     match path.file_name() {
@@ -154,15 +185,17 @@ pub fn get_name_from_path(path: &Path) -> Result<String>
     }
 }
 
-/// Returns the file name as a UTF-8 string from a rust DirEntry or panics if the path is not unicode compatible (BPX only supports UTF-8)
+/// Returns the file name as a UTF-8 string from a rust DirEntry.
 ///
 /// # Arguments
 ///
-/// * `entry` - the rust DirEntry
+/// * `entry`: the rust DirEntry.
 ///
-/// # Returns
+/// returns: String
 ///
-/// * the file name as UTF-8 string
+/// # Panics
+///
+/// Panics in case `entry` is not unicode compatible (BPX only supports UTF-8).
 pub fn get_name_from_dir_entry(entry: &DirEntry) -> String
 {
     match entry.file_name().to_str() {
