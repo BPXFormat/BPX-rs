@@ -169,6 +169,10 @@ impl DebugSymbols
                 let sym: &str = (&val[i]).try_into()?;
                 symbols.insert(hash(sym), String::from(sym));
             }
+            return Ok(DebugSymbols {
+                symbols_list: Vec::new(),
+                symbols_map: symbols
+            });
         }
         return Err(Error::MissingProp("__debug__"));
     }
