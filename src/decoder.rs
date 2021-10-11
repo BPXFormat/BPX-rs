@@ -26,7 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! The BPX decoder
+//! The BPX decoder.
 
 use std::{io, io::Write};
 
@@ -43,13 +43,13 @@ use crate::{
 
 const READ_BLOCK_SIZE: usize = 8192;
 
-/// Represents the IO backend for a BPX decoder
+/// Represents the IO backend for a BPX decoder.
 pub trait IoBackend: io::Seek + io::Read
 {
 }
 impl<T: io::Seek + io::Read> IoBackend for T {}
 
-/// The BPX decoder
+/// The BPX decoder.
 pub struct Decoder<TBackend: IoBackend>
 {
     main_header: MainHeader,
@@ -75,16 +75,28 @@ impl<TBackend: IoBackend> Decoder<TBackend>
         return Ok(());
     }
 
-    /// Creates a new BPX decoder
+    /// Creates a new BPX decoder.
     ///
     /// # Arguments
     ///
-    /// * `file` - a reference to an [IoBackend](self::IoBackend) to use for reading the data
+    /// * `file`: An [IoBackend](self::IoBackend) to use for reading the data.
     ///
-    /// # Returns
+    /// returns: Result<Decoder<TBackend>, Error>
     ///
-    /// * a new BPX decoder
-    /// * an [Error](crate::error::Error) if some headers could not be read or if the header data is corrupted
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned if some headers
+    /// could not be read or if the header data is corrupted.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::encoder::Encoder;
+    ///
+    /// let mut encoder = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// encoder.save();
+    /// //TODO: Finish once Encoder can be consumed back into its IO Backend
+    /// ```
     pub fn new(mut file: TBackend) -> Result<Decoder<TBackend>>
     {
         let (checksum, header) = MainHeader::read(&mut file)?;
