@@ -129,12 +129,13 @@ impl Object
     ///
     /// ```
     /// use bpx::sd::Object;
+    /// use bpx::sd::Value;
     ///
     /// let mut obj = Object::new();
     /// obj.set("Test", 12.into());
     /// assert!(obj.get("Test").is_some());
     /// assert!(obj.get("Test1").is_none());
-    /// assert_eq!(obj.get("Test").unwrap(), 12.into());
+    /// assert!(obj.get("Test").unwrap() == &Value::from(12));
     /// ```
     pub fn get(&self, name: &str) -> Option<&Value>
     {
@@ -189,14 +190,15 @@ impl Object
     ///
     /// ```
     /// use bpx::sd::Object;
+    /// use bpx::sd::Value;
     ///
     /// let mut obj = Object::new();
     /// obj.set("Test", 12.into());
     /// let mut buf = Vec::<u8>::new();
     /// obj.write(&mut buf);
-    /// let obj1 = Object::read(&mut buf).unwrap();
+    /// let obj1 = Object::read(&mut buf.as_slice()).unwrap();
     /// assert!(obj1.get("Test").is_some());
-    /// assert_eq!(obj1.get("Test").unwrap(), 12.into());
+    /// assert!(obj1.get("Test").unwrap() == &Value::from(12));
     /// ```
     pub fn read<TRead: std::io::Read>(source: &mut TRead) -> Result<Object>
     {
