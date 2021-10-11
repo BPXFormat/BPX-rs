@@ -33,7 +33,7 @@ use std::{
 
 use crate::{sd::Value, utils, Result};
 
-/// Represents a BPX Structured Data Object
+/// Represents a BPX Structured Data Object.
 #[derive(PartialEq, Clone)]
 pub struct Object
 {
@@ -42,105 +42,162 @@ pub struct Object
 
 impl Object
 {
-    /// Creates a new object
-    ///
-    /// # Returns
-    ///
-    /// * a new BPXSD object
+    /// Creates a new object.
     pub fn new() -> Object
     {
         return Object { props: HashMap::new() };
     }
 
-    /// Sets a property in the object
+    /// Sets a property in the object using a raw property hash.
     ///
     /// # Arguments
     ///
-    /// * `hash` - the BPX hash of the property
-    /// * `value` - the [Value](crate::sd::Value) to set
+    /// * `hash`: the BPX hash of the property.
+    /// * `value`: the [Value](crate::sd::Value) to set.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::Object;
+    ///
+    /// let mut obj = Object::new();
+    /// assert_eq!(obj.prop_count(), 0);
+    /// obj.raw_set(0, 12.into());
+    /// assert_eq!(obj.prop_count(), 1);
+    /// ```
     pub fn raw_set(&mut self, hash: u64, value: Value)
     {
         self.props.insert(hash, value);
     }
 
-    /// Sets a property in the object
+    /// Sets a property in the object.
     ///
     /// # Arguments
     ///
-    /// * `name` - the property name
-    /// * `value` - the [Value](crate::sd::Value) to set
+    /// * `name`: the property name.
+    /// * `value`: the [Value](crate::sd::Value) to set.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::Object;
+    ///
+    /// let mut obj = Object::new();
+    /// assert_eq!(obj.prop_count(), 0);
+    /// obj.set("Test", 12.into());
+    /// assert_eq!(obj.prop_count(), 1);
+    /// ```
     pub fn set(&mut self, name: &str, value: Value)
     {
         self.raw_set(utils::hash(name), value);
     }
 
-    /// Gets a property in the object
+    /// Gets a property in the object by its hash.
+    /// Returns None if the property hash does not exist.
     ///
     /// # Arguments
     ///
-    /// * `hash` - the BPX hash of the property
+    /// * `hash`: the BPX hash of the property.
     ///
-    /// # Returns
+    /// returns: Option<&Value>
     ///
-    /// * a reference to the [Value](crate::sd::Value)
-    /// * None if the property could not be found
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::Object;
+    ///
+    /// let mut obj = Object::new();
+    /// obj.raw_set(0, 12.into());
+    /// assert!(obj.raw_get(0).is_some());
+    /// assert!(obj.raw_get(1).is_none());
+    /// ```
     pub fn raw_get(&self, hash: u64) -> Option<&Value>
     {
         return self.props.get(&hash);
     }
 
-    /// Gets a property in the object
+    /// Gets a property in the object.
+    /// Returns None if the property name does not exist.
     ///
     /// # Arguments
     ///
-    /// * `name` - the property name
+    /// * `name`: the property name.
     ///
-    /// # Returns
+    /// returns: Option<&Value>
     ///
-    /// * a reference to the [Value](crate::sd::Value)
-    /// * None if the property could not be found
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::Object;
+    ///
+    /// let mut obj = Object::new();
+    /// obj.set("Test", 12.into());
+    /// assert!(obj.get("Test").is_some());
+    /// assert!(obj.get("Test1").is_none());
+    /// assert_eq!(obj.get("Test").unwrap(), 12.into());
+    /// ```
     pub fn get(&self, name: &str) -> Option<&Value>
     {
         return self.raw_get(utils::hash(name));
     }
 
-    /// Gets the length of the object
-    ///
-    /// # Returns
-    ///
-    /// * the number of properties in the object
+    /// Returns the number of properties in the object.
     pub fn prop_count(&self) -> usize
     {
         return self.props.len();
     }
 
-    /// Gets the list of all keys in the object
-    ///
-    /// # Returns
-    ///
-    /// * a set of all keys in the object
+    /// Returns a set of all key-value pairs (properties) in the object.
     pub fn get_keys(&self) -> Keys<'_, u64, Value>
     {
         return self.props.keys();
     }
 
-    /// Writes the object to the given IO backend
+    /// Attempts to write the object to the given IO backend.
     ///
-    /// # Returns
+    /// # Arguments
     ///
-    /// * nothing if the operation succeeded
-    /// * an [Error](crate::error::Error) if the data could not be written
+    /// * `dest`: the destination [Write](std::io::Write).
+    ///
+    /// returns: Result<(), Error>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::Object;
+    ///
+    /// let mut obj = Object::new();
+    /// obj.set("Test", 12.into());
+    /// let mut buf = Vec::<u8>::new();
+    /// obj.write(&mut buf);
+    /// assert!(buf.len() > 0);
+    /// ```
     pub fn write<TWrite: std::io::Write>(&self, dest: &mut TWrite) -> Result<()>
     {
         return super::encoder::write_structured_data(dest, self);
     }
 
-    /// Reads a BPXSD object from an IO backend
+    /// Attempts to read a BPXSD object from an IO backend.
     ///
-    /// # Returns
+    /// # Arguments
     ///
-    /// * the new BPXSD object if the operation succeeded
-    /// * an [Error](crate::error::Error) if the data could not be read or the data was corrupt/truncated
+    /// * `source`: the source [Read](std::io::Read).
+    ///
+    /// returns: Result<Object, Error>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::Object;
+    ///
+    /// let mut obj = Object::new();
+    /// obj.set("Test", 12.into());
+    /// let mut buf = Vec::<u8>::new();
+    /// obj.write(&mut buf);
+    /// let obj1 = Object::read(&mut buf).unwrap();
+    /// assert!(obj1.get("Test").is_some());
+    /// assert_eq!(obj1.get("Test").unwrap(), 12.into());
+    /// ```
     pub fn read<TRead: std::io::Read>(source: &mut TRead) -> Result<Object>
     {
         return super::decoder::read_structured_data(source);

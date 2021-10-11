@@ -35,7 +35,7 @@ use crate::{
     Result
 };
 
-/// Provides support for debug symbols to BPXSD object
+/// Provides support for debug symbols to BPXSD object.
 #[derive(Clone)]
 pub struct DebugSymbols
 {
@@ -45,11 +45,7 @@ pub struct DebugSymbols
 
 impl DebugSymbols
 {
-    /// Creates a new DebugSymbols
-    ///
-    /// # Returns
-    ///
-    /// * a new DebugSymbols
+    /// Creates a new DebugSymbols.
     pub fn new() -> DebugSymbols
     {
         return DebugSymbols {
@@ -58,16 +54,24 @@ impl DebugSymbols
         };
     }
 
-    /// Performs a lookup for a given hash value in this symbol list
+    /// Performs a lookup for a given hash value in this symbol list.
+    /// Returns None if the symbol does not exist.
     ///
     /// # Arguments
     ///
-    /// * `hash` - the hash to search the symbol for
+    /// * `hash`: the hash for which to search the symbol name.
     ///
-    /// # Returns
+    /// returns: Option<&str>
     ///
-    /// * a string slice if the symbol has been found
-    /// * None if the symbol does not exist
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::DebugSymbols;
+    /// use bpx::utils::hash;
+    ///
+    /// let symbols = DebugSymbols::new();
+    /// assert!(symbols.lookup(hash("Test")).is_none());
+    /// ```
     pub fn lookup(&self, hash: u64) -> Option<&str>
     {
         if let Some(v) = self.symbols_map.get(&hash) {
@@ -76,37 +80,86 @@ impl DebugSymbols
         return None;
     }
 
-    /// Pushes a new symbol in this symbol list
+    /// Pushes a new symbol in this symbol list.
     ///
     /// # Arguments
     ///
-    /// * `symbol` - the name of the symbol to push
+    /// * `symbol`:  the name of the symbol to push.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::DebugSymbols;
+    /// use bpx::utils::hash;
+    ///
+    /// let mut symbols = DebugSymbols::new();
+    /// symbols.push("Test");
+    /// assert!(symbols.lookup(hash("Test")).is_some());
+    /// ```
     pub fn push(&mut self, symbol: &str)
     {
         self.symbols_map.insert(hash(symbol), String::from(symbol));
         self.symbols_list.push(String::from(symbol));
     }
 
-    /// Attach this symbol list to a BPXSD object
+    /// Attach this symbol list to a BPXSD object.
     ///
     /// # Arguments
     ///
-    /// * `obj` - the object to attach debug information
+    /// * `obj`: the object to attach debug information to.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::{DebugSymbols, Object};
+    /// use bpx::utils::hash;
+    ///
+    /// let mut symbols = DebugSymbols::new();
+    /// symbols.push("Test");
+    /// assert!(symbols.lookup(hash("Test")).is_some());
+    /// let mut obj = Object::new();
+    /// symbols.write(&mut obj);
+    /// assert!(obj.get("__debug__").is_some());
+    /// ```
     pub fn write(&self, obj: &mut Object)
     {
         obj.set("__debug__", self.symbols_list.clone().into());
     }
 
-    /// Attempts to read debug information from a BPXSD object
+    /// Attempts to read debug information from a BPXSD object.
     ///
     /// # Arguments
     ///
-    /// * `obj` - the object to read debug information from
+    /// * `obj`: the object to read debug information from.
     ///
-    /// # Returns
+    /// returns: Result<DebugSymbols, Error>
     ///
-    /// * an instance of DebugSymbols is the given has debug information and that debug information are not corrupted
-    /// * an error in case the object does not provide debug information or if the debug information could not be read
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned in case the object
+    /// does not provide debug information or if the debug information
+    /// could not be read.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::{DebugSymbols, Object};
+    /// use bpx::utils::hash;
+    ///
+    /// let mut symbols = DebugSymbols::new();
+    /// symbols.push("Test");
+    /// let mut obj = Object::new();
+    /// symbols.write(&mut obj);
+    /// let symbols1 = DebugSymbols::read(&obj).unwrap();
+    /// assert!(symbols1.lookup(hash("Test")).is_some());
+    /// ```
+    ///
+    /// ```should_panic
+    /// use bpx::sd::{DebugSymbols, Object};
+    ///
+    /// let mut obj = Object::new();
+    /// DebugSymbols::read(&obj).unwrap();
+    /// ```
     pub fn read(obj: &Object) -> Result<DebugSymbols>
     {
         if let Some(val) = obj.get("__debug__") {
