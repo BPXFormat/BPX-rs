@@ -126,7 +126,7 @@ impl MainHeader
     /// use bpx::header::{MainHeader, SIZE_MAIN_HEADER};
     ///
     /// let mut corrupted: [u8; SIZE_MAIN_HEADER] = [0; SIZE_MAIN_HEADER];
-    /// MainHeader::read(&mut corrupted).unwrap();
+    /// MainHeader::read(&mut corrupted.as_ref()).unwrap();
     /// ```
     pub fn read<TReader: io::Read>(reader: &mut TReader) -> Result<(u32, MainHeader)>
     {
