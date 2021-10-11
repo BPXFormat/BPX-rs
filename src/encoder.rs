@@ -26,7 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! The BPX encoder
+//! The BPX encoder.
 
 use std::{
     fs::File,
@@ -55,13 +55,13 @@ use crate::{
 
 const READ_BLOCK_SIZE: usize = 8192;
 
-/// Represents the IO backend for a BPX encoder
+/// Represents the IO backend for a BPX encoder.
 pub trait IoBackend: io::Write
 {
 }
 impl<T: io::Write> IoBackend for T {}
 
-/// The BPX encoder
+/// The BPX encoder.
 pub struct Encoder<TBackend: IoBackend>
 {
     main_header: MainHeader,
@@ -72,15 +72,13 @@ pub struct Encoder<TBackend: IoBackend>
 
 impl<TBackend: IoBackend> Encoder<TBackend>
 {
-    /// Creates a new BPX encoder
+    /// Creates a new BPX encoder.
     ///
     /// # Arguments
     ///
-    /// * `file` - a reference to an [IoBackend](self::IoBackend) to use for writing the data
+    /// * `file`: An [IoBackend](self::IoBackend) to use for reading the data.
     ///
-    /// # Returns
-    ///
-    /// * a new BPX encoder
+    /// returns: Result<Encoder<TBackend>, Error>
     pub fn new(file: TBackend) -> Result<Encoder<TBackend>>
     {
         return Ok(Encoder {
@@ -91,11 +89,23 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         });
     }
 
-    /// Sets the BPX Main Header
+    /// Sets the BPX Main Header.
     ///
     /// # Arguments
     ///
-    /// * `main_header` - the new [MainHeader](crate::header::MainHeader)
+    /// * `main_header`: the new [MainHeader](crate::header::MainHeader).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::builder::MainHeaderBuilder;
+    /// use bpx::encoder::Encoder;
+    /// use bpx::Interface;
+    ///
+    /// let mut encoder = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// encoder.set_main_header(MainHeaderBuilder::new().with_type(1).build());
+    /// assert_eq!(encoder.get_main_header().btype, 1);
+    /// ```
     pub fn set_main_header(&mut self, main_header: MainHeader)
     {
         self.main_header = main_header;
@@ -105,12 +115,23 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     ///
     /// # Arguments
     ///
-    /// * `header` - the [SectionHeader](crate::header::SectionHeader) of the new section
+    /// * `header`: the [SectionHeader](crate::header::SectionHeader) of the new section.
     ///
-    /// # Returns
+    /// returns: Result<SectionHandle, Error>
     ///
-    /// * a [SectionHandle](crate::SectionHandle) to the newly created section
-    /// * an [Error](crate::error::Error) if the section could not be created
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::builder::MainHeaderBuilder;
+    /// use bpx::encoder::Encoder;
+    /// use bpx::header::SectionHeader;
+    /// use bpx::Interface;
+    ///
+    /// let mut encoder = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// assert_eq!(encoder.get_main_header().section_num, 0);
+    /// encoder.create_section(SectionHeader::new());
+    /// assert_eq!(encoder.get_main_header().section_num, 1);
+    /// ```
     pub fn create_section(&mut self, header: SectionHeader) -> Result<SectionHandle>
     {
         self.main_header.section_num += 1;
@@ -166,14 +187,26 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         return Ok(());
     }
 
-    /// Writes all sections to the underlying IO backend
+    /// Writes all sections to the underlying IO backend.
     ///
-    /// *this functions prints some information to standard output as a way to debug data compression issues*
+    /// **This function prints some information to standard output as a way
+    /// to debug data compression issues unless the `debug-log` feature
+    /// is disabled.**
     ///
-    /// # Returns
+    /// # Errors
     ///
-    /// * Nothing if the operation succeeded
-    /// * an [Error](crate::error::Error) if the data could not be written
+    /// An [Error](crate::error::Error) is returned if some data could
+    /// not be written.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::encoder::Encoder;
+    ///
+    /// let mut encoder = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// encoder.save();
+    /// //TODO: Finish once Encoder can be consumed back into its IO Backend
+    /// ```
     pub fn save(&mut self) -> Result<()>
     {
         let (mut main_data, chksum_sht, all_sections_size) = self.write_sections()?;
