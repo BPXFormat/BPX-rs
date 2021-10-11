@@ -38,20 +38,23 @@ use crate::{
     Result
 };
 
-/// Packs a file or folder in a BPXP with the given virtual name
+/// Packs a file or folder in a BPXP with the given virtual name.
 ///
-/// *this functions prints some information to standard output as a way to debug data compression issues*
+/// **This function prints some information to standard output as a way
+/// to debug data compression issues unless the `debug-log` feature
+/// is disabled.**
 ///
 /// # Arguments
 ///
-/// * `package` - the BPXP [PackageEncoder](crate::variant::package::PackageEncoder) to use
-/// * `source` - the source [Path](std::path::Path) to pack
-/// * `vname` - the virtual name for the root source path
+/// * `package`: the BPXP [PackageEncoder](crate::variant::package::PackageEncoder) to use.
+/// * `vname`: the virtual name for the root source path.
+/// * `source`: the source [Path](std::path::Path) to pack.
 ///
-/// # Returns
+/// returns: Result<(), Error>
 ///
-/// * nothing if the operation succeeded
-/// * an [Error](crate::error::Error) in case of system error
+/// # Errors
+///
+/// An [Error](crate::error::Error) is returned if some objects could not be packed.
 pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
     package: &mut PackageEncoder<TBackend>,
     vname: &str,
@@ -77,19 +80,23 @@ pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
     return Ok(());
 }
 
-/// Packs a file or folder in a BPXP, automatically computing the virtual name from the source path file name
+/// Packs a file or folder in a BPXP, automatically computing
+/// the virtual name from the source path file name.
 ///
-/// *this functions prints some information to standard output as a way to debug data compression issues*
+/// **This function prints some information to standard output as a way
+/// to debug data compression issues unless the `debug-log` feature
+/// is disabled.**
 ///
 /// # Arguments
 ///
-/// * `package` - the BPXP [PackageEncoder](crate::variant::package::PackageEncoder) to use
-/// * `source` - the source [Path](std::path::Path) to pack
+/// * `package`: the BPXP [PackageEncoder](crate::variant::package::PackageEncoder) to use.
+/// * `source`: the source [Path](std::path::Path) to pack.
 ///
-/// # Returns
+/// returns: Result<(), Error>
 ///
-/// * nothing if the operation succeeded
-/// * an [Error](crate::error::Error) in case of system error
+/// # Errors
+///
+/// An [Error](crate::error::Error) is returned if some objects could not be packed.
 pub fn pack_file<TBackend: crate::encoder::IoBackend>(
     package: &mut PackageEncoder<TBackend>,
     source: &Path
@@ -98,17 +105,18 @@ pub fn pack_file<TBackend: crate::encoder::IoBackend>(
     return pack_file_vname(package, &get_name_from_path(source)?, source);
 }
 
-/// Loads an object into memory
+/// Loads an object into memory.
 ///
 /// # Arguments
 ///
-/// * `package` - the BPXP [PackageDecoder](crate::variant::package::PackageDecoder) to use
-/// * `obj` - the object header
+/// * `package`: the BPXP [PackageDecoder](crate::variant::package::PackageDecoder) to use.
+/// * `obj`: the object header.
 ///
-/// # Returns
+/// returns: Result<Vec<u8>, Error>
 ///
-/// * the object content as a raw [Vec](std::vec::Vec) of bytes
-/// * an error if the object could not be unpacked
+/// # Errors
+///
+/// An [Error](crate::error::Error) is returned if the object could not be unpacked.
 pub fn unpack_memory<TBackend: crate::decoder::IoBackend>(
     package: &mut PackageDecoder<TBackend>,
     obj: &ObjectHeader
@@ -122,18 +130,19 @@ pub fn unpack_memory<TBackend: crate::decoder::IoBackend>(
     return Ok(v);
 }
 
-/// Unpacks an object to the given file
+/// Unpacks an object to the given file.
 ///
 /// # Arguments
 ///
-/// * `package` - the BPXP [PackageDecoder](crate::variant::package::PackageDecoder) to use
-/// * `obj` - the object header
-/// * `out` - the output file [Path](std::path::Path)
+/// * `package`: the BPXP [PackageDecoder](crate::variant::package::PackageDecoder) to use.
+/// * `obj`: the object header.
+/// * `out`: the output [Path](std::path::Path).
 ///
-/// # Returns
+/// returns: Result<File, Error>
 ///
-/// * the File that was written
-/// * an error if the object could not be unpacked
+/// # Errors
+///
+/// An [Error](crate::error::Error) is returned if the object could not be unpacked.
 pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
     package: &mut PackageDecoder<TBackend>,
     obj: &ObjectHeader,
@@ -148,19 +157,22 @@ pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
     return Ok(f);
 }
 
-/// Unpacks a BPXP
+/// Unpacks a BPXP.
 ///
-/// *this functions prints some information to standard output as a way to debug a broken or incorrectly packed BPXP*
+/// **This function prints some information to standard output as a way
+/// to debug a broken or incorrectly packed BPXP unless the `debug-log`
+/// feature is disabled.**
 ///
 /// # Arguments
 ///
-/// * `package` - the BPXP [PackageDecoder](crate::variant::package::PackageDecoder) to unpack
-/// * `target` - the target [Path](std::path::Path) to extract the content to
+/// * `package`: the BPXP [PackageDecoder](crate::variant::package::PackageDecoder) to unpack.
+/// * `target`: the target [Path](std::path::Path) to extract the content to.
 ///
-/// # Returns
+/// returns: Result<(), Error>
 ///
-/// * nothing if the operation succeeded
-/// * an [Error](crate::error::Error) in case of corruption or system error
+/// # Errors
+///
+/// An [Error](crate::error::Error) is returned if some objects could not be unpacked.
 pub fn unpack<TBackend: crate::decoder::IoBackend>(package: &mut PackageDecoder<TBackend>, target: &Path)
     -> Result<()>
 {
