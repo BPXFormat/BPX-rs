@@ -157,7 +157,7 @@ impl SectionHeaderBuilder
     /// let header = SectionHeaderBuilder::new()
     ///     .with_compression(CompressionMethod::Zlib)
     ///     .build();
-    /// assert_eq!(header.flags & FLAG_COMPRESS_ZLIB);
+    /// assert_ne!(header.flags & FLAG_COMPRESS_ZLIB, 0);
     /// ```
     pub fn with_compression(mut self, method: CompressionMethod) -> Self
     {
@@ -220,7 +220,7 @@ impl SectionHeaderBuilder
     /// let header = SectionHeaderBuilder::new()
     ///     .with_checksum(Checksum::Crc32)
     ///     .build();
-    /// assert!(header.flags & FLAG_CHECK_CRC32);
+    /// assert_ne!(header.flags & FLAG_CHECK_CRC32, 0);
     /// ```
     pub fn with_checksum(mut self, chksum: Checksum) -> Self
     {
@@ -248,9 +248,9 @@ impl SectionHeaderBuilder
     ///     .build();
     /// assert_eq!(header.size, 128);
     /// assert_eq!(header.btype, 1);
-    /// assert!(header.flags & FLAG_COMPRESS_ZLIB);
+    /// assert_ne!(header.flags & FLAG_COMPRESS_ZLIB, 0);
     /// assert_eq!(header.csize, 0);
-    /// assert!(header.flags & FLAG_CHECK_CRC32);
+    /// assert_ne!(header.flags & FLAG_CHECK_CRC32, 0);
     /// ```
     pub fn build(self) -> SectionHeader
     {
