@@ -149,7 +149,7 @@ impl PackageBuilder
     /// use bpx::encoder::Encoder;
     /// use bpx::variant::package::PackageBuilder;
     ///
-    /// let mut encoder = Encoder::new(Vec::<u8>::new());
+    /// let mut encoder = Encoder::new(Vec::<u8>::new()).unwrap();
     /// let mut bpxp = PackageBuilder::new().build(&mut encoder).unwrap();
     /// encoder.save();
     /// //TODO: Finish
