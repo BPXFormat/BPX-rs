@@ -26,7 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! High-level utilities to generate low-level file headers
+//! High-level utilities to generate low-level file headers.
 
 use crate::header::{
     MainHeader,
@@ -39,35 +39,37 @@ use crate::header::{
 
 const COMPRESSION_THRESHOLD: u32 = 65536;
 
-/// The compression method to use for a section
+/// The compression method to use for a section.
 pub enum CompressionMethod
 {
-    /// Use the xz compression algorithm with extreme preset
+    /// Use the xz compression algorithm with extreme preset.
     ///
-    /// *Slow but usually provides better compression*
+    /// *Slow but usually provides better compression.*
     Xz,
 
-    /// Use the zlib compression algorithm
+    /// Use the zlib compression algorithm.
     ///
-    /// *Faster but does not compress as much as the xz algorithm*
+    /// *Faster but does not compress as much as the xz algorithm.*
     Zlib
 }
 
 /// The checksum algorithm to use for a section
 pub enum Checksum
 {
-    /// The weak checksum is a very fast algorithm which is computed by adding all bytes of data
+    /// The weak checksum is a very fast algorithm which is computed
+    /// by adding all bytes of data.
     ///
-    /// *Not recommended for large or potentially large sections*
+    /// *Not recommended for large or potentially large sections.*
     Weak,
 
-    /// Use a CRC32 algorithn to compute the checksum
+    /// Use a CRC32 algorithn to compute the checksum.
     ///
-    /// *This is the prefered method for all large or potentially large sections*
+    /// *This is the prefered method for all large or potentially
+    /// large sections.*
     Crc32
 }
 
-/// Utility to easily generate a [SectionHeader](crate::header::SectionHeader)
+/// Utility to easily generate a [SectionHeader](crate::header::SectionHeader).
 pub struct SectionHeaderBuilder
 {
     header: SectionHeader
@@ -75,11 +77,7 @@ pub struct SectionHeaderBuilder
 
 impl SectionHeaderBuilder
 {
-    /// Creates a new section header builder
-    ///
-    /// # Returns
-    ///
-    /// * the new section header builder
+    /// Creates a new section header builder.
     pub fn new() -> SectionHeaderBuilder
     {
         return SectionHeaderBuilder {
@@ -87,39 +85,80 @@ impl SectionHeaderBuilder
         };
     }
 
-    /// Defines the size in bytes of the section
+    /// Defines the size in bytes of the section.
     ///
-    /// - *By default, the size of the section is not known, and the encoder will assume a dynamic size is requested*
+    /// *By default, the size of the section is not known, and the encoder
+    /// will assume a dynamic size is requested.*
     ///
     /// # Arguments
     ///
-    /// * `size` - the size of the section
+    /// * `size`: the size in bytes of the section.
+    ///
+    /// returns: SectionHeaderBuilder
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::builder::SectionHeaderBuilder;
+    ///
+    /// let header = SectionHeaderBuilder::new()
+    ///     .with_size(128)
+    ///     .build();
+    /// assert_eq!(header.size, 128);
+    /// ```
     pub fn with_size(mut self, size: u32) -> Self
     {
         self.header.size = size;
         return self;
     }
 
-    /// Defines the variant byte of the section
+    /// Defines the type byte of the section.
     ///
-    /// - *The default value of the variant byte is 0*
+    /// *The default value of the type byte is 0.*
     ///
     /// # Arguments
     ///
-    /// * `typeb` - the variant byte of the section
+    /// * `typeb`: the type byte of the section.
+    ///
+    /// returns: SectionHeaderBuilder
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::builder::SectionHeaderBuilder;
+    ///
+    /// let header = SectionHeaderBuilder::new()
+    ///     .with_type(1)
+    ///     .build();
+    /// assert_eq!(header.btype, 1);
+    /// ```
     pub fn with_type(mut self, typeb: u8) -> Self
     {
         self.header.btype = typeb;
         return self;
     }
 
-    /// Defines the compression algorithm to use when compressing the section
+    /// Defines the compression algorithm to use when compressing the section.
     ///
-    /// - *The default is to not perform any compression at all*
+    /// *The default is to not perform any compression at all.*
     ///
     /// # Arguments
     ///
-    /// * `method` - the [CompressionMethod](self::CompressionMethod)
+    /// * `method`: the [CompressionMethod](self::CompressionMethod) to use for saving this section.
+    ///
+    /// returns: SectionHeaderBuilder
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::builder::{CompressionMethod, SectionHeaderBuilder};
+    /// use bpx::header::FLAG_COMPRESS_ZLIB;
+    ///
+    /// let header = SectionHeaderBuilder::new()
+    ///     .with_compression(CompressionMethod::Zlib)
+    ///     .build();
+    /// assert_ne!(header.flags & FLAG_COMPRESS_ZLIB, 0);
+    /// ```
     pub fn with_compression(mut self, method: CompressionMethod) -> Self
     {
         match method {
@@ -130,27 +169,59 @@ impl SectionHeaderBuilder
         return self;
     }
 
-    /// Defines the maximum size in bytes to keep the section uncompressed
+    /// Defines the maximum size in bytes to keep the section uncompressed.
     ///
-    /// - *Use a value of 0 in order to force compression all the time*
-    /// - *The default threshold is set to 65536*
+    /// *Use a value of 0 in order to force compression all the time.*
+    ///
+    /// *The default threshold is set to 65536.*
     ///
     /// # Arguments
     ///
-    /// * `threshold` - the new threshold value
+    /// * `threshold`: the new value of the compression threshold.
+    ///
+    /// returns: SectionHeaderBuilder
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::builder::{CompressionMethod, SectionHeaderBuilder};
+    ///
+    /// let header = SectionHeaderBuilder::new()
+    ///     .with_compression(CompressionMethod::Zlib)
+    ///     .with_threshold(0)
+    ///     .build();
+    /// // The compression threshold value is stored in csize
+    /// assert_eq!(header.csize, 0);
+    /// ```
     pub fn with_threshold(mut self, threshold: u32) -> Self
     {
         self.header.csize = threshold;
         return self;
     }
 
-    /// Defines the checksum algorithm to use when computing the checksum for the data in that section
+    /// Defines the checksum algorithm to use when computing
+    /// the checksum for the data in that section.
     ///
-    /// - *By default, no checksum is applied and the checksum field of the BPX Section Header is set to 0*
+    /// *By default, no checksum is applied and the checksum
+    /// field of the BPX Section Header is set to 0.*
     ///
     /// # Arguments
     ///
-    /// * `chksum` - the [Checksum](self::Checksum)
+    /// * `chksum`: the new [Checksum](self::Checksum) algorithm to use for data verification.
+    ///
+    /// returns: SectionHeaderBuilder
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::builder::{Checksum, SectionHeaderBuilder};
+    /// use bpx::header::FLAG_CHECK_CRC32;
+    ///
+    /// let header = SectionHeaderBuilder::new()
+    ///     .with_checksum(Checksum::Crc32)
+    ///     .build();
+    /// assert_ne!(header.flags & FLAG_CHECK_CRC32, 0);
+    /// ```
     pub fn with_checksum(mut self, chksum: Checksum) -> Self
     {
         match chksum {
@@ -160,18 +231,34 @@ impl SectionHeaderBuilder
         return self;
     }
 
-    /// Consumes self and returns the generated [SectionHeader](crate::header::SectionHeader)
+    /// Consumes self and returns the generated [SectionHeader](crate::header::SectionHeader).
     ///
-    /// # Returns
+    /// # Examples
     ///
-    /// * a new [SectionHeader](crate::header::SectionHeader)
+    /// ```
+    /// use bpx::builder::{Checksum, CompressionMethod, SectionHeaderBuilder};
+    /// use bpx::header::{FLAG_CHECK_CRC32, FLAG_COMPRESS_ZLIB};
+    ///
+    /// let header = SectionHeaderBuilder::new()
+    ///     .with_size(128)
+    ///     .with_type(1)
+    ///     .with_compression(CompressionMethod::Zlib)
+    ///     .with_threshold(0)
+    ///     .with_checksum(Checksum::Crc32)
+    ///     .build();
+    /// assert_eq!(header.size, 128);
+    /// assert_eq!(header.btype, 1);
+    /// assert_ne!(header.flags & FLAG_COMPRESS_ZLIB, 0);
+    /// assert_eq!(header.csize, 0);
+    /// assert_ne!(header.flags & FLAG_CHECK_CRC32, 0);
+    /// ```
     pub fn build(self) -> SectionHeader
     {
         return self.header;
     }
 }
 
-/// Utility to easily generate a [MainHeader](crate::header::MainHeader)
+/// Utility to easily generate a [MainHeader](crate::header::MainHeader).
 pub struct MainHeaderBuilder
 {
     header: MainHeader
@@ -179,11 +266,7 @@ pub struct MainHeaderBuilder
 
 impl MainHeaderBuilder
 {
-    /// Creates a new main header builder
-    ///
-    /// # Returns
-    ///
-    /// * the new main header builder
+    /// Creates a new main header builder.
     pub fn new() -> MainHeaderBuilder
     {
         return MainHeaderBuilder {
@@ -191,50 +274,105 @@ impl MainHeaderBuilder
         };
     }
 
-    /// Defines the BPX variant byte
+    /// Defines the BPX type byte.
     ///
-    /// - *The default value of the variant byte is 0*
+    /// *The default value of the type byte is 0.*
     ///
     /// # Arguments
     ///
-    /// * `typeb` - the BPX variant byte
+    /// * `typeb`: the BPX type byte.
+    ///
+    /// returns: MainHeaderBuilder
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::builder::MainHeaderBuilder;
+    ///
+    /// let header = MainHeaderBuilder::new()
+    ///     .with_type('M' as u8)
+    ///     .build();
+    /// assert_eq!(header.btype, 'M' as u8);
+    /// ```
     pub fn with_type(mut self, typeb: u8) -> Self
     {
         self.header.btype = typeb;
         return self;
     }
 
-    /// Defines the Extended Type Information field of the BPX
+    /// Defines the Extended Type Information field of the BPX.
     ///
-    /// - *The default value of the variant byte is 0*
+    /// *By default Extended Type Information is filled with zeros.*
     ///
     /// # Arguments
     ///
-    /// * `type_ext` - the Extended Type Information block
+    /// * `type_ext`: the Extended Type Information block.
+    ///
+    /// returns: MainHeaderBuilder
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::builder::MainHeaderBuilder;
+    ///
+    /// let header = MainHeaderBuilder::new()
+    ///     .with_type_ext([1; 16])
+    ///     .build();
+    /// assert_eq!(header.type_ext, [1; 16]);
+    /// ```
     pub fn with_type_ext(mut self, type_ext: [u8; 16]) -> Self
     {
         self.header.type_ext = type_ext;
         return self;
     }
 
-    /// Defines the version of the BPX
+    /// Defines the version of the BPX.
     ///
-    /// - *The default value of the version int is given by [BPX_CURRENT_VERSION](crate::header::BPX_CURRENT_VERSION)*
+    /// *The default value of the version int is given by
+    /// [BPX_CURRENT_VERSION](crate::header::BPX_CURRENT_VERSION).*
+    ///
+    /// **Note: A version which is not specified in [KNOWN_VERSIONS](crate::header::KNOWN_VERSIONS)
+    /// will cause the decoder to fail loading the file, complaining that
+    /// the file is corrupted.**
     ///
     /// # Arguments
     ///
-    /// * `type_ext` - the Extended Type Information block
+    /// * `version`: the new version of the BPX.
+    ///
+    /// returns: MainHeaderBuilder
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::builder::MainHeaderBuilder;
+    ///
+    /// let header = MainHeaderBuilder::new()
+    ///     .with_version(1)
+    ///     .build();
+    /// assert_eq!(header.version, 1);
+    /// ```
     pub fn with_version(mut self, version: u32) -> Self
     {
         self.header.version = version;
         return self;
     }
 
-    /// Consumes self and returns the generated [MainHeader](crate::header::MainHeader)
+    /// Consumes self and returns the generated [MainHeader](crate::header::MainHeader).
     ///
-    /// # Returns
+    /// # Examples
     ///
-    /// * a new [MainHeader](crate::header::MainHeader)
+    /// ```
+    /// use bpx::builder::MainHeaderBuilder;
+    ///
+    /// let header = MainHeaderBuilder::new()
+    ///     .with_type('M' as u8)
+    ///     .with_type_ext([1; 16])
+    ///     .with_version(1)
+    ///     .build();
+    /// assert_eq!(header.btype, 'M' as u8);
+    /// assert_eq!(header.type_ext, [1; 16]);
+    /// assert_eq!(header.version, 1);
+    /// ```
     pub fn build(self) -> MainHeader
     {
         return self.header;

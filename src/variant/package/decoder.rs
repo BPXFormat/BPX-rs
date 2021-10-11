@@ -50,7 +50,7 @@ use crate::{
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
-/// Represents a BPX Package decoder
+/// Represents a BPX Package decoder.
 pub struct PackageDecoder<'a, TBackend: IoBackend>
 {
     type_code: [u8; 2],
@@ -87,16 +87,23 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Pl
 
 impl<'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
 {
-    /// Creates a new PackageDecoder by reading from a BPX decoder
+    /// Creates a new PackageDecoder by reading from a BPX decoder.
     ///
     /// # Arguments
     ///
-    /// * `decoder` - the BPX [Decoder](crate::decoder::Decoder) backend to use
+    /// * `decoder`: the BPX [Decoder](crate::decoder::Decoder) backend to use.
     ///
-    /// # Returns
+    /// returns: Result<PackageDecoder<TBackend>, Error>
     ///
-    /// * a new PackageDecoder if the file header was successfully parsed
-    /// * an [Error](crate::error::Error) in case of corruption or system error
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned if some sections/headers could not be loaded.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// //TODO: Implement
+    /// ```
     pub fn read(decoder: &mut Decoder<TBackend>) -> Result<PackageDecoder<TBackend>>
     {
         if decoder.get_main_header().btype != 'P' as u8 {
@@ -137,42 +144,36 @@ impl<'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
         });
     }
 
-    /// Gets the two bytes of BPXP variant
-    ///
-    /// # Returns
-    ///
-    /// * an array with 2 bytes
+    /// Gets the two bytes of BPXP variant.
     pub fn get_variant(&self) -> [u8; 2]
     {
         return self.type_code;
     }
 
-    /// Gets the target CPU architecture for this BPXP
-    ///
-    /// # Returns
-    ///
-    /// * an [Architecture](crate::variant::package::Architecture) enum
+    /// Gets the target CPU [Architecture](crate::variant::package::Architecture) for this BPXP.
     pub fn get_architecture(&self) -> Architecture
     {
         return self.architecture;
     }
 
-    /// Gets the target platform for this BPXP
-    ///
-    /// # Returns
-    ///
-    /// * a [Platform](crate::variant::package::Platform) enum
+    /// Gets the target [Platform](crate::variant::package::Platform) for this BPXP.
     pub fn get_platform(&self) -> Platform
     {
         return self.platform;
     }
 
-    /// Reads the metadata section of this BPXP if any
+    /// Reads the metadata section of this BPXP if any.
+    /// Returns None if there is no metadata in this BPXP.
     ///
-    /// # Returns
+    /// # Errors
     ///
-    /// * an [Option](std::option::Option) of the decoded BPXSD [Object](crate::sd::Object)
-    /// * an [Error](crate::error::Error) in case of corruption or system error
+    /// An [Error](crate::error::Error) is returned in case of corruption or system error.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// //TODO: Implement
+    /// ```
     pub fn read_metadata(&mut self) -> Result<Option<Object>>
     {
         if let Some(handle) = self.decoder.find_section_by_type(SECTION_TYPE_SD) {
@@ -183,12 +184,17 @@ impl<'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
         return Ok(None);
     }
 
-    /// Reads the object table of this BPXP
+    /// Reads the object table of this BPXP.
     ///
-    /// # Returns
+    /// # Errors
     ///
-    /// * the decoded [ObjectTable](crate::variant::package::object::ObjectTable)
-    /// * an [Error](crate::error::Error) in case of corruption or system error
+    /// An [Error](crate::error::Error) is returned in case of corruption or system error.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// //TODO: Implement
+    /// ```
     pub fn read_object_table(&mut self) -> Result<ObjectTable>
     {
         let mut v = Vec::new();
@@ -214,16 +220,23 @@ impl<'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
         return Ok(ObjectTable::new(v));
     }
 
-    /// Gets the name of an object, loads the string if its not yet loaded
+    /// Gets the name of an object; loads the string if its not yet loaded.
     ///
     /// # Arguments
     ///
-    /// * `obj` - the object header to load the actual name for
+    /// * `obj`: the object header to load the actual name for.
     ///
-    /// # Returns
+    /// returns: Result<&str, Error>
     ///
-    /// * the name of the object
-    /// * an error if the name could not be read
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned if the name could not be read.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// //TODO: Implement
+    /// ```
     pub fn get_object_name(&mut self, obj: &ObjectHeader) -> Result<&str>
     {
         return self.strings.get(self.decoder, obj.name);
@@ -251,17 +264,25 @@ impl<'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
         return Ok(len);
     }
 
-    /// Unpacks an object to a raw stream
+    /// Unpacks an object to a raw stream.
+    /// Returns the number of bytes read if the operation has succeeded.
     ///
     /// # Arguments
     ///
-    /// * `obj` - the object header
-    /// * `out` - the raw [Write](std::io::Write)
+    /// * `obj`: the object header.
+    /// * `out`: the raw [Write](std::io::Write) to use as destination.
     ///
-    /// # Returns
+    /// returns: Result<u64, Error>
     ///
-    /// * the number of bytes read if the operation succeeded
-    /// * an error if the object could not be unpacked
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned if the object could not be unpacked.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// //TODO: Implement
+    /// ```
     pub fn unpack_object<TWrite: Write>(&mut self, obj: &ObjectHeader, out: &mut TWrite) -> Result<u64>
     {
         let mut section_id = obj.start;

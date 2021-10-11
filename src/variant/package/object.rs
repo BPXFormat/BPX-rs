@@ -30,20 +30,20 @@ use std::collections::HashMap;
 
 use crate::{decoder::IoBackend, variant::package::PackageDecoder, Result};
 
-/// Represents an object header as read from the package
+/// Represents an object header as read from the package.
 #[derive(Copy, Clone)]
 pub struct ObjectHeader
 {
-    /// The size of the object
+    /// The size of the object.
     pub size: u64,
 
-    /// The pointer to the name of the object
+    /// The pointer to the name of the object.
     pub name: u32,
 
-    /// The start section index to the content
+    /// The start section index to the content.
     pub start: u32,
 
-    /// The offset to the content in the start section
+    /// The offset to the content in the start section.
     pub offset: u32
 }
 
@@ -55,32 +55,39 @@ pub struct ObjectTable
 
 impl ObjectTable
 {
-    /// Constructs a new object table from a list of [ObjectHeader](crate::variant::package::object::ObjectHeader)
+    /// Constructs a new object table from a list of
+    /// [ObjectHeader](crate::variant::package::object::ObjectHeader).
     ///
     /// # Arguments
     ///
-    /// * `list` - the list of object headers
+    /// * `list`: the list of object headers.
     ///
-    /// # Returns
-    ///
-    /// * a new [ObjectTable](crate::variant::package::object::ObjectTable)
+    /// returns: ObjectTable
     pub fn new(list: Vec<ObjectHeader>) -> ObjectTable
     {
         return ObjectTable { list, map: None };
     }
 
-    /// Builds the object map for easy and efficient lookup of objects by name
+    /// Builds the object map for easy and efficient lookup of objects by name.
     ///
-    /// *You must call this function before you can use find_object*
+    /// **You must call this function before you can use find_object.**
     ///
     /// # Arguments
     ///
-    /// * `package` - the [PackageDecoder](crate::variant::package::PackageDecoder) to load the strings
+    /// * `package`: the [PackageDecoder](crate::variant::package::PackageDecoder) to load the strings from.
     ///
-    /// # Returns
+    /// returns: Result<(), Error>
     ///
-    /// * nothing if the operation succeeded,
-    /// * an [Error](crate::error::Error) if the strings could not be loaded
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned if the strings could
+    /// not be loaded.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// //TODO: Implement
+    /// ```
     pub fn build_lookup_table<TBackend: IoBackend>(&mut self, package: &mut PackageDecoder<TBackend>) -> Result<()>
     {
         let mut map = HashMap::new();
@@ -92,28 +99,26 @@ impl ObjectTable
         return Ok(());
     }
 
-    /// Gets all objects in this BPXP
-    ///
-    /// # Returns
-    ///
-    /// * a [Vec](std::vec::Vec) of [ObjectHeader](crate::variant::package::object::ObjectHeader)
+    /// Gets all objects in this BPXP.
     pub fn get_objects(&self) -> &Vec<ObjectHeader>
     {
         return &self.list;
     }
 
-    /// Finds an object by its name
-    ///
-    /// *Panics if the lookup table is not built*
+    /// Finds an object by its name.
+    /// Returns None if the object does not exist.
     ///
     /// # Arguments
     ///
-    /// * `name` - the name of the object to search for
+    /// * `name`: the name of the object to search for.
     ///
-    /// # Returns
+    /// returns: Option<&ObjectHeader>
     ///
-    /// * a reference [ObjectHeader](crate::variant::package::object::ObjectHeader)
-    /// * None if the object does not exist
+    /// # Examples
+    ///
+    /// ```
+    /// //TODO: Implement
+    /// ```
     pub fn find_object(&self, name: &str) -> Option<&ObjectHeader>
     {
         if let Some(map) = &self.map {

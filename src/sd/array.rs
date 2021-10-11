@@ -33,7 +33,7 @@ use std::{
 
 use crate::sd::Value;
 
-/// Represents a BPX Structured Data Array
+/// Represents a BPX Structured Data Array.
 #[derive(PartialEq, Clone)]
 pub struct Array
 {
@@ -42,41 +42,76 @@ pub struct Array
 
 impl Array
 {
-    /// Creates a new array
-    ///
-    /// # Returns
-    ///
-    /// * a new BPXSD array
+    /// Creates a new array.
     pub fn new() -> Array
     {
         return Array { data: Vec::new() };
     }
 
-    /// Adds a value at the end of the array
+    /// Adds a value at the end of the array.
     ///
     /// # Arguments
     ///
-    /// * `v` - the [Value](crate::sd::Value) to add
+    /// * `v`: the [Value](crate::sd::Value) to add.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::Array;
+    ///
+    /// let mut arr = Array::new();
+    /// assert_eq!(arr.len(), 0);
+    /// arr.add("Test".into());
+    /// assert_eq!(arr.len(), 1);
+    /// ```
     pub fn add(&mut self, v: Value)
     {
         self.data.push(v);
     }
 
-    /// Removes a value from the array
+    /// Removes a value from the array.
     ///
     /// # Arguments
     ///
-    /// * `pos` - the position of the item in the array to remove
+    /// * `pos`: the position of the item in the array to remove.
+    ///
+    /// # Panics
+    ///
+    /// Panics if pos is out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::Array;
+    ///
+    /// let mut arr = Array::new();
+    /// arr.add("Test".into());
+    /// assert_eq!(arr.len(), 1);
+    /// arr.remove_at(0);
+    /// assert_eq!(arr.len(), 0);
+    /// ```
     pub fn remove_at(&mut self, pos: usize)
     {
         self.data.remove(pos);
     }
 
-    /// Removes a range of values from the array
+    /// Removes a range of values from the array.
     ///
     /// # Arguments
     ///
-    /// * `item` - the [Value](crate::sd::Value) to remove
+    /// * `item`: the [Value](crate::sd::Value) to remove.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::Array;
+    ///
+    /// let mut arr = Array::new();
+    /// arr.add("Test".into());
+    /// assert_eq!(arr.len(), 1);
+    /// arr.remove("Test".into());
+    /// assert_eq!(arr.len(), 0);
+    /// ```
     pub fn remove(&mut self, item: Value)
     {
         for i in 0..self.data.len() {
@@ -86,26 +121,34 @@ impl Array
         }
     }
 
-    /// Attempts to get an item at a given position
+    /// Attempts to get an item at a given position.
+    /// Returns None if no value could be found at the given position.
     ///
     /// # Arguments
     ///
-    /// * `pos` - the position of the item
+    /// * `pos`: the position of the item.
     ///
-    /// # Returns
+    /// returns: Option<&Value>
     ///
-    /// * a reference to the [Value](crate::sd::Value) at the given position
-    /// * None if no value could be found at the given position
+    /// # Examples
+    ///
+    /// ```
+    /// use std::convert::TryInto;
+    /// use bpx::sd::Array;
+    /// use bpx::sd::Value;
+    ///
+    /// let mut arr = Array::new();
+    /// arr.add("Test".into());
+    /// assert_eq!(arr.len(), 1);
+    /// assert!(arr.get(0).is_some());
+    /// assert!(arr.get(0).unwrap() == &Value::from("Test"));
+    /// ```
     pub fn get(&self, pos: usize) -> Option<&Value>
     {
         return self.data.get(pos);
     }
 
-    /// Gets the length of the array
-    ///
-    /// # Returns
-    ///
-    /// * the length of the array
+    /// Returns the length of the array.
     pub fn len(&self) -> usize
     {
         return self.data.len();

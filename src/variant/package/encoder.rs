@@ -48,7 +48,7 @@ const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
 const MAX_DATA_SECTION_SIZE: usize = 200000000 - MIN_DATA_REMAINING_SIZE; //200MB
 
-/// Utility to easily generate a [PackageEncoder](crate::variant::package::PackageEncoder)
+/// Utility to easily generate a [PackageEncoder](crate::variant::package::PackageEncoder).
 pub struct PackageBuilder
 {
     architecture: Architecture,
@@ -59,11 +59,7 @@ pub struct PackageBuilder
 
 impl PackageBuilder
 {
-    /// Creates a new BPX Package builder
-    ///
-    /// # Returns
-    ///
-    /// * the new BPX Package builder
+    /// Creates a new BPX Package builder.
     pub fn new() -> PackageBuilder
     {
         return PackageBuilder {
@@ -74,68 +70,90 @@ impl PackageBuilder
         };
     }
 
-    /// Defines the CPU architecture that the package is targeting
+    /// Defines the CPU architecture that the package is targeting.
     ///
-    /// - *By default, no CPU architecture is targeted*
+    /// *By default, no CPU architecture is targeted.*
     ///
     /// # Arguments
     ///
-    /// * `arch` - the new [Architecture](crate::variant::package::Architecture)
+    /// * `arch`:
+    ///
+    /// returns: PackageBuilder
     pub fn with_architecture(mut self, arch: Architecture) -> Self
     {
         self.architecture = arch;
         return self;
     }
 
-    /// Defines the platform that the package is targeting
+    /// Defines the platform that the package is targeting.
     ///
-    /// - *By default, no platform is targeted*
+    /// *By default, no platform is targeted.*
     ///
     /// # Arguments
     ///
-    /// * `platform` - the new [Platform](crate::variant::package::Platform)
+    /// * `platform`:
+    ///
+    /// returns: PackageBuilder
     pub fn with_platform(mut self, platform: Platform) -> Self
     {
         self.platform = platform;
         return self;
     }
 
-    /// Defines the metadata for the package
+    /// Defines the metadata for the package.
     ///
-    /// - *By default, no metadata object is set*
+    /// *By default, no metadata object is set.*
     ///
     /// # Arguments
     ///
-    /// * `obj` - the new BPXSD [Object](crate::sd::Object) metadata
+    /// * `obj`:
+    ///
+    /// returns: PackageBuilder
     pub fn with_metadata(mut self, obj: Object) -> Self
     {
         self.metadata = Some(obj);
         return self;
     }
 
-    /// Defines the variant of the package
+    /// Defines the type of the package.
     ///
-    /// - *By default, the package variant is 'PK' to identify a package destined for FPKG C++ package manager*
+    /// *By default, the package variant is 'PK' to identify
+    /// a package designed for FPKG.*
     ///
     /// # Arguments
     ///
-    /// * `type_code` - an array with 2 bytes
-    pub fn with_variant(mut self, type_code: [u8; 2]) -> Self
+    /// * `type_code`:
+    ///
+    /// returns: PackageBuilder
+    pub fn with_type(mut self, type_code: [u8; 2]) -> Self
     {
         self.type_code = type_code;
         return self;
     }
 
-    /// Builds the corresponding [PackageEncoder](crate::variant::package::PackageEncoder)
+    /// Builds the corresponding [PackageEncoder](crate::variant::package::PackageEncoder).
     ///
     /// # Arguments
     ///
-    /// * `encoder` - the BPX [Encoder](crate::encoder::Encoder) backend to use
+    /// * `encoder`:
     ///
-    /// # Returns
+    /// returns: Result<PackageEncoder<TBackend>, Error>
     ///
-    /// * the new [PackageEncoder](crate::variant::package::PackageEncoder) if the operation succeeded
-    /// * an [Error](crate::error::Error) in case of system error
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned in case some sections could not be created.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::encoder::Encoder;
+    /// use bpx::variant::package::PackageBuilder;
+    ///
+    /// let mut encoder = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let mut bpxp = PackageBuilder::new().build(&mut encoder).unwrap();
+    /// encoder.save();
+    /// //TODO: Finish
+    /// ```
     pub fn build<TBackend: IoBackend>(self, encoder: &mut Encoder<TBackend>) -> Result<PackageEncoder<TBackend>>
     {
         let mut type_ext: [u8; 16] = [0; 16];
@@ -232,19 +250,24 @@ impl<'a, TBackend: IoBackend> PackageEncoder<'a, TBackend>
         return Ok((count, false));
     }
 
-    /// Stores an object in this BPXP with the given name
+    /// Stores an object in this BPXP with the given name.
     ///
-    /// *this functions prints some information to standard output as a way to debug data compression issues*
+    /// **This function prints some information to standard output as a way
+    /// to debug data compression issues unless the `debug-log` feature
+    /// is disabled.**
     ///
     /// # Arguments
     ///
-    /// * `name` - the name of the object
-    /// * `source` - the source object data as a [Read](std::io::Read)
+    /// * `name`: the name of the object.
+    /// * `source`: the source object data as a [Read](std::io::Read).
     ///
-    /// # Returns
+    /// returns: Result<(), Error>
     ///
-    /// * nothing if the operation succeeded
-    /// * an [Error](crate::error::Error) in case of system error
+    /// # Examples
+    ///
+    /// ```
+    /// //TODO: Implement
+    /// ```
     pub fn pack_object<TRead: Read>(&mut self, name: &str, source: &mut TRead) -> Result<()>
     {
         let mut object_size = 0;

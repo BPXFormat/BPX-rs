@@ -26,7 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! Utilities to manipulate the content of sections
+//! Utilities to manipulate the content of sections.
 
 use std::{
     boxed::Box,
@@ -39,37 +39,60 @@ mod memory;
 
 const MEMORY_THRESHOLD: u32 = 100000000;
 
-/// Opaque variant intended to manipulate section data in the form of standard IO operations
+/// Opaque variant intended to manipulate section data in the form of standard IO operations.
 pub trait SectionData: Read + Write + Seek
 {
-    /// Loads this section into memory
+    /// Loads this section into memory.
     ///
-    /// # Returns
+    /// # Errors
     ///
-    /// * a new [Vec](std::vec::Vec) of u8 binary data
-    /// * an [Error](crate::error::Error) if the section could not be loaded
+    /// An [Error](crate::error::Error) is returned if the section could not be loaded.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::encoder::Encoder;
+    /// use bpx::header::SectionHeader;
+    /// use bpx::Interface;
+    ///
+    /// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let handle = file.create_section(SectionHeader::new()).unwrap();
+    /// let section = file.open_section(handle).unwrap();
+    /// let data = section.load_in_memory().unwrap();
+    /// assert_eq!(data.len(), 0);
+    /// ```
     fn load_in_memory(&mut self) -> Result<Vec<u8>>;
 
-    /// Gets the current size of this section
+    /// Returns the current size of this section.
     ///
-    /// # Returns
+    /// # Examples
     ///
-    /// * the size in bytes of the section so far
+    /// ```
+    /// use bpx::encoder::Encoder;
+    /// use bpx::header::SectionHeader;
+    /// use bpx::Interface;
+    ///
+    /// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let handle = file.create_section(SectionHeader::new()).unwrap();
+    /// let section = file.open_section(handle).unwrap();
+    /// assert_eq!(section.size(), 0);
+    /// ```
     fn size(&self) -> usize;
 }
 
-/// Creates new section data by automatically choosing the right container given a section size
+/// Creates new section data by automatically choosing the right container given a section size.
 ///
-/// *this function is not intended for direct use*
+/// *This function is not intended for direct use.*
 ///
 /// # Arguments
 ///
-/// * `size` - optional size of section, if None the section will automatically reallocate to fit its content
+/// * `size`: optional size of section, if None the section will automatically reallocate to fit its content.
 ///
-/// # Returns
+/// returns: Result<Box<dyn SectionData, Global>, Error>
 ///
-/// * a [Box](std::boxed::Box) of an opaque SectionData object
-/// * an [Error](std::io::Error) in case the temporary file could not be created
+/// # Errors
+///
+/// An [Error](std::io::Error) is returned in case the temporary file could not be created.
 pub fn new_section_data(size: Option<u32>) -> Result<Box<dyn SectionData>>
 {
     if let Some(s) = size {

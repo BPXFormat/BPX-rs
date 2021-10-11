@@ -26,7 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! The BPX decoder
+//! The BPX decoder.
 
 use std::{io, io::Write};
 
@@ -43,13 +43,13 @@ use crate::{
 
 const READ_BLOCK_SIZE: usize = 8192;
 
-/// Represents the IO backend for a BPX decoder
+/// Represents the IO backend for a BPX decoder.
 pub trait IoBackend: io::Seek + io::Read
 {
 }
 impl<T: io::Seek + io::Read> IoBackend for T {}
 
-/// The BPX decoder
+/// The BPX decoder.
 pub struct Decoder<TBackend: IoBackend>
 {
     main_header: MainHeader,
@@ -75,16 +75,28 @@ impl<TBackend: IoBackend> Decoder<TBackend>
         return Ok(());
     }
 
-    /// Creates a new BPX decoder
+    /// Creates a new BPX decoder.
     ///
     /// # Arguments
     ///
-    /// * `file` - a reference to an [IoBackend](self::IoBackend) to use for reading the data
+    /// * `file`: An [IoBackend](self::IoBackend) to use for reading the data.
     ///
-    /// # Returns
+    /// returns: Result<Decoder<TBackend>, Error>
     ///
-    /// * a new BPX decoder
-    /// * an [Error](crate::error::Error) if some headers could not be read or if the header data is corrupted
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned if some headers
+    /// could not be read or if the header data is corrupted.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::encoder::Encoder;
+    ///
+    /// let mut encoder = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// encoder.save();
+    /// //TODO: Finish once Encoder can be consumed back into its IO Backend
+    /// ```
     pub fn new(mut file: TBackend) -> Result<Decoder<TBackend>>
     {
         let (checksum, header) = MainHeader::read(&mut file)?;
@@ -106,7 +118,7 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
     {
         for i in 0..self.sections.len() {
             if self.sections[i].btype == btype {
-                return Some(i);
+                return Some(SectionHandle(i));
             }
         }
         return None;
@@ -118,7 +130,7 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
 
         for i in 0..self.sections.len() {
             if self.sections[i].btype == btype {
-                v.push(i);
+                v.push(SectionHandle(i));
             }
         }
         return v;
@@ -127,21 +139,21 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
     fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>
     {
         if let Some(_) = self.sections.get(index as usize) {
-            return Some(index as SectionHandle);
+            return Some(SectionHandle(index as _));
         }
         return None;
     }
 
     fn get_section_header(&self, handle: SectionHandle) -> &SectionHeader
     {
-        return &self.sections[handle];
+        return &self.sections[handle.0];
     }
 
     fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData>
     {
-        let header = &self.sections[handle];
+        let header = &self.sections[handle.0];
         let file = &mut self.file;
-        let object = self.sections_data[handle].get_or_insert_with_err(|| load_section(file, header))?;
+        let object = self.sections_data[handle.0].get_or_insert_with_err(|| load_section(file, header))?;
         return Ok(object.as_mut());
     }
 
@@ -152,7 +164,7 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
 
     fn get_section_index(&self, handle: SectionHandle) -> u32
     {
-        return handle as u32;
+        return handle.0 as u32;
     }
 }
 

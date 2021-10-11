@@ -43,98 +43,176 @@ pub mod section;
 pub mod strings;
 pub mod utils;
 
-/// Represents a pointer to a section
+/// Represents a pointer to a section.
 ///
-/// *Allows indirect access to a given section instead of sharing mutable references in user code*
-pub type SectionHandle = usize;
+/// *Allows indirect access to a given section instead of sharing mutable references in user code.*
+#[derive(Copy, Clone, Debug)]
+pub struct SectionHandle(usize);
 
-/// The interface implemented by both the BPX encoder and decoder
+/// The interface implemented by both the BPX encoder and decoder.
 pub trait Interface
 {
-    /// Searches for the first section of a given variant
+    /// Searches for the first section of a given type.
+    /// Returns None if no section could be found.
     ///
     /// # Arguments
     ///
-    /// * `btype` - section variant byte
+    /// * `btype`: section type byte.
     ///
-    /// # Returns
+    /// returns: Option<SectionHandle>
     ///
-    /// * None if no section could be found
-    /// * a handle to the section
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::encoder::Encoder;
+    /// use bpx::Interface;
+    ///
+    /// let file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// assert!(file.find_section_by_type(0).is_none());
+    /// ```
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>;
 
-    /// Searches for all sections of a given variant
+    /// Searches for all sections of a given type.
+    /// Returns None if no section could be found.
     ///
     /// # Arguments
     ///
-    /// * `btype` - section variant byte
+    /// * `btype`: section type byte.
     ///
-    /// # Returns
+    /// returns: Vec<SectionHandle, Global>
     ///
-    /// * a list of handles from all sections matching the given variant
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::encoder::Encoder;
+    /// use bpx::Interface;
+    ///
+    /// let file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// assert_eq!(file.find_all_sections_of_type(0).len(), 0);
+    /// ```
     fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>;
 
-    /// Locates a section by its index in the file
+    /// Locates a section by its index in the file.
+    /// Returns None if the section does not exist.
     ///
     /// # Arguments
     ///
-    /// * `index` - the section index to search for
+    /// * `index`: the section index to search for.
     ///
-    /// # Returns
+    /// returns: Option<SectionHandle>
     ///
-    /// * None if the section does not exist
-    /// * a handle to the section
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::encoder::Encoder;
+    /// use bpx::Interface;
+    ///
+    /// let file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// assert!(file.find_section_by_index(0).is_none());
+    /// ```
     fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>;
 
-    /// Gets the BPX section header
-    ///
-    /// *panics if the given section handle is invalid*
+    /// Returns the BPX section header of a section.
     ///
     /// # Arguments
     ///
-    /// * `handle` - a handle to the section
+    /// * `handle`: a handle to the section.
     ///
-    /// # Returns
+    /// returns: &SectionHeader
     ///
-    /// * read-only reference to the BPX section header
+    /// # Panics
+    ///
+    /// Panics if the given section handle is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::encoder::Encoder;
+    /// use bpx::Interface;
+    /// use bpx::builder::SectionHeaderBuilder;
+    ///
+    /// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let handle = file.create_section(SectionHeaderBuilder::new().with_type(1).build()).unwrap();
+    /// let header = file.get_section_header(handle);
+    /// assert_eq!(header.btype, 1);
+    /// ```
     fn get_section_header(&self, handle: SectionHandle) -> &header::SectionHeader;
 
-
-    /// Gets the section index from a section handle
-    ///
-    /// *panics if the given section handle is invalid*
+    /// Returns the section index from a section handle.
     ///
     /// # Arguments
     ///
-    /// * `handle` - a handle to the section
+    /// * `handle`: a handle to the section.
     ///
-    /// # Returns
+    /// returns: u32
     ///
-    /// * the index of the section
+    /// # Panics
+    ///
+    /// Panics if the given section handle is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::encoder::Encoder;
+    /// use bpx::Interface;
+    /// use bpx::builder::SectionHeaderBuilder;
+    ///
+    /// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let handle = file.create_section(SectionHeaderBuilder::new().build()).unwrap();
+    /// assert_eq!(file.get_section_index(handle), 0);
+    /// ```
     fn get_section_index(&self, handle: SectionHandle) -> u32;
 
-    /// Opens a section for read and/or write
-    ///
-    /// *panics if the given section handle is invalid*
+    /// Opens a section for read and/or write.
     ///
     /// # Arguments
     ///
-    /// * `handle` - a handle to the section
+    /// * `handle`: a handle to the section.
     ///
-    /// # Returns
+    /// returns: Result<&mut dyn SectionData, Error>
     ///
-    /// * reference to the section data
+    /// # Errors
+    ///
+    /// A BPX [Error](error::Error) if an IO or any other file error occurs
+    /// while reading the section from the file.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the given section handle is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::encoder::Encoder;
+    /// use bpx::Interface;
+    /// use bpx::builder::SectionHeaderBuilder;
+    ///
+    /// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let handle = file.create_section(SectionHeaderBuilder::new().build()).unwrap();
+    /// let section = file.open_section(handle).unwrap();
+    /// let data = section.load_in_memory().unwrap();
+    /// assert_eq!(data.len(), 0);
+    /// ```
     fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn section::SectionData>;
 
-    /// Gets the BPX main header
+    /// Returns a read-only reference to the BPX main header.
     ///
-    /// # Returns
+    /// # Examples
     ///
-    /// * read-only reference to the BPX main header
+    /// ```
+    /// use bpx::encoder::Encoder;
+    /// use bpx::Interface;
+    /// use bpx::builder::SectionHeaderBuilder;
+    ///
+    /// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let header = file.get_main_header();
+    /// //Default BPX variant/type is 'P'
+    /// assert_eq!(header.btype, 'P' as u8);
+    /// ```
     fn get_main_header(&self) -> &header::MainHeader;
 }
 
-/// Represents a result from this library
+/// Represents a result from this library.
 ///
-/// *this acts as a shortcut to [Result](std::result::Result)<T, [Error](error::Error)>*
+/// *This acts as a shortcut to [Result](std::result::Result)<T, [Error](error::Error)>.*
 pub type Result<T> = std::result::Result<T, error::Error>;
