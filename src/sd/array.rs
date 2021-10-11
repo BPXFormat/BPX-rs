@@ -133,13 +133,15 @@ impl Array
     /// # Examples
     ///
     /// ```
+    /// use std::convert::TryInto;
     /// use bpx::sd::Array;
+    /// use bpx::sd::Value;
     ///
     /// let mut arr = Array::new();
     /// arr.add("Test".into());
     /// assert_eq!(arr.len(), 1);
     /// assert!(arr.get(0).is_some());
-    /// assert_eq!(arr.get(0).unwrap(), "Test".into());
+    /// assert!(arr.get(0).unwrap() == &Value::from("Test"));
     /// ```
     pub fn get(&self, pos: usize) -> Option<&Value>
     {
