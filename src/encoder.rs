@@ -56,18 +56,26 @@ use crate::{
 const READ_BLOCK_SIZE: usize = 8192;
 
 /// Represents the IO backend for a BPX encoder.
-pub trait IoBackend: io::Write
+pub trait IoBackend: io::Write + io::Seek
 {
 }
-impl<T: io::Write> IoBackend for T {}
+impl<T: io::Write + io::Seek> IoBackend for T {}
+
+struct SectionEntry
+{
+    header: SectionHeader,
+    data: Box<dyn SectionData>,
+    index: u32
+}
 
 /// The BPX encoder.
 pub struct Encoder<TBackend: IoBackend>
 {
     main_header: MainHeader,
-    sections: Vec<SectionHeader>,
-    sections_data: Vec<Box<dyn SectionData>>,
-    file: TBackend
+    sections: Vec<Option<SectionEntry>>,
+    file: TBackend,
+    cur_index: u32,
+    modified: bool
 }
 
 impl<TBackend: IoBackend> Encoder<TBackend>
@@ -84,8 +92,9 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         return Ok(Encoder {
             main_header: MainHeader::new(),
             sections: Vec::new(),
-            sections_data: Vec::new(),
-            file
+            file,
+            cur_index: 0,
+            modified: true
         });
     }
 
@@ -101,8 +110,9 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// use bpx::builder::MainHeaderBuilder;
     /// use bpx::encoder::Encoder;
     /// use bpx::Interface;
+    /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut encoder = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let mut encoder = Encoder::new(new_byte_buf(0)).unwrap();
     /// encoder.set_main_header(MainHeaderBuilder::new().with_type(1).build());
     /// assert_eq!(encoder.get_main_header().btype, 1);
     /// ```
@@ -126,19 +136,36 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// use bpx::encoder::Encoder;
     /// use bpx::header::SectionHeader;
     /// use bpx::Interface;
+    /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut encoder = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let mut encoder = Encoder::new(new_byte_buf(0)).unwrap();
     /// assert_eq!(encoder.get_main_header().section_num, 0);
     /// encoder.create_section(SectionHeader::new());
     /// assert_eq!(encoder.get_main_header().section_num, 1);
     /// ```
     pub fn create_section(&mut self, header: SectionHeader) -> Result<SectionHandle>
     {
+        self.modified = true;
         self.main_header.section_num += 1;
         let section = create_section(&header)?;
-        self.sections.push(header);
+        for i in 0..self.sections.len() {
+            if self.sections[i].is_none() {
+                self.sections[i] = Some(SectionEntry {
+                    header,
+                    data: section,
+                    index: self.cur_index
+                });
+                self.cur_index += 1;
+                return Ok(SectionHandle(i));
+            }
+        }
+        self.sections.push(Some(SectionEntry {
+            header,
+            data: section,
+            index: self.cur_index
+        }));
+        self.cur_index += 1;
         let r = self.sections.len() - 1;
-        self.sections_data.push(section);
         return Ok(SectionHandle(r));
     }
 
@@ -149,26 +176,25 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         let mut ptr: u64 = SIZE_MAIN_HEADER as u64 + (self.sections.len() as u64 * SIZE_SECTION_HEADER as u64);
         let mut f = tempfile::tempfile()?;
 
-        for i in 0..self.sections.len() {
-            if self.sections_data[i].size() > u32::MAX as usize {
-                return Err(Error::Capacity(self.sections_data[i].size()));
+        for v in &mut self.sections {
+            if let Some(section) = v {
+                if section.data.size() > u32::MAX as usize {
+                    return Err(Error::Capacity(section.data.size()));
+                }
+                section.data.seek(io::SeekFrom::Start(0))?;
+                let flags = get_flags(&section.header, section.data.size() as u32);
+                let (csize, chksum) = write_section(flags, section.data.as_mut(), &mut f)?;
+                section.header.csize = csize as u32;
+                section.header.size = section.data.size() as u32;
+                section.header.chksum = chksum;
+                section.header.flags = flags;
+                section.header.pointer = ptr;
+                #[cfg(feature = "debug-log")]
+                println!("Writing section #{}: Size = {}, Size after compression = {}", section.index, section.header.size, section.header.csize);
+                ptr += csize as u64;
+                chksum_sht += section.header.get_checksum();
+                all_sections_size += csize;
             }
-            self.sections_data[i].seek(io::SeekFrom::Start(0))?;
-            let flags = get_flags(&self.sections[i], self.sections_data[i].size() as u32);
-            let (csize, chksum) = write_section(flags, self.sections_data[i].as_mut(), &mut f)?;
-            self.sections[i].csize = csize as u32;
-            self.sections[i].size = self.sections_data[i].size() as u32;
-            self.sections[i].chksum = chksum;
-            self.sections[i].flags = flags;
-            self.sections[i].pointer = ptr;
-            #[cfg(feature = "debug-log")]
-            println!(
-                "Writing section #{}: Size = {}, Size after compression = {}",
-                i, self.sections[i].size, self.sections[i].csize
-            );
-            ptr += csize as u64;
-            chksum_sht += self.sections[i].get_checksum();
-            all_sections_size += csize;
         }
         return Ok((f, chksum_sht, all_sections_size));
     }
@@ -202,8 +228,9 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     ///
     /// ```
     /// use bpx::encoder::Encoder;
+    /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut encoder = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let mut encoder = Encoder::new(new_byte_buf(0)).unwrap();
     /// encoder.save();
     /// //TODO: Finish once Encoder can be consumed back into its IO Backend
     /// ```
@@ -216,7 +243,9 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         self.main_header.chksum = chksum_sht + self.main_header.get_checksum();
         self.main_header.write(&mut self.file)?;
         for v in &self.sections {
-            v.write(&mut self.file)?;
+            if let Some(section) = v {
+                section.header.write(&mut self.file)?;
+            }
         }
         self.write_data_file(&mut main_data, all_sections_size)?;
         return Ok(());
@@ -228,8 +257,10 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {
         for i in 0..self.sections.len() {
-            if self.sections[i].btype == btype {
-                return Some(SectionHandle(i));
+            if let Some(v) = &self.sections[i] {
+                if v.header.btype == btype {
+                    return Some(SectionHandle(i));
+                }
             }
         }
         return None;
@@ -240,8 +271,10 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
         let mut v = Vec::new();
 
         for i in 0..self.sections.len() {
-            if self.sections[i].btype == btype {
-                v.push(SectionHandle(i));
+            if let Some(vv) = &self.sections[i] {
+                if vv.header.btype == btype {
+                    v.push(SectionHandle(i));
+                }
             }
         }
         return v;
@@ -249,15 +282,19 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
 
     fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>
     {
-        if let Some(_) = self.sections.get(index as usize) {
-            return Some(SectionHandle(index as _));
+        for i in 0..self.sections.len() {
+            if let Some(section) = &self.sections[i] {
+                if section.index == index {
+                    return Some(SectionHandle(i));
+                }
+            }
         }
         return None;
     }
 
     fn get_section_header(&self, handle: SectionHandle) -> &SectionHeader
     {
-        return &self.sections[handle.0];
+        return &self.sections[handle.0].as_ref().unwrap().header;
     }
 
     fn get_section_index(&self, handle: SectionHandle) -> u32
@@ -267,7 +304,9 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
 
     fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData>
     {
-        return Ok(self.sections_data[handle.0].as_mut());
+        let section = self.sections[handle.0].as_mut().unwrap();
+        self.modified = true;
+        return Ok(section.data.as_mut());
     }
 
     fn get_main_header(&self) -> &MainHeader
