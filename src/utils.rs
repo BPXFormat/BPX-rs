@@ -87,7 +87,7 @@ impl<T> OptionExtension<T> for Option<T>
 ///
 /// # Arguments
 ///
-/// * `size`: the initial size of the buffer if not known use 0.
+/// * `size`: the initial size of the buffer; if not known use 0.
 ///
 /// returns: Cursor<Vec<u8>>
 pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>>
