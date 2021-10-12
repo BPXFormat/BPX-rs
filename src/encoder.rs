@@ -172,7 +172,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         return Ok(SectionHandle(r));
     }
 
-    fn write_sections2(&mut self, file_start_offset: usize) -> Result<(u32, usize)>
+    fn write_sections(&mut self, file_start_offset: usize) -> Result<(u32, usize)>
     {
         let mut ptr: u64 = file_start_offset as _;
         let mut all_sections_size: usize = 0;
@@ -242,7 +242,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         //Seek to the start of the actual file content
         self.file.seek(SeekFrom::Start(file_start_offset as _))?;
         //Write all section data and section headers
-        let (chksum_sht, all_sections_size) = self.write_sections2(file_start_offset)?;
+        let (chksum_sht, all_sections_size) = self.write_sections(file_start_offset)?;
         self.main_header.file_size = all_sections_size as u64 + file_start_offset as u64;
         self.main_header.chksum = chksum_sht + self.main_header.get_checksum();
         //Relocate to the start of the file and write the BPX main header
