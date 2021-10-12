@@ -41,8 +41,9 @@ use std::collections::hash_map::Entry;
 /// use bpx::encoder::Encoder;
 /// use bpx::header::SectionHeader;
 /// use bpx::strings::StringSection;
+/// use bpx::utils::new_byte_buf;
 ///
-/// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+/// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
 /// let handle = file.create_section(SectionHeader::new()).unwrap();
 /// let mut strings = StringSection::new(handle);
 /// let offset = strings.put(&mut file, "Test").unwrap();
