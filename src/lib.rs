@@ -66,8 +66,9 @@ pub trait Interface
     /// ```
     /// use bpx::encoder::Encoder;
     /// use bpx::Interface;
+    /// use bpx::utils::new_byte_buf;
     ///
-    /// let file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let file = Encoder::new(new_byte_buf(0)).unwrap();
     /// assert!(file.find_section_by_type(0).is_none());
     /// ```
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>;
@@ -86,8 +87,9 @@ pub trait Interface
     /// ```
     /// use bpx::encoder::Encoder;
     /// use bpx::Interface;
+    /// use bpx::utils::new_byte_buf;
     ///
-    /// let file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let file = Encoder::new(new_byte_buf(0)).unwrap();
     /// assert_eq!(file.find_all_sections_of_type(0).len(), 0);
     /// ```
     fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>;
@@ -106,8 +108,9 @@ pub trait Interface
     /// ```
     /// use bpx::encoder::Encoder;
     /// use bpx::Interface;
+    /// use bpx::utils::new_byte_buf;
     ///
-    /// let file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let file = Encoder::new(new_byte_buf(0)).unwrap();
     /// assert!(file.find_section_by_index(0).is_none());
     /// ```
     fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>;
@@ -130,8 +133,9 @@ pub trait Interface
     /// use bpx::encoder::Encoder;
     /// use bpx::Interface;
     /// use bpx::builder::SectionHeaderBuilder;
+    /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
     /// let handle = file.create_section(SectionHeaderBuilder::new().with_type(1).build()).unwrap();
     /// let header = file.get_section_header(handle);
     /// assert_eq!(header.btype, 1);
@@ -156,8 +160,9 @@ pub trait Interface
     /// use bpx::encoder::Encoder;
     /// use bpx::Interface;
     /// use bpx::builder::SectionHeaderBuilder;
+    /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
     /// let handle = file.create_section(SectionHeaderBuilder::new().build()).unwrap();
     /// assert_eq!(file.get_section_index(handle), 0);
     /// ```
@@ -186,8 +191,9 @@ pub trait Interface
     /// use bpx::encoder::Encoder;
     /// use bpx::Interface;
     /// use bpx::builder::SectionHeaderBuilder;
+    /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
     /// let handle = file.create_section(SectionHeaderBuilder::new().build()).unwrap();
     /// let section = file.open_section(handle).unwrap();
     /// let data = section.load_in_memory().unwrap();
@@ -203,8 +209,9 @@ pub trait Interface
     /// use bpx::encoder::Encoder;
     /// use bpx::Interface;
     /// use bpx::builder::SectionHeaderBuilder;
+    /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
     /// let header = file.get_main_header();
     /// //Default BPX variant/type is 'P'
     /// assert_eq!(header.btype, 'P' as u8);
