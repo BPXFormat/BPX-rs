@@ -91,12 +91,19 @@ impl<TBackend: IoBackend> Decoder<TBackend>
     /// # Examples
     ///
     /// ```
+    /// use std::io::{Seek, SeekFrom};
+    /// use bpx::decoder::Decoder;
     /// use bpx::encoder::Encoder;
+    /// use bpx::Interface;
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut encoder = Encoder::new(new_byte_buf(0)).unwrap();
     /// encoder.save();
-    /// //TODO: Finish once Encoder can be consumed back into its IO Backend
+    /// let mut bytebuf = encoder.into_inner();
+    /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
+    /// let mut decoder = Decoder::new(bytebuf).unwrap();
+    /// assert_eq!(decoder.get_main_header().section_num, 0);
+    /// assert_eq!(decoder.get_main_header().btype, 'P' as u8);
     /// ```
     pub fn new(mut file: TBackend) -> Result<Decoder<TBackend>>
     {
