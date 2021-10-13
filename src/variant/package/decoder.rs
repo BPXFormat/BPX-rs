@@ -284,7 +284,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// ```
     /// //TODO: Implement
     /// ```
-    pub fn unpack_object<TWrite: Write>(&mut self, obj: &ObjectHeader, out: &mut TWrite) -> Result<u64>
+    pub fn unpack_object<TWrite: Write>(&mut self, obj: &ObjectHeader, mut out: TWrite) -> Result<u64>
     {
         let mut section_id = obj.start;
         let mut offset = obj.offset;
@@ -300,7 +300,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
                 handle,
                 offset,
                 std::cmp::min(remaining_section_size as u64, len) as u32,
-                out
+                &mut out
             )?;
             len -= val as u64;
             offset = 0;
