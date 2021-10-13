@@ -173,6 +173,45 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         return Ok(SectionHandle(r));
     }
 
+    /// Removes a section from this BPX.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the given section handle is invalid.
+    ///
+    /// # Arguments
+    ///
+    /// * `handle`: a handle to the section.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::encoder::Encoder;
+    /// use bpx::header::SectionHeader;
+    /// use bpx::Interface;
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let mut encoder = Encoder::new(new_byte_buf(0)).unwrap();
+    /// let handle = encoder.create_section(SectionHeader::new()).unwrap();
+    /// encoder.save();
+    /// assert_eq!(encoder.get_main_header().section_num, 1);
+    /// encoder.remove_section(handle);
+    /// encoder.save();
+    /// assert_eq!(encoder.get_main_header().section_num, 0);
+    /// ```
+    pub fn remove_section(&mut self, handle: SectionHandle)
+    {
+        self.sections[handle.0] = None;
+        self.sections_in_order.retain(|v| v.0 != handle.0);
+        for i in 0..self.sections_in_order.len() {
+            let handle = self.sections_in_order[i];
+            self.sections[handle.0].as_mut().unwrap().index = i as _;
+        }
+        self.main_header.section_num -= 1;
+        self.cur_index -= 1;
+        self.modified = true;
+    }
+
     fn write_sections(&mut self, file_start_offset: usize) -> Result<(u32, usize)>
     {
         let mut ptr: u64 = file_start_offset as _;
