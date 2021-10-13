@@ -92,8 +92,9 @@ impl<TBackend: IoBackend> Decoder<TBackend>
     ///
     /// ```
     /// use bpx::encoder::Encoder;
+    /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut encoder = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let mut encoder = Encoder::new(new_byte_buf(0)).unwrap();
     /// encoder.save();
     /// //TODO: Finish once Encoder can be consumed back into its IO Backend
     /// ```

@@ -28,6 +28,7 @@
 
 //! Contains various utilities to be used by other modules.
 
+use std::io::Cursor;
 use std::num::Wrapping;
 
 /// Hash text using the hash function defined in the BPX specification for strings.
@@ -79,4 +80,20 @@ impl<T> OptionExtension<T> for Option<T>
             None => unsafe { std::hint::unreachable_unchecked() }
         }
     }
+}
+
+/// Creates a new in-memory byte buffer which can be used
+/// to plug as IoBackend to a BPX encoder or decoder.
+///
+/// # Arguments
+///
+/// * `size`: the initial size of the buffer; if not known use 0.
+///
+/// returns: Cursor<Vec<u8>>
+pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>>
+{
+    if size > 0 {
+        return Cursor::new(Vec::with_capacity(size));
+    }
+    return Cursor::new(Vec::new());
 }

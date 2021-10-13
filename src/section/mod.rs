@@ -54,8 +54,9 @@ pub trait SectionData: Read + Write + Seek
     /// use bpx::encoder::Encoder;
     /// use bpx::header::SectionHeader;
     /// use bpx::Interface;
+    /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
     /// let handle = file.create_section(SectionHeader::new()).unwrap();
     /// let section = file.open_section(handle).unwrap();
     /// let data = section.load_in_memory().unwrap();
@@ -71,8 +72,9 @@ pub trait SectionData: Read + Write + Seek
     /// use bpx::encoder::Encoder;
     /// use bpx::header::SectionHeader;
     /// use bpx::Interface;
+    /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut file = Encoder::new(Vec::<u8>::new()).unwrap();
+    /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
     /// let handle = file.create_section(SectionHeader::new()).unwrap();
     /// let section = file.open_section(handle).unwrap();
     /// assert_eq!(section.size(), 0);
