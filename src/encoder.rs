@@ -186,7 +186,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
                 return Err(Error::Capacity(section.data.size()));
             }
             section.data.seek(io::SeekFrom::Start(0))?;
-            let flags = get_flags(&section.header, section.data.size() as u32);
+            let flags = get_flags(&section, section.data.size() as u32);
             let (csize, chksum) = write_section(flags, section.data.as_mut(), &mut self.file)?;
             section.header.csize = csize as u32;
             section.header.size = section.data.size() as u32;
@@ -313,17 +313,17 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
     }
 }
 
-fn get_flags(header: &SectionHeader, size: u32) -> u8
+fn get_flags(section: &SectionEntry, size: u32) -> u8
 {
     let mut flags = 0;
-    if header.flags & FLAG_CHECK_WEAK != 0 {
+    if section.flags & FLAG_CHECK_WEAK != 0 {
         flags |= FLAG_CHECK_WEAK;
-    } else if header.flags & FLAG_CHECK_CRC32 != 0 {
+    } else if section.flags & FLAG_CHECK_CRC32 != 0 {
         flags |= FLAG_CHECK_CRC32;
     }
-    if header.flags & FLAG_COMPRESS_XZ != 0 && size > header.csize {
+    if section.flags & FLAG_COMPRESS_XZ != 0 && size > section.threshold {
         flags |= FLAG_COMPRESS_XZ;
-    } else if header.flags & FLAG_COMPRESS_ZLIB != 0 && size > header.csize {
+    } else if section.flags & FLAG_COMPRESS_ZLIB != 0 && size > section.threshold {
         flags |= FLAG_COMPRESS_ZLIB;
     }
     return flags;
