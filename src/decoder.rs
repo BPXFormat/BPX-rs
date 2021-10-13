@@ -110,6 +110,12 @@ impl<TBackend: IoBackend> Decoder<TBackend>
         decoder.read_section_header_table(checksum)?;
         return Ok(decoder);
     }
+
+    /// Consumes this BPX decoder and returns the inner IO backend.
+    pub fn into_inner(self) -> TBackend
+    {
+        return self.file;
+    }
 }
 
 impl<TBackend: IoBackend> Interface for Decoder<TBackend>

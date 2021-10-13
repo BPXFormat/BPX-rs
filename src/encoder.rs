@@ -221,6 +221,12 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         self.write_data_file(&mut main_data, all_sections_size)?;
         return Ok(());
     }
+
+    /// Consumes this BPX encoder and returns the inner IO backend.
+    pub fn into_inner(self) -> TBackend
+    {
+        return self.file;
+    }
 }
 
 impl<TBackend: IoBackend> Interface for Encoder<TBackend>
