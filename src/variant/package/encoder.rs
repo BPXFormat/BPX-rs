@@ -151,7 +151,7 @@ impl PackageBuilder
     /// use bpx::variant::package::{PackageBuilder, PackageDecoder};
     ///
     /// let mut bpxp = PackageBuilder::new().build(new_byte_buf(0)).unwrap();
-    /// bpxp.pack_object("TestObject", "this_is_a_test".as_bytes());
+    /// bpxp.pack_object("TestObject", "This is a test 你好".as_bytes());
     /// bpxp.save();
     /// //Reset our bytebuf pointer to start
     /// let mut bytebuf = bpxp.into_inner().into_inner();
@@ -162,8 +162,10 @@ impl PackageBuilder
     /// assert_eq!(table.get_objects().len(), 1);
     /// let object = table.get_objects()[0];
     /// assert_eq!(bpxp.get_object_name(&object).unwrap(), "TestObject");
-    /// //let data =
-    /// //TODO: Finish
+    /// let mut data = Vec::new();
+    /// bpxp.unpack_object(&object, &mut data);
+    /// let s = std::str::from_utf8(&data).unwrap();
+    /// assert_eq!(s, "This is a test 你好")
     /// ```
     pub fn build<TBackend: IoBackend>(self, backend: TBackend) -> Result<PackageEncoder<TBackend>>
     {
@@ -274,12 +276,6 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     /// * `source`: the source object data as a [Read](std::io::Read).
     ///
     /// returns: Result<(), Error>
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// //TODO: Implement
-    /// ```
     pub fn pack_object<TRead: Read>(&mut self, name: &str, mut source: TRead) -> Result<()>
     {
         let mut object_size = 0;
