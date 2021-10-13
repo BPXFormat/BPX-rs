@@ -155,8 +155,9 @@ impl PackageBuilder
     /// encoder.save();
     /// //TODO: Finish
     /// ```
-    pub fn build<TBackend: IoBackend>(self, encoder: &mut Encoder<TBackend>) -> Result<PackageEncoder<TBackend>>
+    pub fn build<TBackend: IoBackend>(self, backend: TBackend) -> Result<PackageEncoder<TBackend>>
     {
+        let mut encoder = Encoder::new(backend)?;
         let mut type_ext: [u8; 16] = [0; 16];
         match self.architecture {
             Architecture::X86_64 => type_ext[0] = 0x0,
@@ -211,12 +212,12 @@ impl PackageBuilder
 }
 
 /// Represents a BPX Package encoder
-pub struct PackageEncoder<'a, TBackend: IoBackend>
+pub struct PackageEncoder<TBackend: IoBackend>
 {
     strings: SectionHandle,
     last_data_section: Option<SectionHandle>,
     object_table: SectionHandle,
-    encoder: &'a mut Encoder<TBackend>
+    encoder: Encoder<TBackend>
 }
 
 fn create_data_section_header() -> SectionHeader
@@ -229,7 +230,7 @@ fn create_data_section_header() -> SectionHeader
     return header;
 }
 
-impl<'a, TBackend: IoBackend> PackageEncoder<'a, TBackend>
+impl<TBackend: IoBackend> PackageEncoder<TBackend>
 {
     fn write_object<TRead: Read>(&mut self, source: &mut TRead, data_id: SectionHandle) -> Result<(usize, bool)>
     {
@@ -293,7 +294,7 @@ impl<'a, TBackend: IoBackend> PackageEncoder<'a, TBackend>
             let mut buf: [u8; 20] = [0; 20];
             let mut strings = StringSection::new(self.strings);
             LittleEndian::write_u64(&mut buf[0..8], object_size as u64);
-            LittleEndian::write_u32(&mut buf[8..12], strings.put(self.encoder, &name)?);
+            LittleEndian::write_u32(&mut buf[8..12], strings.put(&mut self.encoder, &name)?);
             LittleEndian::write_u32(&mut buf[12..16], start);
             LittleEndian::write_u32(&mut buf[16..20], offset);
             // Write the object header
@@ -306,5 +307,11 @@ impl<'a, TBackend: IoBackend> PackageEncoder<'a, TBackend>
             self.last_data_section = Some(data_section);
         }
         return Ok(());
+    }
+
+    /// Consumes this BPXP encoder and returns the inner BPX encoder.
+    pub fn into_inner(self) -> Encoder<TBackend>
+    {
+        return self.encoder;
     }
 }

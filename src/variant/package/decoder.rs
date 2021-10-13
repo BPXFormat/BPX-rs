@@ -51,13 +51,13 @@ use crate::{
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
 /// Represents a BPX Package decoder.
-pub struct PackageDecoder<'a, TBackend: IoBackend>
+pub struct PackageDecoder<TBackend: IoBackend>
 {
     type_code: [u8; 2],
     architecture: Architecture,
     platform: Platform,
     strings: StringSection,
-    decoder: &'a mut Decoder<TBackend>,
+    decoder: Decoder<TBackend>,
     object_table: SectionHandle
 }
 
@@ -85,7 +85,7 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Pl
     return Ok((arch, platform));
 }
 
-impl<'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
+impl<TBackend: IoBackend> PackageDecoder<TBackend>
 {
     /// Creates a new PackageDecoder by reading from a BPX decoder.
     ///
@@ -104,8 +104,9 @@ impl<'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
     /// ```
     /// //TODO: Implement
     /// ```
-    pub fn read(decoder: &mut Decoder<TBackend>) -> Result<PackageDecoder<TBackend>>
+    pub fn read(backend: TBackend) -> Result<PackageDecoder<TBackend>>
     {
+        let mut decoder = Decoder::new(backend)?;
         if decoder.get_main_header().btype != 'P' as u8 {
             return Err(Error::Corruption(format!(
                 "Unknown variant of BPX: {}",
@@ -239,7 +240,7 @@ impl<'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
     /// ```
     pub fn get_object_name(&mut self, obj: &ObjectHeader) -> Result<&str>
     {
-        return self.strings.get(self.decoder, obj.name);
+        return self.strings.get(&mut self.decoder, obj.name);
     }
 
     fn load_from_section<TWrite: Write>(
@@ -306,5 +307,11 @@ impl<'a, TBackend: IoBackend> PackageDecoder<'a, TBackend>
             section_id += 1;
         }
         return Ok(obj.size);
+    }
+
+    /// Consumes this BPXP decoder and returns the inner BPX decoder.
+    pub fn into_inner(self) -> Decoder<TBackend>
+    {
+        return self.decoder;
     }
 }
