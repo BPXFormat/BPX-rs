@@ -98,12 +98,6 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if some sections/headers could not be loaded.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// //TODO: Implement
-    /// ```
     pub fn read(backend: TBackend) -> Result<PackageDecoder<TBackend>>
     {
         let decoder = Decoder::new(backend)?;
@@ -169,12 +163,6 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned in case of corruption or system error.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// //TODO: Implement
-    /// ```
     pub fn read_metadata(&mut self) -> Result<Option<Object>>
     {
         if let Some(handle) = self.decoder.find_section_by_type(SECTION_TYPE_SD) {
@@ -190,12 +178,6 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned in case of corruption or system error.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// //TODO: Implement
-    /// ```
     pub fn read_object_table(&mut self) -> Result<ObjectTable>
     {
         let mut v = Vec::new();
@@ -232,12 +214,6 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if the name could not be read.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// //TODO: Implement
-    /// ```
     pub fn get_object_name(&mut self, obj: &ObjectHeader) -> Result<&str>
     {
         return self.strings.get(&mut self.decoder, obj.name);
@@ -278,13 +254,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if the object could not be unpacked.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// //TODO: Implement
-    /// ```
-    pub fn unpack_object<TWrite: Write>(&mut self, obj: &ObjectHeader, out: &mut TWrite) -> Result<u64>
+    pub fn unpack_object<TWrite: Write>(&mut self, obj: &ObjectHeader, mut out: TWrite) -> Result<u64>
     {
         let mut section_id = obj.start;
         let mut offset = obj.offset;
@@ -300,7 +270,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
                 handle,
                 offset,
                 std::cmp::min(remaining_section_size as u64, len) as u32,
-                out
+                &mut out
             )?;
             len -= val as u64;
             offset = 0;

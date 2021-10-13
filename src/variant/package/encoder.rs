@@ -146,12 +146,26 @@ impl PackageBuilder
     /// # Examples
     ///
     /// ```
+    /// use std::io::{Seek, SeekFrom};
     /// use bpx::utils::new_byte_buf;
-    /// use bpx::variant::package::PackageBuilder;
+    /// use bpx::variant::package::{PackageBuilder, PackageDecoder};
     ///
     /// let mut bpxp = PackageBuilder::new().build(new_byte_buf(0)).unwrap();
+    /// bpxp.pack_object("TestObject", "This is a test 你好".as_bytes());
     /// bpxp.save();
-    /// //TODO: Finish
+    /// //Reset our bytebuf pointer to start
+    /// let mut bytebuf = bpxp.into_inner().into_inner();
+    /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
+    /// //Attempt decoding our in-memory BPXP
+    /// let mut bpxp = PackageDecoder::read(bytebuf).unwrap();
+    /// let table = bpxp.read_object_table().unwrap();
+    /// assert_eq!(table.get_objects().len(), 1);
+    /// let object = table.get_objects()[0];
+    /// assert_eq!(bpxp.get_object_name(&object).unwrap(), "TestObject");
+    /// let mut data = Vec::new();
+    /// bpxp.unpack_object(&object, &mut data);
+    /// let s = std::str::from_utf8(&data).unwrap();
+    /// assert_eq!(s, "This is a test 你好")
     /// ```
     pub fn build<TBackend: IoBackend>(self, backend: TBackend) -> Result<PackageEncoder<TBackend>>
     {
@@ -262,13 +276,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     /// * `source`: the source object data as a [Read](std::io::Read).
     ///
     /// returns: Result<(), Error>
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// //TODO: Implement
-    /// ```
-    pub fn pack_object<TRead: Read>(&mut self, name: &str, source: &mut TRead) -> Result<()>
+    pub fn pack_object<TRead: Read>(&mut self, name: &str, mut source: TRead) -> Result<()>
     {
         let mut object_size = 0;
         let useless = &mut self.encoder;
@@ -279,7 +287,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
         let offset = self.encoder.open_section(data_section)?.size() as u32;
 
         loop {
-            let (count, need_section) = self.write_object(source, data_section)?;
+            let (count, need_section) = self.write_object(&mut source, data_section)?;
             object_size += count;
             if need_section {
                 data_section = self.encoder.create_section(create_data_section_header())?;

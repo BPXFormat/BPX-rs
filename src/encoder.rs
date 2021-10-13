@@ -266,12 +266,16 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// # Examples
     ///
     /// ```
+    /// use std::io::{Seek, SeekFrom};
+    /// use bpx::decoder::Decoder;
     /// use bpx::encoder::Encoder;
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut encoder = Encoder::new(new_byte_buf(0)).unwrap();
     /// encoder.save();
-    /// //TODO: Finish once Encoder can be consumed back into its IO Backend
+    /// let mut bytebuf = encoder.into_inner();
+    /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
+    /// Decoder::new(bytebuf).unwrap(); //If this panics then encoder is broken
     /// ```
     pub fn save(&mut self) -> Result<()>
     {

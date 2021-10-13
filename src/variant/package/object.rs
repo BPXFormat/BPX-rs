@@ -82,12 +82,6 @@ impl ObjectTable
     ///
     /// An [Error](crate::error::Error) is returned if the strings could
     /// not be loaded.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// //TODO: Implement
-    /// ```
     pub fn build_lookup_table<TBackend: IoBackend>(&mut self, package: &mut PackageDecoder<TBackend>) -> Result<()>
     {
         let mut map = HashMap::new();
@@ -115,10 +109,6 @@ impl ObjectTable
     /// returns: Option<&ObjectHeader>
     ///
     /// # Examples
-    ///
-    /// ```
-    /// //TODO: Implement
-    /// ```
     pub fn find_object(&self, name: &str) -> Option<&ObjectHeader>
     {
         if let Some(map) = &self.map {
