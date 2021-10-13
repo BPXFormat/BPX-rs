@@ -64,7 +64,9 @@ struct SectionEntry
 {
     header: SectionHeader,
     data: Box<dyn SectionData>,
-    index: u32
+    index: u32,
+    threshold: u32,
+    flags: u8
 }
 
 /// The BPX encoder.
@@ -149,23 +151,22 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         self.modified = true;
         self.main_header.section_num += 1;
         let section = create_section(&header)?;
+        let entry = SectionEntry {
+            header,
+            data: section,
+            index: self.cur_index,
+            threshold: header.csize,
+            flags: header.flags
+        };
         for i in 0..self.sections.len() {
             if self.sections[i].is_none() {
-                self.sections[i] = Some(SectionEntry {
-                    header,
-                    data: section,
-                    index: self.cur_index
-                });
+                self.sections[i] = Some(entry);
                 self.cur_index += 1;
                 self.sections_in_order.push(SectionHandle(i));
                 return Ok(SectionHandle(i));
             }
         }
-        self.sections.push(Some(SectionEntry {
-            header,
-            data: section,
-            index: self.cur_index
-        }));
+        self.sections.push(Some(entry));
         self.cur_index += 1;
         let r = self.sections.len() - 1;
         self.sections_in_order.push(SectionHandle(r));
