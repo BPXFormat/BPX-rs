@@ -155,7 +155,7 @@ impl PackageBuilder
     /// bpxp.save();
     /// //Reset our bytebuf pointer to start
     /// let mut bytebuf = bpxp.into_inner().into_inner();
-    /// bytebuf.seek(SeekFrom::Start(0));
+    /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
     /// //Attempt decoding our in-memory BPXP
     /// let mut bpxp = PackageDecoder::read(bytebuf).unwrap();
     /// let table = bpxp.read_object_table().unwrap();
