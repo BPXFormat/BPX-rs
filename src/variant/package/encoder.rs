@@ -146,13 +146,11 @@ impl PackageBuilder
     /// # Examples
     ///
     /// ```
-    /// use bpx::encoder::Encoder;
     /// use bpx::utils::new_byte_buf;
     /// use bpx::variant::package::PackageBuilder;
     ///
-    /// let mut encoder = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let mut bpxp = PackageBuilder::new().build(&mut encoder).unwrap();
-    /// encoder.save();
+    /// let mut bpxp = PackageBuilder::new().build(new_byte_buf(0)).unwrap();
+    /// bpxp.save();
     /// //TODO: Finish
     /// ```
     pub fn build<TBackend: IoBackend>(self, backend: TBackend) -> Result<PackageEncoder<TBackend>>
@@ -307,6 +305,20 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
             self.last_data_section = Some(data_section);
         }
         return Ok(());
+    }
+
+    /// Saves this BPXP.
+    ///
+    /// **This function prints some information to standard output as a way
+    /// to debug data compression issues unless the `debug-log` feature
+    /// is disabled.**
+    ///
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned if the encoder failed to save.
+    pub fn save(&mut self) -> Result<()>
+    {
+        return self.encoder.save();
     }
 
     /// Consumes this BPXP encoder and returns the inner BPX encoder.

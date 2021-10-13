@@ -106,7 +106,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// ```
     pub fn read(backend: TBackend) -> Result<PackageDecoder<TBackend>>
     {
-        let mut decoder = Decoder::new(backend)?;
+        let decoder = Decoder::new(backend)?;
         if decoder.get_main_header().btype != 'P' as u8 {
             return Err(Error::Corruption(format!(
                 "Unknown variant of BPX: {}",
