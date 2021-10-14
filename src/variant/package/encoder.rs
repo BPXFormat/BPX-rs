@@ -280,7 +280,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     {
         let mut object_size = 0;
         let useless = &mut self.encoder;
-        let mut data_section = *Option::get_or_insert_with_err(&mut self.last_data_section, || {
+        let mut data_section = *self.last_data_section.get_or_insert_with_err(|| {
             useless.create_section(create_data_section_header())
         })?;
         let start = self.encoder.get_section_index(data_section);
