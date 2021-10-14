@@ -255,7 +255,7 @@ fn get_value_parser<TRead: Read>(type_code: u8) -> Option<fn(stream: &mut TRead)
     }
 }
 
-pub fn read_structured_data<TRead: Read>(source: &mut TRead) -> Result<Object>
+pub fn read_structured_data<TRead: Read>(mut source: TRead) -> Result<Object>
 {
-    return parse_object(source);
+    return parse_object(&mut source);
 }

@@ -200,7 +200,7 @@ impl Object
     /// assert!(obj1.get("Test").is_some());
     /// assert!(obj1.get("Test").unwrap() == &Value::from(12));
     /// ```
-    pub fn read<TRead: std::io::Read>(source: &mut TRead) -> Result<Object>
+    pub fn read<TRead: std::io::Read>(source: TRead) -> Result<Object>
     {
         return super::decoder::read_structured_data(source);
     }
