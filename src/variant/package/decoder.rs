@@ -98,7 +98,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if some sections/headers could not be loaded.
-    pub fn read(backend: TBackend) -> Result<PackageDecoder<TBackend>>
+    pub fn new(backend: TBackend) -> Result<PackageDecoder<TBackend>>
     {
         let decoder = Decoder::new(backend)?;
         if decoder.get_main_header().btype != 'P' as u8 {
