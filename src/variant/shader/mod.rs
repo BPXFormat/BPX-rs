@@ -31,12 +31,20 @@
 pub mod symbol;
 mod decoder;
 
-pub use decoder::ShaderDecoder;
+pub use decoder::ShaderPackDecoder;
 
 pub const SUPPORTED_VERSION: u32 = 0x2;
 
+pub const SECTION_TYPE_SHADER: u8 = 0x1;
 pub const SECTION_TYPE_SYMBOL_TABLE: u8 = 0x2;
 pub const SECTION_TYPE_EXTENDED_DATA: u8 = 0x3;
+
+#[derive(Clone)]
+pub struct Shader
+{
+    stage: Stage,
+    data: Vec<u8>
+}
 
 #[derive(Copy, Clone)]
 pub enum Target

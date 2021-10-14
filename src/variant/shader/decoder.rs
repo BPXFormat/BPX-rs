@@ -35,7 +35,7 @@ use crate::header::SECTION_TYPE_STRING;
 use crate::sd::Object;
 use crate::strings::StringSection;
 use crate::utils::OptionExtension;
-use crate::variant::shader::{SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SYMBOL_TABLE, SUPPORTED_VERSION, Target, Type};
+use crate::variant::shader::{SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SHADER, SECTION_TYPE_SYMBOL_TABLE, Shader, Stage, SUPPORTED_VERSION, Target, Type};
 use crate::variant::shader::symbol::{FLAG_EXTENDED_DATA, Symbol, SymbolTable, SymbolType};
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
@@ -76,7 +76,19 @@ fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType>
     }
 }
 
-pub struct ShaderDecoder<TBackend: IoBackend>
+fn get_stage_from_code(code: u8) -> Result<Stage>
+{
+    return match code {
+        0x0 => Ok(Stage::Vertex),
+        0x1 => Ok(Stage::Hull),
+        0x2 => Ok(Stage::Domain),
+        0x3 => Ok(Stage::Geometry),
+        0x4 => Ok(Stage::Pixel),
+        _ => Err(Error::Corruption(String::from("Shader stage code does not exist")))
+    };
+}
+
+pub struct ShaderPackDecoder<TBackend: IoBackend>
 {
     decoder: Decoder<TBackend>,
     assembly_hash: u64,
@@ -88,7 +100,7 @@ pub struct ShaderDecoder<TBackend: IoBackend>
     extended_data: Option<SectionHandle>
 }
 
-impl<TBackend: IoBackend> ShaderDecoder<TBackend>
+impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
 {
     /// Creates a new ShaderDecoder by reading from a BPX decoder.
     ///
@@ -101,7 +113,7 @@ impl<TBackend: IoBackend> ShaderDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if some sections/headers could not be loaded.
-    pub fn new(backend: TBackend) -> Result<ShaderDecoder<TBackend>>
+    pub fn new(backend: TBackend) -> Result<ShaderPackDecoder<TBackend>>
     {
         let decoder = Decoder::new(backend)?;
         if decoder.get_main_header().btype != 'P' as u8 {
@@ -128,7 +140,7 @@ impl<TBackend: IoBackend> ShaderDecoder<TBackend>
             Some(v) => v,
             None => return Err(Error::Corruption(String::from("Unable to locate BPXS symbol table")))
         };
-        return Ok(ShaderDecoder {
+        return Ok(ShaderPackDecoder {
             decoder,
             assembly_hash: hash,
             num_symbols,
@@ -137,6 +149,28 @@ impl<TBackend: IoBackend> ShaderDecoder<TBackend>
             symbol_table,
             strings: StringSection::new(strings),
             extended_data: None
+        });
+    }
+
+    /// Lists all shaders contained in this shader package
+    pub fn list_shaders(&self) -> Vec<SectionHandle>
+    {
+        return self.decoder.find_all_sections_of_type(SECTION_TYPE_SHADER);
+    }
+
+    /// Loads a shader into memory
+    pub fn load_shader(&mut self, handle: SectionHandle) -> Result<Shader>
+    {
+        let header = self.decoder.get_section_header(handle);
+        if header.size < 1 { //We must at least find a stage byte
+            return Err(Error::Truncation("load shader"));
+        }
+        let section = self.decoder.open_section(handle)?;
+        let mut buf = section.load_in_memory()?;
+        let stage = get_stage_from_code(buf.remove(0))?;
+        return Ok(Shader {
+            stage,
+            data: buf
         });
     }
 
