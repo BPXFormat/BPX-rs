@@ -108,7 +108,9 @@ impl ObjectTable
     ///
     /// returns: Option<&ObjectHeader>
     ///
-    /// # Examples
+    /// # Panics
+    ///
+    /// Panics if the lookup table is not yet built.
     pub fn find_object(&self, name: &str) -> Option<&ObjectHeader>
     {
         if let Some(map) = &self.map {
