@@ -135,7 +135,7 @@ impl PackageBuilder
     ///
     /// # Arguments
     ///
-    /// * `encoder`:
+    /// * `backend`: the [IoBackend](crate::encoder::IoBackend) to use.
     ///
     /// returns: Result<PackageEncoder<TBackend>, Error>
     ///

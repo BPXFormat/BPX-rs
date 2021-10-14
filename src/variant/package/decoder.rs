@@ -91,7 +91,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     ///
     /// # Arguments
     ///
-    /// * `decoder`: the BPX [Decoder](crate::decoder::Decoder) backend to use.
+    /// * `backend`: the [IoBackend](crate::decoder::IoBackend) to use.
     ///
     /// returns: Result<PackageDecoder<TBackend>, Error>
     ///
