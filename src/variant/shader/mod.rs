@@ -26,7 +26,43 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! This module contains implementations for the standard BPX variants/types.
+//! An implementation of the BPX type S (Shader) specification.
 
-pub mod package;
-pub mod shader;
+pub mod symbol;
+mod decoder;
+
+pub use decoder::ShaderDecoder;
+
+pub const SUPPORTED_VERSION: u32 = 0x2;
+
+pub const SECTION_TYPE_SYMBOL_TABLE: u8 = 0x2;
+pub const SECTION_TYPE_EXTENDED_DATA: u8 = 0x3;
+
+#[derive(Copy, Clone)]
+pub enum Target
+{
+    DX11,
+    DX12,
+    GL33,
+    GL40,
+    VK10,
+    MT,
+    Any
+}
+
+#[derive(Copy, Clone)]
+pub enum Type
+{
+    Assembly,
+    Pipeline
+}
+
+#[derive(Copy, Clone)]
+pub enum Stage
+{
+    Vertex,
+    Hull,
+    Domain,
+    Geometry,
+    Pixel
+}
