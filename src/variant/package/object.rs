@@ -49,6 +49,7 @@ pub struct ObjectHeader
     pub offset: u32
 }
 
+/// Helper class to query an object table.
 pub struct ObjectTable
 {
     list: Vec<ObjectHeader>,
