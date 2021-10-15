@@ -36,7 +36,7 @@ use crate::sd::Object;
 use crate::strings::StringSection;
 use crate::utils::OptionExtension;
 use crate::variant::shader::{SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SHADER, SECTION_TYPE_SYMBOL_TABLE, Shader, Stage, SUPPORTED_VERSION, Target, Type};
-use crate::variant::shader::symbol::{FLAG_EXTENDED_DATA, Symbol, SYMBOL_STRUCTURE_SIZE, SymbolTable, SymbolType};
+use crate::variant::shader::symbol::{FLAG_EXTENDED_DATA, Symbol, SymbolTable};
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
 {

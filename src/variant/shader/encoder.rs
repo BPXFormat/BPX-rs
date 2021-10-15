@@ -73,7 +73,7 @@ impl ShaderPackBuilder
         return self;
     }
 
-    pub fn build<TBackend: IoBackend>(mut self, backend: TBackend) -> Result<ShaderPackEncoder<TBackend>>
+    pub fn build<TBackend: IoBackend>(self, backend: TBackend) -> Result<ShaderPackEncoder<TBackend>>
     {
         let mut encoder = Encoder::new(backend)?;
         let mut type_ext: [u8; 16] = [0; 16];
