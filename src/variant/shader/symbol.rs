@@ -27,6 +27,10 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::collections::HashMap;
+use std::io::Read;
+use byteorder::{ByteOrder, LittleEndian};
+use crate::error::Error;
+use crate::Result;
 
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;
 pub const FLAG_HULL_STAGE: u16 = 0x2;
@@ -39,6 +43,8 @@ pub const FLAG_INTERNAL: u16 = 0x80;
 pub const FLAG_EXTENDED_DATA: u16 = 0x100;
 pub const FLAG_REGISTER: u16 = 0x200;
 
+pub const SYMBOL_STRUCTURE_SIZE: usize = 12;
+
 #[derive(Copy, Clone)]
 pub enum SymbolType
 {
@@ -50,6 +56,19 @@ pub enum SymbolType
     Pipeline
 }
 
+fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType>
+{
+    return match scode {
+        0x0 => Ok(SymbolType::Texture),
+        0x1 => Ok(SymbolType::Sampler),
+        0x2 => Ok(SymbolType::ConstantBuffer),
+        0x3 => Ok(SymbolType::Constant),
+        0x4 => Ok(SymbolType::VertexFormat),
+        0x5 => Ok(SymbolType::Pipeline),
+        _ => Err(Error::Corruption(String::from("Symbol type code does not exist")))
+    }
+}
+
 #[derive(Copy, Clone)]
 pub struct Symbol
 {
@@ -58,6 +77,47 @@ pub struct Symbol
     pub flags: u16,
     pub stype: SymbolType,
     pub register: u8
+}
+
+impl Symbol
+{
+    pub fn read<TReader: Read>(reader: &mut TReader) -> Result<Symbol>
+    {
+        let mut buf: [u8; SYMBOL_STRUCTURE_SIZE] = [0; SYMBOL_STRUCTURE_SIZE];
+        if reader.read(&mut buf)? != 12 {
+            return Err(Error::Truncation("read symbol table"));
+        }
+        let name = LittleEndian::read_u32(&buf[0..4]);
+        let extended_data = LittleEndian::read_u32(&buf[4..8]);
+        let flags = LittleEndian::read_u16(&buf[8..10]);
+        let stype = get_symbol_type_from_code(buf[10])?;
+        let register = buf[11];
+        return Ok(Symbol {
+            name,
+            extended_data,
+            flags,
+            stype,
+            register
+        });
+    }
+
+    pub fn to_bytes(&self) -> [u8; SYMBOL_STRUCTURE_SIZE]
+    {
+        let mut buf = [0; SYMBOL_STRUCTURE_SIZE];
+        LittleEndian::write_u32(&mut buf[0..4], self.name);
+        LittleEndian::write_u32(&mut buf[4..8], self.extended_data);
+        LittleEndian::write_u16(&mut buf[8..10], self.flags);
+        match self.stype {
+            SymbolType::Texture => buf[10] = 0x0,
+            SymbolType::Sampler => buf[10] = 0x1,
+            SymbolType::ConstantBuffer => buf[10] = 0x2,
+            SymbolType::Constant => buf[10] = 0x3,
+            SymbolType::VertexFormat => buf[10] = 0x4,
+            SymbolType::Pipeline => buf[10] = 0x5
+        };
+        buf[11] = self.register;
+        return buf;
+    }
 }
 
 pub struct SymbolTable

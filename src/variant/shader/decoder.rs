@@ -36,7 +36,7 @@ use crate::sd::Object;
 use crate::strings::StringSection;
 use crate::utils::OptionExtension;
 use crate::variant::shader::{SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SHADER, SECTION_TYPE_SYMBOL_TABLE, Shader, Stage, SUPPORTED_VERSION, Target, Type};
-use crate::variant::shader::symbol::{FLAG_EXTENDED_DATA, Symbol, SymbolTable, SymbolType};
+use crate::variant::shader::symbol::{FLAG_EXTENDED_DATA, Symbol, SYMBOL_STRUCTURE_SIZE, SymbolTable, SymbolType};
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
 {
@@ -61,19 +61,6 @@ fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
         return Err(Error::Corruption(String::from("Type code does not exist")));
     }
     return Ok((target, btype));
-}
-
-fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType>
-{
-    return match scode {
-        0x0 => Ok(SymbolType::Texture),
-        0x1 => Ok(SymbolType::Sampler),
-        0x2 => Ok(SymbolType::ConstantBuffer),
-        0x3 => Ok(SymbolType::Constant),
-        0x4 => Ok(SymbolType::VertexFormat),
-        0x5 => Ok(SymbolType::Pipeline),
-        _ => Err(Error::Corruption(String::from("Symbol type code does not exist")))
-    }
 }
 
 fn get_stage_from_code(code: u8) -> Result<Stage>
@@ -223,26 +210,11 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     {
         let mut v = Vec::new();
         let count = self.decoder.get_section_header(self.symbol_table).size / 20;
-        let symbol_table = self.decoder.open_section(self.symbol_table)?;
+        let mut symbol_table = self.decoder.open_section(self.symbol_table)?;
 
         for _ in 0..count {
-            let mut buf: [u8; 12] = [0; 12];
-            if symbol_table.read(&mut buf)? != 12 {
-                return Err(Error::Truncation("read symbol table"));
-            }
-            let name = LittleEndian::read_u32(&buf[0..4]);
-            let extended_data = LittleEndian::read_u32(&buf[4..8]);
-            let flags = LittleEndian::read_u16(&buf[8..10]);
-            let stype = get_symbol_type_from_code(buf[10])?;
-            let register = buf[11];
-
-            v.push(Symbol {
-                name,
-                extended_data,
-                flags,
-                stype,
-                register
-            })
+            let sym = Symbol::read(&mut symbol_table)?;
+            v.push(sym);
         }
         return Ok(SymbolTable::new(v));
     }

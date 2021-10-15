@@ -30,6 +30,7 @@
 
 pub mod symbol;
 mod decoder;
+mod encoder;
 
 pub use decoder::ShaderPackDecoder;
 
