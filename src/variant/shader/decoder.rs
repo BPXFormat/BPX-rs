@@ -201,14 +201,14 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     ///
     /// # Arguments
     ///
-    /// * `obj`: the symbol to load the actual name for.
+    /// * `sym`: the symbol to load the actual name for.
     ///
     /// returns: Result<&str, Error>
     ///
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if the name could not be read.
-    pub fn get_object_name(&mut self, sym: &Symbol) -> Result<&str>
+    pub fn get_symbol_name(&mut self, sym: &Symbol) -> Result<&str>
     {
         return self.strings.get(&mut self.decoder, sym.name);
     }
