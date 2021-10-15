@@ -87,26 +87,14 @@ impl Write for InMemorySection
     }
 }
 
-fn slow_but_correct_add(value: usize, offset: isize) -> usize
-//Unfortunatly rust requires much slower add operation (another reason to not use rust for large scale projects)
-{
-    if offset < 0 {
-        return value - -offset as usize;
-    } else if offset > 0 {
-        return value + offset as usize;
-    } else {
-        return value;
-    }
-}
-
 impl Seek for InMemorySection
 {
     fn seek(&mut self, state: SeekFrom) -> Result<u64>
     {
         match state {
             SeekFrom::Start(pos) => self.cursor = pos as usize,
-            SeekFrom::End(pos) => self.cursor = slow_but_correct_add(self.data.len(), pos as isize),
-            SeekFrom::Current(pos) => self.cursor = slow_but_correct_add(self.cursor, pos as isize)
+            SeekFrom::End(pos) => self.cursor = self.cursor.wrapping_add(pos as usize),
+            SeekFrom::Current(pos) => self.cursor = self.cursor.wrapping_add(pos as usize)
         }
         return Ok(self.cursor as u64);
     }
