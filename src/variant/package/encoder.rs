@@ -223,7 +223,7 @@ impl PackageBuilder
     }
 }
 
-/// Represents a BPX Package encoder
+/// Represents a BPX Package encoder.
 pub struct PackageEncoder<TBackend: IoBackend>
 {
     strings: SectionHandle,

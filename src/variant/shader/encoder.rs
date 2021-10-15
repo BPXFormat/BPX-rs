@@ -119,6 +119,7 @@ impl ShaderPackBuilder
     }
 }
 
+/// Represents a BPX Shader Package encoder.
 pub struct ShaderPackEncoder<TBackend: IoBackend>
 {
     encoder: Encoder<TBackend>,
@@ -157,6 +158,21 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
         self.encoder.set_main_header(header);
     }
 
+    /// Writes a symbol into this BPXS.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: the name of the symbols.
+    /// * `stype`: the [SymbolType](crate::variant::shader::symbol::SymbolType).
+    /// * `flags`: the symbol flags (use the FLAG_ constants in the [symbol](crate::variant::shader::symbol) module).
+    /// * `register`: the register number of this symbol.
+    /// * `extended_data`: an optional BPXSD object to write as extended symbol data.
+    ///
+    /// returns: Result<(), Error>
+    ///
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned if the symbol could not be written.
     pub fn write_symbol<T: AsRef<str>>(&mut self, name: T, stype: SymbolType, flags: u16, register: u8, extended_data: Option<Object>) -> Result<()>
     {
         let address = self.strings.put(&mut self.encoder, name.as_ref())?;
@@ -175,6 +191,17 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
         return Ok(());
     }
 
+    /// Writes a shader into this BPXS.
+    ///
+    /// # Arguments
+    ///
+    /// * `shader`: the [Shader](crate::variant::shader::Shader) to write.
+    ///
+    /// returns: Result<(), Error>
+    ///
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned if the shader could not be written.
     pub fn write_shader(&mut self, shader: Shader) -> Result<()>
     {
         let section = self.encoder.create_section(
@@ -198,11 +225,21 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
         return Ok(());
     }
 
+    /// Saves this BPXS.
+    ///
+    /// **This function prints some information to standard output as a way
+    /// to debug data compression issues unless the `debug-log` feature
+    /// is disabled.**
+    ///
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned if the encoder failed to save.
     pub fn save(&mut self) -> Result<()>
     {
         return self.encoder.save();
     }
 
+    /// Consumes this BPXS encoder and returns the inner BPX encoder.
     pub fn into_inner(self) -> Encoder<TBackend>
     {
         return self.encoder;
