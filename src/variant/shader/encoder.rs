@@ -231,7 +231,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
     ///
     /// * `name`: the name of the symbols.
     /// * `stype`: the [SymbolType](crate::variant::shader::symbol::SymbolType).
-    /// * `flags`: the symbol flags (use the FLAG_ constants in the [symbol](crate::variant::shader::symbol) module).
+    /// * `flags`: the symbol flags (see the FLAG_ constants in the [symbol](crate::variant::shader::symbol) module).
     /// * `register`: the register number of this symbol.
     /// * `extended_data`: an optional BPXSD object to write as extended symbol data.
     ///
