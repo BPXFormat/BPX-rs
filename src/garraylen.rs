@@ -40,8 +40,8 @@ pub struct T3 {}
 
 impl GenericArrayLen for T3
 {
-    type TArray = [u8; 3];
     const SIZE: usize = 3;
+    type TArray = [u8; 3];
 
     fn from_array(buf: &[u8]) -> Self::TArray
     {
@@ -53,8 +53,8 @@ pub struct T16 {}
 
 impl GenericArrayLen for T16
 {
-    type TArray = [u8; 16];
     const SIZE: usize = 16;
+    type TArray = [u8; 16];
 
     fn from_array(buf: &[u8]) -> Self::TArray
     {
