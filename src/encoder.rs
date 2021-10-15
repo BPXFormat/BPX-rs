@@ -225,9 +225,11 @@ impl<TBackend: IoBackend> Encoder<TBackend>
             if section.data.size() > u32::MAX as usize {
                 return Err(Error::Capacity(section.data.size()));
             }
+            let last_section_ptr = section.data.seek(SeekFrom::Current(0))?;
             section.data.seek(io::SeekFrom::Start(0))?;
             let flags = get_flags(&section, section.data.size() as u32);
             let (csize, chksum) = write_section(flags, section.data.as_mut(), &mut self.file)?;
+            section.data.seek(io::SeekFrom::Start(last_section_ptr))?;
             section.header.csize = csize as u32;
             section.header.size = section.data.size() as u32;
             section.header.chksum = chksum;
