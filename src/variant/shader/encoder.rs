@@ -37,6 +37,7 @@ use crate::strings::StringSection;
 use crate::utils::OptionExtension;
 use crate::variant::shader::symbol::{Symbol, SymbolType};
 
+/// Utility to easily generate a [ShaderPackEncoder](crate::variant::package::ShaderPackEncoder).
 pub struct ShaderPackBuilder
 {
     assembly_hash: u64,
@@ -46,6 +47,7 @@ pub struct ShaderPackBuilder
 
 impl ShaderPackBuilder
 {
+    /// Creates a new BPX Shader Package builder.
     pub fn new() -> ShaderPackBuilder
     {
         return ShaderPackBuilder {
@@ -55,24 +57,89 @@ impl ShaderPackBuilder
         };
     }
 
+    /// Defines the shader assembly this package is linked against.
+    ///
+    /// *By default, no shader assembly is linked and the hash is 0.*
+    ///
+    /// # Arguments
+    ///
+    /// * `hash`: the shader assembly hash.
+    ///
+    /// returns: ShaderPackBuilder
     pub fn with_assembly(mut self, hash: u64) -> Self
     {
         self.assembly_hash = hash;
         return self;
     }
 
+    /// Defines the target of this shader package.
+    ///
+    /// *By default, the target is Any.*
+    ///
+    /// # Arguments
+    ///
+    /// * `target`: the shader target.
+    ///
+    /// returns: ShaderPackBuilder
     pub fn with_target(mut self, target: Target) -> Self
     {
         self.target = target;
         return self;
     }
 
+    /// Defines the shader package type.
+    ///
+    /// *By default, the type is Pipeline.*
+    ///
+    /// # Arguments
+    ///
+    /// * `btype`: the shader package type (pipeline/program or assembly).
+    ///
+    /// returns: ShaderPackBuilder
     pub fn with_type(mut self, btype: Type) -> Self
     {
         self.btype = btype;
         return self;
     }
 
+    /// Builds the corresponding [ShaderPackEncoder](crate::variant::package::ShaderPackEncoder).
+    ///
+    /// # Arguments
+    ///
+    /// * `backend`: the [IoBackend](crate::encoder::IoBackend) to use.
+    ///
+    /// returns: Result<ShaderPackEncoder<TBackend>, Error>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::io::{Seek, SeekFrom};
+    /// use bpx::utils::new_byte_buf;
+    /// use bpx::variant::package::{PackageBuilder, PackageDecoder};
+    /// use bpx::variant::shader::{Shader, ShaderPackBuilder, ShaderPackDecoder, Stage};
+    /// use bpx::variant::shader::symbol::SymbolType;
+    ///
+    /// let mut bpxs = ShaderPackBuilder::new().build(new_byte_buf(0)).unwrap();
+    /// bpxs.write_symbol("test", SymbolType::Constant, 0, 0xFF, None).unwrap();
+    /// bpxs.write_shader(Shader {
+    ///     stage: Stage::Pixel,
+    ///     data: Vec::new()
+    /// }).unwrap();
+    /// bpxs.save();
+    /// //Reset our bytebuf pointer to start
+    /// let mut bytebuf = bpxs.into_inner().into_inner();
+    /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
+    /// //Attempt decoding our in-memory BPXP
+    /// let mut bpxs = ShaderPackDecoder::new(bytebuf).unwrap();
+    /// let table = bpxs.read_symbol_table().unwrap();
+    /// assert_eq!(table.get_symbols().len(), 1);
+    /// let sym = table.get_symbols()[0];
+    /// assert_eq!(bpxs.get_symbol_count(), 1);
+    /// assert_eq!(bpxs.get_symbol_name(&sym).unwrap(), "test");
+    /// let shader = bpxs.load_shader(bpxs.list_shaders()[0]).unwrap();
+    /// assert_eq!(shader.stage, Stage::Pixel);
+    /// assert_eq!(shader.data.len(), 0);
+    /// ```
     pub fn build<TBackend: IoBackend>(self, backend: TBackend) -> Result<ShaderPackEncoder<TBackend>>
     {
         let mut encoder = Encoder::new(backend)?;
