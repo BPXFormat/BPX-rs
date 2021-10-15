@@ -122,6 +122,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     pub fn set_main_header(&mut self, main_header: MainHeader)
     {
         self.main_header = main_header;
+        self.modified = true;
     }
 
     /// Creates a new section in the BPX
