@@ -36,7 +36,7 @@ use crate::sd::Object;
 use crate::strings::StringSection;
 use crate::utils::OptionExtension;
 use crate::variant::shader::{SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SHADER, SECTION_TYPE_SYMBOL_TABLE, Shader, Stage, SUPPORTED_VERSION, Target, Type};
-use crate::variant::shader::symbol::{FLAG_EXTENDED_DATA, Symbol, SymbolTable};
+use crate::variant::shader::symbol::{FLAG_EXTENDED_DATA, Symbol, SYMBOL_STRUCTURE_SIZE, SymbolTable};
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
 {
@@ -221,9 +221,12 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     pub fn read_symbol_table(&mut self) -> Result<SymbolTable>
     {
         let mut v = Vec::new();
-        let count = self.decoder.get_section_header(self.symbol_table).size / 20;
+        let count = self.decoder.get_section_header(self.symbol_table).size / SYMBOL_STRUCTURE_SIZE as u32;
         let mut symbol_table = self.decoder.open_section(self.symbol_table)?;
 
+        if count != self.num_symbols as u32 {
+            return Err(Error::Truncation("read symbol table"));
+        }
         for _ in 0..count {
             let sym = Symbol::read(&mut symbol_table)?;
             v.push(sym);
