@@ -251,5 +251,10 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
         let obj = Object::read(&mut data)?;
         return Ok(obj);
     }
+
+    pub fn into_inner(self) -> Decoder<TBackend>
+    {
+        return self.decoder;
+    }
 }
 

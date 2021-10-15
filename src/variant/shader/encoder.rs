@@ -26,7 +26,6 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::Write;
 use byteorder::{ByteOrder, LittleEndian};
 use crate::encoder::{Encoder, IoBackend};
 use crate::variant::shader::{SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SHADER, SECTION_TYPE_SYMBOL_TABLE, Shader, Stage, SUPPORTED_VERSION, Target, Type};
@@ -202,5 +201,10 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
     pub fn save(&mut self) -> Result<()>
     {
         return self.encoder.save();
+    }
+
+    pub fn into_inner(self) -> Encoder<TBackend>
+    {
+        return self.encoder;
     }
 }
