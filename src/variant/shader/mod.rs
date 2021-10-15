@@ -33,6 +33,8 @@ mod decoder;
 mod encoder;
 
 pub use decoder::ShaderPackDecoder;
+pub use encoder::ShaderPackBuilder;
+pub use encoder::ShaderPackEncoder;
 
 pub const SUPPORTED_VERSION: u32 = 0x2;
 
