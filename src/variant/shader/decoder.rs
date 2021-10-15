@@ -75,6 +75,7 @@ fn get_stage_from_code(code: u8) -> Result<Stage>
     };
 }
 
+/// Represents a BPX Shader Package decoder.
 pub struct ShaderPackDecoder<TBackend: IoBackend>
 {
     decoder: Decoder<TBackend>,
@@ -89,13 +90,13 @@ pub struct ShaderPackDecoder<TBackend: IoBackend>
 
 impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
 {
-    /// Creates a new ShaderDecoder by reading from a BPX decoder.
+    /// Creates a new ShaderPackDecoder by reading from a BPX decoder.
     ///
     /// # Arguments
     ///
     /// * `backend`: the [IoBackend](crate::decoder::IoBackend) to use.
     ///
-    /// returns: Result<ShaderDecoder<TBackend>, Error>
+    /// returns: Result<ShaderPackDecoder<TBackend>, Error>
     ///
     /// # Errors
     ///
@@ -139,13 +140,24 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
         });
     }
 
-    /// Lists all shaders contained in this shader package
+    /// Lists all shaders contained in this shader package.
     pub fn list_shaders(&self) -> Vec<SectionHandle>
     {
         return self.decoder.find_all_sections_of_type(SECTION_TYPE_SHADER);
     }
 
-    /// Loads a shader into memory
+
+    /// Loads a shader into memory.
+    ///
+    /// # Arguments
+    ///
+    /// * `handle`: a handle to the shader section.
+    ///
+    /// returns: Result<Shader, Error>
+    ///
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned if the shader could not be loaded.
     pub fn load_shader(&mut self, handle: SectionHandle) -> Result<Shader>
     {
         let header = self.decoder.get_section_header(handle);
@@ -252,9 +264,9 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
         return Ok(obj);
     }
 
+    /// Consumes this BPXS decoder and returns the inner BPX decoder.
     pub fn into_inner(self) -> Decoder<TBackend>
     {
         return self.decoder;
     }
 }
-
