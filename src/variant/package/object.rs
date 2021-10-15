@@ -26,6 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! Contains utilities to work with the object table section.
+
 use std::collections::HashMap;
 
 use crate::{decoder::IoBackend, variant::package::PackageDecoder, Result};
