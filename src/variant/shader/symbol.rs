@@ -29,8 +29,10 @@
 use std::collections::HashMap;
 use std::io::Read;
 use byteorder::{ByteOrder, LittleEndian};
+use crate::decoder::IoBackend;
 use crate::error::Error;
 use crate::Result;
+use crate::variant::shader::ShaderPackDecoder;
 
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;
 pub const FLAG_HULL_STAGE: u16 = 0x2;
@@ -155,7 +157,7 @@ impl SymbolTable
     ///
     /// An [Error](crate::error::Error) is returned if the strings could
     /// not be loaded.
-    /*pub fn build_lookup_table<TBackend: IoBackend>(&mut self, package: &mut PackageDecoder<TBackend>) -> Result<()>
+    pub fn build_lookup_table<TBackend: IoBackend>(&mut self, package: &mut ShaderPackDecoder<TBackend>) -> Result<()>
     {
         let mut map = HashMap::new();
         for v in &self.list {
@@ -164,7 +166,7 @@ impl SymbolTable
         }
         self.map = Some(map);
         return Ok(());
-    }*/
+    }
 
     /// Gets all symbols in this BPXS.
     pub fn get_symbols(&self) -> &Vec<Symbol>
