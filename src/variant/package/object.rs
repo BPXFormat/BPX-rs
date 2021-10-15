@@ -31,7 +31,7 @@ use std::collections::HashMap;
 use crate::{decoder::IoBackend, variant::package::PackageDecoder, Result};
 
 /// Represents an object header as read from the package.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ObjectHeader
 {
     /// The size of the object.

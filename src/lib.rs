@@ -46,7 +46,7 @@ pub mod utils;
 /// Represents a pointer to a section.
 ///
 /// *Allows indirect access to a given section instead of sharing mutable references in user code.*
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct SectionHandle(usize);
 
 /// The interface implemented by both the BPX encoder and decoder.

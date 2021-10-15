@@ -47,7 +47,7 @@ pub const FLAG_REGISTER: u16 = 0x200;
 
 pub const SYMBOL_STRUCTURE_SIZE: usize = 12;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum SymbolType
 {
     Texture,
@@ -71,7 +71,7 @@ fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType>
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Symbol
 {
     pub name: u32,

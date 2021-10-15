@@ -47,7 +47,7 @@ pub const SECTION_TYPE_OBJECT_TABLE: u8 = 0x2;
 pub const SUPPORTED_VERSION: u32 = 0x2;
 
 /// Enum of all supported processor architectures by BPXP.
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum Architecture
 {
     /// x86_64
@@ -83,7 +83,7 @@ pub enum Architecture
 }
 
 /// Enum of all supported platforms by BPXP.
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum Platform
 {
     /// GNU / Linux

@@ -40,6 +40,7 @@ use crate::header::{
 const COMPRESSION_THRESHOLD: u32 = 65536;
 
 /// The compression method to use for a section.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum CompressionMethod
 {
     /// Use the xz compression algorithm with extreme preset.
@@ -54,6 +55,7 @@ pub enum CompressionMethod
 }
 
 /// The checksum algorithm to use for a section
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Checksum
 {
     /// The weak checksum is a very fast algorithm which is computed

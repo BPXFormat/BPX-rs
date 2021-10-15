@@ -66,7 +66,7 @@ pub const BPX_CURRENT_VERSION: u32 = 0x2;
 pub const KNOWN_VERSIONS: &[u32] = &[0x1, 0x2];
 
 /// The BPX Main Header.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct MainHeader
 {
     /// BPX signature.
@@ -224,7 +224,7 @@ impl MainHeader
 }
 
 /// The BPX Section Header.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct SectionHeader
 {
     /// Data pointer.
