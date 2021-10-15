@@ -161,7 +161,7 @@ impl SymbolTable
     {
         let mut map = HashMap::new();
         for v in &self.list {
-            let name = String::from(package.get_object_name(v)?);
+            let name = String::from(package.get_symbol_name(v)?);
             map.insert(name, *v);
         }
         self.map = Some(map);
