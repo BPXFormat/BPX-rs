@@ -37,7 +37,7 @@ use crate::strings::StringSection;
 use crate::utils::OptionExtension;
 use crate::variant::shader::symbol::{Symbol, SymbolType};
 
-/// Utility to easily generate a [ShaderPackEncoder](crate::variant::package::ShaderPackEncoder).
+/// Utility to easily generate a [ShaderPackEncoder](crate::variant::shader::ShaderPackEncoder).
 pub struct ShaderPackBuilder
 {
     assembly_hash: u64,
@@ -102,7 +102,7 @@ impl ShaderPackBuilder
         return self;
     }
 
-    /// Builds the corresponding [ShaderPackEncoder](crate::variant::package::ShaderPackEncoder).
+    /// Builds the corresponding [ShaderPackEncoder](crate::variant::shader::ShaderPackEncoder).
     ///
     /// # Arguments
     ///
