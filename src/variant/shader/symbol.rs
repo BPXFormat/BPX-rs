@@ -26,6 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! Contains utilities to work with the symbol table section.
+
 use std::collections::HashMap;
 use std::io::Read;
 use byteorder::{ByteOrder, LittleEndian};
@@ -34,27 +36,59 @@ use crate::error::Error;
 use crate::Result;
 use crate::variant::shader::ShaderPackDecoder;
 
+/// Indicates this symbol is used on the vertex stage.
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;
+
+/// Indicates this symbol is used on the hull stage.
 pub const FLAG_HULL_STAGE: u16 = 0x2;
+
+/// Indicates this symbol is used on the domain stage.
 pub const FLAG_DOMAIN_STAGE: u16 = 0x4;
+
+/// Indicates this symbol is used on the geometry stage.
 pub const FLAG_GEOMETRY_STAGE: u16 = 0x8;
+
+/// Indicates this symbol is used on the pixel stage.
 pub const FLAG_PIXEL_STAGE: u16 = 0x10;
+
+/// Indicates this symbol is part of an assembly.
 pub const FLAG_ASSEMBLY: u16 = 0x20;
+
+/// Indicates this symbol is not defined in this package.
 pub const FLAG_EXTERNAL: u16 = 0x40;
+
+/// Indicates this symbol is defined in this package.
 pub const FLAG_INTERNAL: u16 = 0x80;
+
+/// Indicates this symbol has extended data.
 pub const FLAG_EXTENDED_DATA: u16 = 0x100;
+
+/// Indicates this symbol has a register number.
 pub const FLAG_REGISTER: u16 = 0x200;
 
+/// Size in bytes of a symbol structure.
 pub const SYMBOL_STRUCTURE_SIZE: usize = 12;
 
+/// The type of a symbol.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum SymbolType
 {
+    /// A texture symbol.
     Texture,
+
+    /// A sampler symbol.
     Sampler,
+
+    /// A constant buffer symbol.
     ConstantBuffer,
+
+    /// A high performance constant symbol (represented as push constants in vulkan).
     Constant,
+
+    /// A vertex format symbol.
     VertexFormat,
+
+    /// A pipeline symbol.
     Pipeline
 }
 
@@ -71,18 +105,39 @@ fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType>
     }
 }
 
+/// Represents the structure of a symbol.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Symbol
 {
+    /// The pointer to the name of the symbol.
     pub name: u32,
+
+    /// The pointer to the BPXSD object attached to this symbol.
     pub extended_data: u32,
+
+    /// The symbol flags (see the FLAG_ constants in the [symbol](crate::variant::shader::symbol) module).
     pub flags: u16,
+
+    /// The type of symbol.
     pub stype: SymbolType,
+
+    /// The register number for this symbol.
     pub register: u8
 }
 
 impl Symbol
 {
+    /// Reads a symbol structure from a [Read](std::io::Read)
+    ///
+    /// # Arguments
+    ///
+    /// * `reader`: the [Read](std::io::Read) to read from.
+    ///
+    /// returns: Result<Symbol, Error>
+    ///
+    /// # Errors
+    ///
+    /// An [Error](crate::error::Error) is returned in case of data truncation.
     pub fn read<TReader: Read>(reader: &mut TReader) -> Result<Symbol>
     {
         let mut buf: [u8; SYMBOL_STRUCTURE_SIZE] = [0; SYMBOL_STRUCTURE_SIZE];
@@ -103,6 +158,7 @@ impl Symbol
         });
     }
 
+    /// Converts this symbol structure to a byte array.
     pub fn to_bytes(&self) -> [u8; SYMBOL_STRUCTURE_SIZE]
     {
         let mut buf = [0; SYMBOL_STRUCTURE_SIZE];
@@ -122,6 +178,7 @@ impl Symbol
     }
 }
 
+/// Helper class to query a symbol table.
 pub struct SymbolTable
 {
     list: Vec<Symbol>,
@@ -130,26 +187,26 @@ pub struct SymbolTable
 
 impl SymbolTable
 {
-    /// Constructs a new object table from a list of
-    /// [ObjectHeader](crate::variant::package::object::ObjectHeader).
+    /// Constructs a new symbol table from a list of
+    /// [Symbol](crate::variant::shader::symbol::Symbol).
     ///
     /// # Arguments
     ///
-    /// * `list`: the list of object headers.
+    /// * `list`: the list of symbols.
     ///
-    /// returns: ObjectTable
+    /// returns: SymbolTable
     pub fn new(list: Vec<Symbol>) -> SymbolTable
     {
         return SymbolTable { list, map: None };
     }
 
-    /// Builds the object map for easy and efficient lookup of objects by name.
+    /// Builds the object map for easy and efficient lookup of symbols by name.
     ///
-    /// **You must call this function before you can use find_object.**
+    /// **You must call this function before you can use find_symbol.**
     ///
     /// # Arguments
     ///
-    /// * `package`: the [PackageDecoder](crate::variant::package::PackageDecoder) to load the strings from.
+    /// * `package`: the [ShaderPackDecoder](crate::variant::shader::ShaderPackDecoder) to load the strings from.
     ///
     /// returns: Result<(), Error>
     ///
