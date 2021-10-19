@@ -84,7 +84,7 @@ fn new_encoder() -> Result<z_stream>
             Z_STREAM_ERROR => Err(Error::Deflate("Invalid compression level")),
             Z_VERSION_ERROR => Err(Error::Deflate("Version mismatch")),
             _ => Err(Error::Deflate("Unknown error, possibly a bug"))
-        }
+        };
     }
 }
 
@@ -105,7 +105,7 @@ fn new_decoder() -> Result<z_stream>
             Z_DATA_ERROR => Err(Error::Deflate("ZLIB data error")),
             Z_VERSION_ERROR => Err(Error::Deflate("Version mismatch")),
             _ => Err(Error::Deflate("Unknown error, possibly a bug"))
-        }
+        };
     }
 }
 
@@ -146,7 +146,7 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
                         Z_STREAM_ERROR => Err(Error::Deflate("Invalid compression level")),
                         Z_VERSION_ERROR => Err(Error::Deflate("Version mismatch")),
                         _ => Err(Error::Deflate("Unknown error, possibly a bug"))
-                    }
+                    };
                 }
             }
             let len = ENCODER_BUF_SIZE - stream.avail_out as usize;

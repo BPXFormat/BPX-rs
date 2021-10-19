@@ -37,12 +37,11 @@ use crate::{
     sd::Object,
     strings::StringSection,
     utils::OptionExtension,
-    variant::package::{Architecture, Platform, SECTION_TYPE_DATA, SECTION_TYPE_OBJECT_TABLE},
+    variant::package::{Architecture, Platform, SECTION_TYPE_DATA, SECTION_TYPE_OBJECT_TABLE, SUPPORTED_VERSION},
     Interface,
     Result,
     SectionHandle
 };
-use crate::variant::package::SUPPORTED_VERSION;
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
@@ -280,9 +279,9 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     {
         let mut object_size = 0;
         let useless = &mut self.encoder;
-        let mut data_section = *self.last_data_section.get_or_insert_with_err(|| {
-            useless.create_section(create_data_section_header())
-        })?;
+        let mut data_section = *self
+            .last_data_section
+            .get_or_insert_with_err(|| useless.create_section(create_data_section_header()))?;
         let start = self.encoder.get_section_index(data_section);
         let offset = self.encoder.open_section(data_section)?.size() as u32;
 

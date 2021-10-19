@@ -28,13 +28,11 @@
 
 //! Contains utilities to work with the symbol table section.
 
-use std::collections::HashMap;
-use std::io::Read;
+use std::{collections::HashMap, io::Read};
+
 use byteorder::{ByteOrder, LittleEndian};
-use crate::decoder::IoBackend;
-use crate::error::Error;
-use crate::Result;
-use crate::variant::shader::ShaderPackDecoder;
+
+use crate::{decoder::IoBackend, error::Error, variant::shader::ShaderPackDecoder, Result};
 
 /// Indicates this symbol is used on the vertex stage.
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;
@@ -102,7 +100,7 @@ fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType>
         0x4 => Ok(SymbolType::VertexFormat),
         0x5 => Ok(SymbolType::Pipeline),
         _ => Err(Error::Corruption(String::from("Symbol type code does not exist")))
-    }
+    };
 }
 
 /// Represents the structure of a symbol.

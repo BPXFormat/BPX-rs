@@ -28,10 +28,15 @@
 
 //! A set of helpers to manipulate BPX string sections.
 
-use std::{collections::HashMap, fs::DirEntry, io::SeekFrom, path::Path, string::String};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    fs::DirEntry,
+    io::SeekFrom,
+    path::Path,
+    string::String
+};
 
 use crate::{error::Error, section::SectionData, Interface, Result, SectionHandle};
-use std::collections::hash_map::Entry;
 
 /// Helper class to manage a BPX string section.
 ///
@@ -137,7 +142,7 @@ fn low_level_read_string(ptr: u32, string_section: &mut dyn SectionData) -> Resu
     return match String::from_utf8(curs) {
         Err(_) => Err(Error::Utf8("string section read")),
         Ok(v) => Ok(v)
-    }
+    };
 }
 
 fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Result<u32>

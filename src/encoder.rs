@@ -282,7 +282,8 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// ```
     pub fn save(&mut self) -> Result<()>
     {
-        if !self.modified { //If the file has not been modified do not engage any IO
+        if !self.modified {
+            //If the file has not been modified do not engage any IO
             return Ok(());
         }
         let file_start_offset = SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * self.main_header.section_num as usize);

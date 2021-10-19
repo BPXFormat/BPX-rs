@@ -27,15 +27,29 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use byteorder::{ByteOrder, LittleEndian};
-use crate::encoder::{Encoder, IoBackend};
-use crate::variant::shader::{SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SHADER, SECTION_TYPE_SYMBOL_TABLE, Shader, Stage, SUPPORTED_VERSION, Target, Type};
-use crate::{Interface, Result, SectionHandle};
-use crate::builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder};
-use crate::header::SECTION_TYPE_STRING;
-use crate::sd::Object;
-use crate::strings::StringSection;
-use crate::utils::OptionExtension;
-use crate::variant::shader::symbol::{Symbol, SymbolType};
+
+use crate::{
+    builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
+    encoder::{Encoder, IoBackend},
+    header::SECTION_TYPE_STRING,
+    sd::Object,
+    strings::StringSection,
+    utils::OptionExtension,
+    variant::shader::{
+        symbol::{Symbol, SymbolType},
+        Shader,
+        Stage,
+        Target,
+        Type,
+        SECTION_TYPE_EXTENDED_DATA,
+        SECTION_TYPE_SHADER,
+        SECTION_TYPE_SYMBOL_TABLE,
+        SUPPORTED_VERSION
+    },
+    Interface,
+    Result,
+    SectionHandle
+};
 
 /// Utility to easily generate a [ShaderPackEncoder](crate::variant::shader::ShaderPackEncoder).
 pub struct ShaderPackBuilder
@@ -240,7 +254,14 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if the symbol could not be written.
-    pub fn write_symbol<T: AsRef<str>>(&mut self, name: T, stype: SymbolType, flags: u16, register: u8, extended_data: Option<Object>) -> Result<()>
+    pub fn write_symbol<T: AsRef<str>>(
+        &mut self,
+        name: T,
+        stype: SymbolType,
+        flags: u16,
+        register: u8,
+        extended_data: Option<Object>
+    ) -> Result<()>
     {
         let address = self.strings.put(&mut self.encoder, name.as_ref())?;
         let extended_data = self.write_extended_data(extended_data)?;

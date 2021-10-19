@@ -30,7 +30,6 @@
 
 use std::vec::Vec;
 
-pub mod variant;
 pub mod builder;
 mod compression;
 pub mod decoder;
@@ -42,6 +41,7 @@ pub mod sd;
 pub mod section;
 pub mod strings;
 pub mod utils;
+pub mod variant;
 
 /// Represents a pointer to a section.
 ///

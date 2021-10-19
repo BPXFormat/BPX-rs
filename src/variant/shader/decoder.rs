@@ -27,16 +27,31 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::SeekFrom;
+
 use byteorder::{ByteOrder, LittleEndian};
-use crate::decoder::{Decoder, IoBackend};
-use crate::{Interface, Result, SectionHandle};
-use crate::error::Error;
-use crate::header::SECTION_TYPE_STRING;
-use crate::sd::Object;
-use crate::strings::StringSection;
-use crate::utils::OptionExtension;
-use crate::variant::shader::{SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SHADER, SECTION_TYPE_SYMBOL_TABLE, Shader, Stage, SUPPORTED_VERSION, Target, Type};
-use crate::variant::shader::symbol::{FLAG_EXTENDED_DATA, Symbol, SYMBOL_STRUCTURE_SIZE, SymbolTable};
+
+use crate::{
+    decoder::{Decoder, IoBackend},
+    error::Error,
+    header::SECTION_TYPE_STRING,
+    sd::Object,
+    strings::StringSection,
+    utils::OptionExtension,
+    variant::shader::{
+        symbol::{Symbol, SymbolTable, FLAG_EXTENDED_DATA, SYMBOL_STRUCTURE_SIZE},
+        Shader,
+        Stage,
+        Target,
+        Type,
+        SECTION_TYPE_EXTENDED_DATA,
+        SECTION_TYPE_SHADER,
+        SECTION_TYPE_SYMBOL_TABLE,
+        SUPPORTED_VERSION
+    },
+    Interface,
+    Result,
+    SectionHandle
+};
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
 {
@@ -53,7 +68,8 @@ fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
         0xFF => target = Target::Any,
         _ => return Err(Error::Corruption(String::from("Target code does not exist")))
     }
-    if tcode == 'A' as u8 { //Rust refuses to parse match properly so use if/else-if blocks
+    if tcode == 'A' as u8 {
+        //Rust refuses to parse match properly so use if/else-if blocks
         btype = Type::Assembly;
     } else if tcode == 'P' as u8 {
         btype = Type::Pipeline;
@@ -119,7 +135,10 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
         }
         let hash = LittleEndian::read_u64(&decoder.get_main_header().type_ext[0..8]);
         let num_symbols = LittleEndian::read_u16(&decoder.get_main_header().type_ext[8..10]);
-        let (target, btype) = get_target_type_from_code(decoder.get_main_header().type_ext[10], decoder.get_main_header().type_ext[11])?;
+        let (target, btype) = get_target_type_from_code(
+            decoder.get_main_header().type_ext[10],
+            decoder.get_main_header().type_ext[11]
+        )?;
         let strings = match decoder.find_section_by_type(SECTION_TYPE_STRING) {
             Some(v) => v,
             None => return Err(Error::Corruption(String::from("Unable to locate strings section")))
@@ -146,7 +165,6 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
         return self.decoder.find_all_sections_of_type(SECTION_TYPE_SHADER);
     }
 
-
     /// Loads a shader into memory.
     ///
     /// # Arguments
@@ -161,16 +179,14 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     pub fn load_shader(&mut self, handle: SectionHandle) -> Result<Shader>
     {
         let header = self.decoder.get_section_header(handle);
-        if header.size < 1 { //We must at least find a stage byte
+        if header.size < 1 {
+            //We must at least find a stage byte
             return Err(Error::Truncation("load shader"));
         }
         let section = self.decoder.open_section(handle)?;
         let mut buf = section.load_in_memory()?;
         let stage = get_stage_from_code(buf.remove(0))?;
-        return Ok(Shader {
-            stage,
-            data: buf
-        });
+        return Ok(Shader { stage, data: buf });
     }
 
     /// Returns the shader package type (Assembly or Pipeline).

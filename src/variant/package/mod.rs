@@ -30,12 +30,11 @@
 
 mod decoder;
 mod encoder;
-pub mod utils;
 pub mod object;
+pub mod utils;
 
 pub use decoder::PackageDecoder;
-pub use encoder::PackageEncoder;
-pub use encoder::PackageBuilder;
+pub use encoder::{PackageBuilder, PackageEncoder};
 
 /// The standard type for a data section in a BPX Package (type P).
 pub const SECTION_TYPE_DATA: u8 = 0x1;

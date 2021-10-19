@@ -28,8 +28,7 @@
 
 //! Contains various utilities to be used by other modules.
 
-use std::io::Cursor;
-use std::num::Wrapping;
+use std::{io::Cursor, num::Wrapping};
 
 /// Hash text using the hash function defined in the BPX specification for strings.
 ///

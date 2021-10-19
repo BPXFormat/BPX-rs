@@ -28,13 +28,12 @@
 
 //! An implementation of the BPX type S (Shader) specification.
 
-pub mod symbol;
 mod decoder;
 mod encoder;
+pub mod symbol;
 
 pub use decoder::ShaderPackDecoder;
-pub use encoder::ShaderPackBuilder;
-pub use encoder::ShaderPackEncoder;
+pub use encoder::{ShaderPackBuilder, ShaderPackEncoder};
 
 /// The supported BPX version for this shader variant decoder/encoder.
 pub const SUPPORTED_VERSION: u32 = 0x2;
