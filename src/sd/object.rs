@@ -31,7 +31,7 @@ use std::{
     ops::Index
 };
 
-use crate::{sd::Value, utils, Result};
+use crate::{sd::{Value, WriteError, ReadError}, utils};
 
 /// Represents a BPX Structured Data Object.
 #[derive(PartialEq, Clone)]
@@ -173,7 +173,7 @@ impl Object
     /// obj.write(&mut buf);
     /// assert!(buf.len() > 0);
     /// ```
-    pub fn write<TWrite: std::io::Write>(&self, dest: &mut TWrite) -> Result<()>
+    pub fn write<TWrite: std::io::Write>(&self, dest: &mut TWrite) -> Result<(), WriteError>
     {
         return super::encoder::write_structured_data(dest, self);
     }
@@ -200,7 +200,7 @@ impl Object
     /// assert!(obj1.get("Test").is_some());
     /// assert!(obj1.get("Test").unwrap() == &Value::from(12));
     /// ```
-    pub fn read<TRead: std::io::Read>(source: TRead) -> Result<Object>
+    pub fn read<TRead: std::io::Read>(source: TRead) -> Result<Object, ReadError>
     {
         return super::decoder::read_structured_data(source);
     }

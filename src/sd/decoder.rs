@@ -30,123 +30,119 @@ use std::io::Read;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::{
-    error::Error,
-    sd::{Array, Object, Value},
-    Result
-};
+use crate::sd::{Array, Object, Value, ReadError};
 
-fn read_bool<TRead: Read>(stream: &mut TRead) -> Result<Value>
+fn read_bool<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut flag: [u8; 1] = [0; 1];
 
     if stream.read(&mut flag)? != 1 {
-        return Err(Error::Truncation("Read Structured Data Value (bool)"));
+        return Err(ReadError::Truncation("Read Structured Data Value (bool)"));
     }
     return Ok(Value::Bool(flag[0] == 1));
 }
 
-fn read_uint8<TRead: Read>(stream: &mut TRead) -> Result<Value>
+fn read_uint8<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 1] = [0; 1];
 
     if stream.read(&mut val)? != 1 {
-        return Err(Error::Truncation("Read Structured Data Value (uint8)"));
+        return Err(ReadError::Truncation("Read Structured Data Value (uint8)"));
     }
     return Ok(Value::Uint8(val[0]));
 }
 
-fn read_int8<TRead: Read>(stream: &mut TRead) -> Result<Value>
+fn read_int8<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 1] = [0; 1];
 
     if stream.read(&mut val)? != 1 {
-        return Err(Error::Truncation("Read Structured Data Value (int8)"));
+        return Err(ReadError::Truncation("Read Structured Data Value (int8)"));
     }
     return Ok(Value::Int8(val[0] as i8));
 }
 
-fn read_uint16<TRead: Read>(stream: &mut TRead) -> Result<Value>
+fn read_uint16<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 2] = [0; 2];
 
     if stream.read(&mut val)? != 2 {
-        return Err(Error::Truncation("Read Structured Data Value (uint16)"));
+        return Err(ReadError::Truncation("Read Structured Data Value (uint16)"));
     }
     return Ok(Value::Uint16(LittleEndian::read_u16(&val)));
 }
 
-fn read_int16<TRead: Read>(stream: &mut TRead) -> Result<Value>
+fn read_int16<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 2] = [0; 2];
 
     if stream.read(&mut val)? != 2 {
-        return Err(Error::Truncation("Read Structured Data Value (int16)"));
+        return Err(ReadError::Truncation("Read Structured Data Value (int16)"));
     }
     return Ok(Value::Int16(LittleEndian::read_i16(&val)));
 }
 
-fn read_uint32<TRead: Read>(stream: &mut TRead) -> Result<Value>
+fn read_uint32<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 4] = [0; 4];
 
     if stream.read(&mut val)? != 4 {
-        return Err(Error::Truncation("Read Structured Data Value (uint32)"));
+        return Err(ReadError::Truncation("Read Structured Data Value (uint32)"));
     }
     return Ok(Value::Uint32(LittleEndian::read_u32(&val)));
 }
 
-fn read_int32<TRead: Read>(stream: &mut TRead) -> Result<Value>
+fn read_int32<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 4] = [0; 4];
 
     if stream.read(&mut val)? != 4 {
-        return Err(Error::Truncation("Read Structured Data Value (int32)"));
+        return Err(ReadError::Truncation("Read Structured Data Value (int32)"));
     }
     return Ok(Value::Int32(LittleEndian::read_i32(&val)));
 }
 
-fn read_uint64<TRead: Read>(stream: &mut TRead) -> Result<Value>
+fn read_uint64<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 8] = [0; 8];
 
     if stream.read(&mut val)? != 8 {
-        return Err(Error::Truncation("Read Structured Data Value (uint64)"));
+        return Err(ReadError::Truncation("Read Structured Data Value (uint64)"));
     }
     return Ok(Value::Uint64(LittleEndian::read_u64(&val)));
 }
 
-fn read_int64<TRead: Read>(stream: &mut TRead) -> Result<Value>
+fn read_int64<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 8] = [0; 8];
 
     if stream.read(&mut val)? != 8 {
-        return Err(Error::Truncation("Read Structured Data Value (int64)"));
+        return Err(ReadError::Truncation("Read Structured Data Value (int64)"));
     }
     return Ok(Value::Int64(LittleEndian::read_i64(&val)));
 }
 
-fn read_float<TRead: Read>(stream: &mut TRead) -> Result<Value>
+fn read_float<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 4] = [0; 4];
 
     if stream.read(&mut val)? != 4 {
-        return Err(Error::Truncation("Read Structured Data Value (float)"));
+        return Err(ReadError::Truncation("Read Structured Data Value (float)"));
     }
     return Ok(Value::Float(LittleEndian::read_f32(&val)));
 }
 
-fn read_double<TRead: Read>(stream: &mut TRead) -> Result<Value>
+fn read_double<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 8] = [0; 8];
 
     if stream.read(&mut val)? != 8 {
-        return Err(Error::Truncation("Read Structured Data Value (double)"));
+        return Err(ReadError::Truncation("Read Structured Data Value (double)"));
     }
     return Ok(Value::Double(LittleEndian::read_f64(&val)));
 }
 
-fn read_string<TRead: Read>(stream: &mut TRead) -> Result<Value>
+fn read_string<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
@@ -156,22 +152,22 @@ fn read_string<TRead: Read>(stream: &mut TRead) -> Result<Value>
         curs.push(chr[0]);
         let res = stream.read(&mut chr)?;
         if res != 1 {
-            return Err(Error::Truncation("Read Structured Data Value (string)"));
+            return Err(ReadError::Truncation("Read Structured Data Value (string)"));
         }
     }
     match String::from_utf8(curs) {
-        Err(_) => return Err(Error::Utf8("Read Structured Data Value (string)")),
+        Err(_) => return Err(ReadError::Utf8("Read Structured Data Value (string)")),
         Ok(v) => return Ok(Value::String(v))
     }
 }
 
-fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object>
+fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object, ReadError>
 {
     let mut obj = Object::new();
     let mut count = {
         let mut buf: [u8; 1] = [0; 1];
         if stream.read(&mut buf)? != 1 {
-            return Err(Error::Truncation("Read Structured Data Value (object)"));
+            return Err(ReadError::Truncation("Read Structured Data Value (object)"));
         }
         buf[0]
     };
@@ -179,14 +175,14 @@ fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object>
     while count > 0 {
         let mut prop: [u8; 9] = [0; 9];
         if stream.read(&mut prop)? != 9 {
-            return Err(Error::Truncation("Read Structured Data Value (object)"));
+            return Err(ReadError::Truncation("Read Structured Data Value (object)"));
         }
         let hash = LittleEndian::read_u64(&prop[0..8]);
         let type_code = prop[8];
         match get_value_parser(type_code) {
             Some(func) => obj.raw_set(hash, func(stream)?),
             None => {
-                return Err(Error::Corruption(format!(
+                return Err(ReadError::Corruption(format!(
                     "Got unexpected unknown variant code ({}) while reading Structured Data Object",
                     type_code
                 )))
@@ -197,13 +193,13 @@ fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object>
     return Ok(obj);
 }
 
-fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array>
+fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array, ReadError>
 {
     let mut arr = Array::new();
     let mut count = {
         let mut buf: [u8; 1] = [0; 1];
         if stream.read(&mut buf)? != 1 {
-            return Err(Error::Truncation("Read Structured Data Value (array)"));
+            return Err(ReadError::Truncation("Read Structured Data Value (array)"));
         }
         buf[0]
     };
@@ -211,12 +207,12 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array>
     while count > 0 {
         let mut type_code: [u8; 1] = [0; 1];
         if stream.read(&mut type_code)? != 1 {
-            return Err(Error::Truncation("Read Structured Data Value (array)"));
+            return Err(ReadError::Truncation("Read Structured Data Value (array)"));
         }
         match get_value_parser(type_code[0]) {
             Some(func) => arr.add(func(stream)?),
             None => {
-                return Err(Error::Corruption(format!(
+                return Err(ReadError::Corruption(format!(
                     "Got unexpected unknown variant code ({}) while reading Structured Data Array",
                     type_code[0]
                 )))
@@ -227,7 +223,7 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array>
     return Ok(arr);
 }
 
-fn get_value_parser<TRead: Read>(type_code: u8) -> Option<fn(stream: &mut TRead) -> Result<Value>>
+fn get_value_parser<TRead: Read>(type_code: u8) -> Option<fn(stream: &mut TRead) -> Result<Value, ReadError>>
 {
     match type_code {
         0x0 => Some(|_| {
@@ -255,7 +251,7 @@ fn get_value_parser<TRead: Read>(type_code: u8) -> Option<fn(stream: &mut TRead)
     }
 }
 
-pub fn read_structured_data<TRead: Read>(mut source: TRead) -> Result<Object>
+pub fn read_structured_data<TRead: Read>(mut source: TRead) -> Result<Object, ReadError>
 {
     return parse_object(&mut source);
 }
