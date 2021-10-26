@@ -31,7 +31,7 @@ use std::{
     io::{Read, Result, Seek, SeekFrom, Write}
 };
 
-use bpx::section::SectionData;
+use crate::section::SectionData;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
