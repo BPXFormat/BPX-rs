@@ -37,6 +37,50 @@ use std::{
 //ReadError, WriteError
 //TODO: Implement MorphableSection which starts as InMemorySection and as size increases auto jumps to FileSection
 
+pub enum DeflateError
+{
+    Memory,
+    Unsupported(&'static str),
+    Data,
+    Unknown,
+
+    /// Describes an io error.
+    ///
+    /// # Arguments
+    /// * the error that occured.
+    Io(std::io::Error)
+}
+
+impl From<std::io::Error> for DeflateError
+{
+    fn from(e: std::io::Error) -> Self
+    {
+        return DeflateError::Io(e);
+    }
+}
+
+pub enum InflateError
+{
+    Memory,
+    Unsupported(&'static str),
+    Data,
+    Unknown,
+
+    /// Describes an io error.
+    ///
+    /// # Arguments
+    /// * the error that occured.
+    Io(std::io::Error)
+}
+
+impl From<std::io::Error> for InflateError
+{
+    fn from(e: std::io::Error) -> Self
+    {
+        return InflateError::Io(e);
+    }
+}
+
 pub enum ReadError
 {
     /// Describes a checksum error.
@@ -69,7 +113,7 @@ pub enum ReadError
     ///
     /// # Arguments
     /// * error description string.
-    Inflate(&'static str)
+    Inflate(InflateError)
 }
 
 impl From<std::io::Error> for ReadError
@@ -77,6 +121,14 @@ impl From<std::io::Error> for ReadError
     fn from(e: std::io::Error) -> Self
     {
         return ReadError::Io(e);
+    }
+}
+
+impl From<InflateError> for ReadError
+{
+    fn from(e: InflateError) -> Self
+    {
+        return ReadError::Inflate(e);
     }
 }
 
@@ -99,7 +151,7 @@ pub enum WriteError
     ///
     /// # Arguments
     /// * error description string.
-    Deflate(&'static str)
+    Deflate(DeflateError)
 }
 
 impl From<std::io::Error> for WriteError
@@ -107,6 +159,14 @@ impl From<std::io::Error> for WriteError
     fn from(e: std::io::Error) -> Self
     {
         return WriteError::Io(e);
+    }
+}
+
+impl From<DeflateError> for WriteError
+{
+    fn from(e: DeflateError) -> Self
+    {
+        return WriteError::Deflate(e);
     }
 }
 
@@ -193,16 +253,16 @@ impl Display for Error
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         return match self {
-            Error::Checksum(expected, actual) => f.write_str(&format!(
+            /*Error::Checksum(expected, actual) => f.write_str(&format!(
                 "checksum validation failed (expected {}, got {})",
                 expected, actual
-            )),
+            )),*/
             Error::Io(e) => f.write_str(&format!("io error ({})", e)),
-            Error::TypeError(expected, actual) => {
+            /*Error::TypeError(expected, actual) => {
                 f.write_str(&format!("incompatible types (expected {}, got {})", expected, actual))
             },
             Error::PropCountExceeded(v) => f.write_str(&format!("BPXSD - too many props (count {}, max is 256)", v)),
-            Error::MissingProp(v) => f.write_str(&format!("BPXSD - missing property {}", v)),
+            Error::MissingProp(v) => f.write_str(&format!("BPXSD - missing property {}", v)),*/
             Error::Truncation(e) => f.write_str(&format!(
                 "unexpected EOF while reading {}, are you sure the data is not truncated?",
                 e

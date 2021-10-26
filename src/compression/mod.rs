@@ -28,8 +28,6 @@
 
 use std::io::{Read, Write};
 
-use crate::Result;
-
 mod crc32chksum;
 mod weakchksum;
 mod xz;
@@ -39,6 +37,7 @@ pub use crc32chksum::Crc32Checksum;
 pub use weakchksum::WeakChecksum;
 pub use xz::XzCompressionMethod;
 pub use zlib::ZlibCompressionMethod;
+use crate::error::{DeflateError, InflateError};
 
 pub trait Checksum
 {
@@ -53,7 +52,7 @@ pub trait Inflater
         output: &mut TWrite,
         deflated_size: usize,
         chksum: &mut TChecksum
-    ) -> Result<()>;
+    ) -> Result<(), InflateError>;
 }
 
 pub trait Deflater
@@ -63,5 +62,5 @@ pub trait Deflater
         output: &mut TWrite,
         inflated_size: usize,
         chksum: &mut TChecksum
-    ) -> Result<usize>;
+    ) -> Result<usize, DeflateError>;
 }

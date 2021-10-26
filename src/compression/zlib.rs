@@ -48,10 +48,9 @@ use libz_sys::{
 };
 
 use crate::{
-    compression::{Checksum, Deflater, Inflater},
-    error::Error,
-    Result
+    compression::{Checksum, Deflater, Inflater}
 };
+use crate::error::{DeflateError, InflateError};
 
 const ENCODER_BUF_SIZE: usize = 8192;
 const DECODER_BUF_SIZE: usize = ENCODER_BUF_SIZE * 2;
@@ -66,7 +65,7 @@ unsafe fn zstream_zeroed() -> z_stream
     return std::mem::transmute(arr);
 }
 
-fn new_encoder() -> Result<z_stream>
+fn new_encoder() -> Result<z_stream, DeflateError>
 {
     unsafe {
         let mut stream: z_stream = zstream_zeroed();
@@ -80,15 +79,15 @@ fn new_encoder() -> Result<z_stream>
             return Ok(stream);
         }
         return match err {
-            Z_MEM_ERROR => Err(Error::Deflate("Memory allocation failure")),
-            Z_STREAM_ERROR => Err(Error::Deflate("Invalid compression level")),
-            Z_VERSION_ERROR => Err(Error::Deflate("Version mismatch")),
-            _ => Err(Error::Deflate("Unknown error, possibly a bug"))
+            Z_MEM_ERROR => Err(DeflateError::Memory),
+            Z_STREAM_ERROR => Err(DeflateError::Unsupported("compression level")),
+            Z_VERSION_ERROR => Err(DeflateError::Unsupported("version")),
+            _ => Err(DeflateError::Unknown)
         };
     }
 }
 
-fn new_decoder() -> Result<z_stream>
+fn new_decoder() -> Result<z_stream, InflateError>
 {
     unsafe {
         let mut stream: z_stream = zstream_zeroed();
@@ -101,10 +100,10 @@ fn new_decoder() -> Result<z_stream>
             return Ok(stream);
         }
         return match err {
-            Z_MEM_ERROR => Err(Error::Deflate("Memory allocation failure")),
-            Z_DATA_ERROR => Err(Error::Deflate("ZLIB data error")),
-            Z_VERSION_ERROR => Err(Error::Deflate("Version mismatch")),
-            _ => Err(Error::Deflate("Unknown error, possibly a bug"))
+            Z_MEM_ERROR => Err(InflateError::Memory),
+            Z_DATA_ERROR => Err(InflateError::Data),
+            Z_VERSION_ERROR => Err(InflateError::Unsupported("version")),
+            _ => Err(InflateError::Unknown)
         };
     }
 }
@@ -115,7 +114,7 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
     output: &mut TWrite,
     inflated_size: usize,
     chksum: &mut TChecksum
-) -> Result<usize>
+) -> Result<usize, DeflateError>
 {
     let mut inbuf: [u8; ENCODER_BUF_SIZE] = [0; ENCODER_BUF_SIZE];
     let mut outbuf: [u8; ENCODER_BUF_SIZE] = [0; ENCODER_BUF_SIZE];
@@ -142,10 +141,10 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
                 let err = deflate(stream, action);
                 if err != Z_OK {
                     return match err {
-                        Z_MEM_ERROR => Err(Error::Deflate("Memory allocation failure")),
-                        Z_STREAM_ERROR => Err(Error::Deflate("Invalid compression level")),
-                        Z_VERSION_ERROR => Err(Error::Deflate("Version mismatch")),
-                        _ => Err(Error::Deflate("Unknown error, possibly a bug"))
+                        Z_MEM_ERROR => Err(DeflateError::Memory),
+                        Z_STREAM_ERROR => Err(DeflateError::Unsupported("compression level")),
+                        Z_VERSION_ERROR => Err(DeflateError::Unsupported("version")),
+                        _ => Err(DeflateError::Unknown)
                     };
                 }
             }
@@ -169,7 +168,7 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
     output: &mut TWrite,
     deflated_size: usize,
     chksum: &mut TChecksum
-) -> Result<()>
+) -> Result<(), InflateError>
 {
     let mut inbuf: [u8; DECODER_BUF_SIZE] = [0; DECODER_BUF_SIZE];
     let mut outbuf: [u8; DECODER_BUF_SIZE] = [0; DECODER_BUF_SIZE];
@@ -189,10 +188,10 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
             unsafe {
                 let err = inflate(stream, Z_NO_FLUSH);
                 match err {
-                    Z_MEM_ERROR => return Err(Error::Deflate("Memory allocation failure")),
-                    Z_DATA_ERROR => return Err(Error::Deflate("ZLIB data error")),
-                    Z_NEED_DICT => return Err(Error::Deflate("ZLIB data error")),
-                    Z_VERSION_ERROR => return Err(Error::Deflate("Version mismatch")),
+                    Z_MEM_ERROR => return Err(InflateError::Memory),
+                    Z_DATA_ERROR => return Err(InflateError::Data),
+                    Z_NEED_DICT => return Err(InflateError::Data),
+                    Z_VERSION_ERROR => return Err(InflateError::Unsupported("version")),
                     _ => ()
                 }
             }
@@ -216,7 +215,7 @@ impl Deflater for ZlibCompressionMethod
         output: &mut TWrite,
         inflated_size: usize,
         chksum: &mut TChecksum
-    ) -> Result<usize>
+    ) -> Result<usize, DeflateError>
     {
         let mut encoder = new_encoder()?;
         let res = do_deflate(&mut encoder, input, output, inflated_size, chksum);
@@ -234,7 +233,7 @@ impl Inflater for ZlibCompressionMethod
         output: &mut TWrite,
         deflated_size: usize,
         chksum: &mut TChecksum
-    ) -> Result<()>
+    ) -> Result<(), InflateError>
     {
         let mut decoder = new_decoder()?;
         let res = do_inflate(&mut decoder, input, output, deflated_size, chksum);

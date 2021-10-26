@@ -51,16 +51,15 @@ use lzma_sys::{
 };
 
 use crate::{
-    compression::{Checksum, Deflater, Inflater},
-    error::Error,
-    Result
+    compression::{Checksum, Deflater, Inflater}
 };
+use crate::error::{DeflateError, InflateError};
 
 const THREADS_MAX: u32 = 8;
 const ENCODER_BUF_SIZE: usize = 8192;
 const DECODER_BUF_SIZE: usize = ENCODER_BUF_SIZE * 2;
 
-fn new_encoder() -> Result<lzma_stream>
+fn new_encoder() -> Result<lzma_stream, DeflateError>
 {
     unsafe {
         let mut stream: lzma_stream = std::mem::zeroed();
@@ -86,15 +85,15 @@ fn new_encoder() -> Result<lzma_stream>
             return Ok(stream);
         }
         match res {
-            LZMA_MEM_ERROR => return Err(Error::Deflate("Memory allocation failure")),
-            LZMA_OPTIONS_ERROR => return Err(Error::Deflate("Specified filter chain is not supported")),
-            LZMA_UNSUPPORTED_CHECK => return Err(Error::Deflate("Specified integrity check is not supported")),
-            _ => return Err(Error::Deflate("Unknown error, possibly a bug"))
+            LZMA_MEM_ERROR => return Err(DeflateError::Memory),
+            LZMA_OPTIONS_ERROR => return Err(DeflateError::Unsupported("filter chain")),
+            LZMA_UNSUPPORTED_CHECK => return Err(DeflateError::Unsupported("integrity check")),
+            _ => return Err(DeflateError::Unknown)
         };
     }
 }
 
-fn new_decoder() -> Result<lzma_stream>
+fn new_decoder() -> Result<lzma_stream, InflateError>
 {
     unsafe {
         let mut stream: lzma_stream = std::mem::zeroed();
@@ -103,10 +102,10 @@ fn new_decoder() -> Result<lzma_stream>
             return Ok(stream);
         }
         match res {
-            LZMA_MEM_ERROR => return Err(Error::Inflate("Memory allocation failure")),
-            LZMA_OPTIONS_ERROR => return Err(Error::Inflate("Specified filter chain is not supported")),
-            LZMA_UNSUPPORTED_CHECK => return Err(Error::Inflate("Specified integrity check is not supported")),
-            _ => return Err(Error::Inflate("Unknown error, possibly a bug"))
+            LZMA_MEM_ERROR => return Err(InflateError::Memory),
+            LZMA_OPTIONS_ERROR => return Err(InflateError::Unsupported("filter chain")),
+            LZMA_UNSUPPORTED_CHECK => return Err(InflateError::Unsupported("integrity check")),
+            _ => return Err(InflateError::Unknown)
         };
     }
 }
@@ -117,7 +116,7 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
     output: &mut TWrite,
     inflated_size: usize,
     chksum: &mut TChecksum
-) -> Result<usize>
+) -> Result<usize, DeflateError>
 {
     let mut action = LZMA_RUN;
     let mut inbuf: [u8; ENCODER_BUF_SIZE] = [0; ENCODER_BUF_SIZE];
@@ -154,9 +153,9 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
                     break;
                 }
                 match res {
-                    LZMA_MEM_ERROR => return Err(Error::Deflate("Memory allocation failure")),
-                    LZMA_DATA_ERROR => return Err(Error::Deflate("LZMA data error")),
-                    _ => return Err(Error::Deflate("Unknown error, possibly a bug"))
+                    LZMA_MEM_ERROR => return Err(DeflateError::Memory),
+                    LZMA_DATA_ERROR => return Err(DeflateError::Data),
+                    _ => return Err(DeflateError::Unknown)
                 };
             }
         }
@@ -170,7 +169,7 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
     output: &mut TWrite,
     deflated_size: usize,
     chksum: &mut TChecksum
-) -> Result<()>
+) -> Result<(), InflateError>
 {
     let mut action = LZMA_RUN;
     let mut inbuf: [u8; ENCODER_BUF_SIZE] = [0; ENCODER_BUF_SIZE];
@@ -205,9 +204,9 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
                     break;
                 }
                 match res {
-                    LZMA_MEM_ERROR => return Err(Error::Inflate("Memory allocation failure")),
-                    LZMA_DATA_ERROR | LZMA_BUF_ERROR => return Err(Error::Inflate("LZMA data error")),
-                    _ => return Err(Error::Inflate("Unknown error, possibly a bug"))
+                    LZMA_MEM_ERROR => return Err(InflateError::Memory),
+                    LZMA_DATA_ERROR | LZMA_BUF_ERROR => return Err(InflateError::Data),
+                    _ => return Err(InflateError::Unknown)
                 };
             }
         }
@@ -224,7 +223,7 @@ impl Deflater for XzCompressionMethod
         output: &mut TWrite,
         inflated_size: usize,
         chksum: &mut TChecksum
-    ) -> Result<usize>
+    ) -> Result<usize, DeflateError>
     {
         let mut stream = new_encoder()?;
         let res = do_deflate(&mut stream, input, output, inflated_size, chksum);
@@ -242,7 +241,7 @@ impl Inflater for XzCompressionMethod
         output: &mut TWrite,
         deflated_size: usize,
         chksum: &mut TChecksum
-    ) -> Result<()>
+    ) -> Result<(), InflateError>
     {
         let mut stream = new_decoder()?;
         let res = do_inflate(&mut stream, input, output, deflated_size, chksum);
