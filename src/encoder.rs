@@ -35,7 +35,7 @@ use std::{
 
 use crate::{
     compression::{Checksum, Crc32Checksum, Deflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod},
-    error::Error,
+    error::WriteError,
     header::{
         MainHeader,
         SectionHeader,
@@ -48,7 +48,6 @@ use crate::{
     },
     section::{new_section_data, SectionData},
     Interface,
-    Result,
     SectionHandle
 };
 
@@ -89,7 +88,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// * `file`: An [IoBackend](self::IoBackend) to use for reading the data.
     ///
     /// returns: Result<Encoder<TBackend>, Error>
-    pub fn new(file: TBackend) -> Result<Encoder<TBackend>>
+    pub fn new(file: TBackend) -> Result<Encoder<TBackend>, WriteError>
     {
         return Ok(Encoder {
             main_header: MainHeader::new(),
@@ -147,7 +146,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// encoder.create_section(SectionHeader::new());
     /// assert_eq!(encoder.get_main_header().section_num, 1);
     /// ```
-    pub fn create_section(&mut self, header: SectionHeader) -> Result<SectionHandle>
+    pub fn create_section(&mut self, header: SectionHeader) -> Result<SectionHandle, WriteError>
     {
         self.modified = true;
         self.main_header.section_num += 1;
@@ -213,7 +212,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         self.modified = true;
     }
 
-    fn write_sections(&mut self, file_start_offset: usize) -> Result<(u32, usize)>
+    fn write_sections(&mut self, file_start_offset: usize) -> Result<(u32, usize), WriteError>
     {
         let mut ptr: u64 = file_start_offset as _;
         let mut all_sections_size: usize = 0;
@@ -223,7 +222,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
             //At this point the handle must be valid otherwise sections_in_order is broken
             let section = self.sections[v.0].as_mut().unwrap();
             if section.data.size() > u32::MAX as usize {
-                return Err(Error::Capacity(section.data.size()));
+                return Err(WriteError::Capacity(section.data.size()));
             }
             let last_section_ptr = section.data.seek(SeekFrom::Current(0))?;
             section.data.seek(io::SeekFrom::Start(0))?;
@@ -280,7 +279,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
     /// Decoder::new(bytebuf).unwrap(); //If this panics then encoder is broken
     /// ```
-    pub fn save(&mut self) -> Result<()>
+    pub fn save(&mut self) -> Result<(), WriteError>
     {
         if !self.modified {
             //If the file has not been modified do not engage any IO
@@ -309,6 +308,8 @@ impl<TBackend: IoBackend> Encoder<TBackend>
 
 impl<TBackend: IoBackend> Interface for Encoder<TBackend>
 {
+    type Error = ();
+
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {
         for i in 0..self.sections.len() {
@@ -353,7 +354,7 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
         return handle.0 as u32;
     }
 
-    fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData>
+    fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData, ()>
     {
         let section = self.sections[handle.0].as_mut().unwrap();
         self.modified = true;
@@ -382,7 +383,7 @@ fn get_flags(section: &SectionEntry, size: u32) -> u8
     return flags;
 }
 
-fn create_section(header: &SectionHeader) -> Result<Box<dyn SectionData>>
+fn create_section(header: &SectionHeader) -> Result<Box<dyn SectionData>, WriteError>
 {
     if header.size == 0 {
         let mut section = new_section_data(None)?;
@@ -399,7 +400,7 @@ fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(
     section: &mut dyn SectionData,
     out: &mut TWrite,
     chksum: &mut TChecksum
-) -> Result<usize>
+) -> Result<usize, WriteError>
 {
     let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
     let mut count: usize = 0;
@@ -417,7 +418,7 @@ fn write_section_compressed<TMethod: Deflater, TWrite: Write, TChecksum: Checksu
     mut section: &mut dyn SectionData,
     out: &mut TWrite,
     chksum: &mut TChecksum
-) -> Result<usize>
+) -> Result<usize, WriteError>
 {
     let size = section.size();
     let csize = TMethod::deflate(&mut section, out, size, chksum)?;
@@ -429,7 +430,7 @@ fn write_section_checked<TWrite: Write, TChecksum: Checksum>(
     section: &mut dyn SectionData,
     out: &mut TWrite,
     chksum: &mut TChecksum
-) -> Result<usize>
+) -> Result<usize, WriteError>
 {
     if flags & FLAG_COMPRESS_XZ != 0 {
         return write_section_compressed::<XzCompressionMethod, _, _>(section, out, chksum);
@@ -440,7 +441,7 @@ fn write_section_checked<TWrite: Write, TChecksum: Checksum>(
     }
 }
 
-fn write_section<TWrite: Write>(flags: u8, section: &mut dyn SectionData, out: &mut TWrite) -> Result<(usize, u32)>
+fn write_section<TWrite: Write>(flags: u8, section: &mut dyn SectionData, out: &mut TWrite) -> Result<(usize, u32), WriteError>
 {
     if flags & FLAG_CHECK_CRC32 != 0 {
         let mut chksum = Crc32Checksum::new();

@@ -33,7 +33,8 @@ use std::io;
 use byteorder::{ByteOrder, LittleEndian};
 
 use super::garraylen::*;
-use crate::{error::Error, Result};
+use crate::{error::Error};
+use crate::error::ReadError;
 
 /// The size in bytes of the BPX Main Header.
 pub const SIZE_MAIN_HEADER: usize = 40;
@@ -128,7 +129,7 @@ impl MainHeader
     /// let mut corrupted: [u8; SIZE_MAIN_HEADER] = [0; SIZE_MAIN_HEADER];
     /// MainHeader::read(&mut corrupted.as_ref()).unwrap();
     /// ```
-    pub fn read<TReader: io::Read>(reader: &mut TReader) -> Result<(u32, MainHeader)>
+    pub fn read<TReader: io::Read>(reader: &mut TReader) -> Result<(u32, MainHeader), ReadError>
     {
         let mut buf: [u8; SIZE_MAIN_HEADER] = [0; SIZE_MAIN_HEADER];
         let mut checksum: u32 = 0;
@@ -149,13 +150,13 @@ impl MainHeader
             type_ext: extract_slice::<T16>(&buf, 24)
         };
         if head.signature[0] != 'B' as u8 || head.signature[1] != 'P' as u8 || head.signature[2] != 'X' as u8 {
-            return Err(Error::Corruption(format!(
+            return Err(ReadError::Corruption(format!(
                 "incorrect signature, expected {}{}{}, got {}{}{}",
                 'B' as u8, 'P' as u8, 'X' as u8, head.signature[0], head.signature[1], head.signature[2]
             )));
         }
         if !KNOWN_VERSIONS.contains(&head.version) {
-            return Err(Error::Unsupported(format!("unsupported version {}", head.version)));
+            return Err(ReadError::BadVersion(head.version));
         }
         return Ok((checksum, head));
     }

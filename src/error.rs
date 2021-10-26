@@ -34,9 +34,10 @@ use std::{
     string::String
 };
 
-/// Represents a BPX error
-#[derive(Debug)]
-pub enum Error
+//ReadError, WriteError
+//TODO: Implement MorphableSection which starts as InMemorySection and as size increases auto jumps to FileSection
+
+pub enum ReadError
 {
     /// Describes a checksum error.
     ///
@@ -51,25 +52,73 @@ pub enum Error
     /// * the error that occured.
     Io(std::io::Error),
 
-    /// Describes a variant conversion error (Structured Data).
+    /// Describes a bad version error.
     ///
     /// # Arguments
-    /// * expected variant name.
-    /// * actual variant name.
-    TypeError(&'static str, &'static str),
+    /// * the version number.
+    BadVersion(u32),
 
-    /// Describes too many props or values attempted to be written as part of
-    /// an Object or Array (Structured Data) (ie exceeds 255).
+    /// Describes a data corruption error, this means an impossible
+    /// byte or sequence of bytes has been found.
     ///
     /// # Arguments
-    /// * actual count of props.
-    PropCountExceeded(usize),
+    /// * message.
+    Corruption(String),
 
-    /// Describes a missing property in an object (Structured Data).
+    /// Describes a decompression error.
     ///
     /// # Arguments
-    /// * name of missing prop.
-    MissingProp(&'static str),
+    /// * error description string.
+    Inflate(&'static str)
+}
+
+impl From<std::io::Error> for ReadError
+{
+    fn from(e: std::io::Error) -> Self
+    {
+        return ReadError::Io(e);
+    }
+}
+
+pub enum WriteError
+{
+    /// Describes an io error.
+    ///
+    /// # Arguments
+    /// * the error that occured.
+    Io(std::io::Error),
+
+    /// Describes a section that is too large to be written
+    /// (ie exceeds 2 pow 32 / 4Gb).
+    ///
+    /// # Arguments
+    /// * actual size of section.
+    Capacity(usize),
+
+    /// Describes a compression error.
+    ///
+    /// # Arguments
+    /// * error description string.
+    Deflate(&'static str)
+}
+
+impl From<std::io::Error> for WriteError
+{
+    fn from(e: std::io::Error) -> Self
+    {
+        return WriteError::Io(e);
+    }
+}
+
+/// Represents a BPX error
+#[derive(Debug)]
+pub enum Error
+{
+    /// Describes an io error.
+    ///
+    /// # Arguments
+    /// * the error that occured.
+    Io(std::io::Error),
 
     /// Describes a data truncation error, this means a section or
     /// the file itself has been truncated.

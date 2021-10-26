@@ -52,6 +52,8 @@ pub struct SectionHandle(usize);
 /// The interface implemented by both the BPX encoder and decoder.
 pub trait Interface
 {
+    type Error;
+
     /// Searches for the first section of a given type.
     /// Returns None if no section could be found.
     ///
@@ -199,7 +201,7 @@ pub trait Interface
     /// let data = section.load_in_memory().unwrap();
     /// assert_eq!(data.len(), 0);
     /// ```
-    fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn section::SectionData>;
+    fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn section::SectionData, Self::Error>;
 
     /// Returns a read-only reference to the BPX main header.
     ///
@@ -218,8 +220,3 @@ pub trait Interface
     /// ```
     fn get_main_header(&self) -> &header::MainHeader;
 }
-
-/// Represents a result from this library.
-///
-/// *This acts as a shortcut to [Result](std::result::Result)<T, [Error](error::Error)>.*
-pub type Result<T> = std::result::Result<T, error::Error>;

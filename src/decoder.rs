@@ -37,9 +37,9 @@ use crate::{
     section::{new_section_data, SectionData},
     utils::OptionExtension,
     Interface,
-    Result,
     SectionHandle
 };
+use crate::error::ReadError;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -48,6 +48,37 @@ pub trait IoBackend: io::Seek + io::Read
 {
 }
 impl<T: io::Seek + io::Read> IoBackend for T {}
+
+/*pub struct Section
+{
+    data: Option<RefCell<dyn SectionData>>,
+    header: SectionHeader,
+    index: u32
+}
+
+impl crate::section::Section for Section
+{
+    fn open(&self) -> Result<RefMut<'_, dyn SectionData>, crate::section::Error>
+    {
+        if let Some(v) = self.data.as_ref() {
+            if let Ok(vv) = v.try_borrow_mut() {
+                return Ok(vv);
+            }
+            return Err(crate::section::Error::DataAlreadyOpen);
+        }
+        return Err(crate::section::Error::NotLoaded);
+    }
+
+    fn get_header(&self) -> SectionHeader
+    {
+        return self.header;
+    }
+
+    fn index(&self) -> u32
+    {
+        return self.index;
+    }
+}*/
 
 /// The BPX decoder.
 pub struct Decoder<TBackend: IoBackend>
@@ -60,7 +91,7 @@ pub struct Decoder<TBackend: IoBackend>
 
 impl<TBackend: IoBackend> Decoder<TBackend>
 {
-    fn read_section_header_table(&mut self, checksum: u32) -> Result<()>
+    fn read_section_header_table(&mut self, checksum: u32) -> Result<(), ReadError>
     {
         let mut final_checksum = checksum;
 
@@ -105,7 +136,7 @@ impl<TBackend: IoBackend> Decoder<TBackend>
     /// assert_eq!(decoder.get_main_header().section_num, 0);
     /// assert_eq!(decoder.get_main_header().btype, 'P' as u8);
     /// ```
-    pub fn new(mut file: TBackend) -> Result<Decoder<TBackend>>
+    pub fn new(mut file: TBackend) -> Result<Decoder<TBackend>, ReadError>
     {
         let (checksum, header) = MainHeader::read(&mut file)?;
         let num = header.section_num;
@@ -128,6 +159,8 @@ impl<TBackend: IoBackend> Decoder<TBackend>
 
 impl<TBackend: IoBackend> Interface for Decoder<TBackend>
 {
+    type Error = ReadError;
+
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {
         for i in 0..self.sections.len() {
@@ -163,7 +196,12 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
         return &self.sections[handle.0];
     }
 
-    fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData>
+    fn get_section_index(&self, handle: SectionHandle) -> u32
+    {
+        return handle.0 as u32;
+    }
+
+    fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData, ReadError>
     {
         let header = &self.sections[handle.0];
         let file = &mut self.file;
@@ -175,14 +213,9 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
     {
         return &self.main_header;
     }
-
-    fn get_section_index(&self, handle: SectionHandle) -> u32
-    {
-        return handle.0 as u32;
-    }
 }
 
-fn load_section<TBackend: IoBackend>(file: &mut TBackend, section: &SectionHeader) -> Result<Box<dyn SectionData>>
+fn load_section<TBackend: IoBackend>(file: &mut TBackend, section: &SectionHeader) -> Result<Box<dyn SectionData>, ReadError>
 {
     let mut data = new_section_data(Some(section.size))?;
     data.seek(io::SeekFrom::Start(0))?;
@@ -213,7 +246,7 @@ fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum:
     section: &SectionHeader,
     out: &mut TWrite,
     chksum: &mut TChecksum
-) -> Result<()>
+) -> Result<(), ReadError>
 {
     if section.flags & FLAG_COMPRESS_XZ != 0 {
         load_section_compressed::<XzCompressionMethod, _, _, _>(file, &section, out, chksum)?;
@@ -252,7 +285,7 @@ fn load_section_compressed<TMethod: Inflater, TBackend: io::Read + io::Seek, TWr
     header: &SectionHeader,
     output: &mut TWrite,
     chksum: &mut TChecksum
-) -> Result<()>
+) -> Result<(), ReadError>
 {
     bpx.seek(io::SeekFrom::Start(header.pointer))?;
     XzCompressionMethod::inflate(bpx, output, header.csize as usize, chksum)?;
