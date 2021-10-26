@@ -28,7 +28,7 @@
 
 use std::io::{Read, Result, Seek, SeekFrom, Write};
 
-use crate::section::SectionData;
+use bpx::section::SectionData;
 
 pub struct InMemorySection
 {
