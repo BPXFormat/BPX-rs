@@ -101,7 +101,7 @@ impl<TBackend: IoBackend> Decoder<TBackend>
             self.sections.push(header);
         }
         if final_checksum != self.main_header.chksum {
-            return Err(Error::Checksum(final_checksum, self.main_header.chksum));
+            return Err(ReadError::Checksum(final_checksum, self.main_header.chksum));
         }
         return Ok(());
     }
@@ -224,14 +224,14 @@ fn load_section<TBackend: IoBackend>(file: &mut TBackend, section: &SectionHeade
         load_section_checked(file, &section, &mut data, &mut chksum)?;
         let v = chksum.finish();
         if v != section.chksum {
-            return Err(Error::Checksum(v, section.chksum));
+            return Err(ReadError::Checksum(v, section.chksum));
         }
     } else if section.flags & FLAG_CHECK_CRC32 != 0 {
         let mut chksum = Crc32Checksum::new();
         load_section_checked(file, &section, &mut data, &mut chksum)?;
         let v = chksum.finish();
         if v != section.chksum {
-            return Err(Error::Checksum(v, section.chksum));
+            return Err(ReadError::Checksum(v, section.chksum));
         }
     } else {
         let mut chksum = WeakChecksum::new();
