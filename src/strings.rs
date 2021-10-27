@@ -37,9 +37,8 @@ use std::{
 };
 
 use crate::{section::SectionData, Interface, SectionHandle};
-use crate::error::ReadError;
 
-pub enum Error<TInterface: Interface>
+pub enum ReadError
 {
     /// Describes an utf8 decoding/encoding error.
     Utf8,
@@ -54,32 +53,50 @@ pub enum Error<TInterface: Interface>
     Io(std::io::Error),
 
     /// An Interface error.
-    Interface(TInterface::Error)
+    Bpx(crate::error::ReadError)
 }
 
-impl<TInterface: Interface> From<std::io::Error> for Error<TInterface>
+impl From<std::io::Error> for ReadError
 {
     fn from(e: std::io::Error) -> Self
     {
-        return Error::Io(e);
+        return ReadError::Io(e);
     }
 }
 
-// Rust is a peace of shit not able to understand conversion of generic errors, so this hack is needed
-
-impl<TInterface: Interface<Error = crate::error::ReadError>> From<crate::error::ReadError> for Error<TInterface>
+impl From<crate::error::ReadError> for ReadError
 {
-    fn from(e: TInterface::Error) -> Self
+    fn from(e: crate::error::ReadError) -> Self
     {
-        return Error::Interface(e);
+        return ReadError::Bpx(e);
     }
 }
 
-impl<TInterface: Interface<Error = ()>> From<()> for Error<TInterface>
+pub enum WriteError
 {
-    fn from(e: TInterface::Error) -> Self
+    /// Describes an io error.
+    ///
+    /// # Arguments
+    /// * the error that occured.
+    Io(std::io::Error),
+
+    /// An Interface error.
+    Bpx(())
+}
+
+impl From<std::io::Error> for WriteError
+{
+    fn from(e: std::io::Error) -> Self
     {
-        return Error::Interface(e);
+        return WriteError::Io(e);
+    }
+}
+
+impl From<()> for WriteError
+{
+    fn from(_: ()) -> Self
+    {
+        return WriteError::Bpx(());
     }
 }
 
@@ -136,7 +153,7 @@ impl StringSection
     ///
     /// Returns an [Error](crate::error::Error) if the string could not be read or the
     /// section is corrupted/truncated.
-    pub fn get<TInterface: Interface<Error = crate::error::ReadError>>(&mut self, interface: &mut TInterface, address: u32) -> Result<&str, Error<TInterface>>
+    pub fn get<TInterface: Interface<Error = crate::error::ReadError>>(&mut self, interface: &mut TInterface, address: u32) -> Result<&str, ReadError>
     {
         let res = match self.cache.entry(address) {
             Entry::Occupied(o) => o.into_mut(),
@@ -161,7 +178,7 @@ impl StringSection
     /// # Errors
     ///
     /// Returns an [Error](crate::error::Error) if the string could not be written.
-    pub fn put<TInterface: Interface<Error = ()>>(&mut self, interface: &mut TInterface, s: &str) -> Result<u32, Error<TInterface>>
+    pub fn put<TInterface: Interface<Error = ()>>(&mut self, interface: &mut TInterface, s: &str) -> Result<u32, WriteError>
     {
         let data = interface.open_section(self.handle)?;
         let address = low_level_write_string(s, data)?;
@@ -170,7 +187,7 @@ impl StringSection
     }
 }
 
-fn low_level_read_string<TInterface: Interface>(ptr: u32, string_section: &mut dyn SectionData) -> Result<String, Error<TInterface>>
+fn low_level_read_string(ptr: u32, string_section: &mut dyn SectionData) -> Result<String, ReadError>
 {
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
@@ -181,11 +198,11 @@ fn low_level_read_string<TInterface: Interface>(ptr: u32, string_section: &mut d
         curs.push(chr[0]);
         let res = string_section.read(&mut chr)?;
         if res != 1 {
-            return Err(Error::Eos);
+            return Err(ReadError::Eos);
         }
     }
     return match String::from_utf8(curs) {
-        Err(_) => Err(Error::Utf8),
+        Err(_) => Err(ReadError::Utf8),
         Ok(v) => Ok(v)
     };
 }
