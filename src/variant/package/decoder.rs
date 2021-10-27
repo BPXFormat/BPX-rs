@@ -44,9 +44,9 @@ use crate::{
         SUPPORTED_VERSION
     },
     Interface,
-    Result,
     SectionHandle
 };
+use crate::variant::package::error::ReadError;
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
@@ -61,7 +61,7 @@ pub struct PackageDecoder<TBackend: IoBackend>
     object_table: SectionHandle
 }
 
-fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Platform)>
+fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Platform), ReadError>
 {
     let arch;
     let platform;
@@ -72,7 +72,7 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Pl
         0x2 => arch = Architecture::X86,
         0x3 => arch = Architecture::Armv7hl,
         0x4 => arch = Architecture::Any,
-        _ => return Err(Error::Corruption(String::from("Architecture code does not exist")))
+        _ => return Err(ReadError::InvalidArchCode(acode))
     }
     match pcode {
         0x0 => platform = Platform::Linux,
@@ -80,7 +80,7 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Pl
         0x2 => platform = Platform::Windows,
         0x3 => platform = Platform::Android,
         0x4 => platform = Platform::Any,
-        _ => return Err(Error::Corruption(String::from("Platform code does not exist")))
+        _ => return Err(ReadError::InvalidPlatformCode(pcode))
     }
     return Ok((arch, platform));
 }
@@ -98,21 +98,14 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if some sections/headers could not be loaded.
-    pub fn new(backend: TBackend) -> Result<PackageDecoder<TBackend>>
+    pub fn new(backend: TBackend) -> Result<PackageDecoder<TBackend>, ReadError>
     {
         let decoder = Decoder::new(backend)?;
         if decoder.get_main_header().btype != 'P' as u8 {
-            return Err(Error::Corruption(format!(
-                "Unknown variant of BPX: {}",
-                decoder.get_main_header().btype as char
-            )));
+            return Err(ReadError::BadType(decoder.get_main_header().btype));
         }
         if decoder.get_main_header().version != SUPPORTED_VERSION {
-            return Err(Error::Unsupported(format!(
-                "This version of the BPX SDK only supports BPXP version {}, you are trying to decode version {} BPXP",
-                SUPPORTED_VERSION,
-                decoder.get_main_header().version
-            )));
+            return Err(ReadError::BadVersion(decoder.get_main_header().version));
         }
         let (a, p) = get_arch_platform_from_code(
             decoder.get_main_header().type_ext[0],
@@ -120,11 +113,11 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
         )?;
         let strings = match decoder.find_section_by_type(SECTION_TYPE_STRING) {
             Some(v) => v,
-            None => return Err(Error::Corruption(String::from("Unable to locate strings section")))
+            None => return Err(ReadError::MissingStrings)
         };
         let object_table = match decoder.find_section_by_type(SECTION_TYPE_OBJECT_TABLE) {
             Some(v) => v,
-            None => return Err(Error::Corruption(String::from("Unable to locate BPXP object table")))
+            None => return Err(ReadError::MissingObjectTable)
         };
         return Ok(PackageDecoder {
             architecture: a,
@@ -163,7 +156,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned in case of corruption or system error.
-    pub fn read_metadata(&mut self) -> Result<Option<Object>>
+    pub fn read_metadata(&mut self) -> Result<Option<Object>, ReadError>
     {
         if let Some(handle) = self.decoder.find_section_by_type(SECTION_TYPE_SD) {
             let mut data = self.decoder.open_section(handle)?;
@@ -178,7 +171,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned in case of corruption or system error.
-    pub fn read_object_table(&mut self) -> Result<ObjectTable>
+    pub fn read_object_table(&mut self) -> Result<ObjectTable, ReadError>
     {
         let mut v = Vec::new();
         let count = self.decoder.get_section_header(self.object_table).size / 20;
@@ -187,7 +180,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
         for _ in 0..count {
             let mut buf: [u8; 20] = [0; 20];
             if object_table.read(&mut buf)? != 20 {
-                return Err(Error::Truncation("read object table"));
+                return Err(ReadError::Eos);
             }
             let size = LittleEndian::read_u64(&buf[0..8]);
             let name_ptr = LittleEndian::read_u32(&buf[8..12]);
@@ -214,7 +207,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if the name could not be read.
-    pub fn get_object_name(&mut self, obj: &ObjectHeader) -> Result<&str>
+    pub fn get_object_name(&mut self, obj: &ObjectHeader) -> Result<&str, crate::strings::ReadError>
     {
         return self.strings.get(&mut self.decoder, obj.name);
     }
@@ -225,7 +218,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
         offset: u32,
         size: u32,
         out: &mut TWrite
-    ) -> Result<u32>
+    ) -> Result<u32, ReadError>
     {
         let mut len = 0;
         let mut buf: [u8; DATA_READ_BUFFER_SIZE] = [0; DATA_READ_BUFFER_SIZE];
@@ -254,7 +247,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if the object could not be unpacked.
-    pub fn unpack_object<TWrite: Write>(&mut self, obj: &ObjectHeader, mut out: TWrite) -> Result<u64>
+    pub fn unpack_object<TWrite: Write>(&mut self, obj: &ObjectHeader, mut out: TWrite) -> Result<u64, ReadError>
     {
         let mut section_id = obj.start;
         let mut offset = obj.offset;

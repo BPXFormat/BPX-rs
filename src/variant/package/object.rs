@@ -30,7 +30,7 @@
 
 use std::collections::HashMap;
 
-use crate::{decoder::IoBackend, variant::package::PackageDecoder, Result};
+use crate::{decoder::IoBackend, variant::package::PackageDecoder};
 
 /// Represents an object header as read from the package.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -85,7 +85,7 @@ impl ObjectTable
     ///
     /// An [Error](crate::error::Error) is returned if the strings could
     /// not be loaded.
-    pub fn build_lookup_table<TBackend: IoBackend>(&mut self, package: &mut PackageDecoder<TBackend>) -> Result<()>
+    pub fn build_lookup_table<TBackend: IoBackend>(&mut self, package: &mut PackageDecoder<TBackend>) -> Result<(), crate::strings::ReadError>
     {
         let mut map = HashMap::new();
         for v in &self.list {

@@ -32,6 +32,7 @@ mod decoder;
 mod encoder;
 pub mod object;
 pub mod utils;
+pub mod error;
 
 pub use decoder::PackageDecoder;
 pub use encoder::{PackageBuilder, PackageEncoder};

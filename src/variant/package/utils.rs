@@ -34,9 +34,9 @@ use std::{
 use crate::{
     error::Error,
     strings::{get_name_from_dir_entry, get_name_from_path},
-    variant::package::{object::ObjectHeader, PackageDecoder, PackageEncoder},
-    Result
+    variant::package::{object::ObjectHeader, PackageDecoder, PackageEncoder}
 };
+use crate::variant::package::error::{ReadError, WriteError};
 
 /// Packs a file or folder in a BPXP with the given virtual name.
 ///
@@ -59,7 +59,7 @@ pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
     package: &mut PackageEncoder<TBackend>,
     vname: &str,
     source: &Path
-) -> Result<()>
+) -> Result<(), WriteError>
 {
     let md = metadata(source)?;
     if md.is_file() {
@@ -100,9 +100,12 @@ pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
 pub fn pack_file<TBackend: crate::encoder::IoBackend>(
     package: &mut PackageEncoder<TBackend>,
     source: &Path
-) -> Result<()>
+) -> Result<(), WriteError>
 {
-    return pack_file_vname(package, &get_name_from_path(source)?, source);
+    if let Ok(str) = get_name_from_path(source) {
+        return pack_file_vname(package, &str, source);
+    }
+    return Err(WriteError::InvalidPath);
 }
 
 /// Loads an object into memory.
@@ -120,12 +123,12 @@ pub fn pack_file<TBackend: crate::encoder::IoBackend>(
 pub fn unpack_memory<TBackend: crate::decoder::IoBackend>(
     package: &mut PackageDecoder<TBackend>,
     obj: &ObjectHeader
-) -> Result<Vec<u8>>
+) -> Result<Vec<u8>, ReadError>
 {
     let mut v = Vec::with_capacity(obj.size as usize);
     let len = package.unpack_object(obj, &mut v)?;
     if len != obj.size {
-        return Err(Error::Truncation("object unpack memory"));
+        return Err(ReadError::Truncation);
     }
     return Ok(v);
 }
@@ -147,12 +150,12 @@ pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
     package: &mut PackageDecoder<TBackend>,
     obj: &ObjectHeader,
     out: &Path
-) -> Result<File>
+) -> Result<File, ReadError>
 {
     let mut f = File::create(out)?;
     let len = package.unpack_object(obj, &mut f)?;
     if len != obj.size {
-        return Err(Error::Truncation("object unpack file"));
+        return Err(ReadError::Truncation);
     }
     return Ok(f);
 }
@@ -174,15 +177,13 @@ pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
 ///
 /// An [Error](crate::error::Error) is returned if some objects could not be unpacked.
 pub fn unpack<TBackend: crate::decoder::IoBackend>(package: &mut PackageDecoder<TBackend>, target: &Path)
-    -> Result<()>
+    -> Result<(), ReadError>
 {
     let table = package.read_object_table()?;
     for v in table.get_objects() {
         let path = package.get_object_name(v)?;
         if path == "" {
-            return Err(Error::Corruption(String::from(
-                "Empty path string detected, aborting to prevent damage on host files"
-            )));
+            return Err(ReadError::BlankString);
         }
         #[cfg(feature = "debug-log")]
         println!("Reading {} with {} byte(s)...", path, v.size);

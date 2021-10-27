@@ -39,9 +39,9 @@ use crate::{
     utils::OptionExtension,
     variant::package::{Architecture, Platform, SECTION_TYPE_DATA, SECTION_TYPE_OBJECT_TABLE, SUPPORTED_VERSION},
     Interface,
-    Result,
     SectionHandle
 };
+use crate::variant::package::error::WriteError;
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
@@ -166,7 +166,7 @@ impl PackageBuilder
     /// let s = std::str::from_utf8(&data).unwrap();
     /// assert_eq!(s, "This is a test 你好")
     /// ```
-    pub fn build<TBackend: IoBackend>(self, backend: TBackend) -> Result<PackageEncoder<TBackend>>
+    pub fn build<TBackend: IoBackend>(self, backend: TBackend) -> Result<PackageEncoder<TBackend>, WriteError>
     {
         let mut encoder = Encoder::new(backend)?;
         let mut type_ext: [u8; 16] = [0; 16];
@@ -211,7 +211,8 @@ impl PackageBuilder
                 .with_type(SECTION_TYPE_SD)
                 .build();
             let metadata = encoder.create_section(metadata_header)?;
-            obj.write(&mut encoder.open_section(metadata)?)?;
+            //TODO: Fix
+            obj.write(&mut encoder.open_section(metadata).unwrap())?;
         }
         return Ok(PackageEncoder {
             strings,
@@ -243,9 +244,10 @@ fn create_data_section_header() -> SectionHeader
 
 impl<TBackend: IoBackend> PackageEncoder<TBackend>
 {
-    fn write_object<TRead: Read>(&mut self, source: &mut TRead, data_id: SectionHandle) -> Result<(usize, bool)>
+    fn write_object<TRead: Read>(&mut self, source: &mut TRead, data_id: SectionHandle) -> Result<(usize, bool), crate::error::WriteError>
     {
-        let data = self.encoder.open_section(data_id)?;
+        //TODO: Fix
+        let data = self.encoder.open_section(data_id).unwrap();
         let mut buf: [u8; DATA_WRITE_BUFFER_SIZE] = [0; DATA_WRITE_BUFFER_SIZE];
         let mut res = source.read(&mut buf)?;
         let mut count = res;
@@ -275,7 +277,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     /// * `source`: the source object data as a [Read](std::io::Read).
     ///
     /// returns: Result<(), Error>
-    pub fn pack_object<TRead: Read>(&mut self, name: &str, mut source: TRead) -> Result<()>
+    pub fn pack_object<TRead: Read>(&mut self, name: &str, mut source: TRead) -> Result<(), WriteError>
     {
         let mut object_size = 0;
         let useless = &mut self.encoder;
@@ -283,7 +285,8 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
             .last_data_section
             .get_or_insert_with_err(|| useless.create_section(create_data_section_header()))?;
         let start = self.encoder.get_section_index(data_section);
-        let offset = self.encoder.open_section(data_section)?.size() as u32;
+        //TODO: Fix
+        let offset = self.encoder.open_section(data_section).unwrap().size() as u32;
 
         loop {
             let (count, need_section) = self.write_object(&mut source, data_section)?;
@@ -303,10 +306,12 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
             LittleEndian::write_u32(&mut buf[12..16], start);
             LittleEndian::write_u32(&mut buf[16..20], offset);
             // Write the object header
-            let object_table = self.encoder.open_section(self.object_table)?;
+            //TODO: Fix
+            let object_table = self.encoder.open_section(self.object_table).unwrap();
             object_table.write(&buf)?;
         }
-        if self.encoder.open_section(data_section)?.size() > MAX_DATA_SECTION_SIZE {
+        //TODO: Fix
+        if self.encoder.open_section(data_section).unwrap().size() > MAX_DATA_SECTION_SIZE {
             self.last_data_section = None;
         } else {
             self.last_data_section = Some(data_section);
@@ -323,7 +328,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if the encoder failed to save.
-    pub fn save(&mut self) -> Result<()>
+    pub fn save(&mut self) -> Result<(), crate::error::WriteError>
     {
         return self.encoder.save();
     }
