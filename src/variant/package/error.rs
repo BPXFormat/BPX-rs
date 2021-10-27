@@ -26,6 +26,18 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+pub enum EosContext
+{
+    Object,
+    ObjectTable
+}
+
+pub enum Section
+{
+    Strings,
+    ObjectTable
+}
+
 pub enum ReadError
 {
     Bpx(crate::error::ReadError),
@@ -36,16 +48,14 @@ pub enum ReadError
     InvalidPlatformCode(u8),
     BadVersion(u32),
     BadType(u8),
-    MissingStrings,
-    MissingObjectTable,
 
-    /// Indicates the BPXP decoder reached EOS (End Of Section) while reading the object table
-    Eos,
+    /// Describes a missing required section.
+    MissingSection(Section),
 
-    /// Indicates an object is truncated
-    Truncation,
+    /// Describes an EOS (End Of Section) error while reading some item.
+    Eos(EosContext),
 
-    /// Indicates a blank string was obtained when attempting to unpack a BPXP to the file system
+    /// Indicates a blank string was obtained when attempting to unpack a BPXP to the file system.
     BlankString
 }
 
@@ -88,7 +98,7 @@ pub enum WriteError
     Strings(crate::strings::WriteError),
     Sd(crate::sd::WriteError),
 
-    //Indicates an invalid path while attempting to pack some files
+    //Indicates an invalid path while attempting to pack some files.
     InvalidPath
 }
 

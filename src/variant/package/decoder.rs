@@ -32,7 +32,6 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
     decoder::{Decoder, IoBackend},
-    error::Error,
     header::{SECTION_TYPE_SD, SECTION_TYPE_STRING},
     sd::Object,
     strings::StringSection,
@@ -46,7 +45,7 @@ use crate::{
     Interface,
     SectionHandle
 };
-use crate::variant::package::error::ReadError;
+use crate::variant::package::error::{EosContext, ReadError, Section};
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
@@ -113,11 +112,11 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
         )?;
         let strings = match decoder.find_section_by_type(SECTION_TYPE_STRING) {
             Some(v) => v,
-            None => return Err(ReadError::MissingStrings)
+            None => return Err(ReadError::MissingSection(Section::Strings))
         };
         let object_table = match decoder.find_section_by_type(SECTION_TYPE_OBJECT_TABLE) {
             Some(v) => v,
-            None => return Err(ReadError::MissingObjectTable)
+            None => return Err(ReadError::MissingSection(Section::ObjectTable))
         };
         return Ok(PackageDecoder {
             architecture: a,
@@ -180,7 +179,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
         for _ in 0..count {
             let mut buf: [u8; 20] = [0; 20];
             if object_table.read(&mut buf)? != 20 {
-                return Err(ReadError::Eos);
+                return Err(ReadError::Eos(EosContext::ObjectTable));
             }
             let size = LittleEndian::read_u64(&buf[0..8]);
             let name_ptr = LittleEndian::read_u32(&buf[8..12]);

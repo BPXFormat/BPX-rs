@@ -36,7 +36,7 @@ use crate::{
     strings::{get_name_from_dir_entry, get_name_from_path},
     variant::package::{object::ObjectHeader, PackageDecoder, PackageEncoder}
 };
-use crate::variant::package::error::{ReadError, WriteError};
+use crate::variant::package::error::{EosContext, ReadError, WriteError};
 
 /// Packs a file or folder in a BPXP with the given virtual name.
 ///
@@ -128,7 +128,7 @@ pub fn unpack_memory<TBackend: crate::decoder::IoBackend>(
     let mut v = Vec::with_capacity(obj.size as usize);
     let len = package.unpack_object(obj, &mut v)?;
     if len != obj.size {
-        return Err(ReadError::Truncation);
+        return Err(ReadError::Eos(EosContext::Object));
     }
     return Ok(v);
 }
@@ -155,7 +155,7 @@ pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
     let mut f = File::create(out)?;
     let len = package.unpack_object(obj, &mut f)?;
     if len != obj.size {
-        return Err(ReadError::Truncation);
+        return Err(ReadError::Eos(EosContext::Object));
     }
     return Ok(f);
 }
