@@ -47,9 +47,9 @@ use crate::{
         SUPPORTED_VERSION
     },
     Interface,
-    Result,
     SectionHandle
 };
+use crate::variant::shader::error::WriteError;
 
 /// Utility to easily generate a [ShaderPackEncoder](crate::variant::shader::ShaderPackEncoder).
 pub struct ShaderPackBuilder
@@ -154,7 +154,7 @@ impl ShaderPackBuilder
     /// assert_eq!(shader.stage, Stage::Pixel);
     /// assert_eq!(shader.data.len(), 0);
     /// ```
-    pub fn build<TBackend: IoBackend>(self, backend: TBackend) -> Result<ShaderPackEncoder<TBackend>>
+    pub fn build<TBackend: IoBackend>(self, backend: TBackend) -> Result<ShaderPackEncoder<TBackend>, WriteError>
     {
         let mut encoder = Encoder::new(backend)?;
         let mut type_ext: [u8; 16] = [0; 16];
@@ -212,7 +212,7 @@ pub struct ShaderPackEncoder<TBackend: IoBackend>
 
 impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
 {
-    fn write_extended_data(&mut self, extended_data: Option<Object>) -> Result<u32>
+    fn write_extended_data(&mut self, extended_data: Option<Object>) -> Result<u32, WriteError>
     {
         if let Some(obj) = extended_data {
             let useless = &mut self.encoder;
@@ -224,7 +224,8 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
                     .build();
                 return useless.create_section(header);
             })?;
-            let mut section = self.encoder.open_section(handle)?;
+            //TODO: Fix
+            let mut section = self.encoder.open_section(handle).unwrap();
             let offset = section.size();
             obj.write(&mut section)?;
             return Ok(offset as u32);
@@ -261,7 +262,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
         flags: u16,
         register: u8,
         extended_data: Option<Object>
-    ) -> Result<()>
+    ) -> Result<(), WriteError>
     {
         let address = self.strings.put(&mut self.encoder, name.as_ref())?;
         let extended_data = self.write_extended_data(extended_data)?;
@@ -272,7 +273,8 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
             stype,
             register
         };
-        let data = self.encoder.open_section(self.symbol_table)?;
+        //TODO: Fix
+        let data = self.encoder.open_section(self.symbol_table).unwrap();
         data.write(&sym.to_bytes())?;
         self.num_symbols += 1;
         self.patch_extended_data();
@@ -290,7 +292,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if the shader could not be written.
-    pub fn write_shader(&mut self, shader: Shader) -> Result<()>
+    pub fn write_shader(&mut self, shader: Shader) -> Result<(), WriteError>
     {
         let section = self.encoder.create_section(
             SectionHeaderBuilder::new()
@@ -300,7 +302,8 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
                 .with_size(shader.data.len() as u32 + 1)
                 .build()
         )?;
-        let data = self.encoder.open_section(section)?;
+        //TODO: Fix
+        let data = self.encoder.open_section(section).unwrap();
         let mut buf = shader.data;
         match shader.stage {
             Stage::Vertex => buf.insert(0, 0x0),
@@ -322,7 +325,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if the encoder failed to save.
-    pub fn save(&mut self) -> Result<()>
+    pub fn save(&mut self) -> Result<(), crate::error::WriteError>
     {
         return self.encoder.save();
     }

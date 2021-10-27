@@ -32,7 +32,6 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
     decoder::{Decoder, IoBackend},
-    error::Error,
     header::SECTION_TYPE_STRING,
     sd::Object,
     strings::StringSection,
@@ -49,11 +48,11 @@ use crate::{
         SUPPORTED_VERSION
     },
     Interface,
-    Result,
     SectionHandle
 };
+use crate::variant::shader::error::{EosContext, ReadError, Section};
 
-fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
+fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
 {
     let target;
     let btype;
@@ -66,7 +65,7 @@ fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
         0x5 => target = Target::VK10,
         0x6 => target = Target::MT,
         0xFF => target = Target::Any,
-        _ => return Err(Error::Corruption(String::from("Target code does not exist")))
+        _ => return Err(ReadError::InvalidTargetCode(acode))
     }
     if tcode == 'A' as u8 {
         //Rust refuses to parse match properly so use if/else-if blocks
@@ -74,12 +73,12 @@ fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
     } else if tcode == 'P' as u8 {
         btype = Type::Pipeline;
     } else {
-        return Err(Error::Corruption(String::from("Type code does not exist")));
+        return Err(ReadError::InvalidTypeCode(tcode));
     }
     return Ok((target, btype));
 }
 
-fn get_stage_from_code(code: u8) -> Result<Stage>
+fn get_stage_from_code(code: u8) -> Result<Stage, ReadError>
 {
     return match code {
         0x0 => Ok(Stage::Vertex),
@@ -87,7 +86,7 @@ fn get_stage_from_code(code: u8) -> Result<Stage>
         0x2 => Ok(Stage::Domain),
         0x3 => Ok(Stage::Geometry),
         0x4 => Ok(Stage::Pixel),
-        _ => Err(Error::Corruption(String::from("Shader stage code does not exist")))
+        _ => Err(ReadError::InvalidStageCode(code))
     };
 }
 
@@ -117,21 +116,14 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if some sections/headers could not be loaded.
-    pub fn new(backend: TBackend) -> Result<ShaderPackDecoder<TBackend>>
+    pub fn new(backend: TBackend) -> Result<ShaderPackDecoder<TBackend>, ReadError>
     {
         let decoder = Decoder::new(backend)?;
         if decoder.get_main_header().btype != 'P' as u8 {
-            return Err(Error::Corruption(format!(
-                "Unknown variant of BPX: {}",
-                decoder.get_main_header().btype as char
-            )));
+            return Err(ReadError::BadType(decoder.get_main_header().btype));
         }
         if decoder.get_main_header().version != SUPPORTED_VERSION {
-            return Err(Error::Unsupported(format!(
-                "This version of the BPX SDK only supports BPXS version {}, you are trying to decode version {} BPXS",
-                SUPPORTED_VERSION,
-                decoder.get_main_header().version
-            )));
+            return Err(ReadError::BadVersion(decoder.get_main_header().version));
         }
         let hash = LittleEndian::read_u64(&decoder.get_main_header().type_ext[0..8]);
         let num_symbols = LittleEndian::read_u16(&decoder.get_main_header().type_ext[8..10]);
@@ -141,11 +133,11 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
         )?;
         let strings = match decoder.find_section_by_type(SECTION_TYPE_STRING) {
             Some(v) => v,
-            None => return Err(Error::Corruption(String::from("Unable to locate strings section")))
+            None => return Err(ReadError::MissingSection(Section::Strings))
         };
         let symbol_table = match decoder.find_section_by_type(SECTION_TYPE_SYMBOL_TABLE) {
             Some(v) => v,
-            None => return Err(Error::Corruption(String::from("Unable to locate BPXS symbol table")))
+            None => return Err(ReadError::MissingSection(Section::SymbolTable))
         };
         return Ok(ShaderPackDecoder {
             decoder,
@@ -176,12 +168,12 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if the shader could not be loaded.
-    pub fn load_shader(&mut self, handle: SectionHandle) -> Result<Shader>
+    pub fn load_shader(&mut self, handle: SectionHandle) -> Result<Shader, ReadError>
     {
         let header = self.decoder.get_section_header(handle);
         if header.size < 1 {
             //We must at least find a stage byte
-            return Err(Error::Truncation("load shader"));
+            return Err(ReadError::Eos(EosContext::Shader));
         }
         let section = self.decoder.open_section(handle)?;
         let mut buf = section.load_in_memory()?;
@@ -224,7 +216,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned if the name could not be read.
-    pub fn get_symbol_name(&mut self, sym: &Symbol) -> Result<&str>
+    pub fn get_symbol_name(&mut self, sym: &Symbol) -> Result<&str, crate::strings::ReadError>
     {
         return self.strings.get(&mut self.decoder, sym.name);
     }
@@ -234,14 +226,14 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned in case of corruption or system error.
-    pub fn read_symbol_table(&mut self) -> Result<SymbolTable>
+    pub fn read_symbol_table(&mut self) -> Result<SymbolTable, ReadError>
     {
         let mut v = Vec::new();
         let count = self.decoder.get_section_header(self.symbol_table).size / SYMBOL_STRUCTURE_SIZE as u32;
         let mut symbol_table = self.decoder.open_section(self.symbol_table)?;
 
         if count != self.num_symbols as u32 {
-            return Err(Error::Truncation("read symbol table"));
+            return Err(ReadError::Eos(EosContext::SymbolTable));
         }
         for _ in 0..count {
             let sym = Symbol::read(&mut symbol_table)?;
@@ -265,7 +257,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     /// # Panics
     ///
     /// Panics if the symbol extended data is undefined.
-    pub fn read_extended_data(&mut self, sym: &Symbol) -> Result<Object>
+    pub fn read_extended_data(&mut self, sym: &Symbol) -> Result<Object, ReadError>
     {
         if sym.flags & FLAG_EXTENDED_DATA == 0 {
             panic!("The symbol extended data is undefined.");
@@ -274,7 +266,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
         let handle = *self.extended_data.get_or_insert_with_err(|| {
             return match useless.find_section_by_type(SECTION_TYPE_EXTENDED_DATA) {
                 Some(v) => Ok(v),
-                None => Err(Error::Corruption(String::from("Unable to locate ExtendedData section")))
+                None => Err(ReadError::MissingSection(Section::ExtendedData))
             };
         })?;
         let mut data = self.decoder.open_section(handle)?;

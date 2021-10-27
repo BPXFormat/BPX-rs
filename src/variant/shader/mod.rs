@@ -31,6 +31,7 @@
 mod decoder;
 mod encoder;
 pub mod symbol;
+pub mod error;
 
 pub use decoder::ShaderPackDecoder;
 pub use encoder::{ShaderPackBuilder, ShaderPackEncoder};

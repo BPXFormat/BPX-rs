@@ -32,7 +32,8 @@ use std::{collections::HashMap, io::Read};
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::{decoder::IoBackend, error::Error, variant::shader::ShaderPackDecoder, Result};
+use crate::{decoder::IoBackend, variant::shader::ShaderPackDecoder};
+use crate::variant::shader::error::{EosContext, ReadError};
 
 /// Indicates this symbol is used on the vertex stage.
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;
@@ -90,7 +91,7 @@ pub enum SymbolType
     Pipeline
 }
 
-fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType>
+fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType, ReadError>
 {
     return match scode {
         0x0 => Ok(SymbolType::Texture),
@@ -99,7 +100,7 @@ fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType>
         0x3 => Ok(SymbolType::Constant),
         0x4 => Ok(SymbolType::VertexFormat),
         0x5 => Ok(SymbolType::Pipeline),
-        _ => Err(Error::Corruption(String::from("Symbol type code does not exist")))
+        _ => Err(ReadError::InvalidSymbolTypeCode(scode))
     };
 }
 
@@ -136,11 +137,11 @@ impl Symbol
     /// # Errors
     ///
     /// An [Error](crate::error::Error) is returned in case of data truncation.
-    pub fn read<TReader: Read>(reader: &mut TReader) -> Result<Symbol>
+    pub fn read<TReader: Read>(reader: &mut TReader) -> Result<Symbol, ReadError>
     {
         let mut buf: [u8; SYMBOL_STRUCTURE_SIZE] = [0; SYMBOL_STRUCTURE_SIZE];
         if reader.read(&mut buf)? != 12 {
-            return Err(Error::Truncation("read symbol table"));
+            return Err(ReadError::Eos(EosContext::SymbolTable));
         }
         let name = LittleEndian::read_u32(&buf[0..4]);
         let extended_data = LittleEndian::read_u32(&buf[4..8]);
@@ -212,7 +213,7 @@ impl SymbolTable
     ///
     /// An [Error](crate::error::Error) is returned if the strings could
     /// not be loaded.
-    pub fn build_lookup_table<TBackend: IoBackend>(&mut self, package: &mut ShaderPackDecoder<TBackend>) -> Result<()>
+    pub fn build_lookup_table<TBackend: IoBackend>(&mut self, package: &mut ShaderPackDecoder<TBackend>) -> Result<(), crate::strings::ReadError>
     {
         let mut map = HashMap::new();
         for v in &self.list {
