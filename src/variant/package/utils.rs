@@ -32,7 +32,6 @@ use std::{
 };
 
 use crate::{
-    error::Error,
     strings::{get_name_from_dir_entry, get_name_from_path},
     variant::package::{object::ObjectHeader, PackageDecoder, PackageEncoder}
 };

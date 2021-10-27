@@ -32,7 +32,6 @@ use std::{io, io::Write};
 
 use crate::{
     compression::{Checksum, Crc32Checksum, Inflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod},
-    error::Error,
     header::{MainHeader, SectionHeader, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB},
     section::{new_section_data, SectionData},
     utils::OptionExtension,

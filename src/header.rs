@@ -33,7 +33,6 @@ use std::io;
 use byteorder::{ByteOrder, LittleEndian};
 
 use super::garraylen::*;
-use crate::{error::Error};
 use crate::error::ReadError;
 
 /// The size in bytes of the BPX Main Header.
