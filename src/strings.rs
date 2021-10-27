@@ -36,7 +36,52 @@ use std::{
     string::String
 };
 
-use crate::{error::Error, section::SectionData, Interface, Result, SectionHandle};
+use crate::{section::SectionData, Interface, SectionHandle};
+use crate::error::ReadError;
+
+pub enum Error<TInterface: Interface>
+{
+    /// Describes an utf8 decoding/encoding error.
+    Utf8,
+
+    /// Indicates the string reader has reached EOS (End Of Section) before the end of the string.
+    Eos,
+
+    /// Describes an io error.
+    ///
+    /// # Arguments
+    /// * the error that occured.
+    Io(std::io::Error),
+
+    /// An Interface error.
+    Interface(TInterface::Error)
+}
+
+impl<TInterface: Interface> From<std::io::Error> for Error<TInterface>
+{
+    fn from(e: std::io::Error) -> Self
+    {
+        return Error::Io(e);
+    }
+}
+
+// Rust is a peace of shit not able to understand conversion of generic errors, so this hack is needed
+
+impl<TInterface: Interface<Error = crate::error::ReadError>> From<crate::error::ReadError> for Error<TInterface>
+{
+    fn from(e: TInterface::Error) -> Self
+    {
+        return Error::Interface(e);
+    }
+}
+
+impl<TInterface: Interface<Error = ()>> From<()> for Error<TInterface>
+{
+    fn from(e: TInterface::Error) -> Self
+    {
+        return Error::Interface(e);
+    }
+}
 
 /// Helper class to manage a BPX string section.
 ///
@@ -91,7 +136,7 @@ impl StringSection
     ///
     /// Returns an [Error](crate::error::Error) if the string could not be read or the
     /// section is corrupted/truncated.
-    pub fn get<TInterface: Interface>(&mut self, interface: &mut TInterface, address: u32) -> Result<&str>
+    pub fn get<TInterface: Interface<Error = crate::error::ReadError>>(&mut self, interface: &mut TInterface, address: u32) -> Result<&str, Error<TInterface>>
     {
         let res = match self.cache.entry(address) {
             Entry::Occupied(o) => o.into_mut(),
@@ -116,7 +161,7 @@ impl StringSection
     /// # Errors
     ///
     /// Returns an [Error](crate::error::Error) if the string could not be written.
-    pub fn put<TInterface: Interface>(&mut self, interface: &mut TInterface, s: &str) -> Result<u32>
+    pub fn put<TInterface: Interface<Error = ()>>(&mut self, interface: &mut TInterface, s: &str) -> Result<u32, Error<TInterface>>
     {
         let data = interface.open_section(self.handle)?;
         let address = low_level_write_string(s, data)?;
@@ -125,7 +170,7 @@ impl StringSection
     }
 }
 
-fn low_level_read_string(ptr: u32, string_section: &mut dyn SectionData) -> Result<String>
+fn low_level_read_string<TInterface: Interface>(ptr: u32, string_section: &mut dyn SectionData) -> Result<String, Error<TInterface>>
 {
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
@@ -136,16 +181,16 @@ fn low_level_read_string(ptr: u32, string_section: &mut dyn SectionData) -> Resu
         curs.push(chr[0]);
         let res = string_section.read(&mut chr)?;
         if res != 1 {
-            return Err(Error::Truncation("string secton read"));
+            return Err(Error::Eos);
         }
     }
     return match String::from_utf8(curs) {
-        Err(_) => Err(Error::Utf8("string section read")),
+        Err(_) => Err(Error::Utf8),
         Ok(v) => Ok(v)
     };
 }
 
-fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Result<u32>
+fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Result<u32, std::io::Error>
 {
     let ptr = string_section.size() as u32;
     string_section.write(s.as_bytes())?;
@@ -163,7 +208,7 @@ fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Resu
 ///
 /// # Errors
 ///
-/// Returns an [Error](crate::error::Error) if the path does not have a file name.
+/// Returns Err if the path does not have a file name.
 ///
 /// # Panics
 ///
@@ -178,7 +223,7 @@ fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Resu
 /// let str = get_name_from_path(Path::new("test/file.txt")).unwrap();
 /// assert_eq!(str, "file.txt");
 /// ```
-pub fn get_name_from_path(path: &Path) -> Result<String>
+pub fn get_name_from_path(path: &Path) -> Result<String, ()>
 {
     match path.file_name() {
         Some(v) => match v.to_str() {
@@ -187,7 +232,7 @@ pub fn get_name_from_path(path: &Path) -> Result<String>
             // The reason BPXP cannot support non-unicode strings in paths is simply because this would be incompatible with unicode systems
             None => panic!("Non unicode paths operating systems cannot run BPXP")
         },
-        None => return Err(Error::from("incorrect path format"))
+        None => return Err(())
     }
 }
 
