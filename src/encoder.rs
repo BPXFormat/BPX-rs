@@ -267,6 +267,23 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         return Ok((chksum_sht, all_sections_size));
     }
 
+    fn internal_save(&mut self) -> Result<(), WriteError>
+    {
+        let file_start_offset = SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * self.main_header.section_num as usize);
+        //Seek to the start of the actual file content
+        self.file.seek(SeekFrom::Start(file_start_offset as _))?;
+        //Write all section data and section headers
+        let (chksum_sht, all_sections_size) = self.write_sections(file_start_offset)?;
+        self.main_header.file_size = all_sections_size as u64 + file_start_offset as u64;
+        self.main_header.chksum = 0;
+        self.main_header.chksum = chksum_sht + self.main_header.get_checksum();
+        //Relocate to the start of the file and write the BPX main header
+        self.file.seek(SeekFrom::Start(0))?;
+        self.main_header.write(&mut self.file)?;
+        self.modified = false;
+        return Ok(());
+    }
+
     /// Writes all sections to the underlying IO backend.
     ///
     /// **This function prints some information to standard output as a way
@@ -294,22 +311,16 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// ```
     pub fn save(&mut self) -> Result<(), WriteError>
     {
-        if !self.modified {
-            //If the file has not been modified do not engage any IO
-            return Ok(());
+        let has_any = self.sections.iter().any(|entry| {
+            if let Some(entry) = entry {
+                return entry.data.modified();
+            }
+            return false;
+        });
+        if self.modified || has_any {
+            self.modified = false;
+            return self.internal_save();
         }
-        let file_start_offset = SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * self.main_header.section_num as usize);
-        //Seek to the start of the actual file content
-        self.file.seek(SeekFrom::Start(file_start_offset as _))?;
-        //Write all section data and section headers
-        let (chksum_sht, all_sections_size) = self.write_sections(file_start_offset)?;
-        self.main_header.file_size = all_sections_size as u64 + file_start_offset as u64;
-        self.main_header.chksum = 0;
-        self.main_header.chksum = chksum_sht + self.main_header.get_checksum();
-        //Relocate to the start of the file and write the BPX main header
-        self.file.seek(SeekFrom::Start(0))?;
-        self.main_header.write(&mut self.file)?;
-        self.modified = false;
         return Ok(());
     }
 
@@ -369,7 +380,6 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
     fn get_section(&self, handle: SectionHandle) -> &Rc<AutoSection>
     {
         let section = self.sections[handle.0].as_ref().unwrap();
-        //self.modified = true; //TODO: Fix
         return &section.data;
     }
 

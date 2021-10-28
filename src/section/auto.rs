@@ -34,7 +34,8 @@ use crate::SectionHandle;
 pub struct Ref<'a>
 {
     r: RefMut<'a, Box<dyn SectionData>>,
-    size: &'a Cell<usize>
+    size: &'a Cell<usize>,
+    modified: &'a Cell<bool>
 }
 
 impl<'a> Deref for Ref<'a>
@@ -61,6 +62,7 @@ impl<'a> Drop for Ref<'a>
     {
         let s = self.r.deref().size();
         self.size.set(s);
+        self.modified.set(true);
     }
 }
 
@@ -68,6 +70,7 @@ pub struct AutoSection
 {
     data: RefCell<Box<dyn SectionData>>,
     size: Cell<usize>,
+    modified: Cell<bool>,
     handle: SectionHandle
 }
 
@@ -84,6 +87,7 @@ impl AutoSection
         return Ok(AutoSection {
             data: RefCell::new(data),
             size: Cell::new(0),
+            modified: Cell::new(false),
             handle
         });
     }
@@ -93,10 +97,16 @@ impl AutoSection
         if let Ok(r) = self.data.try_borrow_mut() {
             return Ok(Ref {
                 r,
-                size: &self.size
+                size: &self.size,
+                modified: &self.modified
             });
         }
         return Err(Error::AlreadyOpen);
+    }
+
+    pub fn modified(&self) -> bool
+    {
+        return self.modified.replace(false);
     }
 }
 
