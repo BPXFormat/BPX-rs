@@ -52,7 +52,7 @@ impl From<std::io::Error> for Error
 pub trait Section
 {
     fn size(&self) -> usize;
-    fn realloc(&self, size: u32) -> Result<(), Error>;
+    fn realloc(&self, size: u32) -> Result<Box<dyn SectionData>, Error>;
     fn handle(&self) -> SectionHandle;
 }
 

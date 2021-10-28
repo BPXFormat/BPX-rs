@@ -37,7 +37,8 @@ use std::{
     vec::Vec
 };
 
-const MEMORY_THRESHOLD: u32 = 100000000;
+const INITIAL_BYTE_BUF_ALLOC_SIZE: usize = 128;
+pub const MEMORY_THRESHOLD: u32 = 100000000;
 
 /// Opaque variant intended to manipulate section data in the form of standard IO operations.
 pub trait SectionData: Read + Write + Seek
@@ -88,7 +89,7 @@ pub fn new_section_data(size: Option<u32>) -> Result<Box<dyn SectionData>>
         if s > MEMORY_THRESHOLD {
             return Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)));
         } else {
-            return Ok(Box::new(memory::InMemorySection::new(vec![0; s as usize])));
+            return Ok(Box::new(memory::InMemorySection::new(INITIAL_BYTE_BUF_ALLOC_SIZE)));
         }
     }
     return Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)));

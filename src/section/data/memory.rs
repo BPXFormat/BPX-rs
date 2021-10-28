@@ -26,11 +26,75 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{Read, Result, Seek, SeekFrom, Write};
+use std::io::{Cursor, Read, Result, Seek, SeekFrom, Write};
 
 use crate::section::SectionData;
+use crate::utils::new_byte_buf;
 
 pub struct InMemorySection
+{
+    byte_buf: Cursor<Vec<u8>>,
+    cur_size: usize
+}
+
+impl InMemorySection
+{
+    pub fn new(initial: usize) -> InMemorySection
+    {
+        return InMemorySection {
+            byte_buf: new_byte_buf(initial),
+            cur_size: 0
+        };
+    }
+}
+
+impl Read for InMemorySection
+{
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize>
+    {
+        return self.byte_buf.read(buf);
+    }
+}
+
+impl Write for InMemorySection
+{
+    fn write(&mut self, buf: &[u8]) -> Result<usize>
+    {
+        let len = self.byte_buf.write(buf)?;
+        if self.byte_buf.position() as usize >= self.cur_size {
+            self.cur_size = self.byte_buf.position() as usize;
+        }
+        return Ok(len);
+    }
+
+    fn flush(&mut self) -> Result<()>
+    {
+        return self.byte_buf.flush();
+    }
+}
+
+impl Seek for InMemorySection
+{
+    fn seek(&mut self, pos: SeekFrom) -> Result<u64>
+    {
+        return self.byte_buf.seek(pos);
+    }
+}
+
+impl SectionData for InMemorySection
+{
+    fn load_in_memory(&mut self) -> Result<Vec<u8>>
+    {
+        return Ok(self.byte_buf.get_ref().clone());
+    }
+
+    fn size(&self) -> usize
+    {
+        return self.cur_size;
+    }
+}
+
+/*pub struct InMemorySection
 {
     data: Vec<u8>,
     cursor: usize,
@@ -111,4 +175,4 @@ impl SectionData for InMemorySection
     {
         return self.cur_size;
     }
-}
+}*/

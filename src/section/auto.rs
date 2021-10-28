@@ -78,12 +78,7 @@ impl AutoSection
 {
     pub fn new(size: u32, handle: SectionHandle) -> Result<AutoSection, std::io::Error>
     {
-        let data;
-        if size == 0 {
-            data = new_section_data(None)?;
-        } else {
-            data = new_section_data(Some(size))?;
-        }
+        let data = new_section_data(Some(size))?;
         return Ok(AutoSection {
             data: RefCell::new(data),
             size: Cell::new(0),
@@ -94,6 +89,12 @@ impl AutoSection
 
     pub fn open(&self) -> Result<Ref<'_>, Error>
     {
+        let size = self.size.get();
+        if size > super::data::MEMORY_THRESHOLD as usize {
+            let mut old = self.realloc(size as u32)?;
+            let mut data = self.open()?;
+            std::io::copy(&mut old, &mut *data)?;
+        }
         if let Ok(r) = self.data.try_borrow_mut() {
             return Ok(Ref {
                 r,
@@ -117,7 +118,7 @@ impl Section for AutoSection
         return self.size.get();
     }
 
-    fn realloc(&self, size: u32) -> Result<(), Error>
+    fn realloc(&self, size: u32) -> Result<Box<dyn SectionData>, Error>
     {
         let data;
         if size == 0 {
@@ -133,11 +134,11 @@ impl Section for AutoSection
                         return Err(Error::AlreadyOpen);
                     }
                 }
-                self.data.replace(v);
+                let old = self.data.replace(v);
                 self.size.set(0);
+                return Ok(old);
             }
         }
-        return Ok(());
     }
 
     fn handle(&self) -> SectionHandle
