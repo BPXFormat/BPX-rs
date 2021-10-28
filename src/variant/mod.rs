@@ -30,3 +30,56 @@
 
 pub mod package;
 pub mod shader;
+
+/// Represents a named table with deferred/optional lookup table build.
+pub trait BuildNamedTable<TDecoder> where Self: NamedTable
+{
+    /// Builds the item map for easy and efficient lookup of items by name.
+    ///
+    /// **You must call this function before you can use lookup.**
+    ///
+    /// # Arguments
+    ///
+    /// * `package`: the decoder to load the strings from.
+    ///
+    /// returns: Result<(), Error>
+    ///
+    /// # Errors
+    ///
+    /// An [Error](crate::strings::Error) is returned if the strings could
+    /// not be loaded.
+    fn build_lookup_table(&mut self, package: &mut TDecoder) -> Result<(), crate::strings::ReadError>;
+}
+
+/// Represents a named table, currently used by both BPXP and BPXS.
+pub trait NamedTable
+{
+    /// The inner item type.
+    type Inner;
+
+    /// Constructs a new NameTable from a list of items.
+    ///
+    /// # Arguments
+    ///
+    /// * `list`: the list of items.
+    ///
+    /// returns: Self
+    fn new(list: Vec<Self::Inner>) -> Self;
+
+    /// Lookup an item by its name.
+    /// Returns None if the item does not exist.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: the name of the item to search for.
+    ///
+    /// returns: Option<&Self::Inner>
+    ///
+    /// # Panics
+    ///
+    /// Panics if the lookup table is not yet built.
+    fn lookup(&self, name: &str) -> Option<&Self::Inner>;
+
+    /// Gets all items in this table as a slice.
+    fn get_all(&self) -> &[Self::Inner];
+}

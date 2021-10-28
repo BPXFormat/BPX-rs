@@ -31,6 +31,8 @@
 use std::collections::HashMap;
 
 use crate::{decoder::IoBackend, variant::package::PackageDecoder};
+use crate::strings::ReadError;
+use crate::variant::{BuildNamedTable, NamedTable};
 
 /// Represents an object header as read from the package.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -56,36 +58,36 @@ pub struct ObjectTable
     map: Option<HashMap<String, ObjectHeader>>
 }
 
-impl ObjectTable
+impl NamedTable for ObjectTable
 {
-    /// Constructs a new object table from a list of
-    /// [ObjectHeader](crate::variant::package::object::ObjectHeader).
-    ///
-    /// # Arguments
-    ///
-    /// * `list`: the list of object headers.
-    ///
-    /// returns: ObjectTable
-    pub fn new(list: Vec<ObjectHeader>) -> ObjectTable
+    type Inner = ObjectHeader;
+
+    fn new(list: Vec<Self::Inner>) -> Self
     {
-        return ObjectTable { list, map: None };
+        return ObjectTable {
+            list,
+            map: None
+        };
     }
 
-    /// Builds the object map for easy and efficient lookup of objects by name.
-    ///
-    /// **You must call this function before you can use find_object.**
-    ///
-    /// # Arguments
-    ///
-    /// * `package`: the [PackageDecoder](crate::variant::package::PackageDecoder) to load the strings from.
-    ///
-    /// returns: Result<(), Error>
-    ///
-    /// # Errors
-    ///
-    /// An [Error](crate::error::Error) is returned if the strings could
-    /// not be loaded.
-    pub fn build_lookup_table<TBackend: IoBackend>(&mut self, package: &mut PackageDecoder<TBackend>) -> Result<(), crate::strings::ReadError>
+    fn lookup(&self, name: &str) -> Option<&Self::Inner>
+    {
+        if let Some(map) = &self.map {
+            return map.get(name);
+        } else {
+            panic!("Lookup table has not yet been initialized, please call build_lookup_table");
+        }
+    }
+
+    fn get_all(&self) -> &[Self::Inner]
+    {
+        return &self.list;
+    }
+}
+
+impl<TBackend: IoBackend> BuildNamedTable<PackageDecoder<TBackend>> for ObjectTable
+{
+    fn build_lookup_table(&mut self, package: &mut PackageDecoder<TBackend>) -> Result<(), ReadError>
     {
         let mut map = HashMap::new();
         for v in &self.list {
@@ -94,32 +96,5 @@ impl ObjectTable
         }
         self.map = Some(map);
         return Ok(());
-    }
-
-    /// Gets all objects in this BPXP.
-    pub fn get_objects(&self) -> &Vec<ObjectHeader>
-    {
-        return &self.list;
-    }
-
-    /// Finds an object by its name.
-    /// Returns None if the object does not exist.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: the name of the object to search for.
-    ///
-    /// returns: Option<&ObjectHeader>
-    ///
-    /// # Panics
-    ///
-    /// Panics if the lookup table is not yet built.
-    pub fn find_object(&self, name: &str) -> Option<&ObjectHeader>
-    {
-        if let Some(map) = &self.map {
-            return map.get(name);
-        } else {
-            panic!("ObjectTable lookup table has not yet been initialized, please call build_lookup_table");
-        }
     }
 }

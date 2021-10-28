@@ -33,6 +33,7 @@ use std::{collections::HashMap, io::Read};
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{decoder::IoBackend, variant::shader::ShaderPackDecoder};
+use crate::variant::{BuildNamedTable, NamedTable};
 use crate::variant::shader::error::{EosContext, ReadError};
 
 /// Indicates this symbol is used on the vertex stage.
@@ -184,36 +185,36 @@ pub struct SymbolTable
     map: Option<HashMap<String, Symbol>>
 }
 
-impl SymbolTable
+impl NamedTable for SymbolTable
 {
-    /// Constructs a new symbol table from a list of
-    /// [Symbol](crate::variant::shader::symbol::Symbol).
-    ///
-    /// # Arguments
-    ///
-    /// * `list`: the list of symbols.
-    ///
-    /// returns: SymbolTable
-    pub fn new(list: Vec<Symbol>) -> SymbolTable
+    type Inner = Symbol;
+
+    fn new(list: Vec<Self::Inner>) -> Self
     {
-        return SymbolTable { list, map: None };
+        return SymbolTable {
+            list,
+            map: None
+        };
     }
 
-    /// Builds the object map for easy and efficient lookup of symbols by name.
-    ///
-    /// **You must call this function before you can use find_symbol.**
-    ///
-    /// # Arguments
-    ///
-    /// * `package`: the [ShaderPackDecoder](crate::variant::shader::ShaderPackDecoder) to load the strings from.
-    ///
-    /// returns: Result<(), Error>
-    ///
-    /// # Errors
-    ///
-    /// An [Error](crate::error::Error) is returned if the strings could
-    /// not be loaded.
-    pub fn build_lookup_table<TBackend: IoBackend>(&mut self, package: &mut ShaderPackDecoder<TBackend>) -> Result<(), crate::strings::ReadError>
+    fn lookup(&self, name: &str) -> Option<&Self::Inner>
+    {
+        if let Some(map) = &self.map {
+            return map.get(name);
+        } else {
+            panic!("Lookup table has not yet been initialized, please call build_lookup_table");
+        }
+    }
+
+    fn get_all(&self) -> &[Self::Inner]
+    {
+        return &self.list;
+    }
+}
+
+impl<TBackend: IoBackend> BuildNamedTable<ShaderPackDecoder<TBackend>> for SymbolTable
+{
+    fn build_lookup_table(&mut self, package: &mut ShaderPackDecoder<TBackend>) -> Result<(), crate::strings::ReadError>
     {
         let mut map = HashMap::new();
         for v in &self.list {
@@ -222,32 +223,5 @@ impl SymbolTable
         }
         self.map = Some(map);
         return Ok(());
-    }
-
-    /// Gets all symbols in this BPXS.
-    pub fn get_symbols(&self) -> &Vec<Symbol>
-    {
-        return &self.list;
-    }
-
-    /// Finds a symbol by its name.
-    /// Returns None if the symbol does not exist.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: the name of the symbol to search for.
-    ///
-    /// returns: Option<&Symbol>
-    ///
-    /// # Panics
-    ///
-    /// Panics if the lookup table is not yet built.
-    pub fn find_symbol(&self, name: &str) -> Option<&Symbol>
-    {
-        if let Some(map) = &self.map {
-            return map.get(name);
-        } else {
-            panic!("SymbolTable lookup table has not yet been initialized, please call build_lookup_table");
-        }
     }
 }
