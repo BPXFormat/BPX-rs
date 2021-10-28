@@ -147,6 +147,7 @@ impl PackageBuilder
     /// ```
     /// use std::io::{Seek, SeekFrom};
     /// use bpx::utils::new_byte_buf;
+    /// use bpx::variant::NamedTable;
     /// use bpx::variant::package::{PackageBuilder, PackageDecoder};
     ///
     /// let mut bpxp = PackageBuilder::new().build(new_byte_buf(0)).unwrap();
@@ -158,8 +159,8 @@ impl PackageBuilder
     /// //Attempt decoding our in-memory BPXP
     /// let mut bpxp = PackageDecoder::new(bytebuf).unwrap();
     /// let table = bpxp.read_object_table().unwrap();
-    /// assert_eq!(table.get_objects().len(), 1);
-    /// let object = table.get_objects()[0];
+    /// assert_eq!(table.get_all().len(), 1);
+    /// let object = table.get_all()[0];
     /// assert_eq!(bpxp.get_object_name(&object).unwrap(), "TestObject");
     /// let mut data = Vec::new();
     /// bpxp.unpack_object(&object, &mut data);

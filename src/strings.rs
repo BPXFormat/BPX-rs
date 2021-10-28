@@ -38,6 +38,7 @@ use std::{
 
 use crate::{section::SectionData, Interface, SectionHandle};
 
+#[derive(Debug)]
 pub enum ReadError
 {
     /// Describes an utf8 decoding/encoding error.
@@ -72,6 +73,7 @@ impl From<crate::error::ReadError> for ReadError
     }
 }
 
+#[derive(Debug)]
 pub enum WriteError
 {
     /// Describes an io error.
@@ -106,7 +108,7 @@ impl From<()> for WriteError
 ///
 /// ```
 /// use bpx::encoder::Encoder;
-/// use bpx::header::SectionHeader;
+/// use bpx::header::{SectionHeader, Struct};
 /// use bpx::strings::StringSection;
 /// use bpx::utils::new_byte_buf;
 ///

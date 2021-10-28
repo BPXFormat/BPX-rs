@@ -34,10 +34,19 @@ use std::ops::{Deref, DerefMut};
 pub use data::SectionData;
 pub use data::new_section_data;
 
+#[derive(Debug)]
 pub enum Error
 {
     AlreadyOpen,
     Io(std::io::Error)
+}
+
+impl From<std::io::Error> for Error
+{
+    fn from(e: std::io::Error) -> Self
+    {
+        return Error::Io(e);
+    }
 }
 
 pub trait Section

@@ -26,18 +26,21 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#[derive(Debug)]
 pub enum EosContext
 {
     Object,
     ObjectTable
 }
 
+#[derive(Debug)]
 pub enum Section
 {
     Strings,
     ObjectTable
 }
 
+#[derive(Debug)]
 pub enum ReadError
 {
     Bpx(crate::error::ReadError),
@@ -91,6 +94,7 @@ impl From<crate::sd::ReadError> for ReadError
     }
 }
 
+#[derive(Debug)]
 pub enum WriteError
 {
     Bpx(crate::error::WriteError),

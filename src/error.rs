@@ -37,6 +37,7 @@ use std::{
 //ReadError, WriteError
 //TODO: Implement MorphableSection which starts as InMemorySection and as size increases auto jumps to FileSection
 
+#[derive(Debug)]
 pub enum DeflateError
 {
     Memory,
@@ -59,6 +60,7 @@ impl From<std::io::Error> for DeflateError
     }
 }
 
+#[derive(Debug)]
 pub enum InflateError
 {
     Memory,
@@ -81,6 +83,7 @@ impl From<std::io::Error> for InflateError
     }
 }
 
+#[derive(Debug)]
 pub enum ReadError
 {
     /// Describes a checksum error.
@@ -132,6 +135,7 @@ impl From<InflateError> for ReadError
     }
 }
 
+#[derive(Debug)]
 pub enum WriteError
 {
     /// Describes an io error.

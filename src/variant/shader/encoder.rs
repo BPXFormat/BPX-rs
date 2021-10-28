@@ -130,6 +130,7 @@ impl ShaderPackBuilder
     /// ```
     /// use std::io::{Seek, SeekFrom};
     /// use bpx::utils::new_byte_buf;
+    /// use bpx::variant::NamedTable;
     /// use bpx::variant::package::{PackageBuilder, PackageDecoder};
     /// use bpx::variant::shader::{Shader, ShaderPackBuilder, ShaderPackDecoder, Stage};
     /// use bpx::variant::shader::symbol::SymbolType;
@@ -147,8 +148,8 @@ impl ShaderPackBuilder
     /// //Attempt decoding our in-memory BPXP
     /// let mut bpxs = ShaderPackDecoder::new(bytebuf).unwrap();
     /// let table = bpxs.read_symbol_table().unwrap();
-    /// assert_eq!(table.get_symbols().len(), 1);
-    /// let sym = table.get_symbols()[0];
+    /// assert_eq!(table.get_all().len(), 1);
+    /// let sym = table.get_all()[0];
     /// assert_eq!(bpxs.get_symbol_count(), 1);
     /// assert_eq!(bpxs.get_symbol_name(&sym).unwrap(), "test");
     /// let shader = bpxs.load_shader(bpxs.list_shaders()[0]).unwrap();
