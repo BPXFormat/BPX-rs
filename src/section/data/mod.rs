@@ -82,19 +82,6 @@ pub trait SectionData: Read + Write + Seek
     fn size(&self) -> usize;
 }
 
-/// Creates new section data by automatically choosing the right container given a section size.
-///
-/// *This function is not intended for direct use.*
-///
-/// # Arguments
-///
-/// * `size`: optional size of section, if None the section will automatically reallocate to fit its content.
-///
-/// returns: Result<Box<dyn SectionData, Global>, Error>
-///
-/// # Errors
-///
-/// An [Error](std::io::Error) is returned in case the temporary file could not be created.
 pub fn new_section_data(size: Option<u32>) -> Result<Box<dyn SectionData>>
 {
     if let Some(s) = size {

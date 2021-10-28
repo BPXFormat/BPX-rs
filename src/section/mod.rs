@@ -32,7 +32,7 @@ mod data;
 mod auto;
 
 pub use data::SectionData;
-pub use data::new_section_data;
+use data::new_section_data;
 
 #[derive(Debug)]
 pub enum Error
