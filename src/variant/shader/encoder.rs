@@ -49,6 +49,7 @@ use crate::{
     Interface,
     SectionHandle
 };
+use crate::header::Struct;
 use crate::variant::shader::error::WriteError;
 
 /// Utility to easily generate a [ShaderPackEncoder](crate::variant::shader::ShaderPackEncoder).
@@ -266,16 +267,16 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
     {
         let address = self.strings.put(&mut self.encoder, name.as_ref())?;
         let extended_data = self.write_extended_data(extended_data)?;
-        let sym = Symbol {
+        let buf = Symbol {
             name: address,
             extended_data,
             flags,
             stype,
             register
-        };
+        }.to_bytes();
         //TODO: Fix
         let data = self.encoder.open_section(self.symbol_table).unwrap();
-        data.write(&sym.to_bytes())?;
+        data.write(&buf)?;
         self.num_symbols += 1;
         self.patch_extended_data();
         return Ok(());

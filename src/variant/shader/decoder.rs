@@ -37,7 +37,7 @@ use crate::{
     strings::StringSection,
     utils::OptionExtension,
     variant::shader::{
-        symbol::{Symbol, SymbolTable, FLAG_EXTENDED_DATA, SYMBOL_STRUCTURE_SIZE},
+        symbol::{Symbol, SymbolTable, FLAG_EXTENDED_DATA},
         Shader,
         Stage,
         Target,
@@ -50,8 +50,10 @@ use crate::{
     Interface,
     SectionHandle
 };
+use crate::header::Struct;
 use crate::variant::NamedTable;
 use crate::variant::shader::error::{EosContext, ReadError, Section};
+use crate::variant::shader::symbol::SIZE_SYMBOL_STRUCTURE;
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
 {
@@ -230,7 +232,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     pub fn read_symbol_table(&mut self) -> Result<SymbolTable, ReadError>
     {
         let mut v = Vec::new();
-        let count = self.decoder.get_section_header(self.symbol_table).size / SYMBOL_STRUCTURE_SIZE as u32;
+        let count = self.decoder.get_section_header(self.symbol_table).size / SIZE_SYMBOL_STRUCTURE as u32;
         let mut symbol_table = self.decoder.open_section(self.symbol_table)?;
 
         if count != self.num_symbols as u32 {

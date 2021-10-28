@@ -28,8 +28,6 @@
 
 use std::io::Read;
 
-use byteorder::{ByteOrder, LittleEndian};
-
 use crate::{
     builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
     encoder::{Encoder, IoBackend},
@@ -41,7 +39,9 @@ use crate::{
     Interface,
     SectionHandle
 };
+use crate::header::Struct;
 use crate::variant::package::error::WriteError;
+use crate::variant::package::object::ObjectHeader;
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
@@ -299,12 +299,13 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
         }
         {
             // Fill and write the object header
-            let mut buf: [u8; 20] = [0; 20];
             let mut strings = StringSection::new(self.strings);
-            LittleEndian::write_u64(&mut buf[0..8], object_size as u64);
-            LittleEndian::write_u32(&mut buf[8..12], strings.put(&mut self.encoder, &name)?);
-            LittleEndian::write_u32(&mut buf[12..16], start);
-            LittleEndian::write_u32(&mut buf[16..20], offset);
+            let buf = ObjectHeader {
+                size: object_size as u64,
+                name: strings.put(&mut self.encoder, &name)?,
+                start,
+                offset
+            }.to_bytes();
             // Write the object header
             //TODO: Fix
             let object_table = self.encoder.open_section(self.object_table).unwrap();

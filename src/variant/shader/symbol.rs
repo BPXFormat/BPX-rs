@@ -28,7 +28,7 @@
 
 //! Contains utilities to work with the symbol table section.
 
-use std::{collections::HashMap, io::Read};
+use std::{collections::HashMap};
 
 use byteorder::{ByteOrder, LittleEndian};
 

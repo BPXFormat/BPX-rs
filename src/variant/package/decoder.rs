@@ -28,8 +28,6 @@
 
 use std::io::{SeekFrom, Write};
 
-use byteorder::{ByteOrder, LittleEndian};
-
 use crate::{
     decoder::{Decoder, IoBackend},
     header::{SECTION_TYPE_SD, SECTION_TYPE_STRING},
@@ -45,8 +43,9 @@ use crate::{
     Interface,
     SectionHandle
 };
+use crate::header::Struct;
 use crate::variant::NamedTable;
-use crate::variant::package::error::{EosContext, ReadError, Section};
+use crate::variant::package::error::{ReadError, Section};
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
@@ -175,23 +174,11 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     {
         let mut v = Vec::new();
         let count = self.decoder.get_section_header(self.object_table).size / 20;
-        let object_table = self.decoder.open_section(self.object_table)?;
+        let mut object_table = self.decoder.open_section(self.object_table)?;
 
         for _ in 0..count {
-            let mut buf: [u8; 20] = [0; 20];
-            if object_table.read(&mut buf)? != 20 {
-                return Err(ReadError::Eos(EosContext::ObjectTable));
-            }
-            let size = LittleEndian::read_u64(&buf[0..8]);
-            let name_ptr = LittleEndian::read_u32(&buf[8..12]);
-            let start = LittleEndian::read_u32(&buf[12..16]);
-            let offset = LittleEndian::read_u32(&buf[16..20]);
-            v.push(ObjectHeader {
-                size,
-                name: name_ptr,
-                start,
-                offset
-            })
+            let header = ObjectHeader::read(&mut object_table)?;
+            v.push(header);
         }
         return Ok(ObjectTable::new(v));
     }
