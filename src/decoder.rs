@@ -39,6 +39,7 @@ use crate::{
     SectionHandle
 };
 use crate::error::ReadError;
+use crate::header::Struct;
 
 const READ_BLOCK_SIZE: usize = 8192;
 

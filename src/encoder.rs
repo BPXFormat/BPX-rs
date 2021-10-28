@@ -50,6 +50,7 @@ use crate::{
     Interface,
     SectionHandle
 };
+use crate::header::{GetChecksum, Struct};
 
 const READ_BLOCK_SIZE: usize = 8192;
 

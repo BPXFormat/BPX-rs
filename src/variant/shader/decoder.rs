@@ -50,6 +50,7 @@ use crate::{
     Interface,
     SectionHandle
 };
+use crate::variant::NamedTable;
 use crate::variant::shader::error::{EosContext, ReadError, Section};
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>

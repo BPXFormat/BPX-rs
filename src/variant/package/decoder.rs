@@ -45,6 +45,7 @@ use crate::{
     Interface,
     SectionHandle
 };
+use crate::variant::NamedTable;
 use crate::variant::package::error::{EosContext, ReadError, Section};
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;

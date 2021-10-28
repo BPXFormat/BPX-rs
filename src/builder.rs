@@ -28,14 +28,7 @@
 
 //! High-level utilities to generate low-level file headers.
 
-use crate::header::{
-    MainHeader,
-    SectionHeader,
-    FLAG_CHECK_CRC32,
-    FLAG_CHECK_WEAK,
-    FLAG_COMPRESS_XZ,
-    FLAG_COMPRESS_ZLIB
-};
+use crate::header::{MainHeader, SectionHeader, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, Struct};
 
 const COMPRESSION_THRESHOLD: u32 = 65536;
 

@@ -30,23 +30,20 @@
 
 mod data;
 
+use std::ops::{Deref, DerefMut};
 pub use data::SectionData;
 pub use data::new_section_data;
 
-/*use std::cell::RefMut;
-
-use crate::header::SectionHeader;
-
 pub enum Error
 {
-    DataAlreadyOpen,
-    NotLoaded
+    AlreadyOpen,
+    Io(std::io::Error)
 }
 
 pub trait Section
 {
-    fn open(&self) -> Result<RefMut<'_, dyn SectionData>, Error>;
-    fn get_header(&self) -> SectionHeader;
-    fn index(&self) -> u32;
+    type DataRef: Deref<Target = dyn SectionData> + DerefMut;
+
+    fn open(&self) -> Result<Self::DataRef, Error>;
+    fn realloc(&self, size: u32) -> Result<(), Error>;
 }
-*/
