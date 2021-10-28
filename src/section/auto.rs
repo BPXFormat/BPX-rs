@@ -43,6 +43,23 @@ pub struct Ref<'a>
     modified: &'a Cell<bool>
 }
 
+impl<'a> Ref<'a>
+{
+    pub fn as_mut(&mut self) -> &mut &mut dyn SectionData
+    {
+        unsafe {
+            return std::mem::transmute(&mut self.r.deref_mut().deref_mut());
+        }
+    }
+
+    pub fn as_ref(&self) -> &&dyn SectionData
+    {
+        unsafe {
+            return std::mem::transmute(&self.r.deref().deref());
+        }
+    }
+}
+
 impl<'a> Deref for Ref<'a>
 {
     type Target = dyn SectionData;

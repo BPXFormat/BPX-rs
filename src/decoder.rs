@@ -28,7 +28,7 @@
 
 //! The BPX decoder.
 
-use std::{io, io::Write, ops::DerefMut, rc::Rc};
+use std::{io, io::Write, rc::Rc};
 
 use crate::{
     compression::{Checksum, Crc32Checksum, Inflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod},
@@ -206,24 +206,24 @@ fn load_section<TBackend: IoBackend>(
         data.seek(io::SeekFrom::Start(0))?;
         if section.flags & FLAG_CHECK_WEAK != 0 {
             let mut chksum = WeakChecksum::new();
-            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
-            load_section_checked(file, &section, &mut data.deref_mut(), &mut chksum)?;
+            //TODO: Check
+            load_section_checked(file, &section, data.as_mut(), &mut chksum)?;
             let v = chksum.finish();
             if v != section.chksum {
                 return Err(ReadError::Checksum(v, section.chksum));
             }
         } else if section.flags & FLAG_CHECK_CRC32 != 0 {
             let mut chksum = Crc32Checksum::new();
-            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
-            load_section_checked(file, &section, &mut data.deref_mut(), &mut chksum)?;
+            //TODO: Check
+            load_section_checked(file, &section, data.as_mut(), &mut chksum)?;
             let v = chksum.finish();
             if v != section.chksum {
                 return Err(ReadError::Checksum(v, section.chksum));
             }
         } else {
             let mut chksum = WeakChecksum::new();
-            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
-            load_section_checked(file, &section, &mut data.deref_mut(), &mut chksum)?;
+            //TODO: Check
+            load_section_checked(file, &section, data.as_mut(), &mut chksum)?;
         }
         data.seek(io::SeekFrom::Start(0))?;
     } //Amazing: another defect of the Rust borrow checker still so stupid

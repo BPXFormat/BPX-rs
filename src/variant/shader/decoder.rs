@@ -26,7 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::{io::SeekFrom, ops::DerefMut, rc::Rc};
+use std::{io::SeekFrom, rc::Rc};
 
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -242,8 +242,8 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
             return Err(ReadError::Eos(EosContext::SymbolTable));
         }
         for _ in 0..count {
-            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
-            let sym = Symbol::read(&mut symbol_table.deref_mut())?;
+            //TODO: Check
+            let sym = Symbol::read(symbol_table.as_mut())?;
             v.push(sym);
         }
         return Ok(SymbolTable::new(v));
@@ -278,8 +278,8 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
         })?;
         let mut data = section.open()?;
         data.seek(SeekFrom::Start(sym.extended_data as _))?;
-        //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
-        let obj = Object::read(&mut data.deref_mut())?;
+        //TODO: Check
+        let obj = Object::read(data.as_mut())?;
         return Ok(obj);
     }
 

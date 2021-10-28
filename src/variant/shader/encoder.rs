@@ -26,7 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::{ops::DerefMut, rc::Rc};
+use std::rc::Rc;
 
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -232,8 +232,8 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
             )?;
             let mut section = handle.open()?;
             let offset = section.size();
-            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
-            obj.write(&mut section.deref_mut())?;
+            //TODO: Check
+            obj.write(section.as_mut())?;
             return Ok(offset as u32);
         }
         return Ok(0xFFFFFF);

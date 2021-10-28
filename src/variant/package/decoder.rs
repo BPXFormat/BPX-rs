@@ -28,7 +28,6 @@
 
 use std::{
     io::{SeekFrom, Write},
-    ops::DerefMut,
     rc::Rc
 };
 
@@ -185,8 +184,8 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
         let mut object_table = self.object_table.open()?;
 
         for _ in 0..count {
-            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
-            let header = ObjectHeader::read(&mut object_table.deref_mut())?;
+            //TODO: Check
+            let header = ObjectHeader::read(object_table.as_mut())?;
             v.push(header);
         }
         return Ok(ObjectTable::new(v));

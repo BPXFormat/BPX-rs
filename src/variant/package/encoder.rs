@@ -26,7 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::{io::Read, ops::DerefMut, rc::Rc};
+use std::{io::Read, rc::Rc};
 
 use crate::{
     builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
@@ -218,8 +218,8 @@ impl PackageBuilder
                 .build();
             let metadata = encoder.create_section(metadata_header)?.clone();
             let mut data = metadata.open()?;
-            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
-            obj.write(&mut data.deref_mut())?;
+            //TODO: Check
+            obj.write(data.as_mut())?;
         }
         return Ok(PackageEncoder {
             strings: StringSection::new(strings),
