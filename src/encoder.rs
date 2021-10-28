@@ -30,8 +30,9 @@
 
 use std::{
     io,
-    io::{Seek, SeekFrom, Write}
+    io::{SeekFrom, Write}
 };
+use std::rc::Rc;
 
 use crate::{
     compression::{Checksum, Crc32Checksum, Deflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod},
@@ -46,11 +47,12 @@ use crate::{
         SIZE_MAIN_HEADER,
         SIZE_SECTION_HEADER
     },
-    section::{new_section_data, SectionData},
+    section::SectionData,
     Interface,
     SectionHandle
 };
 use crate::header::{GetChecksum, Struct};
+use crate::section::{AutoSection, Section};
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -63,7 +65,7 @@ impl<T: io::Write + io::Seek> IoBackend for T {}
 struct SectionEntry
 {
     header: SectionHeader,
-    data: Box<dyn SectionData>,
+    data: Rc<AutoSection>,
     index: u32,
     threshold: u32,
     flags: u8
@@ -147,11 +149,28 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// encoder.create_section(SectionHeader::new());
     /// assert_eq!(encoder.get_main_header().section_num, 1);
     /// ```
-    pub fn create_section(&mut self, header: SectionHeader) -> Result<SectionHandle, WriteError>
+    pub fn create_section(&mut self, header: SectionHeader) -> Result<&Rc<AutoSection>, WriteError>
     {
         self.modified = true;
         self.main_header.section_num += 1;
-        let section = create_section(&header)?;
+        for i in 0..self.sections.len() {
+            if self.sections[i].is_none() {
+                let section = create_section(&header, SectionHandle(i))?;
+                let entry = SectionEntry {
+                    header,
+                    data: section,
+                    index: self.cur_index,
+                    threshold: header.csize,
+                    flags: header.flags
+                };
+                self.sections[i] = Some(entry);
+                self.sections_in_order.push(SectionHandle(i));
+                self.cur_index += 1;
+                return Ok(&self.sections[i].as_ref().unwrap().data)
+            }
+        }
+        let r = self.sections.len();
+        let section = create_section(&header, SectionHandle(r))?;
         let entry = SectionEntry {
             header,
             data: section,
@@ -159,19 +178,10 @@ impl<TBackend: IoBackend> Encoder<TBackend>
             threshold: header.csize,
             flags: header.flags
         };
-        for i in 0..self.sections.len() {
-            if self.sections[i].is_none() {
-                self.sections[i] = Some(entry);
-                self.cur_index += 1;
-                self.sections_in_order.push(SectionHandle(i));
-                return Ok(SectionHandle(i));
-            }
-        }
         self.sections.push(Some(entry));
-        self.cur_index += 1;
-        let r = self.sections.len() - 1;
         self.sections_in_order.push(SectionHandle(r));
-        return Ok(SectionHandle(r));
+        self.cur_index += 1;
+        return Ok(&self.sections[r].as_ref().unwrap().data);
     }
 
     /// Removes a section from this BPX.
@@ -190,13 +200,14 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// use bpx::encoder::Encoder;
     /// use bpx::header::{SectionHeader, Struct};
     /// use bpx::Interface;
+    /// use bpx::section::Section;
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut encoder = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let handle = encoder.create_section(SectionHeader::new()).unwrap();
+    /// let section = encoder.create_section(SectionHeader::new()).unwrap().clone();
     /// encoder.save();
     /// assert_eq!(encoder.get_main_header().section_num, 1);
-    /// encoder.remove_section(handle);
+    /// encoder.remove_section(section.handle());
     /// encoder.save();
     /// assert_eq!(encoder.get_main_header().section_num, 0);
     /// ```
@@ -225,13 +236,14 @@ impl<TBackend: IoBackend> Encoder<TBackend>
             if section.data.size() > u32::MAX as usize {
                 return Err(WriteError::Capacity(section.data.size()));
             }
-            let last_section_ptr = section.data.seek(SeekFrom::Current(0))?;
-            section.data.seek(io::SeekFrom::Start(0))?;
-            let flags = get_flags(&section, section.data.size() as u32);
-            let (csize, chksum) = write_section(flags, section.data.as_mut(), &mut self.file)?;
-            section.data.seek(io::SeekFrom::Start(last_section_ptr))?;
+            let mut data = section.data.open()?;
+            let last_section_ptr = data.seek(SeekFrom::Current(0))?;
+            data.seek(io::SeekFrom::Start(0))?;
+            let flags = get_flags(&section, data.size() as u32);
+            let (csize, chksum) = write_section(flags, &mut *data, &mut self.file)?;
+            data.seek(io::SeekFrom::Start(last_section_ptr))?;
             section.header.csize = csize as u32;
-            section.header.size = section.data.size() as u32;
+            section.header.size = data.size() as u32;
             section.header.chksum = chksum;
             section.header.flags = flags;
             section.header.pointer = ptr;
@@ -292,6 +304,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         //Write all section data and section headers
         let (chksum_sht, all_sections_size) = self.write_sections(file_start_offset)?;
         self.main_header.file_size = all_sections_size as u64 + file_start_offset as u64;
+        self.main_header.chksum = 0;
         self.main_header.chksum = chksum_sht + self.main_header.get_checksum();
         //Relocate to the start of the file and write the BPX main header
         self.file.seek(SeekFrom::Start(0))?;
@@ -309,8 +322,6 @@ impl<TBackend: IoBackend> Encoder<TBackend>
 
 impl<TBackend: IoBackend> Interface for Encoder<TBackend>
 {
-    type Error = ();
-
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {
         for i in 0..self.sections.len() {
@@ -355,11 +366,11 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
         return handle.0 as u32;
     }
 
-    fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData, ()>
+    fn get_section(&self, handle: SectionHandle) -> &Rc<AutoSection>
     {
-        let section = self.sections[handle.0].as_mut().unwrap();
-        self.modified = true;
-        return Ok(section.data.as_mut());
+        let section = self.sections[handle.0].as_ref().unwrap();
+        //self.modified = true; //TODO: Fix
+        return &section.data;
     }
 
     fn get_main_header(&self) -> &MainHeader
@@ -384,17 +395,14 @@ fn get_flags(section: &SectionEntry, size: u32) -> u8
     return flags;
 }
 
-fn create_section(header: &SectionHeader) -> Result<Box<dyn SectionData>, WriteError>
+fn create_section(header: &SectionHeader, handle: SectionHandle) -> Result<Rc<AutoSection>, WriteError>
 {
-    if header.size == 0 {
-        let mut section = new_section_data(None)?;
-        section.seek(io::SeekFrom::Start(0))?;
-        return Ok(section);
-    } else {
-        let mut section = new_section_data(Some(header.size))?;
-        section.seek(io::SeekFrom::Start(0))?;
-        return Ok(section);
-    }
+    let section = Rc::new(AutoSection::new(header.size, handle)?);
+    {
+        let mut data = section.open().unwrap();
+        data.seek(io::SeekFrom::Start(0))?;
+    } //Another defect of the Rust borrow checker
+    return Ok(section);
 }
 
 fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(

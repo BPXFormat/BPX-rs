@@ -155,7 +155,9 @@ pub enum WriteError
     ///
     /// # Arguments
     /// * error description string.
-    Deflate(DeflateError)
+    Deflate(DeflateError),
+
+    Section(crate::section::Error)
 }
 
 impl From<std::io::Error> for WriteError
@@ -171,6 +173,14 @@ impl From<DeflateError> for WriteError
     fn from(e: DeflateError) -> Self
     {
         return WriteError::Deflate(e);
+    }
+}
+
+impl From<crate::section::Error> for WriteError
+{
+    fn from(e: crate::section::Error) -> Self
+    {
+        return WriteError::Section(e);
     }
 }
 

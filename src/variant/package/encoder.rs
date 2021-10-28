@@ -27,6 +27,8 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::Read;
+use std::ops::DerefMut;
+use std::rc::Rc;
 
 use crate::{
     builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
@@ -36,10 +38,10 @@ use crate::{
     strings::StringSection,
     utils::OptionExtension,
     variant::package::{Architecture, Platform, SECTION_TYPE_DATA, SECTION_TYPE_OBJECT_TABLE, SUPPORTED_VERSION},
-    Interface,
-    SectionHandle
+    Interface
 };
 use crate::header::Struct;
+use crate::section::{AutoSection, Section};
 use crate::variant::package::error::WriteError;
 use crate::variant::package::object::ObjectHeader;
 
@@ -152,7 +154,7 @@ impl PackageBuilder
     ///
     /// let mut bpxp = PackageBuilder::new().build(new_byte_buf(0)).unwrap();
     /// bpxp.pack_object("TestObject", "This is a test 你好".as_bytes());
-    /// bpxp.save();
+    /// bpxp.save().unwrap();
     /// //Reset our bytebuf pointer to start
     /// let mut bytebuf = bpxp.into_inner().into_inner();
     /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
@@ -203,20 +205,21 @@ impl PackageBuilder
             .with_compression(CompressionMethod::Zlib)
             .with_type(SECTION_TYPE_OBJECT_TABLE)
             .build();
-        let strings = encoder.create_section(strings_header)?;
-        let object_table = encoder.create_section(object_table_header)?;
+        let strings = encoder.create_section(strings_header)?.clone();
+        let object_table = encoder.create_section(object_table_header)?.clone();
         if let Some(obj) = self.metadata {
             let metadata_header = SectionHeaderBuilder::new()
                 .with_checksum(Checksum::Weak)
                 .with_compression(CompressionMethod::Zlib)
                 .with_type(SECTION_TYPE_SD)
                 .build();
-            let metadata = encoder.create_section(metadata_header)?;
-            //TODO: Fix
-            obj.write(&mut encoder.open_section(metadata).unwrap())?;
+            let metadata = encoder.create_section(metadata_header)?.clone();
+            let mut data = metadata.open()?;
+            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
+            obj.write(&mut data.deref_mut())?;
         }
         return Ok(PackageEncoder {
-            strings,
+            strings: StringSection::new(strings),
             encoder,
             last_data_section: None,
             object_table
@@ -227,9 +230,9 @@ impl PackageBuilder
 /// Represents a BPX Package encoder.
 pub struct PackageEncoder<TBackend: IoBackend>
 {
-    strings: SectionHandle,
-    last_data_section: Option<SectionHandle>,
-    object_table: SectionHandle,
+    strings: StringSection,
+    last_data_section: Option<Rc<AutoSection>>,
+    object_table: Rc<AutoSection>,
     encoder: Encoder<TBackend>
 }
 
@@ -245,10 +248,10 @@ fn create_data_section_header() -> SectionHeader
 
 impl<TBackend: IoBackend> PackageEncoder<TBackend>
 {
-    fn write_object<TRead: Read>(&mut self, source: &mut TRead, data_id: SectionHandle) -> Result<(usize, bool), crate::error::WriteError>
+    fn write_object<TRead: Read>(&mut self, source: &mut TRead, data_id: &Rc<AutoSection>) -> Result<(usize, bool), crate::error::WriteError>
     {
         //TODO: Fix
-        let data = self.encoder.open_section(data_id).unwrap();
+        let mut data = data_id.open()?;
         let mut buf: [u8; DATA_WRITE_BUFFER_SIZE] = [0; DATA_WRITE_BUFFER_SIZE];
         let mut res = source.read(&mut buf)?;
         let mut count = res;
@@ -282,38 +285,39 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     {
         let mut object_size = 0;
         let useless = &mut self.encoder;
-        let mut data_section = *self
+        let mut data_section = self
             .last_data_section
-            .get_or_insert_with_err(|| useless.create_section(create_data_section_header()))?;
-        let start = self.encoder.get_section_index(data_section);
-        //TODO: Fix
-        let offset = self.encoder.open_section(data_section).unwrap().size() as u32;
+            .get_or_insert_with_err(|| -> Result<Rc<AutoSection>, crate::error::WriteError> {
+                //Here Rust type inference is even more broken! Cloning needs to be done twice!!!!
+                let fuckyourust = useless.create_section(create_data_section_header())?;
+                return Ok(fuckyourust.clone());
+            })?.clone();
+        let start = self.encoder.get_section_index(data_section.handle());
+        let offset = data_section.size() as u32;
 
         loop {
-            let (count, need_section) = self.write_object(&mut source, data_section)?;
+            let (count, need_section) = self.write_object(&mut source, &data_section)?;
             object_size += count;
             if need_section {
-                data_section = self.encoder.create_section(create_data_section_header())?;
+                data_section = self.encoder.create_section(create_data_section_header())?.clone();
             } else {
                 break;
             }
         }
         {
             // Fill and write the object header
-            let mut strings = StringSection::new(self.strings);
             let buf = ObjectHeader {
                 size: object_size as u64,
-                name: strings.put(&mut self.encoder, &name)?,
+                name: self.strings.put(&name)?,
                 start,
                 offset
             }.to_bytes();
             // Write the object header
-            //TODO: Fix
-            let object_table = self.encoder.open_section(self.object_table).unwrap();
+            let mut object_table = self.object_table.open()?;
             object_table.write(&buf)?;
         }
         //TODO: Fix
-        if self.encoder.open_section(data_section).unwrap().size() > MAX_DATA_SECTION_SIZE {
+        if data_section.size() > MAX_DATA_SECTION_SIZE {
             self.last_data_section = None;
         } else {
             self.last_data_section = Some(data_section);

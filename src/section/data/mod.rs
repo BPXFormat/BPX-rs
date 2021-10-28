@@ -57,10 +57,10 @@ pub trait SectionData: Read + Write + Seek
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let handle = file.create_section(SectionHeader::new()).unwrap();
-    /// let section = file.open_section(handle).unwrap();
-    /// let data = section.load_in_memory().unwrap();
-    /// assert_eq!(data.len(), 0);
+    /// let section = file.create_section(SectionHeader::new()).unwrap();
+    /// let mut data = section.open().unwrap();
+    /// let buf = data.load_in_memory().unwrap();
+    /// assert_eq!(buf.len(), 0);
     /// ```
     fn load_in_memory(&mut self) -> Result<Vec<u8>>;
 
@@ -75,9 +75,9 @@ pub trait SectionData: Read + Write + Seek
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let handle = file.create_section(SectionHeader::new()).unwrap();
-    /// let section = file.open_section(handle).unwrap();
-    /// assert_eq!(section.size(), 0);
+    /// let section = file.create_section(SectionHeader::new()).unwrap();
+    /// let data = section.open().unwrap();
+    /// assert_eq!(data.size(), 0);
     /// ```
     fn size(&self) -> usize;
 }

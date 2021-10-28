@@ -29,17 +29,19 @@
 //! The BPX decoder.
 
 use std::{io, io::Write};
+use std::ops::DerefMut;
+use std::rc::Rc;
 
 use crate::{
     compression::{Checksum, Crc32Checksum, Inflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod},
     header::{MainHeader, SectionHeader, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB},
-    section::{new_section_data, SectionData},
     utils::OptionExtension,
     Interface,
     SectionHandle
 };
 use crate::error::ReadError;
 use crate::header::Struct;
+use crate::section::AutoSection;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -49,43 +51,12 @@ pub trait IoBackend: io::Seek + io::Read
 }
 impl<T: io::Seek + io::Read> IoBackend for T {}
 
-/*pub struct Section
-{
-    data: Option<RefCell<dyn SectionData>>,
-    header: SectionHeader,
-    index: u32
-}
-
-impl crate::section::Section for Section
-{
-    fn open(&self) -> Result<RefMut<'_, dyn SectionData>, crate::section::Error>
-    {
-        if let Some(v) = self.data.as_ref() {
-            if let Ok(vv) = v.try_borrow_mut() {
-                return Ok(vv);
-            }
-            return Err(crate::section::Error::DataAlreadyOpen);
-        }
-        return Err(crate::section::Error::NotLoaded);
-    }
-
-    fn get_header(&self) -> SectionHeader
-    {
-        return self.header;
-    }
-
-    fn index(&self) -> u32
-    {
-        return self.index;
-    }
-}*/
-
 /// The BPX decoder.
 pub struct Decoder<TBackend: IoBackend>
 {
     main_header: MainHeader,
     sections: Vec<SectionHeader>,
-    sections_data: Vec<Option<Box<dyn SectionData>>>,
+    sections_data: Vec<Option<Rc<AutoSection>>>,
     file: TBackend
 }
 
@@ -150,6 +121,14 @@ impl<TBackend: IoBackend> Decoder<TBackend>
         return Ok(decoder);
     }
 
+    pub fn load_section(&mut self, handle: SectionHandle) -> Result<&Rc<AutoSection>, ReadError>
+    {
+        let header = &self.sections[handle.0];
+        let file = &mut self.file;
+        let object = self.sections_data[handle.0].get_or_insert_with_err(|| load_section(file, handle, header))?;
+        return Ok(object);
+    }
+
     /// Consumes this BPX decoder and returns the inner IO backend.
     pub fn into_inner(self) -> TBackend
     {
@@ -159,8 +138,6 @@ impl<TBackend: IoBackend> Decoder<TBackend>
 
 impl<TBackend: IoBackend> Interface for Decoder<TBackend>
 {
-    type Error = ReadError;
-
     fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
     {
         for i in 0..self.sections.len() {
@@ -201,12 +178,9 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
         return handle.0 as u32;
     }
 
-    fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn SectionData, ReadError>
+    fn get_section(&self, handle: SectionHandle) -> &Rc<AutoSection>
     {
-        let header = &self.sections[handle.0];
-        let file = &mut self.file;
-        let object = self.sections_data[handle.0].get_or_insert_with_err(|| load_section(file, header))?;
-        return Ok(object.as_mut());
+        return self.sections_data[handle.0].as_ref().unwrap();
     }
 
     fn get_main_header(&self) -> &MainHeader
@@ -215,30 +189,36 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
     }
 }
 
-fn load_section<TBackend: IoBackend>(file: &mut TBackend, section: &SectionHeader) -> Result<Box<dyn SectionData>, ReadError>
+fn load_section<TBackend: IoBackend>(file: &mut TBackend, handle: SectionHandle, section: &SectionHeader) -> Result<Rc<AutoSection>, ReadError>
 {
-    let mut data = new_section_data(Some(section.size))?;
-    data.seek(io::SeekFrom::Start(0))?;
-    if section.flags & FLAG_CHECK_WEAK != 0 {
-        let mut chksum = WeakChecksum::new();
-        load_section_checked(file, &section, &mut data, &mut chksum)?;
-        let v = chksum.finish();
-        if v != section.chksum {
-            return Err(ReadError::Checksum(v, section.chksum));
+    let sdata = Rc::new(AutoSection::new(section.size, handle)?);
+    {
+        let mut data = sdata.open().unwrap();
+        data.seek(io::SeekFrom::Start(0))?;
+        if section.flags & FLAG_CHECK_WEAK != 0 {
+            let mut chksum = WeakChecksum::new();
+            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
+            load_section_checked(file, &section, &mut data.deref_mut(), &mut chksum)?;
+            let v = chksum.finish();
+            if v != section.chksum {
+                return Err(ReadError::Checksum(v, section.chksum));
+            }
+        } else if section.flags & FLAG_CHECK_CRC32 != 0 {
+            let mut chksum = Crc32Checksum::new();
+            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
+            load_section_checked(file, &section, &mut data.deref_mut(), &mut chksum)?;
+            let v = chksum.finish();
+            if v != section.chksum {
+                return Err(ReadError::Checksum(v, section.chksum));
+            }
+        } else {
+            let mut chksum = WeakChecksum::new();
+            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
+            load_section_checked(file, &section, &mut data.deref_mut(), &mut chksum)?;
         }
-    } else if section.flags & FLAG_CHECK_CRC32 != 0 {
-        let mut chksum = Crc32Checksum::new();
-        load_section_checked(file, &section, &mut data, &mut chksum)?;
-        let v = chksum.finish();
-        if v != section.chksum {
-            return Err(ReadError::Checksum(v, section.chksum));
-        }
-    } else {
-        let mut chksum = WeakChecksum::new();
-        load_section_checked(file, &section, &mut data, &mut chksum)?;
-    }
-    data.seek(io::SeekFrom::Start(0))?;
-    return Ok(data);
+        data.seek(io::SeekFrom::Start(0))?;
+    } //Amazing: another defect of the Rust borrow checker still so stupid
+    return Ok(sdata);
 }
 
 fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(

@@ -27,6 +27,8 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::SeekFrom;
+use std::ops::DerefMut;
+use std::rc::Rc;
 
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -51,6 +53,7 @@ use crate::{
     SectionHandle
 };
 use crate::header::Struct;
+use crate::section::{AutoSection};
 use crate::variant::NamedTable;
 use crate::variant::shader::error::{EosContext, ReadError, Section};
 use crate::variant::shader::symbol::SIZE_SYMBOL_STRUCTURE;
@@ -101,9 +104,9 @@ pub struct ShaderPackDecoder<TBackend: IoBackend>
     num_symbols: u16,
     target: Target,
     btype: Type,
-    symbol_table: SectionHandle,
+    symbol_table: Rc<AutoSection>,
     strings: StringSection,
-    extended_data: Option<SectionHandle>
+    extended_data: Option<Rc<AutoSection>>
 }
 
 impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
@@ -121,7 +124,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     /// An [Error](crate::error::Error) is returned if some sections/headers could not be loaded.
     pub fn new(backend: TBackend) -> Result<ShaderPackDecoder<TBackend>, ReadError>
     {
-        let decoder = Decoder::new(backend)?;
+        let mut decoder = Decoder::new(backend)?;
         if decoder.get_main_header().btype != 'P' as u8 {
             return Err(ReadError::BadType(decoder.get_main_header().btype));
         }
@@ -143,14 +146,14 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
             None => return Err(ReadError::MissingSection(Section::SymbolTable))
         };
         return Ok(ShaderPackDecoder {
-            decoder,
             assembly_hash: hash,
             num_symbols,
             target,
             btype,
-            symbol_table,
-            strings: StringSection::new(strings),
-            extended_data: None
+            symbol_table: decoder.load_section(symbol_table)?.clone(),
+            strings: StringSection::new(decoder.load_section(strings)?.clone()),
+            extended_data: None,
+            decoder
         });
     }
 
@@ -178,7 +181,8 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
             //We must at least find a stage byte
             return Err(ReadError::Eos(EosContext::Shader));
         }
-        let section = self.decoder.open_section(handle)?;
+        let s = self.decoder.load_section(handle)?;
+        let mut section = s.open()?;
         let mut buf = section.load_in_memory()?;
         let stage = get_stage_from_code(buf.remove(0))?;
         return Ok(Shader { stage, data: buf });
@@ -221,7 +225,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     /// An [Error](crate::error::Error) is returned if the name could not be read.
     pub fn get_symbol_name(&mut self, sym: &Symbol) -> Result<&str, crate::strings::ReadError>
     {
-        return self.strings.get(&mut self.decoder, sym.name);
+        return self.strings.get(sym.name);
     }
 
     /// Reads the symbol table of this BPXS.
@@ -231,15 +235,17 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     /// An [Error](crate::error::Error) is returned in case of corruption or system error.
     pub fn read_symbol_table(&mut self) -> Result<SymbolTable, ReadError>
     {
+        use crate::section::Section;
         let mut v = Vec::new();
-        let count = self.decoder.get_section_header(self.symbol_table).size / SIZE_SYMBOL_STRUCTURE as u32;
-        let mut symbol_table = self.decoder.open_section(self.symbol_table)?;
+        let count = self.symbol_table.size() as u32 / SIZE_SYMBOL_STRUCTURE as u32;
+        let mut symbol_table = self.symbol_table.open()?;
 
         if count != self.num_symbols as u32 {
             return Err(ReadError::Eos(EosContext::SymbolTable));
         }
         for _ in 0..count {
-            let sym = Symbol::read(&mut symbol_table)?;
+            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
+            let sym = Symbol::read(&mut symbol_table.deref_mut())?;
             v.push(sym);
         }
         return Ok(SymbolTable::new(v));
@@ -265,16 +271,17 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
         if sym.flags & FLAG_EXTENDED_DATA == 0 {
             panic!("The symbol extended data is undefined.");
         }
-        let useless = &self.decoder;
-        let handle = *self.extended_data.get_or_insert_with_err(|| {
+        let useless = &mut self.decoder;
+        let section = self.extended_data.get_or_insert_with_err(|| {
             return match useless.find_section_by_type(SECTION_TYPE_EXTENDED_DATA) {
-                Some(v) => Ok(v),
+                Some(v) => Ok(useless.load_section(v)?.clone()),
                 None => Err(ReadError::MissingSection(Section::ExtendedData))
             };
         })?;
-        let mut data = self.decoder.open_section(handle)?;
+        let mut data = section.open()?;
         data.seek(SeekFrom::Start(sym.extended_data as _))?;
-        let obj = Object::read(&mut data)?;
+        //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
+        let obj = Object::read(&mut data.deref_mut())?;
         return Ok(obj);
     }
 

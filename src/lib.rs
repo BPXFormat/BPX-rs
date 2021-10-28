@@ -28,7 +28,9 @@
 
 //! This library is the official implementation for the [BPX](https://gitlab.com/bp3d/bpx/bpx/-/blob/master/BPX_Format.pdf) container format.
 
+use std::rc::Rc;
 use std::vec::Vec;
+use crate::section::AutoSection;
 
 pub mod builder;
 mod compression;
@@ -52,8 +54,6 @@ pub struct SectionHandle(usize);
 /// The interface implemented by both the BPX encoder and decoder.
 pub trait Interface
 {
-    type Error;
-
     /// Searches for the first section of a given type.
     /// Returns None if no section could be found.
     ///
@@ -135,11 +135,12 @@ pub trait Interface
     /// use bpx::encoder::Encoder;
     /// use bpx::Interface;
     /// use bpx::builder::SectionHeaderBuilder;
+    /// use bpx::section::Section;
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let handle = file.create_section(SectionHeaderBuilder::new().with_type(1).build()).unwrap();
-    /// let header = file.get_section_header(handle);
+    /// let section = file.create_section(SectionHeaderBuilder::new().with_type(1).build()).unwrap().clone();
+    /// let header = file.get_section_header(section.handle());
     /// assert_eq!(header.btype, 1);
     /// ```
     fn get_section_header(&self, handle: SectionHandle) -> &header::SectionHeader;
@@ -162,15 +163,16 @@ pub trait Interface
     /// use bpx::encoder::Encoder;
     /// use bpx::Interface;
     /// use bpx::builder::SectionHeaderBuilder;
+    /// use bpx::section::Section;
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let handle = file.create_section(SectionHeaderBuilder::new().build()).unwrap();
-    /// assert_eq!(file.get_section_index(handle), 0);
+    /// let section = file.create_section(SectionHeaderBuilder::new().build()).unwrap().clone();
+    /// assert_eq!(file.get_section_index(section.handle()), 0);
     /// ```
     fn get_section_index(&self, handle: SectionHandle) -> u32;
 
-    /// Opens a section for read and/or write.
+    /// Gets a section for read and/or write.
     ///
     /// # Arguments
     ///
@@ -196,12 +198,12 @@ pub trait Interface
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let handle = file.create_section(SectionHeaderBuilder::new().build()).unwrap();
-    /// let section = file.open_section(handle).unwrap();
-    /// let data = section.load_in_memory().unwrap();
-    /// assert_eq!(data.len(), 0);
+    /// let section = file.create_section(SectionHeaderBuilder::new().build()).unwrap();
+    /// let mut data = section.open().unwrap();
+    /// let buf = data.load_in_memory().unwrap();
+    /// assert_eq!(buf.len(), 0);
     /// ```
-    fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn section::SectionData, Self::Error>;
+    fn get_section(&self, handle: SectionHandle) -> &Rc<AutoSection>;
 
     /// Returns a read-only reference to the BPX main header.
     ///

@@ -29,8 +29,8 @@
 //! Utilities to manipulate the content of sections.
 
 mod data;
+mod auto;
 
-use std::ops::{Deref, DerefMut};
 pub use data::SectionData;
 pub use data::new_section_data;
 
@@ -51,8 +51,10 @@ impl From<std::io::Error> for Error
 
 pub trait Section
 {
-    type DataRef: Deref<Target = dyn SectionData> + DerefMut;
-
-    fn open(&self) -> Result<Self::DataRef, Error>;
+    fn size(&self) -> usize;
     fn realloc(&self, size: u32) -> Result<(), Error>;
+    fn handle(&self) -> SectionHandle;
 }
+
+pub use auto::AutoSection;
+use crate::SectionHandle;

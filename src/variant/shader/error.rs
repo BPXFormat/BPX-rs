@@ -47,6 +47,7 @@ pub enum ReadError
     Bpx(crate::error::ReadError),
     Io(std::io::Error),
     Sd(crate::sd::ReadError),
+    Section(crate::section::Error),
     Strings(crate::strings::ReadError),
     InvalidTargetCode(u8),
     InvalidTypeCode(u8),
@@ -94,12 +95,21 @@ impl From<crate::sd::ReadError> for ReadError
     }
 }
 
+impl From<crate::section::Error> for ReadError
+{
+    fn from(e: crate::section::Error) -> Self
+    {
+        return ReadError::Section(e);
+    }
+}
+
 #[derive(Debug)]
 pub enum WriteError
 {
     Bpx(crate::error::WriteError),
     Io(std::io::Error),
     Strings(crate::strings::WriteError),
+    Section(crate::section::Error),
     Sd(crate::sd::WriteError)
 }
 
@@ -124,6 +134,14 @@ impl From<crate::strings::WriteError> for WriteError
     fn from(e: crate::strings::WriteError) -> Self
     {
         return WriteError::Strings(e);
+    }
+}
+
+impl From<crate::section::Error> for WriteError
+{
+    fn from(e: crate::section::Error) -> Self
+    {
+        return WriteError::Section(e);
     }
 }
 

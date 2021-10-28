@@ -26,6 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use std::ops::DerefMut;
+use std::rc::Rc;
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
@@ -46,10 +48,10 @@ use crate::{
         SECTION_TYPE_SYMBOL_TABLE,
         SUPPORTED_VERSION
     },
-    Interface,
-    SectionHandle
+    Interface
 };
 use crate::header::Struct;
+use crate::section::AutoSection;
 use crate::variant::shader::error::WriteError;
 
 /// Utility to easily generate a [ShaderPackEncoder](crate::variant::shader::ShaderPackEncoder).
@@ -190,8 +192,8 @@ impl ShaderPackBuilder
             .with_compression(CompressionMethod::Zlib)
             .with_type(SECTION_TYPE_STRING)
             .build();
-        let strings = encoder.create_section(strings_header)?;
-        let symbol_table = encoder.create_section(symbol_table_header)?;
+        let strings = encoder.create_section(strings_header)?.clone();
+        let symbol_table = encoder.create_section(symbol_table_header)?.clone();
         return Ok(ShaderPackEncoder {
             encoder,
             strings: StringSection::new(strings),
@@ -207,8 +209,8 @@ pub struct ShaderPackEncoder<TBackend: IoBackend>
 {
     encoder: Encoder<TBackend>,
     strings: StringSection,
-    extended_data: Option<SectionHandle>,
-    symbol_table: SectionHandle,
+    extended_data: Option<Rc<AutoSection>>,
+    symbol_table: Rc<AutoSection>,
     num_symbols: u16
 }
 
@@ -218,18 +220,19 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
     {
         if let Some(obj) = extended_data {
             let useless = &mut self.encoder;
-            let handle = *self.extended_data.get_or_insert_with_err(|| {
+            let handle = self.extended_data.get_or_insert_with_err(|| -> Result<Rc<AutoSection>, crate::error::WriteError> {
                 let header = SectionHeaderBuilder::new()
                     .with_type(SECTION_TYPE_EXTENDED_DATA)
                     .with_checksum(Checksum::Crc32)
                     .with_compression(CompressionMethod::Zlib)
                     .build();
-                return useless.create_section(header);
+                let fuckyourust = useless.create_section(header)?;
+                return Ok(fuckyourust.clone());
             })?;
-            //TODO: Fix
-            let mut section = self.encoder.open_section(handle).unwrap();
+            let mut section = handle.open()?;
             let offset = section.size();
-            obj.write(&mut section)?;
+            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
+            obj.write(&mut section.deref_mut())?;
             return Ok(offset as u32);
         }
         return Ok(0xFFFFFF);
@@ -266,7 +269,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
         extended_data: Option<Object>
     ) -> Result<(), WriteError>
     {
-        let address = self.strings.put(&mut self.encoder, name.as_ref())?;
+        let address = self.strings.put(name.as_ref())?;
         let extended_data = self.write_extended_data(extended_data)?;
         let buf = Symbol {
             name: address,
@@ -275,9 +278,11 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
             stype,
             register
         }.to_bytes();
-        //TODO: Fix
-        let data = self.encoder.open_section(self.symbol_table).unwrap();
-        data.write(&buf)?;
+        {
+            let mut data = self.symbol_table.open()?;
+            data.write(&buf)?;
+        } //Rust borrow checker is so stupid not able to understand that data is not used after this line
+        //So we have to add another scope to workarround that defect
         self.num_symbols += 1;
         self.patch_extended_data();
         return Ok(());
@@ -304,8 +309,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
                 .with_size(shader.data.len() as u32 + 1)
                 .build()
         )?;
-        //TODO: Fix
-        let data = self.encoder.open_section(section).unwrap();
+        let mut data = section.open()?;
         let mut buf = shader.data;
         match shader.stage {
             Stage::Vertex => buf.insert(0, 0x0),

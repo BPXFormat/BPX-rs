@@ -35,8 +35,10 @@ use std::{
     path::Path,
     string::String
 };
+use std::rc::Rc;
 
-use crate::{section::SectionData, Interface, SectionHandle};
+use crate::section::SectionData;
+use crate::section::AutoSection;
 
 #[derive(Debug)]
 pub enum ReadError
@@ -53,8 +55,8 @@ pub enum ReadError
     /// * the error that occured.
     Io(std::io::Error),
 
-    /// An Interface error.
-    Bpx(crate::error::ReadError)
+    /// A section error.
+    Section(crate::section::Error)
 }
 
 impl From<std::io::Error> for ReadError
@@ -65,11 +67,11 @@ impl From<std::io::Error> for ReadError
     }
 }
 
-impl From<crate::error::ReadError> for ReadError
+impl From<crate::section::Error> for ReadError
 {
-    fn from(e: crate::error::ReadError) -> Self
+    fn from(e: crate::section::Error) -> Self
     {
-        return ReadError::Bpx(e);
+        return ReadError::Section(e);
     }
 }
 
@@ -82,8 +84,8 @@ pub enum WriteError
     /// * the error that occured.
     Io(std::io::Error),
 
-    /// An Interface error.
-    Bpx(())
+    /// A section error.
+    Section(crate::section::Error)
 }
 
 impl From<std::io::Error> for WriteError
@@ -94,11 +96,11 @@ impl From<std::io::Error> for WriteError
     }
 }
 
-impl From<()> for WriteError
+impl From<crate::section::Error> for WriteError
 {
-    fn from(_: ()) -> Self
+    fn from(e: crate::section::Error) -> Self
     {
-        return WriteError::Bpx(());
+        return WriteError::Section(e);
     }
 }
 
@@ -113,15 +115,15 @@ impl From<()> for WriteError
 /// use bpx::utils::new_byte_buf;
 ///
 /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-/// let handle = file.create_section(SectionHeader::new()).unwrap();
-/// let mut strings = StringSection::new(handle);
-/// let offset = strings.put(&mut file, "Test").unwrap();
-/// let str = strings.get(&mut file, offset).unwrap();
+/// let section = file.create_section(SectionHeader::new()).unwrap();
+/// let mut strings = StringSection::new(section.clone());
+/// let offset = strings.put("Test").unwrap();
+/// let str = strings.get(offset).unwrap();
 /// assert_eq!(str, "Test");
 /// ```
 pub struct StringSection
 {
-    handle: SectionHandle,
+    section: Rc<AutoSection>,
     cache: HashMap<u32, String>
 }
 
@@ -134,10 +136,10 @@ impl StringSection
     /// * `hdl`: handle to the string section.
     ///
     /// returns: StringSection
-    pub fn new(hdl: SectionHandle) -> StringSection
+    pub fn new(section: Rc<AutoSection>) -> StringSection
     {
         return StringSection {
-            handle: hdl,
+            section,
             cache: HashMap::new()
         };
     }
@@ -155,13 +157,13 @@ impl StringSection
     ///
     /// Returns an [Error](crate::error::Error) if the string could not be read or the
     /// section is corrupted/truncated.
-    pub fn get<TInterface: Interface<Error = crate::error::ReadError>>(&mut self, interface: &mut TInterface, address: u32) -> Result<&str, ReadError>
+    pub fn get(&mut self, address: u32) -> Result<&str, ReadError>
     {
         let res = match self.cache.entry(address) {
             Entry::Occupied(o) => o.into_mut(),
             Entry::Vacant(o) => {
-                let data = interface.open_section(self.handle)?;
-                let s = low_level_read_string(address, data)?;
+                let mut data = self.section.open()?;
+                let s = low_level_read_string(address, &mut *data)?;
                 o.insert(s)
             }
         };
@@ -180,10 +182,10 @@ impl StringSection
     /// # Errors
     ///
     /// Returns an [Error](crate::error::Error) if the string could not be written.
-    pub fn put<TInterface: Interface<Error = ()>>(&mut self, interface: &mut TInterface, s: &str) -> Result<u32, WriteError>
+    pub fn put(&mut self, s: &str) -> Result<u32, WriteError>
     {
-        let data = interface.open_section(self.handle)?;
-        let address = low_level_write_string(s, data)?;
+        let mut data = self.section.open()?;
+        let address = low_level_write_string(s, &mut *data)?;
         self.cache.insert(address, String::from(s));
         return Ok(address);
     }

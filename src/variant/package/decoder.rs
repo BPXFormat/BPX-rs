@@ -27,6 +27,8 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::{SeekFrom, Write};
+use std::ops::DerefMut;
+use std::rc::Rc;
 
 use crate::{
     decoder::{Decoder, IoBackend},
@@ -44,6 +46,7 @@ use crate::{
     SectionHandle
 };
 use crate::header::Struct;
+use crate::section::{AutoSection};
 use crate::variant::NamedTable;
 use crate::variant::package::error::{ReadError, Section};
 
@@ -57,7 +60,7 @@ pub struct PackageDecoder<TBackend: IoBackend>
     platform: Platform,
     strings: StringSection,
     decoder: Decoder<TBackend>,
-    object_table: SectionHandle
+    object_table: Rc<AutoSection>
 }
 
 fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Platform), ReadError>
@@ -99,7 +102,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// An [Error](crate::error::Error) is returned if some sections/headers could not be loaded.
     pub fn new(backend: TBackend) -> Result<PackageDecoder<TBackend>, ReadError>
     {
-        let decoder = Decoder::new(backend)?;
+        let mut decoder = Decoder::new(backend)?;
         if decoder.get_main_header().btype != 'P' as u8 {
             return Err(ReadError::BadType(decoder.get_main_header().btype));
         }
@@ -121,13 +124,13 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
         return Ok(PackageDecoder {
             architecture: a,
             platform: p,
-            strings: StringSection::new(strings),
+            strings: StringSection::new(decoder.load_section(strings)?.clone()),
             type_code: [
                 decoder.get_main_header().type_ext[2],
                 decoder.get_main_header().type_ext[3]
             ],
-            decoder,
-            object_table
+            object_table: decoder.load_section(object_table)?.clone(),
+            decoder
         });
     }
 
@@ -158,8 +161,9 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     pub fn read_metadata(&mut self) -> Result<Option<Object>, ReadError>
     {
         if let Some(handle) = self.decoder.find_section_by_type(SECTION_TYPE_SD) {
-            let mut data = self.decoder.open_section(handle)?;
-            let obj = Object::read(&mut data)?;
+            let section = self.decoder.load_section(handle)?;
+            let mut data = section.open()?;
+            let obj = Object::read(&mut *data)?;
             return Ok(Some(obj));
         }
         return Ok(None);
@@ -172,12 +176,14 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// An [Error](crate::error::Error) is returned in case of corruption or system error.
     pub fn read_object_table(&mut self) -> Result<ObjectTable, ReadError>
     {
+        use crate::section::Section;
         let mut v = Vec::new();
-        let count = self.decoder.get_section_header(self.object_table).size / 20;
-        let mut object_table = self.decoder.open_section(self.object_table)?;
+        let count = self.object_table.size() / 20;
+        let mut object_table = self.object_table.open()?;
 
         for _ in 0..count {
-            let header = ObjectHeader::read(&mut object_table)?;
+            //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
+            let header = ObjectHeader::read(&mut object_table.deref_mut())?;
             v.push(header);
         }
         return Ok(ObjectTable::new(v));
@@ -196,7 +202,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// An [Error](crate::error::Error) is returned if the name could not be read.
     pub fn get_object_name(&mut self, obj: &ObjectHeader) -> Result<&str, crate::strings::ReadError>
     {
-        return self.strings.get(&mut self.decoder, obj.name);
+        return self.strings.get(obj.name);
     }
 
     fn load_from_section<TWrite: Write>(
@@ -209,7 +215,8 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     {
         let mut len = 0;
         let mut buf: [u8; DATA_READ_BUFFER_SIZE] = [0; DATA_READ_BUFFER_SIZE];
-        let data = self.decoder.open_section(handle)?;
+        let section = self.decoder.load_section(handle)?;
+        let mut data = section.open()?;
 
         data.seek(SeekFrom::Start(offset as u64))?;
         while len < size {
