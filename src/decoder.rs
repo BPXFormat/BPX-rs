@@ -233,7 +233,7 @@ fn load_section<TBackend: IoBackend>(
 fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
     file: &mut TBackend,
     section: &SectionHeader,
-    out: &mut TWrite,
+    out: TWrite,
     chksum: &mut TChecksum
 ) -> Result<(), ReadError>
 {
@@ -250,7 +250,7 @@ fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum:
 fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
     bpx: &mut TBackend,
     header: &SectionHeader,
-    output: &mut TWrite,
+    mut output: TWrite,
     chksum: &mut TChecksum
 ) -> io::Result<()>
 {
@@ -272,7 +272,7 @@ fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChec
 fn load_section_compressed<TMethod: Inflater, TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
     bpx: &mut TBackend,
     header: &SectionHeader,
-    output: &mut TWrite,
+    output: TWrite,
     chksum: &mut TChecksum
 ) -> Result<(), ReadError>
 {

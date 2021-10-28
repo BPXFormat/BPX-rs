@@ -110,8 +110,8 @@ fn new_decoder() -> Result<z_stream, InflateError>
 
 fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
     stream: &mut z_stream,
-    input: &mut TRead,
-    output: &mut TWrite,
+    mut input: TRead,
+    mut output: TWrite,
     inflated_size: usize,
     chksum: &mut TChecksum
 ) -> Result<usize, DeflateError>
@@ -164,8 +164,8 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
 
 fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
     stream: &mut z_stream,
-    input: &mut TRead,
-    output: &mut TWrite,
+    mut input: TRead,
+    mut output: TWrite,
     deflated_size: usize,
     chksum: &mut TChecksum
 ) -> Result<(), InflateError>
@@ -211,8 +211,8 @@ pub struct ZlibCompressionMethod {}
 impl Deflater for ZlibCompressionMethod
 {
     fn deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
-        input: &mut TRead,
-        output: &mut TWrite,
+        input: TRead,
+        output: TWrite,
         inflated_size: usize,
         chksum: &mut TChecksum
     ) -> Result<usize, DeflateError>
@@ -229,8 +229,8 @@ impl Deflater for ZlibCompressionMethod
 impl Inflater for ZlibCompressionMethod
 {
     fn inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
-        input: &mut TRead,
-        output: &mut TWrite,
+        input: TRead,
+        output: TWrite,
         deflated_size: usize,
         chksum: &mut TChecksum
     ) -> Result<(), InflateError>

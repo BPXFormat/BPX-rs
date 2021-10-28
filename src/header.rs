@@ -72,7 +72,7 @@ pub trait Struct<const S: usize>
     /// let mut corrupted: [u8; SIZE_MAIN_HEADER] = [0; SIZE_MAIN_HEADER];
     /// MainHeader::read(&mut corrupted.as_ref()).unwrap();
     /// ```
-    fn read<TReader: io::Read>(reader: &mut TReader) -> Result<Self::Output, Self::Error>
+    fn read<TReader: io::Read>(mut reader: TReader) -> Result<Self::Output, Self::Error>
     {
         let mut buffer: [u8; S] = [0; S];
         let len = reader.read(&mut buffer)?;

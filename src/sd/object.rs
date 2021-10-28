@@ -176,7 +176,7 @@ impl Object
     /// obj.write(&mut buf);
     /// assert!(buf.len() > 0);
     /// ```
-    pub fn write<TWrite: std::io::Write>(&self, dest: &mut TWrite) -> Result<(), WriteError>
+    pub fn write<TWrite: std::io::Write>(&self, dest: TWrite) -> Result<(), WriteError>
     {
         return super::encoder::write_structured_data(dest, self);
     }

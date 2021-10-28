@@ -45,18 +45,14 @@ pub struct Ref<'a>
 
 impl<'a> Ref<'a>
 {
-    pub fn as_mut(&mut self) -> &mut &mut dyn SectionData
+    pub fn as_mut(&mut self) -> &mut dyn SectionData
     {
-        unsafe {
-            return std::mem::transmute(&mut self.r.deref_mut().deref_mut());
-        }
+        return self.r.deref_mut().deref_mut();
     }
 
-    pub fn as_ref(&self) -> &&dyn SectionData
+    pub fn as_ref(&self) -> &dyn SectionData
     {
-        unsafe {
-            return std::mem::transmute(&self.r.deref().deref());
-        }
+        return self.r.deref().deref();
     }
 }
 
