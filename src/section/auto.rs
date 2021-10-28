@@ -26,10 +26,15 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::cell::{Cell, RefCell, RefMut};
-use std::ops::{Deref, DerefMut};
-use crate::section::{Error, new_section_data, Section, SectionData};
-use crate::SectionHandle;
+use std::{
+    cell::{Cell, RefCell, RefMut},
+    ops::{Deref, DerefMut}
+};
+
+use crate::{
+    section::{new_section_data, Error, Section, SectionData},
+    SectionHandle
+};
 
 pub struct Ref<'a>
 {
@@ -126,8 +131,8 @@ impl Section for AutoSection
         } else {
             data = new_section_data(Some(size));
         }
-        match data {
-            Err(e) => return Err(Error::Io(e)),
+        return match data {
+            Err(e) => Err(Error::Io(e)),
             Ok(v) => {
                 {
                     if let Err(_) = self.open() {
@@ -136,9 +141,9 @@ impl Section for AutoSection
                 }
                 let old = self.data.replace(v);
                 self.size.set(0);
-                return Ok(old);
+                Ok(old)
             }
-        }
+        };
     }
 
     fn handle(&self) -> SectionHandle

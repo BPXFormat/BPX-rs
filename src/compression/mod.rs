@@ -37,6 +37,7 @@ pub use crc32chksum::Crc32Checksum;
 pub use weakchksum::WeakChecksum;
 pub use xz::XzCompressionMethod;
 pub use zlib::ZlibCompressionMethod;
+
 use crate::error::{DeflateError, InflateError};
 
 pub trait Checksum

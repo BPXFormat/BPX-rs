@@ -33,10 +33,16 @@ use std::{
 
 use crate::{
     strings::{get_name_from_dir_entry, get_name_from_path},
-    variant::package::{object::ObjectHeader, PackageDecoder, PackageEncoder}
+    variant::{
+        package::{
+            error::{EosContext, ReadError, WriteError},
+            object::ObjectHeader,
+            PackageDecoder,
+            PackageEncoder
+        },
+        NamedTable
+    }
 };
-use crate::variant::NamedTable;
-use crate::variant::package::error::{EosContext, ReadError, WriteError};
 
 /// Packs a file or folder in a BPXP with the given virtual name.
 ///
@@ -176,8 +182,10 @@ pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
 /// # Errors
 ///
 /// An [Error](crate::error::Error) is returned if some objects could not be unpacked.
-pub fn unpack<TBackend: crate::decoder::IoBackend>(package: &mut PackageDecoder<TBackend>, target: &Path)
-    -> Result<(), ReadError>
+pub fn unpack<TBackend: crate::decoder::IoBackend>(
+    package: &mut PackageDecoder<TBackend>,
+    target: &Path
+) -> Result<(), ReadError>
 {
     let table = package.read_object_table()?;
     for v in table.get_all() {

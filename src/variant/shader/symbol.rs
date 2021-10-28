@@ -28,14 +28,22 @@
 
 //! Contains utilities to work with the symbol table section.
 
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::{decoder::IoBackend, variant::shader::ShaderPackDecoder};
-use crate::header::Struct;
-use crate::variant::{BuildNamedTable, NamedTable};
-use crate::variant::shader::error::{EosContext, ReadError};
+use crate::{
+    decoder::IoBackend,
+    header::Struct,
+    variant::{
+        shader::{
+            error::{EosContext, ReadError},
+            ShaderPackDecoder
+        },
+        BuildNamedTable,
+        NamedTable
+    }
+};
 
 /// Indicates this symbol is used on the vertex stage.
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;
@@ -195,10 +203,7 @@ impl NamedTable for SymbolTable
 
     fn new(list: Vec<Self::Inner>) -> Self
     {
-        return SymbolTable {
-            list,
-            map: None
-        };
+        return SymbolTable { list, map: None };
     }
 
     fn lookup(&self, name: &str) -> Option<&Self::Inner>
@@ -218,7 +223,8 @@ impl NamedTable for SymbolTable
 
 impl<TBackend: IoBackend> BuildNamedTable<ShaderPackDecoder<TBackend>> for SymbolTable
 {
-    fn build_lookup_table(&mut self, package: &mut ShaderPackDecoder<TBackend>) -> Result<(), crate::strings::ReadError>
+    fn build_lookup_table(&mut self, package: &mut ShaderPackDecoder<TBackend>)
+        -> Result<(), crate::strings::ReadError>
     {
         let mut map = HashMap::new();
         for v in &self.list {

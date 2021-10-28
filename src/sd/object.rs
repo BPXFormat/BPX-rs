@@ -31,7 +31,10 @@ use std::{
     ops::Index
 };
 
-use crate::{sd::{Value, WriteError, ReadError}, utils};
+use crate::{
+    sd::{ReadError, Value, WriteError},
+    utils
+};
 
 /// Represents a BPX Structured Data Object.
 #[derive(PartialEq, Clone)]

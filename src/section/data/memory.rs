@@ -28,8 +28,7 @@
 
 use std::io::{Cursor, Read, Result, Seek, SeekFrom, Write};
 
-use crate::section::SectionData;
-use crate::utils::new_byte_buf;
+use crate::{section::SectionData, utils::new_byte_buf};
 
 pub struct InMemorySection
 {

@@ -26,37 +26,35 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::SeekFrom;
-use std::ops::DerefMut;
-use std::rc::Rc;
+use std::{io::SeekFrom, ops::DerefMut, rc::Rc};
 
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
     decoder::{Decoder, IoBackend},
-    header::SECTION_TYPE_STRING,
+    header::{Struct, SECTION_TYPE_STRING},
     sd::Object,
+    section::AutoSection,
     strings::StringSection,
     utils::OptionExtension,
-    variant::shader::{
-        symbol::{Symbol, SymbolTable, FLAG_EXTENDED_DATA},
-        Shader,
-        Stage,
-        Target,
-        Type,
-        SECTION_TYPE_EXTENDED_DATA,
-        SECTION_TYPE_SHADER,
-        SECTION_TYPE_SYMBOL_TABLE,
-        SUPPORTED_VERSION
+    variant::{
+        shader::{
+            error::{EosContext, ReadError, Section},
+            symbol::{Symbol, SymbolTable, FLAG_EXTENDED_DATA, SIZE_SYMBOL_STRUCTURE},
+            Shader,
+            Stage,
+            Target,
+            Type,
+            SECTION_TYPE_EXTENDED_DATA,
+            SECTION_TYPE_SHADER,
+            SECTION_TYPE_SYMBOL_TABLE,
+            SUPPORTED_VERSION
+        },
+        NamedTable
     },
     Interface,
     SectionHandle
 };
-use crate::header::Struct;
-use crate::section::{AutoSection};
-use crate::variant::NamedTable;
-use crate::variant::shader::error::{EosContext, ReadError, Section};
-use crate::variant::shader::symbol::SIZE_SYMBOL_STRUCTURE;
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
 {

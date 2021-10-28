@@ -32,10 +32,18 @@ use std::collections::HashMap;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::{decoder::IoBackend, variant::package::PackageDecoder};
-use crate::header::Struct;
-use crate::variant::{BuildNamedTable, NamedTable};
-use crate::variant::package::error::{EosContext, ReadError};
+use crate::{
+    decoder::IoBackend,
+    header::Struct,
+    variant::{
+        package::{
+            error::{EosContext, ReadError},
+            PackageDecoder
+        },
+        BuildNamedTable,
+        NamedTable
+    }
+};
 
 /// Size in bytes of an object header.
 pub const SIZE_OBJECT_HEADER: usize = 20;
@@ -115,10 +123,7 @@ impl NamedTable for ObjectTable
 
     fn new(list: Vec<Self::Inner>) -> Self
     {
-        return ObjectTable {
-            list,
-            map: None
-        };
+        return ObjectTable { list, map: None };
     }
 
     fn lookup(&self, name: &str) -> Option<&Self::Inner>

@@ -122,7 +122,9 @@ pub trait Struct<const S: usize>
     }
 }
 
-pub trait GetChecksum<const D: usize> where Self: Struct<D>
+pub trait GetChecksum<const D: usize>
+where
+    Self: Struct<D>
 {
     /// Computes the checksum for this header.
     fn get_checksum(&self) -> u32

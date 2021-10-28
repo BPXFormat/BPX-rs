@@ -28,20 +28,25 @@
 
 //! The BPX decoder.
 
-use std::{io, io::Write};
-use std::ops::DerefMut;
-use std::rc::Rc;
+use std::{io, io::Write, ops::DerefMut, rc::Rc};
 
 use crate::{
     compression::{Checksum, Crc32Checksum, Inflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod},
-    header::{MainHeader, SectionHeader, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB},
+    error::ReadError,
+    header::{
+        MainHeader,
+        SectionHeader,
+        Struct,
+        FLAG_CHECK_CRC32,
+        FLAG_CHECK_WEAK,
+        FLAG_COMPRESS_XZ,
+        FLAG_COMPRESS_ZLIB
+    },
+    section::AutoSection,
     utils::OptionExtension,
     Interface,
     SectionHandle
 };
-use crate::error::ReadError;
-use crate::header::Struct;
-use crate::section::AutoSection;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -189,7 +194,11 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
     }
 }
 
-fn load_section<TBackend: IoBackend>(file: &mut TBackend, handle: SectionHandle, section: &SectionHeader) -> Result<Rc<AutoSection>, ReadError>
+fn load_section<TBackend: IoBackend>(
+    file: &mut TBackend,
+    handle: SectionHandle,
+    section: &SectionHeader
+) -> Result<Rc<AutoSection>, ReadError>
 {
     let sdata = Rc::new(AutoSection::new(section.size, handle)?);
     {

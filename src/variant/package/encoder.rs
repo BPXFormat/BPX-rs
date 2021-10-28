@@ -26,24 +26,27 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::Read;
-use std::ops::DerefMut;
-use std::rc::Rc;
+use std::{io::Read, ops::DerefMut, rc::Rc};
 
 use crate::{
     builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
     encoder::{Encoder, IoBackend},
-    header::{SectionHeader, SECTION_TYPE_SD, SECTION_TYPE_STRING},
+    header::{SectionHeader, Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
     sd::Object,
+    section::{AutoSection, Section},
     strings::StringSection,
     utils::OptionExtension,
-    variant::package::{Architecture, Platform, SECTION_TYPE_DATA, SECTION_TYPE_OBJECT_TABLE, SUPPORTED_VERSION},
+    variant::package::{
+        error::WriteError,
+        object::ObjectHeader,
+        Architecture,
+        Platform,
+        SECTION_TYPE_DATA,
+        SECTION_TYPE_OBJECT_TABLE,
+        SUPPORTED_VERSION
+    },
     Interface
 };
-use crate::header::Struct;
-use crate::section::{AutoSection, Section};
-use crate::variant::package::error::WriteError;
-use crate::variant::package::object::ObjectHeader;
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
@@ -248,7 +251,11 @@ fn create_data_section_header() -> SectionHeader
 
 impl<TBackend: IoBackend> PackageEncoder<TBackend>
 {
-    fn write_object<TRead: Read>(&mut self, source: &mut TRead, data_id: &Rc<AutoSection>) -> Result<(usize, bool), crate::error::WriteError>
+    fn write_object<TRead: Read>(
+        &mut self,
+        source: &mut TRead,
+        data_id: &Rc<AutoSection>
+    ) -> Result<(usize, bool), crate::error::WriteError>
     {
         //TODO: Fix
         let mut data = data_id.open()?;
@@ -291,7 +298,8 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
                 //Here Rust type inference is even more broken! Cloning needs to be done twice!!!!
                 let fuckyourust = useless.create_section(create_data_section_header())?;
                 return Ok(fuckyourust.clone());
-            })?.clone();
+            })?
+            .clone();
         let start = self.encoder.get_section_index(data_section.handle());
         let offset = data_section.size() as u32;
 
@@ -311,7 +319,8 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
                 name: self.strings.put(&name)?,
                 start,
                 offset
-            }.to_bytes();
+            }
+            .to_bytes();
             // Write the object header
             let mut object_table = self.object_table.open()?;
             object_table.write(&buf)?;

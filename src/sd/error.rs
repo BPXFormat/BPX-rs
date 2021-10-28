@@ -80,7 +80,7 @@ pub enum ReadError
     ///
     /// # Arguments
     /// * last operation name before failure.
-    Utf8(&'static str),
+    Utf8(&'static str)
 }
 
 impl From<std::io::Error> for ReadError

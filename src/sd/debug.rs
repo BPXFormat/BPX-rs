@@ -29,7 +29,7 @@
 use std::{collections::HashMap, convert::TryInto};
 
 use crate::{
-    sd::{Array, Object, DebugError},
+    sd::{Array, DebugError, Object},
     utils::hash
 };
 

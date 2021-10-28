@@ -32,7 +32,9 @@ pub mod package;
 pub mod shader;
 
 /// Represents a named table with deferred/optional lookup table build.
-pub trait BuildNamedTable<TDecoder> where Self: NamedTable
+pub trait BuildNamedTable<TDecoder>
+where
+    Self: NamedTable
 {
     /// Builds the item map for easy and efficient lookup of items by name.
     ///

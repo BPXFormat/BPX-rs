@@ -28,11 +28,11 @@
 
 //! Utilities to manipulate the content of sections.
 
-mod data;
 mod auto;
+mod data;
 
-pub use data::SectionData;
 use data::new_section_data;
+pub use data::SectionData;
 
 #[derive(Debug)]
 pub enum Error
@@ -57,4 +57,5 @@ pub trait Section
 }
 
 pub use auto::AutoSection;
+
 use crate::SectionHandle;

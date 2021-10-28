@@ -26,18 +26,20 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::ops::DerefMut;
-use std::rc::Rc;
+use std::{ops::DerefMut, rc::Rc};
+
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
     builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
     encoder::{Encoder, IoBackend},
-    header::SECTION_TYPE_STRING,
+    header::{Struct, SECTION_TYPE_STRING},
     sd::Object,
+    section::AutoSection,
     strings::StringSection,
     utils::OptionExtension,
     variant::shader::{
+        error::WriteError,
         symbol::{Symbol, SymbolType},
         Shader,
         Stage,
@@ -50,9 +52,6 @@ use crate::{
     },
     Interface
 };
-use crate::header::Struct;
-use crate::section::AutoSection;
-use crate::variant::shader::error::WriteError;
 
 /// Utility to easily generate a [ShaderPackEncoder](crate::variant::shader::ShaderPackEncoder).
 pub struct ShaderPackBuilder
@@ -220,15 +219,17 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
     {
         if let Some(obj) = extended_data {
             let useless = &mut self.encoder;
-            let handle = self.extended_data.get_or_insert_with_err(|| -> Result<Rc<AutoSection>, crate::error::WriteError> {
-                let header = SectionHeaderBuilder::new()
-                    .with_type(SECTION_TYPE_EXTENDED_DATA)
-                    .with_checksum(Checksum::Crc32)
-                    .with_compression(CompressionMethod::Zlib)
-                    .build();
-                let fuckyourust = useless.create_section(header)?;
-                return Ok(fuckyourust.clone());
-            })?;
+            let handle = self.extended_data.get_or_insert_with_err(
+                || -> Result<Rc<AutoSection>, crate::error::WriteError> {
+                    let header = SectionHeaderBuilder::new()
+                        .with_type(SECTION_TYPE_EXTENDED_DATA)
+                        .with_checksum(Checksum::Crc32)
+                        .with_compression(CompressionMethod::Zlib)
+                        .build();
+                    let fuckyourust = useless.create_section(header)?;
+                    return Ok(fuckyourust.clone());
+                }
+            )?;
             let mut section = handle.open()?;
             let offset = section.size();
             //Type inference in Rust is so buggy! One &mut dyn is not enough you need double &mut dyn now!
@@ -277,12 +278,13 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
             flags,
             stype,
             register
-        }.to_bytes();
+        }
+        .to_bytes();
         {
             let mut data = self.symbol_table.open()?;
             data.write(&buf)?;
         } //Rust borrow checker is so stupid not able to understand that data is not used after this line
-        //So we have to add another scope to workarround that defect
+          //So we have to add another scope to workarround that defect
         self.num_symbols += 1;
         self.patch_extended_data();
         return Ok(());

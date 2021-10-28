@@ -33,12 +33,11 @@ use std::{
     fs::DirEntry,
     io::SeekFrom,
     path::Path,
+    rc::Rc,
     string::String
 };
-use std::rc::Rc;
 
-use crate::section::SectionData;
-use crate::section::AutoSection;
+use crate::section::{AutoSection, SectionData};
 
 #[derive(Debug)]
 pub enum ReadError

@@ -30,16 +30,18 @@
 
 use std::{
     io,
-    io::{SeekFrom, Write}
+    io::{SeekFrom, Write},
+    rc::Rc
 };
-use std::rc::Rc;
 
 use crate::{
     compression::{Checksum, Crc32Checksum, Deflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod},
     error::WriteError,
     header::{
+        GetChecksum,
         MainHeader,
         SectionHeader,
+        Struct,
         FLAG_CHECK_CRC32,
         FLAG_CHECK_WEAK,
         FLAG_COMPRESS_XZ,
@@ -47,12 +49,10 @@ use crate::{
         SIZE_MAIN_HEADER,
         SIZE_SECTION_HEADER
     },
-    section::SectionData,
+    section::{AutoSection, Section, SectionData},
     Interface,
     SectionHandle
 };
-use crate::header::{GetChecksum, Struct};
-use crate::section::{AutoSection, Section};
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -166,7 +166,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
                 self.sections[i] = Some(entry);
                 self.sections_in_order.push(SectionHandle(i));
                 self.cur_index += 1;
-                return Ok(&self.sections[i].as_ref().unwrap().data)
+                return Ok(&self.sections[i].as_ref().unwrap().data);
             }
         }
         let r = self.sections.len();
@@ -460,7 +460,11 @@ fn write_section_checked<TWrite: Write, TChecksum: Checksum>(
     }
 }
 
-fn write_section<TWrite: Write>(flags: u8, section: &mut dyn SectionData, out: &mut TWrite) -> Result<(usize, u32), WriteError>
+fn write_section<TWrite: Write>(
+    flags: u8,
+    section: &mut dyn SectionData,
+    out: &mut TWrite
+) -> Result<(usize, u32), WriteError>
 {
     if flags & FLAG_CHECK_CRC32 != 0 {
         let mut chksum = Crc32Checksum::new();

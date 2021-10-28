@@ -30,7 +30,7 @@ use std::io::Read;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::sd::{Array, Object, Value, ReadError};
+use crate::sd::{Array, Object, ReadError, Value};
 
 fn read_bool<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {

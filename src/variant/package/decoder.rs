@@ -26,29 +26,32 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{SeekFrom, Write};
-use std::ops::DerefMut;
-use std::rc::Rc;
+use std::{
+    io::{SeekFrom, Write},
+    ops::DerefMut,
+    rc::Rc
+};
 
 use crate::{
     decoder::{Decoder, IoBackend},
-    header::{SECTION_TYPE_SD, SECTION_TYPE_STRING},
+    header::{Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
     sd::Object,
+    section::AutoSection,
     strings::StringSection,
-    variant::package::{
-        object::{ObjectHeader, ObjectTable},
-        Architecture,
-        Platform,
-        SECTION_TYPE_OBJECT_TABLE,
-        SUPPORTED_VERSION
+    variant::{
+        package::{
+            error::{ReadError, Section},
+            object::{ObjectHeader, ObjectTable},
+            Architecture,
+            Platform,
+            SECTION_TYPE_OBJECT_TABLE,
+            SUPPORTED_VERSION
+        },
+        NamedTable
     },
     Interface,
     SectionHandle
 };
-use crate::header::Struct;
-use crate::section::{AutoSection};
-use crate::variant::NamedTable;
-use crate::variant::package::error::{ReadError, Section};
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
