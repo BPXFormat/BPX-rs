@@ -75,9 +75,19 @@ pub trait Struct<const S: usize>
     fn read<TReader: io::Read>(reader: &mut TReader) -> Result<Self::Output, Self::Error>
     {
         let mut buffer: [u8; S] = [0; S];
-        reader.read(&mut buffer)?;
+        let len = reader.read(&mut buffer)?;
+        if len != S {
+            if let Some(err) = Self::error_buffer_size() {
+                return Err(err);
+            }
+        }
         return Self::from_bytes(buffer);
     }
+
+    /// Returns the error to return when the reader did not read a full buffer.
+    ///
+    /// **Return None in this function to indicate that this is not an error.**
+    fn error_buffer_size() -> Option<Self::Error>;
 
     /// Attempts to read a structure from a fixed size byte array.
     ///
@@ -214,6 +224,11 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
         };
     }
 
+    fn error_buffer_size() -> Option<Self::Error>
+    {
+        return None;
+    }
+
     fn from_bytes(buffer: [u8; SIZE_MAIN_HEADER]) -> Result<Self::Output, Self::Error>
     {
         let mut checksum: u32 = 0;
@@ -314,6 +329,11 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader
             btype: 0,   //+20
             flags: 0    //+21
         };
+    }
+
+    fn error_buffer_size() -> Option<Self::Error>
+    {
+        return None;
     }
 
     fn from_bytes(buffer: [u8; SIZE_SECTION_HEADER]) -> Result<Self::Output, Self::Error>

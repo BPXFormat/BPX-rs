@@ -33,6 +33,7 @@ use std::{collections::HashMap, io::Read};
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{decoder::IoBackend, variant::shader::ShaderPackDecoder};
+use crate::header::Struct;
 use crate::variant::{BuildNamedTable, NamedTable};
 use crate::variant::shader::error::{EosContext, ReadError};
 
@@ -67,7 +68,7 @@ pub const FLAG_EXTENDED_DATA: u16 = 0x100;
 pub const FLAG_REGISTER: u16 = 0x200;
 
 /// Size in bytes of a symbol structure.
-pub const SYMBOL_STRUCTURE_SIZE: usize = 12;
+pub const SIZE_SYMBOL_STRUCTURE: usize = 12;
 
 /// The type of a symbol.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -125,30 +126,34 @@ pub struct Symbol
     pub register: u8
 }
 
-impl Symbol
+impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
 {
-    /// Reads a symbol structure from a [Read](std::io::Read)
-    ///
-    /// # Arguments
-    ///
-    /// * `reader`: the [Read](std::io::Read) to read from.
-    ///
-    /// returns: Result<Symbol, Error>
-    ///
-    /// # Errors
-    ///
-    /// An [Error](crate::error::Error) is returned in case of data truncation.
-    pub fn read<TReader: Read>(reader: &mut TReader) -> Result<Symbol, ReadError>
+    type Output = Symbol;
+    type Error = ReadError;
+
+    fn new() -> Self
     {
-        let mut buf: [u8; SYMBOL_STRUCTURE_SIZE] = [0; SYMBOL_STRUCTURE_SIZE];
-        if reader.read(&mut buf)? != 12 {
-            return Err(ReadError::Eos(EosContext::SymbolTable));
-        }
-        let name = LittleEndian::read_u32(&buf[0..4]);
-        let extended_data = LittleEndian::read_u32(&buf[4..8]);
-        let flags = LittleEndian::read_u16(&buf[8..10]);
-        let stype = get_symbol_type_from_code(buf[10])?;
-        let register = buf[11];
+        return Symbol {
+            name: 0,
+            extended_data: 0xFFFFFF,
+            flags: 0,
+            stype: SymbolType::Constant,
+            register: 0xFF
+        };
+    }
+
+    fn error_buffer_size() -> Option<Self::Error>
+    {
+        return Some(ReadError::Eos(EosContext::SymbolTable));
+    }
+
+    fn from_bytes(buffer: [u8; SIZE_SYMBOL_STRUCTURE]) -> Result<Self::Output, Self::Error>
+    {
+        let name = LittleEndian::read_u32(&buffer[0..4]);
+        let extended_data = LittleEndian::read_u32(&buffer[4..8]);
+        let flags = LittleEndian::read_u16(&buffer[8..10]);
+        let stype = get_symbol_type_from_code(buffer[10])?;
+        let register = buffer[11];
         return Ok(Symbol {
             name,
             extended_data,
@@ -158,10 +163,9 @@ impl Symbol
         });
     }
 
-    /// Converts this symbol structure to a byte array.
-    pub fn to_bytes(&self) -> [u8; SYMBOL_STRUCTURE_SIZE]
+    fn to_bytes(&self) -> [u8; SIZE_SYMBOL_STRUCTURE]
     {
-        let mut buf = [0; SYMBOL_STRUCTURE_SIZE];
+        let mut buf = [0; SIZE_SYMBOL_STRUCTURE];
         LittleEndian::write_u32(&mut buf[0..4], self.name);
         LittleEndian::write_u32(&mut buf[4..8], self.extended_data);
         LittleEndian::write_u16(&mut buf[8..10], self.flags);
