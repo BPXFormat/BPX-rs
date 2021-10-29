@@ -26,6 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use std::fmt::{Display, Formatter};
 use crate::macros::variant_error;
 use crate::macros::impl_err_conversion;
 use crate::macros::named_enum;
@@ -106,3 +107,38 @@ impl_err_conversion!(
         crate::sd::WriteError => Sd
     }
 );
+
+impl Display for ReadError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            ReadError::Bpx(e) => f.write_str(&format!("BPX error: {}", e)),
+            ReadError::Io(e) => f.write_str(&format!("io error: {}", e)),
+            ReadError::Section(e) => f.write_str(&format!("section error: {}", e)),
+            ReadError::BadVersion(v) => f.write_str(&format!("unsupported version ({})", v)),
+            ReadError::BadType(t) => f.write_str(&format!("unknown BPX type code ({})", t)),
+            ReadError::InvalidCode(ctx, code) => f.write_str(&format!("invalid {} code ({})", ctx.name(), code)),
+            ReadError::MissingSection(s) => f.write_str(&format!("missing {} section", s.name())),
+            ReadError::Eos(ctx) => f.write_str(&format!("got EOS while reading {}", ctx.name())),
+            ReadError::BlankString => f.write_str("blank strings are not supported when unpacking to file system"),
+            ReadError::Sd(e) => f.write_str(&format!("BPXSD error: {}", e)),
+            ReadError::Strings(e) => f.write_str(&format!("strings error: {}", e))
+        }
+    }
+}
+
+impl Display for WriteError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            WriteError::Bpx(e) => f.write_str(&format!("BPX error: {}", e)),
+            WriteError::Io(e) => f.write_str(&format!("io error: {}", e)),
+            WriteError::Section(e) => f.write_str(&format!("section error: {}", e)),
+            WriteError::Strings(e) => f.write_str(&format!("strings error: {}", e)),
+            WriteError::Sd(e) => f.write_str(&format!("BPXSD error: {}", e)),
+            WriteError::InvalidPath => f.write_str("path does not contain any file name")
+        }
+    }
+}
