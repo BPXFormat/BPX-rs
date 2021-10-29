@@ -250,10 +250,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
             type_ext: extract_slice::<T16>(&buffer, 24)
         };
         if head.signature[0] != 'B' as u8 || head.signature[1] != 'P' as u8 || head.signature[2] != 'X' as u8 {
-            return Err(ReadError::Corruption(format!(
-                "incorrect signature, expected {}{}{}, got {}{}{}",
-                'B' as u8, 'P' as u8, 'X' as u8, head.signature[0], head.signature[1], head.signature[2]
-            )));
+            return Err(ReadError::BadSignature(head.signature));
         }
         if !KNOWN_VERSIONS.contains(&head.version) {
             return Err(ReadError::BadVersion(head.version));

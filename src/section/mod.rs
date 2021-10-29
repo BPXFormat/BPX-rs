@@ -31,13 +31,17 @@
 mod auto;
 mod data;
 
+use std::fmt::{Display, Formatter};
 use data::new_section_data;
 pub use data::SectionData;
 
 #[derive(Debug)]
 pub enum Error
 {
+    /// The section is already open.
     AlreadyOpen,
+
+    /// Describes an io error.
     Io(std::io::Error)
 }
 
@@ -46,6 +50,17 @@ impl From<std::io::Error> for Error
     fn from(e: std::io::Error) -> Self
     {
         return Error::Io(e);
+    }
+}
+
+impl Display for Error
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            Error::AlreadyOpen => f.write_str("section is already open"),
+            Error::Io(e) => f.write_str(&format!("io error ({})", e))
+        }
     }
 }
 

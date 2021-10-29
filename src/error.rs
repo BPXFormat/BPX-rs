@@ -30,25 +30,25 @@
 
 use std::{
     convert::From,
-    fmt::{Display, Formatter},
-    string::String
+    fmt::{Display, Formatter}
 };
-
-//ReadError, WriteError
-//TODO: Implement MorphableSection which starts as InMemorySection and as size increases auto jumps to FileSection
 
 #[derive(Debug)]
 pub enum DeflateError
 {
+    /// Memory allocation failure.
     Memory,
+
+    /// Some requested operation wasn't supported by this build of the compression libraries.
     Unsupported(&'static str),
+
+    /// Data error (usually shouldn't occur, might occur due to some wrong use of compression APIs).
     Data,
+
+    /// Unknown error (low-level error from chosen compression library).
     Unknown,
 
     /// Describes an io error.
-    ///
-    /// # Arguments
-    /// * the error that occured.
     Io(std::io::Error)
 }
 
@@ -60,18 +60,36 @@ impl From<std::io::Error> for DeflateError
     }
 }
 
+impl Display for DeflateError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            DeflateError::Memory => f.write_str("memory allocation failure"),
+            DeflateError::Unsupported(e) => f.write_str(&format!("unsupported operation ({})", e)),
+            DeflateError::Data => f.write_str("data error"),
+            DeflateError::Unknown => f.write_str("low-level unknown error"),
+            DeflateError::Io(e) => f.write_str(&format!("io error: {}", e))
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum InflateError
 {
+    /// Memory allocation failure.
     Memory,
+
+    /// Some requested operation wasn't supported by this build of the compression libraries.
     Unsupported(&'static str),
+
+    /// Data error (usually means input data is corrupted).
     Data,
+
+    /// Unknown error (low-level error from chosen compression library).
     Unknown,
 
     /// Describes an io error.
-    ///
-    /// # Arguments
-    /// * the error that occured.
     Io(std::io::Error)
 }
 
@@ -80,6 +98,20 @@ impl From<std::io::Error> for InflateError
     fn from(e: std::io::Error) -> Self
     {
         return InflateError::Io(e);
+    }
+}
+
+impl Display for InflateError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            InflateError::Memory => f.write_str("memory allocation failure"),
+            InflateError::Unsupported(e) => f.write_str(&format!("unsupported operation ({})", e)),
+            InflateError::Data => f.write_str("data error"),
+            InflateError::Unknown => f.write_str("low-level unknown error"),
+            InflateError::Io(e) => f.write_str(&format!("io error: {}", e))
+        }
     }
 }
 
@@ -94,28 +126,21 @@ pub enum ReadError
     Checksum(u32, u32),
 
     /// Describes an io error.
-    ///
-    /// # Arguments
-    /// * the error that occured.
     Io(std::io::Error),
 
     /// Describes a bad version error.
     ///
     /// # Arguments
-    /// * the version number.
+    /// * the incriminated version number.
     BadVersion(u32),
 
-    /// Describes a data corruption error, this means an impossible
-    /// byte or sequence of bytes has been found.
+    /// Describes a bad signature error
     ///
     /// # Arguments
-    /// * message.
-    Corruption(String),
+    /// * the incriminated signature.
+    BadSignature([u8; 3]),
 
     /// Describes a decompression error.
-    ///
-    /// # Arguments
-    /// * error description string.
     Inflate(InflateError)
 }
 
@@ -135,13 +160,27 @@ impl From<InflateError> for ReadError
     }
 }
 
+impl Display for ReadError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            ReadError::Checksum(expected, actual) => f.write_str(&format!(
+                "checksum validation failed (expected {}, got {})",
+                expected, actual
+            )),
+            ReadError::Io(e) => f.write_str(&format!("io error: {}", e)),
+            ReadError::BadVersion(v) => f.write_str(&format!("unknown file version ({})", v)),
+            ReadError::BadSignature(sig) => f.write_str(&format!("unknown file signature ({}{}{})", sig[0], sig[1], sig[2])),
+            ReadError::Inflate(e) => f.write_str(&format!("inflate error: {}", e))
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum WriteError
 {
     /// Describes an io error.
-    ///
-    /// # Arguments
-    /// * the error that occured.
     Io(std::io::Error),
 
     /// Describes a section that is too large to be written
@@ -152,11 +191,9 @@ pub enum WriteError
     Capacity(usize),
 
     /// Describes a compression error.
-    ///
-    /// # Arguments
-    /// * error description string.
     Deflate(DeflateError),
 
+    /// A section error.
     Section(crate::section::Error)
 }
 
@@ -184,113 +221,15 @@ impl From<crate::section::Error> for WriteError
     }
 }
 
-/// Represents a BPX error
-#[derive(Debug)]
-pub enum Error
-{
-    /// Describes an io error.
-    ///
-    /// # Arguments
-    /// * the error that occured.
-    Io(std::io::Error),
-
-    /// Describes a data truncation error, this means a section or
-    /// the file itself has been truncated.
-    ///
-    /// # Arguments
-    /// * last operation name before failure.
-    Truncation(&'static str),
-
-    /// Describes a data corruption error, this means an impossible
-    /// byte or sequence of bytes has been found.
-    ///
-    /// # Arguments
-    /// * message.
-    Corruption(String),
-
-    /// Describes an utf8 decoding/encoding error.
-    ///
-    /// # Arguments
-    /// * last operation name before failure.
-    Utf8(&'static str),
-
-    /// Describes an operation or flag that is currently unsupported.
-    ///
-    /// # Arguments
-    /// * message.
-    Unsupported(String),
-
-    /// Describes a section that is too large to be written
-    /// (ie exceeds 2 pow 32 / 4Gb).
-    ///
-    /// # Arguments
-    /// * actual size of section.
-    Capacity(usize),
-
-    /// Describes a compression error.
-    ///
-    /// # Arguments
-    /// * error description string.
-    Deflate(&'static str),
-
-    /// Describes a decompression error.
-    ///
-    /// # Arguments
-    /// * error description string.
-    Inflate(&'static str),
-
-    /// Describes a generic unknown error.
-    ///
-    /// # Arguments
-    /// * error message.
-    Other(String)
-}
-
-impl From<std::io::Error> for Error
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return Error::Io(e);
-    }
-}
-
-impl From<&str> for Error
-{
-    fn from(e: &str) -> Self
-    {
-        return Error::Other(String::from(e));
-    }
-}
-
-impl Display for Error
+impl Display for WriteError
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
-        return match self {
-            /*Error::Checksum(expected, actual) => f.write_str(&format!(
-                "checksum validation failed (expected {}, got {})",
-                expected, actual
-            )),*/
-            Error::Io(e) => f.write_str(&format!("io error ({})", e)),
-            /*Error::TypeError(expected, actual) => {
-                f.write_str(&format!("incompatible types (expected {}, got {})", expected, actual))
-            },
-            Error::PropCountExceeded(v) => f.write_str(&format!("BPXSD - too many props (count {}, max is 256)", v)),
-            Error::MissingProp(v) => f.write_str(&format!("BPXSD - missing property {}", v)),*/
-            Error::Truncation(e) => f.write_str(&format!(
-                "unexpected EOF while reading {}, are you sure the data is not truncated?",
-                e
-            )),
-            Error::Corruption(e) => f.write_str(&format!("illegal bytes found ({})", e)),
-            Error::Utf8(e) => f.write_str(&format!("utf8 decoding/encoding error in {}", e)),
-            Error::Unsupported(e) => f.write_str(&format!("unsupported operation {}", e)),
-            Error::Capacity(e) => f.write_str(&format!(
-                "section capacity exceeded (found {} bytes, max is 2 pow 32 bytes)",
-                e
-            )),
-            Error::Deflate(e) => f.write_str(&format!("deflate error ({})", e)),
-            Error::Inflate(e) => f.write_str(&format!("inflate error ({})", e)),
-            Error::Other(e) => f.write_str(&format!("{}", e))
-        };
+        match self {
+            WriteError::Io(e) => f.write_str(&format!("io error: {}", e)),
+            WriteError::Capacity(size) => f.write_str(&format!("maximum section size exceeded ({} > 2^32)", size)),
+            WriteError::Deflate(e) => f.write_str(&format!("deflate error: {}", e)),
+            WriteError::Section(e) => f.write_str(&format!("section error: {}", e))
+        }
     }
 }
