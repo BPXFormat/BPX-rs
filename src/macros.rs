@@ -60,7 +60,7 @@ macro_rules! named_enum {
             pub fn name(&self) -> &'static str
             {
                 return match self {
-                    $($variant => $namestr),*
+                    $(Self::$variant => $namestr),*
                 };
             }
         }
@@ -71,7 +71,9 @@ macro_rules! variant_error {
     (
         $(E { $($(#[$eos_outer:meta])* $eos: ident : $eos_name: expr),* })?
         $(S { $($(#[$sec_outer:meta])* $sec: ident : $sec_name: expr),* })?
+        $(#[$router:meta])*
         R { $($(#[$rerr_outer:meta])* $rerr: ident $(($($tr: ty),*))?),* }
+        $(#[$wouter:meta])*
         W { $($(#[$werr_outer:meta])* $werr: ident $(($($tw: ty),*))?),* }
     ) => {
         $(
@@ -92,6 +94,7 @@ macro_rules! variant_error {
             );
         )?
 
+        $(#[$router])*
         #[derive(Debug)]
         pub enum ReadError
         {
@@ -124,6 +127,7 @@ macro_rules! variant_error {
             }
         );
 
+        $(#[$wouter])*
         #[derive(Debug)]
         pub enum WriteError
         {

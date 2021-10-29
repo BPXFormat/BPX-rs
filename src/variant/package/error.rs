@@ -26,132 +26,83 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#[derive(Debug)]
-pub enum EosContext
-{
-    Object,
-    ObjectTable
-}
+use crate::macros::variant_error;
+use crate::macros::impl_err_conversion;
+use crate::macros::named_enum;
 
-#[derive(Debug)]
-pub enum Section
-{
-    Strings,
-    ObjectTable
-}
-
-#[derive(Debug)]
-pub enum ReadError
-{
-    Bpx(crate::error::ReadError),
-    Io(std::io::Error),
-    Section(crate::section::Error),
-    Sd(crate::sd::ReadError),
-    Strings(crate::strings::ReadError),
-    InvalidArchCode(u8),
-    InvalidPlatformCode(u8),
-    BadVersion(u32),
-    BadType(u8),
-
-    /// Describes a missing required section.
-    MissingSection(Section),
-
-    /// Describes an EOS (End Of Section) error while reading some item.
-    Eos(EosContext),
-
-    /// Indicates a blank string was obtained when attempting to unpack a BPXP to the file system.
-    BlankString
-}
-
-impl From<std::io::Error> for ReadError
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return ReadError::Io(e);
+named_enum!(
+    /// Represents the context of an invalid code.
+    InvalidCodeContext {
+        Arch : "architecture",
+        Platform : "platform"
     }
-}
+);
 
-impl From<crate::error::ReadError> for ReadError
-{
-    fn from(e: crate::error::ReadError) -> Self
-    {
-        return ReadError::Bpx(e);
+variant_error!(
+    E {
+        /// Reached EOS while reading an object.
+        Object : "object",
+
+        /// Reached EOS while reading the object table.
+        ObjectTable : "object table"
     }
-}
 
-impl From<crate::strings::ReadError> for ReadError
-{
-    fn from(e: crate::strings::ReadError) -> Self
-    {
-        return ReadError::Strings(e);
+    S {
+        /// Missing strings section.
+        Strings : "string",
+
+        /// Missing object table section.
+        ObjectTable : "object table"
     }
-}
 
-impl From<crate::section::Error> for ReadError
-{
-    fn from(e: crate::section::Error) -> Self
-    {
-        return ReadError::Section(e);
+    /// Represents a BPXP read error.
+    R {
+        /// Invalid code.
+        ///
+        /// # Arguments
+        /// * the context.
+        /// * the coding byte.
+        InvalidCode(InvalidCodeContext, u8),
+
+        /// Describes a missing required section.
+        MissingSection(Section),
+
+        /// Describes an EOS (End Of Section) error while reading some item.
+        Eos(EosContext),
+
+        /// Indicates a blank string was obtained when attempting to unpack a BPXP to the file system.
+        BlankString,
+
+        /// Describes a structured data error.
+        Sd(crate::sd::ReadError),
+
+        /// A strings error.
+        Strings(crate::strings::ReadError)
     }
-}
 
-impl From<crate::sd::ReadError> for ReadError
-{
-    fn from(e: crate::sd::ReadError) -> Self
-    {
-        return ReadError::Sd(e);
+    /// Represents a BPXP write error.
+    W {
+        /// A strings error.
+        Strings(crate::strings::WriteError),
+
+        /// Describes a structured data error.
+        Sd(crate::sd::WriteError),
+
+        //Indicates an invalid path while attempting to pack some files.
+        InvalidPath
     }
-}
+);
 
-#[derive(Debug)]
-pub enum WriteError
-{
-    Bpx(crate::error::WriteError),
-    Io(std::io::Error),
-    Section(crate::section::Error),
-    Strings(crate::strings::WriteError),
-    Sd(crate::sd::WriteError),
-
-    //Indicates an invalid path while attempting to pack some files.
-    InvalidPath
-}
-
-impl From<std::io::Error> for WriteError
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return WriteError::Io(e);
+impl_err_conversion!(
+    ReadError {
+        crate::strings::ReadError => Strings,
+        crate::sd::ReadError => Sd
     }
-}
+);
 
-impl From<crate::error::WriteError> for WriteError
-{
-    fn from(e: crate::error::WriteError) -> Self
-    {
-        return WriteError::Bpx(e);
+impl_err_conversion!(
+    WriteError {
+        crate::strings::WriteError => Strings,
+        crate::sd::WriteError => Sd
     }
-}
-
-impl From<crate::strings::WriteError> for WriteError
-{
-    fn from(e: crate::strings::WriteError) -> Self
-    {
-        return WriteError::Strings(e);
-    }
-}
-
-impl From<crate::section::Error> for WriteError
-{
-    fn from(e: crate::section::Error) -> Self
-    {
-        return WriteError::Section(e);
-    }
-}
-
-impl From<crate::sd::WriteError> for WriteError
-{
-    fn from(e: crate::sd::WriteError) -> Self
-    {
-        return WriteError::Sd(e);
-    }
-}
+);

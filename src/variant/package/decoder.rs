@@ -51,6 +51,7 @@ use crate::{
     Interface,
     SectionHandle
 };
+use crate::variant::package::error::InvalidCodeContext;
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
@@ -76,7 +77,7 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Pl
         0x2 => arch = Architecture::X86,
         0x3 => arch = Architecture::Armv7hl,
         0x4 => arch = Architecture::Any,
-        _ => return Err(ReadError::InvalidArchCode(acode))
+        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Arch, acode))
     }
     match pcode {
         0x0 => platform = Platform::Linux,
@@ -84,7 +85,7 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Pl
         0x2 => platform = Platform::Windows,
         0x3 => platform = Platform::Android,
         0x4 => platform = Platform::Any,
-        _ => return Err(ReadError::InvalidPlatformCode(pcode))
+        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Platform, pcode))
     }
     return Ok((arch, platform));
 }
