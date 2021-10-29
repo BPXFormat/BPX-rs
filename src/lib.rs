@@ -32,6 +32,7 @@ use std::{rc::Rc, vec::Vec};
 
 use crate::section::AutoSection;
 
+mod macros;
 pub mod builder;
 mod compression;
 pub mod decoder;
