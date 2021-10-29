@@ -55,6 +55,7 @@ use crate::{
     Interface,
     SectionHandle
 };
+use crate::variant::shader::error::InvalidCodeContext;
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
 {
@@ -69,7 +70,7 @@ fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), Rea
         0x5 => target = Target::VK10,
         0x6 => target = Target::MT,
         0xFF => target = Target::Any,
-        _ => return Err(ReadError::InvalidTargetCode(acode))
+        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Target, acode))
     }
     if tcode == 'A' as u8 {
         //Rust refuses to parse match properly so use if/else-if blocks
@@ -77,7 +78,7 @@ fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), Rea
     } else if tcode == 'P' as u8 {
         btype = Type::Pipeline;
     } else {
-        return Err(ReadError::InvalidTypeCode(tcode));
+        return Err(ReadError::InvalidCode(InvalidCodeContext::Type, tcode));
     }
     return Ok((target, btype));
 }
@@ -90,7 +91,7 @@ fn get_stage_from_code(code: u8) -> Result<Stage, ReadError>
         0x2 => Ok(Stage::Domain),
         0x3 => Ok(Stage::Geometry),
         0x4 => Ok(Stage::Pixel),
-        _ => Err(ReadError::InvalidStageCode(code))
+        _ => Err(ReadError::InvalidCode(InvalidCodeContext::Stage, code))
     };
 }
 

@@ -44,6 +44,7 @@ use crate::{
         NamedTable
     }
 };
+use crate::variant::shader::error::InvalidCodeContext;
 
 /// Indicates this symbol is used on the vertex stage.
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;
@@ -110,7 +111,7 @@ fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType, ReadError>
         0x3 => Ok(SymbolType::Constant),
         0x4 => Ok(SymbolType::VertexFormat),
         0x5 => Ok(SymbolType::Pipeline),
-        _ => Err(ReadError::InvalidSymbolTypeCode(scode))
+        _ => Err(ReadError::InvalidCode(InvalidCodeContext::SymbolType, scode))
     };
 }
 
