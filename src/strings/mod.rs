@@ -28,6 +28,11 @@
 
 //! A set of helpers to manipulate BPX string sections.
 
+mod error;
+
+pub use error::ReadError;
+pub use error::WriteError;
+
 use std::{
     collections::{hash_map::Entry, HashMap},
     fs::DirEntry,
@@ -38,70 +43,6 @@ use std::{
 };
 
 use crate::section::{AutoSection, SectionData};
-
-#[derive(Debug)]
-pub enum ReadError
-{
-    /// Describes an utf8 decoding/encoding error.
-    Utf8,
-
-    /// Indicates the string reader has reached EOS (End Of Section) before the end of the string.
-    Eos,
-
-    /// Describes an io error.
-    ///
-    /// # Arguments
-    /// * the error that occured.
-    Io(std::io::Error),
-
-    /// A section error.
-    Section(crate::section::Error)
-}
-
-impl From<std::io::Error> for ReadError
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return ReadError::Io(e);
-    }
-}
-
-impl From<crate::section::Error> for ReadError
-{
-    fn from(e: crate::section::Error) -> Self
-    {
-        return ReadError::Section(e);
-    }
-}
-
-#[derive(Debug)]
-pub enum WriteError
-{
-    /// Describes an io error.
-    ///
-    /// # Arguments
-    /// * the error that occured.
-    Io(std::io::Error),
-
-    /// A section error.
-    Section(crate::section::Error)
-}
-
-impl From<std::io::Error> for WriteError
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return WriteError::Io(e);
-    }
-}
-
-impl From<crate::section::Error> for WriteError
-{
-    fn from(e: crate::section::Error) -> Self
-    {
-        return WriteError::Section(e);
-    }
-}
 
 /// Helper class to manage a BPX string section.
 ///
