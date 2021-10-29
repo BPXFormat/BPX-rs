@@ -48,7 +48,7 @@ where
     ///
     /// # Errors
     ///
-    /// An [Error](crate::strings::Error) is returned if the strings could
+    /// An [Error](crate::strings::ReadError) is returned if the strings could
     /// not be loaded.
     fn build_lookup_table(&mut self, package: &mut TDecoder) -> Result<(), crate::strings::ReadError>;
 }
