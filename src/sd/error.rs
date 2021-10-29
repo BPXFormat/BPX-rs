@@ -26,14 +26,13 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use std::fmt::{Display, Formatter};
+
 /// Represents a structured data write error
 #[derive(Debug)]
 pub enum WriteError
 {
     /// Describes an io error.
-    ///
-    /// # Arguments
-    /// * the error that occured.
     Io(std::io::Error),
 
     /// Describes too many props or values attempted to be written as part of
@@ -52,6 +51,17 @@ impl From<std::io::Error> for WriteError
     }
 }
 
+impl Display for WriteError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            WriteError::Io(e) => f.write_str(&format!("io error: {}", e)),
+            WriteError::PropCountExceeded(count) => f.write_str(&format!("property count exceeded ({} > 255)", count))
+        }
+    }
+}
+
 /// Represents a structured data read error
 #[derive(Debug)]
 pub enum ReadError
@@ -66,21 +76,17 @@ pub enum ReadError
     /// the file itself has been truncated.
     ///
     /// # Arguments
-    /// * last operation name before failure.
+    /// * failed operation name.
     Truncation(&'static str),
 
-    /// Describes a data corruption error, this means an impossible
-    /// byte or sequence of bytes has been found.
+    /// Describes a bad type code for a value.
     ///
     /// # Arguments
-    /// * message.
-    Corruption(String),
+    /// * the incriminated type code.
+    BadTypeCode(u8),
 
     /// Describes an utf8 decoding/encoding error.
-    ///
-    /// # Arguments
-    /// * last operation name before failure.
-    Utf8(&'static str)
+    Utf8
 }
 
 impl From<std::io::Error> for ReadError
@@ -88,6 +94,19 @@ impl From<std::io::Error> for ReadError
     fn from(e: std::io::Error) -> Self
     {
         return ReadError::Io(e);
+    }
+}
+
+impl Display for ReadError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            ReadError::Io(e) => f.write_str(&format!("io error: {}", e)),
+            ReadError::Truncation(typename) => f.write_str(&format!("failed to read {}", typename)),
+            ReadError::BadTypeCode(code) => f.write_str(&format!("unknown value type code ({})", code)),
+            ReadError::Utf8 => f.write_str("utf8 error")
+        }
     }
 }
 
@@ -110,6 +129,17 @@ impl From<TypeError> for DebugError
     }
 }
 
+impl Display for DebugError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            DebugError::MissingProp => f.write_str("missing '__debug__' property"),
+            DebugError::Type(e) => f.write_str(&format!("type error: {}", e))
+        }
+    }
+}
+
 /// Represents a structured data value conversion error
 #[derive(Debug)]
 pub struct TypeError
@@ -129,5 +159,13 @@ impl TypeError
             expected_type_name: expected,
             actual_type_name: actual
         };
+    }
+}
+
+impl Display for TypeError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        f.write_str(&format!("unsupported type conversion (expected {}, got {})", self.expected_type_name, self.actual_type_name))
     }
 }
