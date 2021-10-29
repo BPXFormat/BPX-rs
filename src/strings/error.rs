@@ -26,6 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use std::fmt::{Display, Formatter};
+
 #[derive(Debug)]
 pub enum ReadError
 {
@@ -58,6 +60,19 @@ impl From<crate::section::Error> for ReadError
     }
 }
 
+impl Display for ReadError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            ReadError::Utf8 => f.write_str("utf8 error"),
+            ReadError::Eos => f.write_str("EOS reached before end of string"),
+            ReadError::Io(e) => f.write_str(&format!("io error: {}", e)),
+            ReadError::Section(e) => f.write_str(&format!("section error: {}", e))
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum WriteError
 {
@@ -81,5 +96,16 @@ impl From<crate::section::Error> for WriteError
     fn from(e: crate::section::Error) -> Self
     {
         return WriteError::Section(e);
+    }
+}
+
+impl Display for WriteError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            WriteError::Io(e) => f.write_str(&format!("io error: {}", e)),
+            WriteError::Section(e) => f.write_str(&format!("section error: {}", e))
+        }
     }
 }
