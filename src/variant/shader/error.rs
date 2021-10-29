@@ -27,24 +27,23 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::fmt::{Display, Formatter};
-use crate::macros::named_enum;
-use crate::macros::variant_error;
-use crate::macros::impl_err_conversion;
+
+use crate::macros::{impl_err_conversion, named_enum, variant_error};
 
 named_enum!(
     /// Represents the context of an invalid code.
     InvalidCodeContext {
         /// Invalid render API target code.
-        Target : "target",
+        Target: "target",
 
         /// Invalid shader pack type code.
-        Type : "type",
+        Type: "type",
 
         /// Invalid shader stage type code.
-        Stage : "stage",
+        Stage: "stage",
 
         /// Invalid symbol type code.
-        SymbolType : "symbol type"
+        SymbolType: "symbol type"
     }
 );
 

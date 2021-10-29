@@ -157,5 +157,5 @@ macro_rules! variant_error {
 }
 
 pub(crate) use impl_err_conversion;
-pub(crate) use variant_error;
 pub(crate) use named_enum;
+pub(crate) use variant_error;

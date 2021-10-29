@@ -28,6 +28,8 @@
 
 use std::fmt::{Display, Formatter};
 
+use crate::macros::impl_err_conversion;
+
 /// Represents a structured data write error
 #[derive(Debug)]
 pub enum WriteError
@@ -43,13 +45,7 @@ pub enum WriteError
     PropCountExceeded(usize)
 }
 
-impl From<std::io::Error> for WriteError
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return WriteError::Io(e);
-    }
-}
+impl_err_conversion!(WriteError { std::io::Error => Io });
 
 impl Display for WriteError
 {
@@ -89,13 +85,7 @@ pub enum ReadError
     Utf8
 }
 
-impl From<std::io::Error> for ReadError
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return ReadError::Io(e);
-    }
-}
+impl_err_conversion!(ReadError { std::io::Error => Io });
 
 impl Display for ReadError
 {
@@ -121,13 +111,7 @@ pub enum DebugError
     Type(TypeError)
 }
 
-impl From<TypeError> for DebugError
-{
-    fn from(e: TypeError) -> Self
-    {
-        return DebugError::Type(e);
-    }
-}
+impl_err_conversion!(DebugError { TypeError => Type });
 
 impl Display for DebugError
 {
@@ -166,6 +150,9 @@ impl Display for TypeError
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
-        f.write_str(&format!("unsupported type conversion (expected {}, got {})", self.expected_type_name, self.actual_type_name))
+        f.write_str(&format!(
+            "unsupported type conversion (expected {}, got {})",
+            self.expected_type_name, self.actual_type_name
+        ))
     }
 }

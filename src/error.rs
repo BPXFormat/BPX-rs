@@ -33,6 +33,8 @@ use std::{
     fmt::{Display, Formatter}
 };
 
+use crate::macros::impl_err_conversion;
+
 #[derive(Debug)]
 pub enum DeflateError
 {
@@ -52,13 +54,7 @@ pub enum DeflateError
     Io(std::io::Error)
 }
 
-impl From<std::io::Error> for DeflateError
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return DeflateError::Io(e);
-    }
-}
+impl_err_conversion!(DeflateError { std::io::Error => Io });
 
 impl Display for DeflateError
 {
@@ -93,13 +89,7 @@ pub enum InflateError
     Io(std::io::Error)
 }
 
-impl From<std::io::Error> for InflateError
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return InflateError::Io(e);
-    }
-}
+impl_err_conversion!(InflateError { std::io::Error => Io });
 
 impl Display for InflateError
 {
@@ -144,21 +134,12 @@ pub enum ReadError
     Inflate(InflateError)
 }
 
-impl From<std::io::Error> for ReadError
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return ReadError::Io(e);
+impl_err_conversion!(
+    ReadError {
+        std::io::Error => Io,
+        InflateError => Inflate
     }
-}
-
-impl From<InflateError> for ReadError
-{
-    fn from(e: InflateError) -> Self
-    {
-        return ReadError::Inflate(e);
-    }
-}
+);
 
 impl Display for ReadError
 {
@@ -171,7 +152,9 @@ impl Display for ReadError
             )),
             ReadError::Io(e) => f.write_str(&format!("io error: {}", e)),
             ReadError::BadVersion(v) => f.write_str(&format!("unknown file version ({})", v)),
-            ReadError::BadSignature(sig) => f.write_str(&format!("unknown file signature ({}{}{})", sig[0], sig[1], sig[2])),
+            ReadError::BadSignature(sig) => {
+                f.write_str(&format!("unknown file signature ({}{}{})", sig[0], sig[1], sig[2]))
+            },
             ReadError::Inflate(e) => f.write_str(&format!("inflate error: {}", e))
         }
     }
@@ -197,29 +180,13 @@ pub enum WriteError
     Section(crate::section::Error)
 }
 
-impl From<std::io::Error> for WriteError
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return WriteError::Io(e);
+impl_err_conversion!(
+    WriteError {
+        std::io::Error => Io,
+        DeflateError => Deflate,
+        crate::section::Error => Section
     }
-}
-
-impl From<DeflateError> for WriteError
-{
-    fn from(e: DeflateError) -> Self
-    {
-        return WriteError::Deflate(e);
-    }
-}
-
-impl From<crate::section::Error> for WriteError
-{
-    fn from(e: crate::section::Error) -> Self
-    {
-        return WriteError::Section(e);
-    }
-}
+);
 
 impl Display for WriteError
 {

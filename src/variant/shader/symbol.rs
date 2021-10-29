@@ -37,14 +37,13 @@ use crate::{
     header::Struct,
     variant::{
         shader::{
-            error::{EosContext, ReadError},
+            error::{EosContext, InvalidCodeContext, ReadError},
             ShaderPackDecoder
         },
         BuildNamedTable,
         NamedTable
     }
 };
-use crate::variant::shader::error::InvalidCodeContext;
 
 /// Indicates this symbol is used on the vertex stage.
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;

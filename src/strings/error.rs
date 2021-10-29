@@ -28,6 +28,8 @@
 
 use std::fmt::{Display, Formatter};
 
+use crate::macros::impl_err_conversion;
+
 #[derive(Debug)]
 pub enum ReadError
 {
@@ -44,21 +46,12 @@ pub enum ReadError
     Section(crate::section::Error)
 }
 
-impl From<std::io::Error> for ReadError
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return ReadError::Io(e);
+impl_err_conversion!(
+    ReadError {
+        std::io::Error => Io,
+        crate::section::Error => Section
     }
-}
-
-impl From<crate::section::Error> for ReadError
-{
-    fn from(e: crate::section::Error) -> Self
-    {
-        return ReadError::Section(e);
-    }
-}
+);
 
 impl Display for ReadError
 {
@@ -83,21 +76,12 @@ pub enum WriteError
     Section(crate::section::Error)
 }
 
-impl From<std::io::Error> for WriteError
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return WriteError::Io(e);
+impl_err_conversion!(
+    WriteError {
+        std::io::Error => Io,
+        crate::section::Error => Section
     }
-}
-
-impl From<crate::section::Error> for WriteError
-{
-    fn from(e: crate::section::Error) -> Self
-    {
-        return WriteError::Section(e);
-    }
-}
+);
 
 impl Display for WriteError
 {

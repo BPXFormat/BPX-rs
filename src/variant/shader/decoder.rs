@@ -39,7 +39,7 @@ use crate::{
     utils::OptionExtension,
     variant::{
         shader::{
-            error::{EosContext, ReadError, Section},
+            error::{EosContext, InvalidCodeContext, ReadError, Section},
             symbol::{Symbol, SymbolTable, FLAG_EXTENDED_DATA, SIZE_SYMBOL_STRUCTURE},
             Shader,
             Stage,
@@ -55,7 +55,6 @@ use crate::{
     Interface,
     SectionHandle
 };
-use crate::variant::shader::error::InvalidCodeContext;
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
 {

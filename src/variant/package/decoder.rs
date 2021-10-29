@@ -39,7 +39,7 @@ use crate::{
     strings::StringSection,
     variant::{
         package::{
-            error::{ReadError, Section},
+            error::{InvalidCodeContext, ReadError, Section},
             object::{ObjectHeader, ObjectTable},
             Architecture,
             Platform,
@@ -51,7 +51,6 @@ use crate::{
     Interface,
     SectionHandle
 };
-use crate::variant::package::error::InvalidCodeContext;
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 

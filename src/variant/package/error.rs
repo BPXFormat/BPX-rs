@@ -27,15 +27,14 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::fmt::{Display, Formatter};
-use crate::macros::variant_error;
-use crate::macros::impl_err_conversion;
-use crate::macros::named_enum;
+
+use crate::macros::{impl_err_conversion, named_enum, variant_error};
 
 named_enum!(
     /// Represents the context of an invalid code.
     InvalidCodeContext {
-        Arch : "architecture",
-        Platform : "platform"
+        Arch: "architecture",
+        Platform: "platform"
     }
 );
 

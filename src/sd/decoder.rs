@@ -181,7 +181,7 @@ fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object, ReadError>
         let type_code = prop[8];
         match get_value_parser(type_code) {
             Some(func) => obj.raw_set(hash, func(stream)?),
-            None => return Err(ReadError::BadTypeCode(type_code)),
+            None => return Err(ReadError::BadTypeCode(type_code))
         }
         count -= 1;
     }
@@ -206,7 +206,7 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array, ReadError>
         }
         match get_value_parser(type_code[0]) {
             Some(func) => arr.add(func(stream)?),
-            None => return Err(ReadError::BadTypeCode(type_code[0])),
+            None => return Err(ReadError::BadTypeCode(type_code[0]))
         }
         count -= 1;
     }

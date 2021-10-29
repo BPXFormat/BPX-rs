@@ -32,8 +32,11 @@ mod auto;
 mod data;
 
 use std::fmt::{Display, Formatter};
+
 use data::new_section_data;
 pub use data::SectionData;
+
+use crate::macros::impl_err_conversion;
 
 #[derive(Debug)]
 pub enum Error
@@ -45,13 +48,7 @@ pub enum Error
     Io(std::io::Error)
 }
 
-impl From<std::io::Error> for Error
-{
-    fn from(e: std::io::Error) -> Self
-    {
-        return Error::Io(e);
-    }
-}
+impl_err_conversion!(Error { std::io::Error => Io });
 
 impl Display for Error
 {

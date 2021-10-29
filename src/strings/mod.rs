@@ -30,9 +30,6 @@
 
 mod error;
 
-pub use error::ReadError;
-pub use error::WriteError;
-
 use std::{
     collections::{hash_map::Entry, HashMap},
     fs::DirEntry,
@@ -41,6 +38,8 @@ use std::{
     rc::Rc,
     string::String
 };
+
+pub use error::{ReadError, WriteError};
 
 use crate::section::{AutoSection, SectionData};
 
