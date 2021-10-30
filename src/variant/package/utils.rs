@@ -60,7 +60,7 @@ use crate::{
 ///
 /// # Errors
 ///
-/// An [Error](crate::error::Error) is returned if some objects could not be packed.
+/// A [WriteError](crate::variant::package::error::WriteError) is returned if some objects could not be packed.
 pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
     package: &mut PackageEncoder<TBackend>,
     vname: &str,
@@ -102,7 +102,7 @@ pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
 ///
 /// # Errors
 ///
-/// An [Error](crate::error::Error) is returned if some objects could not be packed.
+/// A [WriteError](crate::variant::package::error::WriteError) is returned if some objects could not be packed.
 pub fn pack_file<TBackend: crate::encoder::IoBackend>(
     package: &mut PackageEncoder<TBackend>,
     source: &Path
@@ -125,7 +125,7 @@ pub fn pack_file<TBackend: crate::encoder::IoBackend>(
 ///
 /// # Errors
 ///
-/// An [Error](crate::error::Error) is returned if the object could not be unpacked.
+/// A [ReadError](crate::variant::package::error::ReadError) is returned if the object could not be unpacked.
 pub fn unpack_memory<TBackend: crate::decoder::IoBackend>(
     package: &mut PackageDecoder<TBackend>,
     obj: &ObjectHeader
@@ -151,7 +151,7 @@ pub fn unpack_memory<TBackend: crate::decoder::IoBackend>(
 ///
 /// # Errors
 ///
-/// An [Error](crate::error::Error) is returned if the object could not be unpacked.
+/// An [ReadError](crate::variant::package::error::ReadError) is returned if the object could not be unpacked.
 pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
     package: &mut PackageDecoder<TBackend>,
     obj: &ObjectHeader,
@@ -181,7 +181,7 @@ pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
 ///
 /// # Errors
 ///
-/// An [Error](crate::error::Error) is returned if some objects could not be unpacked.
+/// An [ReadError](crate::variant::package::error::ReadError) is returned if some objects could not be unpacked.
 pub fn unpack<TBackend: crate::decoder::IoBackend>(
     package: &mut PackageDecoder<TBackend>,
     target: &Path

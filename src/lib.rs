@@ -183,11 +183,6 @@ pub trait Interface
     ///
     /// returns: Result<&mut dyn SectionData, Error>
     ///
-    /// # Errors
-    ///
-    /// A BPX [Error](error::Error) if an IO or any other file error occurs
-    /// while reading the section from the file.
-    ///
     /// # Panics
     ///
     /// Panics if the given section handle is invalid.

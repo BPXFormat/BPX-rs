@@ -119,7 +119,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if some sections/headers could not be loaded.
+    /// A [ReadError](crate::variant::shader::error::ReadError) is returned if some sections/headers could not be loaded.
     pub fn new(backend: TBackend) -> Result<ShaderPackDecoder<TBackend>, ReadError>
     {
         let mut decoder = Decoder::new(backend)?;
@@ -171,7 +171,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if the shader could not be loaded.
+    /// An [ReadError](crate::variant::shader::error::ReadError) is returned if the shader could not be loaded.
     pub fn load_shader(&mut self, handle: SectionHandle) -> Result<Shader, ReadError>
     {
         let header = self.decoder.get_section_header(handle);
@@ -220,7 +220,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if the name could not be read.
+    /// A [ReadError](crate::strings::ReadError) is returned if the name could not be read.
     pub fn get_symbol_name(&mut self, sym: &Symbol) -> Result<&str, crate::strings::ReadError>
     {
         return self.strings.get(sym.name);
@@ -230,7 +230,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned in case of corruption or system error.
+    /// A [ReadError](crate::variant::shader::error::ReadError) is returned in case of corruption or system error.
     pub fn read_symbol_table(&mut self) -> Result<SymbolTable, ReadError>
     {
         use crate::section::Section;
@@ -259,7 +259,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned in case of corruption or system error.
+    /// A [ReadError](crate::variant::shader::error::ReadError) is returned in case of corruption or system error.
     ///
     /// # Panics
     ///

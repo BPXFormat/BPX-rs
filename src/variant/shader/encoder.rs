@@ -260,7 +260,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if the symbol could not be written.
+    /// A [WriteError](crate::variant::shader::error::WriteError) is returned if the symbol could not be written.
     pub fn write_symbol<T: AsRef<str>>(
         &mut self,
         name: T,
@@ -300,7 +300,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if the shader could not be written.
+    /// A [WriteError](crate::variant::shader::error::WriteError) is returned if the shader could not be written.
     pub fn write_shader(&mut self, shader: Shader) -> Result<(), WriteError>
     {
         let section = self.encoder.create_section(
@@ -332,7 +332,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if the encoder failed to save.
+    /// A [WriteError](crate::error::WriteError) is returned if the encoder failed to save.
     pub fn save(&mut self) -> Result<(), crate::error::WriteError>
     {
         return self.encoder.save();
