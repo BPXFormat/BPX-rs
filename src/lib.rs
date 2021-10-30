@@ -52,9 +52,7 @@ pub mod variant;
 ///
 /// *Allows indirect access to a given section instead of sharing mutable references in user code.*
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct SectionHandle(usize);
-
-//TODO: Replace SectionHandle by direct use of section indices and an abstract SectionInfo.
+pub struct Handle(u32);
 
 /// The interface implemented by both the BPX encoder and decoder.
 pub trait Interface
@@ -66,7 +64,7 @@ pub trait Interface
     ///
     /// * `btype`: section type byte.
     ///
-    /// returns: Option<SectionHandle>
+    /// returns: Option<Handle>
     ///
     /// # Examples
     ///
@@ -78,7 +76,7 @@ pub trait Interface
     /// let file = Encoder::new(new_byte_buf(0)).unwrap();
     /// assert!(file.find_section_by_type(0).is_none());
     /// ```
-    fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>;
+    fn find_section_by_type(&self, btype: u8) -> Option<Handle>;
 
     /// Searches for all sections of a given type.
     /// Returns None if no section could be found.
@@ -87,7 +85,7 @@ pub trait Interface
     ///
     /// * `btype`: section type byte.
     ///
-    /// returns: Vec<SectionHandle, Global>
+    /// returns: Vec<Handle, Global>
     ///
     /// # Examples
     ///
@@ -99,7 +97,7 @@ pub trait Interface
     /// let file = Encoder::new(new_byte_buf(0)).unwrap();
     /// assert_eq!(file.find_all_sections_of_type(0).len(), 0);
     /// ```
-    fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>;
+    fn find_all_sections_of_type(&self, btype: u8) -> Vec<Handle>;
 
     /// Locates a section by its index in the file.
     /// Returns None if the section does not exist.
@@ -108,7 +106,7 @@ pub trait Interface
     ///
     /// * `index`: the section index to search for.
     ///
-    /// returns: Option<SectionHandle>
+    /// returns: Option<Handle>
     ///
     /// # Examples
     ///
@@ -120,7 +118,7 @@ pub trait Interface
     /// let file = Encoder::new(new_byte_buf(0)).unwrap();
     /// assert!(file.find_section_by_index(0).is_none());
     /// ```
-    fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>;
+    fn find_section_by_index(&self, index: u32) -> Option<Handle>;
 
     /// Returns the BPX section header of a section.
     ///
@@ -148,7 +146,7 @@ pub trait Interface
     /// let header = file.get_section_header(section.handle());
     /// assert_eq!(header.btype, 1);
     /// ```
-    fn get_section_header(&self, handle: SectionHandle) -> &header::SectionHeader;
+    fn get_section_header(&self, handle: Handle) -> &header::SectionHeader;
 
     /// Returns the section index from a section handle.
     ///
@@ -175,7 +173,7 @@ pub trait Interface
     /// let section = file.create_section(SectionHeaderBuilder::new().build()).unwrap().clone();
     /// assert_eq!(file.get_section_index(section.handle()), 0);
     /// ```
-    fn get_section_index(&self, handle: SectionHandle) -> u32;
+    fn get_section_index(&self, handle: Handle) -> u32;
 
     /// Gets a section for read and/or write.
     ///
@@ -203,7 +201,7 @@ pub trait Interface
     /// let buf = data.load_in_memory().unwrap();
     /// assert_eq!(buf.len(), 0);
     /// ```
-    fn get_section(&self, handle: SectionHandle) -> &Rc<AutoSection>;
+    fn get_section(&self, handle: Handle) -> &Rc<AutoSection>;
 
     /// Returns a read-only reference to the BPX main header.
     ///

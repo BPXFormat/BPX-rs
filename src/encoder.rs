@@ -51,7 +51,7 @@ use crate::{
     },
     section::{AutoSection, Section, SectionData},
     Interface,
-    SectionHandle
+    Handle
 };
 
 const READ_BLOCK_SIZE: usize = 8192;
@@ -76,7 +76,7 @@ pub struct Encoder<TBackend: IoBackend>
 {
     main_header: MainHeader,
     sections: Vec<Option<SectionEntry>>,
-    sections_in_order: Vec<SectionHandle>,
+    sections_in_order: Vec<Handle>,
     file: TBackend,
     cur_index: u32,
     modified: bool
@@ -133,7 +133,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     ///
     /// * `header`: the [SectionHeader](crate::header::SectionHeader) of the new section.
     ///
-    /// returns: Result<SectionHandle, Error>
+    /// returns: Result<Handle, Error>
     ///
     /// # Examples
     ///
@@ -155,7 +155,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         self.main_header.section_num += 1;
         for i in 0..self.sections.len() {
             if self.sections[i].is_none() {
-                let section = create_section(&header, SectionHandle(i))?;
+                let section = create_section(&header, Handle(i as _))?;
                 let entry = SectionEntry {
                     header,
                     data: section,
@@ -164,13 +164,13 @@ impl<TBackend: IoBackend> Encoder<TBackend>
                     flags: header.flags
                 };
                 self.sections[i] = Some(entry);
-                self.sections_in_order.push(SectionHandle(i));
+                self.sections_in_order.push(Handle(i as _));
                 self.cur_index += 1;
                 return Ok(&self.sections[i].as_ref().unwrap().data);
             }
         }
         let r = self.sections.len();
-        let section = create_section(&header, SectionHandle(r))?;
+        let section = create_section(&header, Handle(r as _))?;
         let entry = SectionEntry {
             header,
             data: section,
@@ -179,7 +179,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
             flags: header.flags
         };
         self.sections.push(Some(entry));
-        self.sections_in_order.push(SectionHandle(r));
+        self.sections_in_order.push(Handle(r as _));
         self.cur_index += 1;
         return Ok(&self.sections[r].as_ref().unwrap().data);
     }
@@ -211,13 +211,13 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// encoder.save();
     /// assert_eq!(encoder.get_main_header().section_num, 0);
     /// ```
-    pub fn remove_section(&mut self, handle: SectionHandle)
+    pub fn remove_section(&mut self, handle: Handle)
     {
-        self.sections[handle.0] = None;
+        self.sections[handle.0 as usize] = None;
         self.sections_in_order.retain(|v| v.0 != handle.0);
         for i in 0..self.sections_in_order.len() {
             let handle = self.sections_in_order[i];
-            self.sections[handle.0].as_mut().unwrap().index = i as _;
+            self.sections[handle.0 as usize].as_mut().unwrap().index = i as _;
         }
         self.main_header.section_num -= 1;
         self.cur_index -= 1;
@@ -232,7 +232,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
 
         for v in &self.sections_in_order {
             //At this point the handle must be valid otherwise sections_in_order is broken
-            let section = self.sections[v.0].as_mut().unwrap();
+            let section = self.sections[v.0 as usize].as_mut().unwrap();
             if section.data.size() > u32::MAX as usize {
                 return Err(WriteError::Capacity(section.data.size()));
             }
@@ -333,33 +333,33 @@ impl<TBackend: IoBackend> Encoder<TBackend>
 
 impl<TBackend: IoBackend> Interface for Encoder<TBackend>
 {
-    fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
+    fn find_section_by_type(&self, btype: u8) -> Option<Handle>
     {
         for i in 0..self.sections.len() {
             if let Some(v) = &self.sections[i] {
                 if v.header.btype == btype {
-                    return Some(SectionHandle(i));
+                    return Some(Handle(i as _));
                 }
             }
         }
         return None;
     }
 
-    fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>
+    fn find_all_sections_of_type(&self, btype: u8) -> Vec<Handle>
     {
         let mut v = Vec::new();
 
         for i in 0..self.sections.len() {
             if let Some(vv) = &self.sections[i] {
                 if vv.header.btype == btype {
-                    v.push(SectionHandle(i));
+                    v.push(Handle(i as _));
                 }
             }
         }
         return v;
     }
 
-    fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>
+    fn find_section_by_index(&self, index: u32) -> Option<Handle>
     {
         if let Some(s) = self.sections_in_order.get(index as usize) {
             return Some(*s);
@@ -367,19 +367,19 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
         return None;
     }
 
-    fn get_section_header(&self, handle: SectionHandle) -> &SectionHeader
+    fn get_section_header(&self, handle: Handle) -> &SectionHeader
     {
-        return &self.sections[handle.0].as_ref().unwrap().header;
+        return &self.sections[handle.0 as usize].as_ref().unwrap().header;
     }
 
-    fn get_section_index(&self, handle: SectionHandle) -> u32
+    fn get_section_index(&self, handle: Handle) -> u32
     {
         return handle.0 as u32;
     }
 
-    fn get_section(&self, handle: SectionHandle) -> &Rc<AutoSection>
+    fn get_section(&self, handle: Handle) -> &Rc<AutoSection>
     {
-        let section = self.sections[handle.0].as_ref().unwrap();
+        let section = self.sections[handle.0 as usize].as_ref().unwrap();
         return &section.data;
     }
 
@@ -405,7 +405,7 @@ fn get_flags(section: &SectionEntry, size: u32) -> u8
     return flags;
 }
 
-fn create_section(header: &SectionHeader, handle: SectionHandle) -> Result<Rc<AutoSection>, WriteError>
+fn create_section(header: &SectionHeader, handle: Handle) -> Result<Rc<AutoSection>, WriteError>
 {
     let section = Rc::new(AutoSection::new(header.size, handle)?);
     {

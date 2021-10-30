@@ -53,7 +53,7 @@ use crate::{
         NamedTable
     },
     Interface,
-    SectionHandle
+    Handle
 };
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
@@ -156,7 +156,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     }
 
     /// Lists all shaders contained in this shader package.
-    pub fn list_shaders(&self) -> Vec<SectionHandle>
+    pub fn list_shaders(&self) -> Vec<Handle>
     {
         return self.decoder.find_all_sections_of_type(SECTION_TYPE_SHADER);
     }
@@ -172,7 +172,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     /// # Errors
     ///
     /// An [ReadError](crate::variant::shader::error::ReadError) is returned if the shader could not be loaded.
-    pub fn load_shader(&mut self, handle: SectionHandle) -> Result<Shader, ReadError>
+    pub fn load_shader(&mut self, handle: Handle) -> Result<Shader, ReadError>
     {
         let header = self.decoder.get_section_header(handle);
         if header.size < 1 {

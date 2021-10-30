@@ -33,7 +33,7 @@ use std::{
 
 use crate::{
     section::{new_section_data, Error, Section, SectionData},
-    SectionHandle
+    Handle
 };
 
 pub struct Ref<'a>
@@ -90,7 +90,7 @@ pub struct AutoSection
     data: RefCell<Box<dyn SectionData>>,
     size: Cell<usize>,
     modified: Cell<bool>,
-    handle: SectionHandle
+    handle: Handle
 }
 
 impl AutoSection
@@ -110,7 +110,7 @@ impl AutoSection
     ///
     /// Returns [Error](std::io::Error) in case some IO error has occurred when the section
     /// is created as a temporary file.
-    pub fn new(size: u32, handle: SectionHandle) -> Result<AutoSection, std::io::Error>
+    pub fn new(size: u32, handle: Handle) -> Result<AutoSection, std::io::Error>
     {
         let data = new_section_data(Some(size))?;
         return Ok(AutoSection {
@@ -179,7 +179,7 @@ impl Section for AutoSection
         };
     }
 
-    fn handle(&self) -> SectionHandle
+    fn handle(&self) -> Handle
     {
         return self.handle;
     }

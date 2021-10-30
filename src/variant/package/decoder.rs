@@ -49,7 +49,7 @@ use crate::{
         NamedTable
     },
     Interface,
-    SectionHandle
+    Handle
 };
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
@@ -211,7 +211,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
 
     fn load_from_section<TWrite: Write>(
         &mut self,
-        handle: SectionHandle,
+        handle: Handle,
         offset: u32,
         size: u32,
         out: &mut TWrite

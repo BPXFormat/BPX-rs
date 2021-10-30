@@ -45,7 +45,7 @@ use crate::{
     section::AutoSection,
     utils::OptionExtension,
     Interface,
-    SectionHandle
+    Handle
 };
 
 const READ_BLOCK_SIZE: usize = 8192;
@@ -137,11 +137,11 @@ impl<TBackend: IoBackend> Decoder<TBackend>
     /// # Errors
     ///
     /// A [ReadError](crate::error::ReadError) is returned if the section could not be loaded.
-    pub fn load_section(&mut self, handle: SectionHandle) -> Result<&Rc<AutoSection>, ReadError>
+    pub fn load_section(&mut self, handle: Handle) -> Result<&Rc<AutoSection>, ReadError>
     {
-        let header = &self.sections[handle.0];
+        let header = &self.sections[handle.0 as usize];
         let file = &mut self.file;
-        let object = self.sections_data[handle.0].get_or_insert_with_err(|| load_section(file, handle, header))?;
+        let object = self.sections_data[handle.0 as usize].get_or_insert_with_err(|| load_section(file, handle, header))?;
         return Ok(object);
     }
 
@@ -154,49 +154,49 @@ impl<TBackend: IoBackend> Decoder<TBackend>
 
 impl<TBackend: IoBackend> Interface for Decoder<TBackend>
 {
-    fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>
+    fn find_section_by_type(&self, btype: u8) -> Option<Handle>
     {
         for i in 0..self.sections.len() {
             if self.sections[i].btype == btype {
-                return Some(SectionHandle(i));
+                return Some(Handle(i as u32));
             }
         }
         return None;
     }
 
-    fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>
+    fn find_all_sections_of_type(&self, btype: u8) -> Vec<Handle>
     {
         let mut v = Vec::new();
 
         for i in 0..self.sections.len() {
             if self.sections[i].btype == btype {
-                v.push(SectionHandle(i));
+                v.push(Handle(i as u32));
             }
         }
         return v;
     }
 
-    fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>
+    fn find_section_by_index(&self, index: u32) -> Option<Handle>
     {
         if let Some(_) = self.sections.get(index as usize) {
-            return Some(SectionHandle(index as _));
+            return Some(Handle(index as _));
         }
         return None;
     }
 
-    fn get_section_header(&self, handle: SectionHandle) -> &SectionHeader
+    fn get_section_header(&self, handle: Handle) -> &SectionHeader
     {
-        return &self.sections[handle.0];
+        return &self.sections[handle.0 as usize];
     }
 
-    fn get_section_index(&self, handle: SectionHandle) -> u32
+    fn get_section_index(&self, handle: Handle) -> u32
     {
         return handle.0 as u32;
     }
 
-    fn get_section(&self, handle: SectionHandle) -> &Rc<AutoSection>
+    fn get_section(&self, handle: Handle) -> &Rc<AutoSection>
     {
-        return self.sections_data[handle.0].as_ref().unwrap();
+        return self.sections_data[handle.0 as usize].as_ref().unwrap();
     }
 
     fn get_main_header(&self) -> &MainHeader
@@ -207,7 +207,7 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
 
 fn load_section<TBackend: IoBackend>(
     file: &mut TBackend,
-    handle: SectionHandle,
+    handle: Handle,
     section: &SectionHeader
 ) -> Result<Rc<AutoSection>, ReadError>
 {

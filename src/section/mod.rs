@@ -83,9 +83,9 @@ pub trait Section
     fn realloc(&self, size: u32) -> Result<Box<dyn SectionData>, Error>;
 
     /// Returns the handle of this section.
-    fn handle(&self) -> SectionHandle;
+    fn handle(&self) -> Handle;
 }
 
 pub use auto::AutoSection;
 
-use crate::SectionHandle;
+use crate::Handle;
