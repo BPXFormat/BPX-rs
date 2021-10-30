@@ -29,9 +29,10 @@
 use std::{collections::HashMap, convert::TryInto};
 
 use crate::{
-    sd::{Array, DebugError, Object},
+    sd::{Array, Object},
     utils::hash
 };
+use crate::sd::error::DebugError;
 
 /// Provides support for debug symbols to BPXSD object.
 #[derive(Clone)]
@@ -134,7 +135,7 @@ impl DebugSymbols
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned in case the object
+    /// A [DebugError](crate::sd::error::DebugError) is returned in case the object
     /// does not provide debug information or if the debug information
     /// could not be read.
     ///

@@ -47,7 +47,7 @@ pub trait SectionData: Read + Write + Seek
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if the section could not be loaded.
+    /// An [Error](std::io::Error) is returned if the section could not be loaded.
     ///
     /// # Examples
     ///

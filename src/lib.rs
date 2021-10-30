@@ -52,6 +52,8 @@ pub mod variant;
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct SectionHandle(usize);
 
+//TODO: Replace SectionHandle by direct use of section indices and an abstract SectionInfo.
+
 /// The interface implemented by both the BPX encoder and decoder.
 pub trait Interface
 {

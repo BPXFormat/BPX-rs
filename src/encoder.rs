@@ -292,7 +292,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if some data could
+    /// A [WriteError](crate::error::WriteError) is returned if some data could
     /// not be written.
     ///
     /// # Examples

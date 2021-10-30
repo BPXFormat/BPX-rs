@@ -92,7 +92,7 @@ impl<TBackend: IoBackend> Decoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if some headers
+    /// A [ReadError](crate::error::ReadError) is returned if some headers
     /// could not be read or if the header data is corrupted.
     ///
     /// # Examples

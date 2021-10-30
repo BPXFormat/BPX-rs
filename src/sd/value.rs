@@ -31,9 +31,11 @@ use std::{
     string::String
 };
 
-use crate::sd::{Array, Object, TypeError};
+use crate::sd::{Array, Object, error::TypeError};
 
-/// Represents a BPXSD value
+use crate::macros::impl_err_conversion;
+
+/// Represents a BPXSD value.
 #[derive(PartialEq, Clone)]
 pub enum Value
 {
@@ -112,123 +114,30 @@ impl Value
     }
 }
 
-impl From<bool> for Value
-{
-    fn from(v: bool) -> Self
-    {
-        return Value::Bool(v);
+impl_err_conversion!(
+    Value {
+        bool => Bool,
+        u8 => Uint8,
+        u16 => Uint16,
+        u32 => Uint32,
+        u64 => Uint64,
+        i8 => Int8,
+        i16 => Int16,
+        i32 => Int32,
+        i64 => Int64,
+        f32 => Float,
+        f64 => Double,
+        String => String,
+        Array => Array,
+        Object => Object
     }
-}
-
-impl From<u8> for Value
-{
-    fn from(v: u8) -> Self
-    {
-        return Value::Uint8(v);
-    }
-}
-
-impl From<u16> for Value
-{
-    fn from(v: u16) -> Self
-    {
-        return Value::Uint16(v);
-    }
-}
-
-impl From<u32> for Value
-{
-    fn from(v: u32) -> Self
-    {
-        return Value::Uint32(v);
-    }
-}
-
-impl From<u64> for Value
-{
-    fn from(v: u64) -> Self
-    {
-        return Value::Uint64(v);
-    }
-}
-
-impl From<i8> for Value
-{
-    fn from(v: i8) -> Self
-    {
-        return Value::Int8(v);
-    }
-}
-
-impl From<i16> for Value
-{
-    fn from(v: i16) -> Self
-    {
-        return Value::Int16(v);
-    }
-}
-
-impl From<i32> for Value
-{
-    fn from(v: i32) -> Self
-    {
-        return Value::Int32(v);
-    }
-}
-
-impl From<i64> for Value
-{
-    fn from(v: i64) -> Self
-    {
-        return Value::Int64(v);
-    }
-}
-
-impl From<f32> for Value
-{
-    fn from(v: f32) -> Self
-    {
-        return Value::Float(v);
-    }
-}
-
-impl From<f64> for Value
-{
-    fn from(v: f64) -> Self
-    {
-        return Value::Double(v);
-    }
-}
+);
 
 impl From<&str> for Value
 {
     fn from(v: &str) -> Self
     {
         return Value::String(String::from(v));
-    }
-}
-
-impl From<String> for Value
-{
-    fn from(v: String) -> Self
-    {
-        return Value::String(v);
-    }
-}
-
-impl From<Array> for Value
-{
-    fn from(v: Array) -> Self
-    {
-        return Value::Array(v);
-    }
-}
-
-impl From<Object> for Value
-{
-    fn from(v: Object) -> Self
-    {
-        return Value::Object(v);
     }
 }
 

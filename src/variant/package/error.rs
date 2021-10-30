@@ -74,7 +74,7 @@ variant_error!(
         BlankString,
 
         /// Describes a structured data error.
-        Sd(crate::sd::ReadError),
+        Sd(crate::sd::error::ReadError),
 
         /// A strings error.
         Strings(crate::strings::ReadError)
@@ -86,7 +86,7 @@ variant_error!(
         Strings(crate::strings::WriteError),
 
         /// Describes a structured data error.
-        Sd(crate::sd::WriteError),
+        Sd(crate::sd::error::WriteError),
 
         //Indicates an invalid path while attempting to pack some files.
         InvalidPath
@@ -96,14 +96,14 @@ variant_error!(
 impl_err_conversion!(
     ReadError {
         crate::strings::ReadError => Strings,
-        crate::sd::ReadError => Sd
+        crate::sd::error::ReadError => Sd
     }
 );
 
 impl_err_conversion!(
     WriteError {
         crate::strings::WriteError => Strings,
-        crate::sd::WriteError => Sd
+        crate::sd::error::WriteError => Sd
     }
 );
 

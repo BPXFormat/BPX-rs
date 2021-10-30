@@ -145,7 +145,7 @@ impl PackageBuilder
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned in case some sections could not be created.
+    /// A [WriteError](crate::variant::package::error::WriteError) is returned in case some sections could not be created.
     ///
     /// # Examples
     ///
@@ -287,7 +287,11 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     /// * `name`: the name of the object.
     /// * `source`: the source object data as a [Read](std::io::Read).
     ///
-    /// returns: Result<(), Error>
+    /// returns: Result<(), WriteError>
+    ///
+    /// # Errors
+    ///
+    /// A [WriteError](crate::variant::package::error::WriteError) is returned if the object could not be written.
     pub fn pack_object<TRead: Read>(&mut self, name: &str, mut source: TRead) -> Result<(), WriteError>
     {
         let mut object_size = 0;
@@ -342,7 +346,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if the encoder failed to save.
+    /// A [WriteError](crate::error::WriteError) is returned if the encoder failed to save.
     pub fn save(&mut self) -> Result<(), crate::error::WriteError>
     {
         return self.encoder.save();

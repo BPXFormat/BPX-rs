@@ -30,7 +30,7 @@ use std::io::Write;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::sd::{Array, Object, Value, WriteError};
+use crate::sd::{Array, Object, Value, error::WriteError};
 
 fn get_value_type_code(val: &Value) -> u8
 {

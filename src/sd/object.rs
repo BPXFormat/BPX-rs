@@ -32,7 +32,7 @@ use std::{
 };
 
 use crate::{
-    sd::{ReadError, Value, WriteError},
+    sd::{error::{ReadError, WriteError}, Value},
     utils
 };
 

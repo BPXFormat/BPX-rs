@@ -94,7 +94,7 @@ impl StringSection
     ///
     /// # Errors
     ///
-    /// Returns an [Error](crate::error::Error) if the string could not be read or the
+    /// Returns a [ReadError](crate::strings::ReadError) if the string could not be read or the
     /// section is corrupted/truncated.
     pub fn get(&mut self, address: u32) -> Result<&str, ReadError>
     {
@@ -120,7 +120,7 @@ impl StringSection
     ///
     /// # Errors
     ///
-    /// Returns an [Error](crate::error::Error) if the string could not be written.
+    /// Returns a [WriteError](crate::strings::WriteError) if the string could not be written.
     pub fn put(&mut self, s: &str) -> Result<u32, WriteError>
     {
         let mut data = self.section.open()?;

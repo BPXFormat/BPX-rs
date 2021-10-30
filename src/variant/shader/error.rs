@@ -86,7 +86,7 @@ variant_error!(
         Strings(crate::strings::ReadError),
 
         /// Describes a structured data error.
-        Sd(crate::sd::ReadError)
+        Sd(crate::sd::error::ReadError)
     }
 
     /// Represents a BPXS write error.
@@ -95,21 +95,21 @@ variant_error!(
         Strings(crate::strings::WriteError),
 
         /// Describes a structured data error.
-        Sd(crate::sd::WriteError)
+        Sd(crate::sd::error::WriteError)
     }
 );
 
 impl_err_conversion!(
     ReadError {
         crate::strings::ReadError => Strings,
-        crate::sd::ReadError => Sd
+        crate::sd::error::ReadError => Sd
     }
 );
 
 impl_err_conversion!(
     WriteError {
         crate::strings::WriteError => Strings,
-        crate::sd::WriteError => Sd
+        crate::sd::error::WriteError => Sd
     }
 );
 

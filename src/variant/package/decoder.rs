@@ -101,7 +101,8 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if some sections/headers could not be loaded.
+    /// A [ReadError](crate::variant::package::error::ReadError) is returned if some
+    /// sections/headers could not be loaded.
     pub fn new(backend: TBackend) -> Result<PackageDecoder<TBackend>, ReadError>
     {
         let mut decoder = Decoder::new(backend)?;
@@ -159,7 +160,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned in case of corruption or system error.
+    /// A [ReadError](crate::variant::package::error::ReadError) is returned in case of corruption or system error.
     pub fn read_metadata(&mut self) -> Result<Option<Object>, ReadError>
     {
         if let Some(handle) = self.decoder.find_section_by_type(SECTION_TYPE_SD) {
@@ -175,7 +176,8 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned in case of corruption or system error.
+    /// A [ReadError](crate::variant::package::error::ReadError) is returned in case of
+    /// corruption or system error.
     pub fn read_object_table(&mut self) -> Result<ObjectTable, ReadError>
     {
         use crate::section::Section;
@@ -201,7 +203,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if the name could not be read.
+    /// A [ReadError](crate::strings::ReadError) is returned if the name could not be read.
     pub fn get_object_name(&mut self, obj: &ObjectHeader) -> Result<&str, crate::strings::ReadError>
     {
         return self.strings.get(obj.name);
@@ -242,7 +244,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if the object could not be unpacked.
+    /// A [ReadError](crate::variant::package::error::ReadError) is returned if the object could not be unpacked.
     pub fn unpack_object<TWrite: Write>(&mut self, obj: &ObjectHeader, mut out: TWrite) -> Result<u64, ReadError>
     {
         let mut section_id = obj.start;

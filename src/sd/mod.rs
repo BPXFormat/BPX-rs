@@ -32,12 +32,11 @@ mod array;
 mod debug;
 mod decoder;
 mod encoder;
-mod error;
+pub mod error;
 mod object;
 mod value;
 
 pub use array::Array;
 pub use debug::DebugSymbols;
-pub use error::{DebugError, ReadError, TypeError, WriteError};
 pub use object::Object;
 pub use value::Value;
