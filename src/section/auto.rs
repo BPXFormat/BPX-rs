@@ -84,6 +84,7 @@ impl<'a> Drop for Ref<'a>
     }
 }
 
+/// The default implementation of the Section trait.
 pub struct AutoSection
 {
     data: RefCell<Box<dyn SectionData>>,
@@ -94,6 +95,21 @@ pub struct AutoSection
 
 impl AutoSection
 {
+    /// Creates a new AutoSection.
+    ///
+    /// **NOTE: Not intended to be called in user code.**
+    ///
+    /// # Arguments
+    ///
+    /// * `size`: the size of the section.
+    /// * `handle`: the section handle.
+    ///
+    /// returns: Result<AutoSection, Error>
+    ///
+    /// # Errors
+    ///
+    /// Returns [Error](std::io::Error) in case some IO error has occurred when the section
+    /// is created as a temporary file.
     pub fn new(size: u32, handle: SectionHandle) -> Result<AutoSection, std::io::Error>
     {
         let data = new_section_data(Some(size))?;
@@ -105,6 +121,7 @@ impl AutoSection
         });
     }
 
+    /// Opens this section and returns a reference to it.
     pub fn open(&self) -> Result<Ref<'_>, Error>
     {
         let size = self.size.get();
@@ -123,6 +140,9 @@ impl AutoSection
         return Err(Error::AlreadyOpen);
     }
 
+    /// Returns true if this section has been modified then resets the modified flag to false.
+    ///
+    /// **NOTE: Not intended to be called in user code.**
     pub fn modified(&self) -> bool
     {
         return self.modified.replace(false);

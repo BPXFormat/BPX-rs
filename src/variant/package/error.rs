@@ -26,6 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! BPXP error definitions.
+
 use std::fmt::{Display, Formatter};
 
 use crate::macros::{impl_err_conversion, named_enum, variant_error};
@@ -33,7 +35,10 @@ use crate::macros::{impl_err_conversion, named_enum, variant_error};
 named_enum!(
     /// Represents the context of an invalid code.
     InvalidCodeContext {
+        /// Invalid architecture code byte.
         Arch: "architecture",
+
+        /// Invalid platform code byte.
         Platform: "platform"
     }
 );
@@ -88,7 +93,7 @@ variant_error!(
         /// Describes a structured data error.
         Sd(crate::sd::error::WriteError),
 
-        //Indicates an invalid path while attempting to pack some files.
+        /// Indicates an invalid path while attempting to pack some files.
         InvalidPath
     }
 );

@@ -30,6 +30,7 @@ use std::fmt::{Display, Formatter};
 
 use crate::macros::impl_err_conversion;
 
+/// Represents a string section read error.
 #[derive(Debug)]
 pub enum ReadError
 {
@@ -66,6 +67,7 @@ impl Display for ReadError
     }
 }
 
+/// Represents a string section write error.
 #[derive(Debug)]
 pub enum WriteError
 {

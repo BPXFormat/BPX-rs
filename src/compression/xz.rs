@@ -84,11 +84,11 @@ fn new_encoder() -> Result<lzma_stream, DeflateError>
         if res == LZMA_OK {
             return Ok(stream);
         }
-        match res {
-            LZMA_MEM_ERROR => return Err(DeflateError::Memory),
-            LZMA_OPTIONS_ERROR => return Err(DeflateError::Unsupported("filter chain")),
-            LZMA_UNSUPPORTED_CHECK => return Err(DeflateError::Unsupported("integrity check")),
-            _ => return Err(DeflateError::Unknown)
+        return match res {
+            LZMA_MEM_ERROR => Err(DeflateError::Memory),
+            LZMA_OPTIONS_ERROR => Err(DeflateError::Unsupported("filter chain")),
+            LZMA_UNSUPPORTED_CHECK => Err(DeflateError::Unsupported("integrity check")),
+            _ => Err(DeflateError::Unknown)
         };
     }
 }
@@ -101,11 +101,11 @@ fn new_decoder() -> Result<lzma_stream, InflateError>
         if res == LZMA_OK {
             return Ok(stream);
         }
-        match res {
-            LZMA_MEM_ERROR => return Err(InflateError::Memory),
-            LZMA_OPTIONS_ERROR => return Err(InflateError::Unsupported("filter chain")),
-            LZMA_UNSUPPORTED_CHECK => return Err(InflateError::Unsupported("integrity check")),
-            _ => return Err(InflateError::Unknown)
+        return match res {
+            LZMA_MEM_ERROR => Err(InflateError::Memory),
+            LZMA_OPTIONS_ERROR => Err(InflateError::Unsupported("filter chain")),
+            LZMA_UNSUPPORTED_CHECK => Err(InflateError::Unsupported("integrity check")),
+            _ => Err(InflateError::Unknown)
         };
     }
 }
@@ -152,10 +152,10 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
                 if res == LZMA_STREAM_END {
                     break;
                 }
-                match res {
-                    LZMA_MEM_ERROR => return Err(DeflateError::Memory),
-                    LZMA_DATA_ERROR => return Err(DeflateError::Data),
-                    _ => return Err(DeflateError::Unknown)
+                return match res {
+                    LZMA_MEM_ERROR => Err(DeflateError::Memory),
+                    LZMA_DATA_ERROR => Err(DeflateError::Data),
+                    _ => Err(DeflateError::Unknown)
                 };
             }
         }
@@ -203,10 +203,10 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
                 if res == LZMA_STREAM_END {
                     break;
                 }
-                match res {
-                    LZMA_MEM_ERROR => return Err(InflateError::Memory),
-                    LZMA_DATA_ERROR | LZMA_BUF_ERROR => return Err(InflateError::Data),
-                    _ => return Err(InflateError::Unknown)
+                return match res {
+                    LZMA_MEM_ERROR => Err(InflateError::Memory),
+                    LZMA_DATA_ERROR | LZMA_BUF_ERROR => Err(InflateError::Data),
+                    _ => Err(InflateError::Unknown)
                 };
             }
         }

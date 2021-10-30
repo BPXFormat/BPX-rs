@@ -155,9 +155,9 @@ fn read_string<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
             return Err(ReadError::Truncation("String"));
         }
     }
-    match String::from_utf8(curs) {
-        Err(_) => return Err(ReadError::Utf8),
-        Ok(v) => return Ok(Value::String(v))
+    return match String::from_utf8(curs) {
+        Err(_) => Err(ReadError::Utf8),
+        Ok(v) => Ok(Value::String(v))
     }
 }
 

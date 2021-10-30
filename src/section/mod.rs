@@ -38,6 +38,7 @@ pub use data::SectionData;
 
 use crate::macros::impl_err_conversion;
 
+/// Represents a section error.
 #[derive(Debug)]
 pub enum Error
 {
@@ -61,10 +62,27 @@ impl Display for Error
     }
 }
 
+/// Trait to define basic functionality of a section content.
 pub trait Section
 {
+    /// Returns the size of the section (without opening the section).
     fn size(&self) -> usize;
+
+    /// Reallocates the section.
+    ///
+    /// # Arguments
+    ///
+    /// * `size`: new section size.
+    ///
+    /// returns: Result<Box<dyn SectionData, Global>, Error>
+    ///
+    /// # Errors
+    ///
+    /// Returns an [Error](crate::section::Error) if the section is already open or if
+    /// the temporary file creation has failed.
     fn realloc(&self, size: u32) -> Result<Box<dyn SectionData>, Error>;
+
+    /// Returns the handle of this section.
     fn handle(&self) -> SectionHandle;
 }
 

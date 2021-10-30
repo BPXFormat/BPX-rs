@@ -126,6 +126,17 @@ impl<TBackend: IoBackend> Decoder<TBackend>
         return Ok(decoder);
     }
 
+    /// Loads a section from this BPX.
+    ///
+    /// # Arguments
+    ///
+    /// * `handle`: a handle to the section.
+    ///
+    /// returns: Result<&Rc<AutoSection>, ReadError>
+    ///
+    /// # Errors
+    ///
+    /// A [ReadError](crate::error::ReadError) is returned if the section could not be loaded.
     pub fn load_section(&mut self, handle: SectionHandle) -> Result<&Rc<AutoSection>, ReadError>
     {
         let header = &self.sections[handle.0];

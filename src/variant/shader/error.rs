@@ -26,6 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! BPXS error definitions.
+
 use std::fmt::{Display, Formatter};
 
 use crate::macros::{impl_err_conversion, named_enum, variant_error};

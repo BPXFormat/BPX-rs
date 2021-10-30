@@ -35,6 +35,7 @@ use std::{
 
 use crate::macros::impl_err_conversion;
 
+/// Represents a generic decompression error.
 #[derive(Debug)]
 pub enum DeflateError
 {
@@ -70,6 +71,7 @@ impl Display for DeflateError
     }
 }
 
+/// Represents a generic compression error.
 #[derive(Debug)]
 pub enum InflateError
 {
@@ -105,6 +107,7 @@ impl Display for InflateError
     }
 }
 
+/// Represents a BPX read error.
 #[derive(Debug)]
 pub enum ReadError
 {
@@ -160,6 +163,7 @@ impl Display for ReadError
     }
 }
 
+/// Represents a BPX write error.
 #[derive(Debug)]
 pub enum WriteError
 {

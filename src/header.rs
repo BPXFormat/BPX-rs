@@ -122,6 +122,7 @@ pub trait Struct<const S: usize>
     }
 }
 
+/// Represents a byte structure with support for checksum.
 pub trait GetChecksum<const D: usize>
 where
     Self: Struct<D>

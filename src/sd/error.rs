@@ -26,6 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! BPXSD error definitions.
+
 use std::fmt::{Display, Formatter};
 
 use crate::macros::impl_err_conversion;
@@ -137,6 +139,14 @@ pub struct TypeError
 
 impl TypeError
 {
+    /// Creates a new BPXSD value conversion type error (shorter method).
+    ///
+    /// # Arguments
+    ///
+    /// * `expected`: the expected type name.
+    /// * `actual`: the actual type name.
+    ///
+    /// returns: TypeError
     pub fn new(expected: &'static str, actual: &'static str) -> TypeError
     {
         return TypeError {
