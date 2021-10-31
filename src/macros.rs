@@ -26,6 +26,10 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! Utility generation macros mainly designed for BPX and IO related error types.
+
+#[macro_export]
+/// Automatically implements conversion from the given set of error types.
 macro_rules! impl_err_conversion {
     ($self: ident { $($foreign: ty => $variant: ident),* }) => {
         $(
@@ -40,6 +44,8 @@ macro_rules! impl_err_conversion {
     };
 }
 
+#[macro_export]
+/// Generates an enum where each variant is assigned a &'static str name.
 macro_rules! named_enum {
     (
         $(#[$enum_outer:meta])* $name: ident { $($(#[$outer:meta])* $variant: ident : $namestr: expr),* }
@@ -67,6 +73,8 @@ macro_rules! named_enum {
     };
 }
 
+#[macro_export]
+/// Generates a set of error definitions for a new BPX variant/type.
 macro_rules! variant_error {
     (
         $(E { $($(#[$eos_outer:meta])* $eos: ident : $eos_name: expr),* })?
@@ -156,6 +164,6 @@ macro_rules! variant_error {
     };
 }
 
-pub(crate) use impl_err_conversion;
-pub(crate) use named_enum;
-pub(crate) use variant_error;
+pub use impl_err_conversion;
+pub use named_enum;
+pub use variant_error;

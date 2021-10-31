@@ -41,7 +41,7 @@ pub mod encoder;
 pub mod error;
 mod garraylen;
 pub mod header;
-mod macros;
+pub mod macros;
 pub mod sd;
 pub mod section;
 pub mod strings;
