@@ -381,7 +381,7 @@ impl SectionHeader
     }
 
     /// Extracts compression information from this section.
-    pub fn get_compression(&self) -> Option<(CompressionMethod, u32)>
+    pub fn compression(&self) -> Option<(CompressionMethod, u32)>
     {
         if self.flags & FLAG_COMPRESS_ZLIB != 0 {
             return Some((CompressionMethod::Zlib, self.csize));
@@ -393,7 +393,7 @@ impl SectionHeader
     }
 
     /// Extracts checksum information from this section.
-    pub fn get_checksum(&self) -> Option<Checksum>
+    pub fn checksum(&self) -> Option<Checksum>
     {
         if self.flags & FLAG_CHECK_WEAK != 0 {
             return Some(Checksum::Weak);
