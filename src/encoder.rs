@@ -78,7 +78,7 @@ pub struct Encoder<TBackend: IoBackend>
     main_header: MainHeader,
     sections: BTreeMap<u32, SectionEntry>,
     file: TBackend,
-    cur_handle: u32,
+    next_handle: u32,
     modified: bool
 }
 
@@ -97,7 +97,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
             main_header: MainHeader::new(),
             sections: BTreeMap::new(),
             file,
-            cur_handle: 0,
+            next_handle: 0,
             modified: true
         });
     }
@@ -152,7 +152,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     {
         self.modified = true;
         self.main_header.section_num += 1;
-        let r = self.cur_handle;
+        let r = self.next_handle;
         let section = create_section(&header, Handle(r))?;
         let entry = SectionEntry {
             header,
@@ -161,7 +161,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
             flags: header.flags
         };
         self.sections.insert(r, entry);
-        self.cur_handle += 1;
+        self.next_handle += 1;
         return Ok(&self.sections[&r].data);
     }
 
@@ -212,7 +212,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
                 return Err(WriteError::Capacity(section.data.size()));
             }
             let mut data = section.data.open()?;
-            let last_section_ptr = data.seek(SeekFrom::Current(0))?;
+            let last_section_ptr = data.stream_position()?;
             data.seek(io::SeekFrom::Start(0))?;
             let flags = get_flags(&section, data.size() as u32);
             let (csize, chksum) = write_section(flags, &mut *data, &mut self.file)?;
@@ -260,6 +260,42 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         return Ok(());
     }
 
+    fn write_last_section(&mut self, last_handle: u32) -> Result<(bool, i64), WriteError>
+    {
+        let entry = self.sections.get_mut(&last_handle).unwrap();
+        self.file.seek(SeekFrom::Start(entry.header.pointer))?;
+        let mut data = entry.data.open()?;
+        let last_section_ptr = data.stream_position()?;
+        let flags = get_flags(entry, data.size() as u32);
+        let (csize, chksum) = write_section(flags, data.as_mut(), &mut self.file)?;
+        data.seek(io::SeekFrom::Start(last_section_ptr))?;
+        let old = entry.header;
+        entry.header.csize = csize as u32;
+        entry.header.size = data.size() as u32;
+        entry.header.chksum = chksum;
+        entry.header.flags = flags;
+        let diff = entry.header.csize as i64 - old.csize as i64;
+        return Ok((old == entry.header, diff));
+    }
+
+    fn internal_save_last(&mut self) -> Result<(), WriteError>
+    {
+        // This function saves only the last section.
+        let (update_sht, diff) = self.write_last_section(self.next_handle - 1)?;
+        if update_sht {
+            let offset_section_header = SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * (self.main_header.section_num - 1) as usize);
+            self.file.seek(SeekFrom::Start(offset_section_header as _))?;
+            let entry = &self.sections[&(self.next_handle - 1)];
+            entry.header.write(&mut self.file)?;
+        }
+        if diff != 0 {
+            self.file.seek(SeekFrom::Start(0))?;
+            self.main_header.file_size = self.main_header.file_size.wrapping_add(diff as u64);
+            self.main_header.write(&mut self.file)?;
+        }
+        return Ok(());
+    }
+
     /// Writes all sections to the underlying IO backend.
     ///
     /// **This function prints some information to standard output as a way
@@ -287,10 +323,21 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// ```
     pub fn save(&mut self) -> Result<(), WriteError>
     {
-        let has_any = self.sections.iter().any(|(_, entry)| entry.data.modified());
-        if self.modified || has_any {
+        let mut filter = self.sections.iter().filter(|(_, entry)| entry.data.modified());
+        let count = filter.by_ref().count();
+        if self.modified || count > 1 {
             self.modified = false;
             return self.internal_save();
+        } else if !self.modified && count == 1 {
+            let (handle, _) = filter.last().unwrap();
+            if *handle == self.next_handle - 1 {
+                //Save only the last section (no need to re-write every other section
+                return self.internal_save_last();
+            } else {
+                //Unfortunately the modified section is not the last one so we can't safely
+                //expand/reduce the file size without corrupting other sections
+                return self.internal_save();
+            }
         }
         return Ok(());
     }
