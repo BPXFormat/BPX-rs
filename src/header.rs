@@ -31,6 +31,7 @@
 use std::io;
 
 use byteorder::{ByteOrder, LittleEndian};
+use crate::builder::{Checksum, CompressionMethod};
 
 use super::garraylen::*;
 use crate::error::ReadError;
@@ -374,8 +375,32 @@ impl GetChecksum<SIZE_SECTION_HEADER> for SectionHeader {}
 impl SectionHeader
 {
     /// Checks if this section is huge (greater than 100Mb).
-    pub fn is_huge_section(&self) -> bool
+    pub fn is_huge(&self) -> bool
     {
         return self.size > 100000000;
+    }
+
+    /// Extracts compression information from this section.
+    pub fn get_compression(&self) -> Option<(CompressionMethod, u32)>
+    {
+        if self.flags & FLAG_COMPRESS_ZLIB != 0 {
+            return Some((CompressionMethod::Zlib, self.csize));
+        } else if self.flags & FLAG_COMPRESS_XZ != 0 {
+            return Some((CompressionMethod::Xz, self.csize));
+        } else {
+            return None;
+        }
+    }
+
+    /// Extracts checksum information from this section.
+    pub fn get_checksum(&self) -> Option<Checksum>
+    {
+        if self.flags & FLAG_CHECK_WEAK != 0 {
+            return Some(Checksum::Weak);
+        } else if self.flags & FLAG_CHECK_CRC32 != 0 {
+            return Some(Checksum::Crc32);
+        } else {
+            return None;
+        }
     }
 }
