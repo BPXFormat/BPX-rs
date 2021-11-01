@@ -144,7 +144,7 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
             if stream.avail_out == 0 || res == LZMA_STREAM_END {
                 let size = ENCODER_BUF_SIZE - stream.avail_out;
                 csize += size;
-                output.write(&outbuf[0..size])?;
+                output.write_all(&outbuf[0..size])?;
                 stream.avail_out = ENCODER_BUF_SIZE;
                 stream.next_out = outbuf.as_mut_ptr();
             }
@@ -195,7 +195,7 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
             if stream.avail_out == 0 || res == LZMA_STREAM_END {
                 let size = DECODER_BUF_SIZE - stream.avail_out;
                 chksum.push(&outbuf[0..size]);
-                output.write(&outbuf[0..size])?;
+                output.write_all(&outbuf[0..size])?;
                 stream.avail_out = DECODER_BUF_SIZE;
                 stream.next_out = outbuf.as_mut_ptr();
             }

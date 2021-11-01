@@ -147,11 +147,12 @@ fn read_string<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
 
-    stream.read(&mut chr)?;
+    if stream.read(&mut chr)? != 1 {
+        return Err(ReadError::Truncation("String"));
+    }
     while chr[0] != 0x0 {
         curs.push(chr[0]);
-        let res = stream.read(&mut chr)?;
-        if res != 1 {
+        if stream.read(&mut chr)? != 1 {
             return Err(ReadError::Truncation("String"));
         }
     }

@@ -460,7 +460,7 @@ fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(
     let mut count: usize = 0;
     while count < section.size() as usize {
         let res = section.read(&mut idata)?;
-        out.write(&idata[0..res])?;
+        out.write_all(&idata[0..res])?;
         chksum.push(&idata[0..res]);
         count += res;
     }

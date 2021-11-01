@@ -149,7 +149,7 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
                 }
             }
             let len = ENCODER_BUF_SIZE - stream.avail_out as usize;
-            output.write(&outbuf[0..len])?;
+            output.write_all(&outbuf[0..len])?;
             csize += len;
             if stream.avail_out == 0 {
                 break;
@@ -197,7 +197,7 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
             }
             let len = DECODER_BUF_SIZE - stream.avail_out as usize;
             chksum.push(&outbuf[0..len]);
-            output.write(&outbuf[0..len])?;
+            output.write_all(&outbuf[0..len])?;
             if stream.avail_out == 0 {
                 break;
             }

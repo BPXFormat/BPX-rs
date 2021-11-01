@@ -78,6 +78,14 @@ pub struct SectionHeaderBuilder
     header: SectionHeader
 }
 
+impl Default for SectionHeaderBuilder
+{
+    fn default() -> Self
+    {
+        return Self::new();
+    }
+}
+
 impl SectionHeaderBuilder
 {
     /// Creates a new section header builder.
@@ -265,6 +273,14 @@ impl SectionHeaderBuilder
 pub struct MainHeaderBuilder
 {
     header: MainHeader
+}
+
+impl Default for MainHeaderBuilder
+{
+    fn default() -> Self
+    {
+        return Self::new();
+    }
 }
 
 impl MainHeaderBuilder

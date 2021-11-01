@@ -139,11 +139,12 @@ fn low_level_read_string(
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
 
     string_section.seek(SeekFrom::Start(ptr as u64))?;
-    string_section.read(&mut chr)?;
+    if string_section.read(&mut chr)? != 1 {
+        return Err(ReadError::Eos);
+    }
     while chr[0] != 0x0 {
         curs.push(chr[0]);
-        let res = string_section.read(&mut chr)?;
-        if res != 1 {
+        if string_section.read(&mut chr)? != 1 {
             return Err(ReadError::Eos);
         }
     }
@@ -159,8 +160,8 @@ fn low_level_write_string(
 ) -> Result<u32, std::io::Error>
 {
     let ptr = string_section.size() as u32;
-    string_section.write(s.as_bytes())?;
-    string_section.write(&[0x0])?;
+    string_section.write_all(s.as_bytes())?;
+    string_section.write_all(&[0x0])?;
     return Ok(ptr);
 }
 

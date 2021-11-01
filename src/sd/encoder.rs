@@ -161,6 +161,6 @@ pub fn write_structured_data<TWrite: Write>(
 ) -> Result<(), WriteError>
 {
     let bytes = write_object(obj)?;
-    dest.write(&bytes)?;
+    dest.write_all(&bytes)?;
     return Ok(());
 }

@@ -285,7 +285,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
         .to_bytes();
         {
             let mut data = self.symbol_table.open()?;
-            data.write(&buf)?;
+            data.write_all(&buf)?;
         } //Rust borrow checker is so stupid not able to understand that data is not used after this line
           //So we have to add another scope to workarround that defect
         self.num_symbols += 1;
@@ -323,7 +323,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
             Stage::Geometry => buf.insert(0, 0x3),
             Stage::Pixel => buf.insert(0, 0x4)
         };
-        data.write(&buf)?;
+        data.write_all(&buf)?;
         return Ok(());
     }
 

@@ -229,7 +229,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
             let s = std::cmp::min(size - len, DATA_READ_BUFFER_SIZE as u32);
             let val = data.read(&mut buf[0..s as usize])?;
             len += val as u32;
-            out.write(&buf[0..val])?;
+            out.write_all(&buf[0..val])?;
         }
         return Ok(len);
     }

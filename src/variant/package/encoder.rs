@@ -267,7 +267,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
         let mut count = res;
 
         while res > 0 {
-            data.write(&buf[0..res])?;
+            data.write_all(&buf[0..res])?;
             if data.size() >= MAX_DATA_SECTION_SIZE
             //Split sections (this is to avoid reaching the 4Gb max)
             {
@@ -337,7 +337,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
             .to_bytes();
             // Write the object header
             let mut object_table = self.object_table.open()?;
-            object_table.write(&buf)?;
+            object_table.write_all(&buf)?;
         }
         //TODO: Fix
         if data_section.size() > MAX_DATA_SECTION_SIZE {
