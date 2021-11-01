@@ -31,7 +31,14 @@
 use std::{io, io::Write, rc::Rc};
 
 use crate::{
-    compression::{Checksum, Crc32Checksum, Inflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod},
+    compression::{
+        Checksum,
+        Crc32Checksum,
+        Inflater,
+        WeakChecksum,
+        XzCompressionMethod,
+        ZlibCompressionMethod
+    },
     error::ReadError,
     header::{
         MainHeader,
@@ -44,8 +51,8 @@ use crate::{
     },
     section::AutoSection,
     utils::OptionExtension,
-    Interface,
-    Handle
+    Handle,
+    Interface
 };
 
 const READ_BLOCK_SIZE: usize = 8192;
@@ -141,7 +148,8 @@ impl<TBackend: IoBackend> Decoder<TBackend>
     {
         let header = &self.sections[handle.0 as usize];
         let file = &mut self.file;
-        let object = self.sections_data[handle.0 as usize].get_or_insert_with_err(|| load_section(file, handle, header))?;
+        let object = self.sections_data[handle.0 as usize]
+            .get_or_insert_with_err(|| load_section(file, handle, header))?;
         return Ok(object);
     }
 
@@ -280,7 +288,12 @@ fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChec
     return Ok(());
 }
 
-fn load_section_compressed<TMethod: Inflater, TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
+fn load_section_compressed<
+    TMethod: Inflater,
+    TBackend: io::Read + io::Seek,
+    TWrite: Write,
+    TChecksum: Checksum
+>(
     bpx: &mut TBackend,
     header: &SectionHeader,
     output: TWrite,

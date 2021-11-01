@@ -32,7 +32,10 @@ use std::{
 };
 
 use crate::{
-    sd::{error::{ReadError, WriteError}, Value},
+    sd::{
+        error::{ReadError, WriteError},
+        Value
+    },
     utils
 };
 
@@ -48,7 +51,9 @@ impl Object
     /// Creates a new object.
     pub fn new() -> Object
     {
-        return Object { props: HashMap::new() };
+        return Object {
+            props: HashMap::new()
+        };
     }
 
     /// Sets a property in the object using a raw property hash.

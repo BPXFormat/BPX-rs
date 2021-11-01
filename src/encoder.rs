@@ -29,15 +29,22 @@
 //! The BPX encoder.
 
 use std::{
+    collections::BTreeMap,
     io,
     io::{SeekFrom, Write},
+    ops::Bound,
     rc::Rc
 };
-use std::collections::BTreeMap;
-use std::ops::Bound;
 
 use crate::{
-    compression::{Checksum, Crc32Checksum, Deflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod},
+    compression::{
+        Checksum,
+        Crc32Checksum,
+        Deflater,
+        WeakChecksum,
+        XzCompressionMethod,
+        ZlibCompressionMethod
+    },
     error::WriteError,
     header::{
         GetChecksum,
@@ -52,8 +59,8 @@ use crate::{
         SIZE_SECTION_HEADER
     },
     section::{AutoSection, Section, SectionData},
-    Interface,
-    Handle
+    Handle,
+    Interface
 };
 
 const READ_BLOCK_SIZE: usize = 8192;
@@ -148,7 +155,8 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// encoder.create_section(SectionHeader::new());
     /// assert_eq!(encoder.get_main_header().section_num, 1);
     /// ```
-    pub fn create_section(&mut self, header: SectionHeader) -> Result<&Rc<AutoSection>, WriteError>
+    pub fn create_section(&mut self, header: SectionHeader)
+        -> Result<&Rc<AutoSection>, WriteError>
     {
         self.modified = true;
         self.main_header.section_num += 1;
@@ -245,7 +253,8 @@ impl<TBackend: IoBackend> Encoder<TBackend>
 
     fn internal_save(&mut self) -> Result<(), WriteError>
     {
-        let file_start_offset = SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * self.main_header.section_num as usize);
+        let file_start_offset =
+            SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * self.main_header.section_num as usize);
         //Seek to the start of the actual file content
         self.file.seek(SeekFrom::Start(file_start_offset as _))?;
         //Write all section data and section headers
@@ -283,8 +292,10 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         // This function saves only the last section.
         let (update_sht, diff) = self.write_last_section(self.next_handle - 1)?;
         if update_sht {
-            let offset_section_header = SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * (self.main_header.section_num - 1) as usize);
-            self.file.seek(SeekFrom::Start(offset_section_header as _))?;
+            let offset_section_header = SIZE_MAIN_HEADER
+                + (SIZE_SECTION_HEADER * (self.main_header.section_num - 1) as usize);
+            self.file
+                .seek(SeekFrom::Start(offset_section_header as _))?;
             let entry = &self.sections[&(self.next_handle - 1)];
             entry.header.write(&mut self.file)?;
         }
@@ -323,7 +334,10 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// ```
     pub fn save(&mut self) -> Result<(), WriteError>
     {
-        let mut filter = self.sections.iter().filter(|(_, entry)| entry.data.modified());
+        let mut filter = self
+            .sections
+            .iter()
+            .filter(|(_, entry)| entry.data.modified());
         let count = filter.by_ref().count();
         if self.modified || count > 1 {
             self.modified = false;
@@ -393,7 +407,10 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
 
     fn get_section_index(&self, handle: Handle) -> u32
     {
-        return self.sections.range((Bound::Unbounded, Bound::Excluded(handle.0))).count() as u32;
+        return self
+            .sections
+            .range((Bound::Unbounded, Bound::Excluded(handle.0)))
+            .count() as u32;
     }
 
     fn get_section(&self, handle: Handle) -> &Rc<AutoSection>

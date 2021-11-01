@@ -110,7 +110,10 @@ fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType, ReadError>
         0x3 => Ok(SymbolType::Constant),
         0x4 => Ok(SymbolType::VertexFormat),
         0x5 => Ok(SymbolType::Pipeline),
-        _ => Err(ReadError::InvalidCode(InvalidCodeContext::SymbolType, scode))
+        _ => Err(ReadError::InvalidCode(
+            InvalidCodeContext::SymbolType,
+            scode
+        ))
     };
 }
 
@@ -223,8 +226,10 @@ impl NamedTable for SymbolTable
 
 impl<TBackend: IoBackend> BuildNamedTable<ShaderPackDecoder<TBackend>> for SymbolTable
 {
-    fn build_lookup_table(&mut self, package: &mut ShaderPackDecoder<TBackend>)
-        -> Result<(), crate::strings::ReadError>
+    fn build_lookup_table(
+        &mut self,
+        package: &mut ShaderPackDecoder<TBackend>
+    ) -> Result<(), crate::strings::ReadError>
     {
         let mut map = HashMap::new();
         for v in &self.list {

@@ -48,8 +48,8 @@ use crate::{
         },
         NamedTable
     },
-    Interface,
-    Handle
+    Handle,
+    Interface
 };
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
@@ -65,7 +65,8 @@ pub struct PackageDecoder<TBackend: IoBackend>
     object_table: Rc<AutoSection>
 }
 
-fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Platform), ReadError>
+fn get_arch_platform_from_code(acode: u8, pcode: u8)
+    -> Result<(Architecture, Platform), ReadError>
 {
     let arch;
     let platform;
@@ -204,7 +205,8 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// # Errors
     ///
     /// A [ReadError](crate::strings::ReadError) is returned if the name could not be read.
-    pub fn get_object_name(&mut self, obj: &ObjectHeader) -> Result<&str, crate::strings::ReadError>
+    pub fn get_object_name(&mut self, obj: &ObjectHeader)
+        -> Result<&str, crate::strings::ReadError>
     {
         return self.strings.get(obj.name);
     }
@@ -245,7 +247,11 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// # Errors
     ///
     /// A [ReadError](crate::variant::package::error::ReadError) is returned if the object could not be unpacked.
-    pub fn unpack_object<TWrite: Write>(&mut self, obj: &ObjectHeader, mut out: TWrite) -> Result<u64, ReadError>
+    pub fn unpack_object<TWrite: Write>(
+        &mut self,
+        obj: &ObjectHeader,
+        mut out: TWrite
+    ) -> Result<u64, ReadError>
     {
         let mut section_id = obj.start;
         let mut offset = obj.offset;

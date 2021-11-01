@@ -55,7 +55,9 @@ impl Display for WriteError
     {
         match self {
             WriteError::Io(e) => f.write_str(&format!("io error: {}", e)),
-            WriteError::PropCountExceeded(count) => f.write_str(&format!("property count exceeded ({} > 255)", count))
+            WriteError::PropCountExceeded(count) => {
+                f.write_str(&format!("property count exceeded ({} > 255)", count))
+            },
         }
     }
 }
@@ -96,7 +98,9 @@ impl Display for ReadError
         match self {
             ReadError::Io(e) => f.write_str(&format!("io error: {}", e)),
             ReadError::Truncation(typename) => f.write_str(&format!("failed to read {}", typename)),
-            ReadError::BadTypeCode(code) => f.write_str(&format!("unknown value type code ({})", code)),
+            ReadError::BadTypeCode(code) => {
+                f.write_str(&format!("unknown value type code ({})", code))
+            },
             ReadError::Utf8 => f.write_str("utf8 error")
         }
     }

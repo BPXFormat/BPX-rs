@@ -130,7 +130,10 @@ impl StringSection
     }
 }
 
-fn low_level_read_string(ptr: u32, string_section: &mut dyn SectionData) -> Result<String, ReadError>
+fn low_level_read_string(
+    ptr: u32,
+    string_section: &mut dyn SectionData
+) -> Result<String, ReadError>
 {
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
@@ -150,7 +153,10 @@ fn low_level_read_string(ptr: u32, string_section: &mut dyn SectionData) -> Resu
     };
 }
 
-fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Result<u32, std::io::Error>
+fn low_level_write_string(
+    s: &str,
+    string_section: &mut dyn SectionData
+) -> Result<u32, std::io::Error>
 {
     let ptr = string_section.size() as u32;
     string_section.write(s.as_bytes())?;

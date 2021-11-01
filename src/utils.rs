@@ -73,12 +73,18 @@ pub trait OptionExtension<T>
     /// # Errors
     ///
     /// Whatever error type is `TError`.
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>;
+    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(
+        &mut self,
+        f: F
+    ) -> Result<&mut T, TError>;
 }
 
 impl<T> OptionExtension<T> for Option<T>
 {
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>
+    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(
+        &mut self,
+        f: F
+    ) -> Result<&mut T, TError>
     {
         if let None = *self {
             *self = Some(f()?);

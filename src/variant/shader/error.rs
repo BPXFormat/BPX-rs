@@ -125,7 +125,9 @@ impl Display for ReadError
             ReadError::Sd(e) => f.write_str(&format!("BPXSD error: {}", e)),
             ReadError::Section(e) => f.write_str(&format!("section error: {}", e)),
             ReadError::Strings(e) => f.write_str(&format!("strings error: {}", e)),
-            ReadError::InvalidCode(ctx, code) => f.write_str(&format!("invalid {} code ({})", ctx.name(), code)),
+            ReadError::InvalidCode(ctx, code) => {
+                f.write_str(&format!("invalid {} code ({})", ctx.name(), code))
+            },
             ReadError::BadVersion(v) => f.write_str(&format!("unsupported version ({})", v)),
             ReadError::BadType(t) => f.write_str(&format!("unknown BPX type code ({})", t)),
             ReadError::MissingSection(s) => f.write_str(&format!("missing {} section", s.name())),

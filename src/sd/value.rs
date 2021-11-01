@@ -31,9 +31,10 @@ use std::{
     string::String
 };
 
-use crate::sd::{Array, Object, error::TypeError};
-
-use crate::macros::impl_err_conversion;
+use crate::{
+    macros::impl_err_conversion,
+    sd::{error::TypeError, Array, Object}
+};
 
 /// Represents a BPXSD value.
 #[derive(PartialEq, Clone)]
@@ -230,7 +231,10 @@ impl TryFrom<Value> for u64
             Value::Uint32(v) => Ok(v as u64),
             Value::Uint16(v) => Ok(v as u64),
             Value::Uint8(v) => Ok(v as u64),
-            _ => Err(TypeError::new("uint8, uint16, uint32 or uint64", v.get_type_name()))
+            _ => Err(TypeError::new(
+                "uint8, uint16, uint32 or uint64",
+                v.get_type_name()
+            ))
         };
     }
 }
@@ -288,7 +292,10 @@ impl TryFrom<Value> for i64
             Value::Int32(v) => Ok(v as i64),
             Value::Int16(v) => Ok(v as i64),
             Value::Int8(v) => Ok(v as i64),
-            _ => Err(TypeError::new("int8, int16, int32 or int64", v.get_type_name()))
+            _ => Err(TypeError::new(
+                "int8, int16, int32 or int64",
+                v.get_type_name()
+            ))
         };
     }
 }
@@ -425,7 +432,10 @@ impl TryFrom<&Value> for u64
             Value::Uint32(v) => Ok(*v as u64),
             Value::Uint16(v) => Ok(*v as u64),
             Value::Uint8(v) => Ok(*v as u64),
-            _ => Err(TypeError::new("uint8, uint16, uint32 or uint64", v.get_type_name()))
+            _ => Err(TypeError::new(
+                "uint8, uint16, uint32 or uint64",
+                v.get_type_name()
+            ))
         };
     }
 }
@@ -483,7 +493,10 @@ impl TryFrom<&Value> for i64
             Value::Int32(v) => Ok(*v as i64),
             Value::Int16(v) => Ok(*v as i64),
             Value::Int8(v) => Ok(*v as i64),
-            _ => Err(TypeError::new("int8, int16, int32 or int64", v.get_type_name()))
+            _ => Err(TypeError::new(
+                "int8, int16, int32 or int64",
+                v.get_type_name()
+            ))
         };
     }
 }

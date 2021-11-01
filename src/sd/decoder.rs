@@ -30,7 +30,7 @@ use std::io::Read;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::sd::{Array, Object, error::ReadError, Value};
+use crate::sd::{error::ReadError, Array, Object, Value};
 
 fn read_bool<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
@@ -158,7 +158,7 @@ fn read_string<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     return match String::from_utf8(curs) {
         Err(_) => Err(ReadError::Utf8),
         Ok(v) => Ok(Value::String(v))
-    }
+    };
 }
 
 fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object, ReadError>
@@ -213,7 +213,9 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array, ReadError>
     return Ok(arr);
 }
 
-fn get_value_parser<TRead: Read>(type_code: u8) -> Option<fn(stream: &mut TRead) -> Result<Value, ReadError>>
+fn get_value_parser<TRead: Read>(
+    type_code: u8
+) -> Option<fn(stream: &mut TRead) -> Result<Value, ReadError>>
 {
     match type_code {
         0x0 => Some(|_| {

@@ -157,7 +157,10 @@ impl ShaderPackBuilder
     /// assert_eq!(shader.stage, Stage::Pixel);
     /// assert_eq!(shader.data.len(), 0);
     /// ```
-    pub fn build<TBackend: IoBackend>(self, backend: TBackend) -> Result<ShaderPackEncoder<TBackend>, WriteError>
+    pub fn build<TBackend: IoBackend>(
+        self,
+        backend: TBackend
+    ) -> Result<ShaderPackEncoder<TBackend>, WriteError>
     {
         let mut encoder = Encoder::new(backend)?;
         let mut type_ext: [u8; 16] = [0; 16];

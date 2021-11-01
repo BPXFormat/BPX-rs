@@ -172,7 +172,10 @@ impl PackageBuilder
     /// let s = std::str::from_utf8(&data).unwrap();
     /// assert_eq!(s, "This is a test 你好")
     /// ```
-    pub fn build<TBackend: IoBackend>(self, backend: TBackend) -> Result<PackageEncoder<TBackend>, WriteError>
+    pub fn build<TBackend: IoBackend>(
+        self,
+        backend: TBackend
+    ) -> Result<PackageEncoder<TBackend>, WriteError>
     {
         let mut encoder = Encoder::new(backend)?;
         let mut type_ext: [u8; 16] = [0; 16];
@@ -292,7 +295,11 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     /// # Errors
     ///
     /// A [WriteError](crate::variant::package::error::WriteError) is returned if the object could not be written.
-    pub fn pack_object<TRead: Read>(&mut self, name: &str, mut source: TRead) -> Result<(), WriteError>
+    pub fn pack_object<TRead: Read>(
+        &mut self,
+        name: &str,
+        mut source: TRead
+    ) -> Result<(), WriteError>
     {
         let mut object_size = 0;
         let useless = &mut self.encoder;
@@ -311,7 +318,10 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
             let (count, need_section) = self.write_object(&mut source, &data_section)?;
             object_size += count;
             if need_section {
-                data_section = self.encoder.create_section(create_data_section_header())?.clone();
+                data_section = self
+                    .encoder
+                    .create_section(create_data_section_header())?
+                    .clone();
             } else {
                 break;
             }

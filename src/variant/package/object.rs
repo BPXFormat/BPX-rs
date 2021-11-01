@@ -143,7 +143,10 @@ impl NamedTable for ObjectTable
 
 impl<TBackend: IoBackend> BuildNamedTable<PackageDecoder<TBackend>> for ObjectTable
 {
-    fn build_lookup_table(&mut self, package: &mut PackageDecoder<TBackend>) -> Result<(), crate::strings::ReadError>
+    fn build_lookup_table(
+        &mut self,
+        package: &mut PackageDecoder<TBackend>
+    ) -> Result<(), crate::strings::ReadError>
     {
         let mut map = HashMap::new();
         for v in &self.list {

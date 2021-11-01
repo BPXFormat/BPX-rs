@@ -50,7 +50,10 @@ where
     ///
     /// An [Error](crate::strings::ReadError) is returned if the strings could
     /// not be loaded.
-    fn build_lookup_table(&mut self, package: &mut TDecoder) -> Result<(), crate::strings::ReadError>;
+    fn build_lookup_table(
+        &mut self,
+        package: &mut TDecoder
+    ) -> Result<(), crate::strings::ReadError>;
 }
 
 /// Represents a named table, currently used by both BPXP and BPXS.

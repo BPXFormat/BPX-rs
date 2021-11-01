@@ -122,10 +122,14 @@ impl Display for ReadError
             ReadError::Section(e) => f.write_str(&format!("section error: {}", e)),
             ReadError::BadVersion(v) => f.write_str(&format!("unsupported version ({})", v)),
             ReadError::BadType(t) => f.write_str(&format!("unknown BPX type code ({})", t)),
-            ReadError::InvalidCode(ctx, code) => f.write_str(&format!("invalid {} code ({})", ctx.name(), code)),
+            ReadError::InvalidCode(ctx, code) => {
+                f.write_str(&format!("invalid {} code ({})", ctx.name(), code))
+            },
             ReadError::MissingSection(s) => f.write_str(&format!("missing {} section", s.name())),
             ReadError::Eos(ctx) => f.write_str(&format!("got EOS while reading {}", ctx.name())),
-            ReadError::BlankString => f.write_str("blank strings are not supported when unpacking to file system"),
+            ReadError::BlankString => {
+                f.write_str("blank strings are not supported when unpacking to file system")
+            },
             ReadError::Sd(e) => f.write_str(&format!("BPXSD error: {}", e)),
             ReadError::Strings(e) => f.write_str(&format!("strings error: {}", e))
         }

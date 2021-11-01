@@ -155,9 +155,10 @@ impl Display for ReadError
             )),
             ReadError::Io(e) => f.write_str(&format!("io error: {}", e)),
             ReadError::BadVersion(v) => f.write_str(&format!("unknown file version ({})", v)),
-            ReadError::BadSignature(sig) => {
-                f.write_str(&format!("unknown file signature ({}{}{})", sig[0], sig[1], sig[2]))
-            },
+            ReadError::BadSignature(sig) => f.write_str(&format!(
+                "unknown file signature ({}{}{})",
+                sig[0], sig[1], sig[2]
+            )),
             ReadError::Inflate(e) => f.write_str(&format!("inflate error: {}", e))
         }
     }
@@ -198,7 +199,9 @@ impl Display for WriteError
     {
         match self {
             WriteError::Io(e) => f.write_str(&format!("io error: {}", e)),
-            WriteError::Capacity(size) => f.write_str(&format!("maximum section size exceeded ({} > 2^32)", size)),
+            WriteError::Capacity(size) => {
+                f.write_str(&format!("maximum section size exceeded ({} > 2^32)", size))
+            },
             WriteError::Deflate(e) => f.write_str(&format!("deflate error: {}", e)),
             WriteError::Section(e) => f.write_str(&format!("section error: {}", e))
         }

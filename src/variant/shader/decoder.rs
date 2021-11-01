@@ -52,8 +52,8 @@ use crate::{
         },
         NamedTable
     },
-    Interface,
-    Handle
+    Handle,
+    Interface
 };
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>

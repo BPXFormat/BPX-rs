@@ -31,10 +31,12 @@
 use std::io;
 
 use byteorder::{ByteOrder, LittleEndian};
-use crate::builder::{Checksum, CompressionMethod};
 
 use super::garraylen::*;
-use crate::error::ReadError;
+use crate::{
+    builder::{Checksum, CompressionMethod},
+    error::ReadError
+};
 
 /// Represents a serializable and deserializable byte structure in a BPX.
 pub trait Struct<const S: usize>
@@ -251,7 +253,10 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
             version: LittleEndian::read_u32(&buffer[20..24]),
             type_ext: extract_slice::<T16>(&buffer, 24)
         };
-        if head.signature[0] != 'B' as u8 || head.signature[1] != 'P' as u8 || head.signature[2] != 'X' as u8 {
+        if head.signature[0] != 'B' as u8
+            || head.signature[1] != 'P' as u8
+            || head.signature[2] != 'X' as u8
+        {
             return Err(ReadError::BadSignature(head.signature));
         }
         if !KNOWN_VERSIONS.contains(&head.version) {

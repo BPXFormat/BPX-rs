@@ -89,7 +89,9 @@ pub fn new_section_data(size: Option<u32>) -> Result<Box<dyn SectionData>>
         if s > MEMORY_THRESHOLD {
             return Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)));
         } else {
-            return Ok(Box::new(memory::InMemorySection::new(INITIAL_BYTE_BUF_ALLOC_SIZE)));
+            return Ok(Box::new(memory::InMemorySection::new(
+                INITIAL_BYTE_BUF_ALLOC_SIZE
+            )));
         }
     }
     return Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)));
