@@ -32,7 +32,6 @@ use std::{
 };
 
 use crate::section::SectionData;
-use crate::utils::ReadFill;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -70,7 +69,7 @@ impl Read for FileBasedSection
         for i in 0..data.len() {
             if self.cursor >= self.written {
                 self.cursor = 0;
-                self.written = self.data.read_fill(&mut self.buffer)?;
+                self.written = self.data.read(&mut self.buffer)?;
             }
             if self.cursor < self.written {
                 data[i] = self.buffer[self.cursor];
