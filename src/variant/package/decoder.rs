@@ -51,6 +51,7 @@ use crate::{
     Handle,
     Interface
 };
+use crate::utils::ReadFill;
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
@@ -227,7 +228,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
         data.seek(SeekFrom::Start(offset as u64))?;
         while len < size {
             let s = std::cmp::min(size - len, DATA_READ_BUFFER_SIZE as u32);
-            let val = data.read(&mut buf[0..s as usize])?;
+            let val = data.read_fill(&mut buf[0..s as usize])?;
             len += val as u32;
             out.write_all(&buf[0..val])?;
         }

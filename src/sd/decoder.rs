@@ -31,12 +31,13 @@ use std::io::Read;
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::sd::{error::ReadError, Array, Object, Value};
+use crate::utils::ReadFill;
 
 fn read_bool<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut flag: [u8; 1] = [0; 1];
 
-    if stream.read(&mut flag)? != 1 {
+    if stream.read_fill(&mut flag)? != 1 {
         return Err(ReadError::Truncation("bool"));
     }
     return Ok(Value::Bool(flag[0] == 1));
@@ -46,7 +47,7 @@ fn read_uint8<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 1] = [0; 1];
 
-    if stream.read(&mut val)? != 1 {
+    if stream.read_fill(&mut val)? != 1 {
         return Err(ReadError::Truncation("uint8"));
     }
     return Ok(Value::Uint8(val[0]));
@@ -56,7 +57,7 @@ fn read_int8<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 1] = [0; 1];
 
-    if stream.read(&mut val)? != 1 {
+    if stream.read_fill(&mut val)? != 1 {
         return Err(ReadError::Truncation("int8"));
     }
     return Ok(Value::Int8(val[0] as i8));
@@ -66,7 +67,7 @@ fn read_uint16<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 2] = [0; 2];
 
-    if stream.read(&mut val)? != 2 {
+    if stream.read_fill(&mut val)? != 2 {
         return Err(ReadError::Truncation("uint16"));
     }
     return Ok(Value::Uint16(LittleEndian::read_u16(&val)));
@@ -76,7 +77,7 @@ fn read_int16<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 2] = [0; 2];
 
-    if stream.read(&mut val)? != 2 {
+    if stream.read_fill(&mut val)? != 2 {
         return Err(ReadError::Truncation("int16"));
     }
     return Ok(Value::Int16(LittleEndian::read_i16(&val)));
@@ -86,7 +87,7 @@ fn read_uint32<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 4] = [0; 4];
 
-    if stream.read(&mut val)? != 4 {
+    if stream.read_fill(&mut val)? != 4 {
         return Err(ReadError::Truncation("uint32"));
     }
     return Ok(Value::Uint32(LittleEndian::read_u32(&val)));
@@ -96,7 +97,7 @@ fn read_int32<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 4] = [0; 4];
 
-    if stream.read(&mut val)? != 4 {
+    if stream.read_fill(&mut val)? != 4 {
         return Err(ReadError::Truncation("int32"));
     }
     return Ok(Value::Int32(LittleEndian::read_i32(&val)));
@@ -106,7 +107,7 @@ fn read_uint64<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 8] = [0; 8];
 
-    if stream.read(&mut val)? != 8 {
+    if stream.read_fill(&mut val)? != 8 {
         return Err(ReadError::Truncation("uint64"));
     }
     return Ok(Value::Uint64(LittleEndian::read_u64(&val)));
@@ -116,7 +117,7 @@ fn read_int64<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 8] = [0; 8];
 
-    if stream.read(&mut val)? != 8 {
+    if stream.read_fill(&mut val)? != 8 {
         return Err(ReadError::Truncation("int64"));
     }
     return Ok(Value::Int64(LittleEndian::read_i64(&val)));
@@ -126,7 +127,7 @@ fn read_float<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 4] = [0; 4];
 
-    if stream.read(&mut val)? != 4 {
+    if stream.read_fill(&mut val)? != 4 {
         return Err(ReadError::Truncation("float"));
     }
     return Ok(Value::Float(LittleEndian::read_f32(&val)));
@@ -136,7 +137,7 @@ fn read_double<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
     let mut val: [u8; 8] = [0; 8];
 
-    if stream.read(&mut val)? != 8 {
+    if stream.read_fill(&mut val)? != 8 {
         return Err(ReadError::Truncation("double"));
     }
     return Ok(Value::Double(LittleEndian::read_f64(&val)));
@@ -147,12 +148,12 @@ fn read_string<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
 
-    if stream.read(&mut chr)? != 1 {
+    if stream.read_fill(&mut chr)? != 1 {
         return Err(ReadError::Truncation("String"));
     }
     while chr[0] != 0x0 {
         curs.push(chr[0]);
-        if stream.read(&mut chr)? != 1 {
+        if stream.read_fill(&mut chr)? != 1 {
             return Err(ReadError::Truncation("String"));
         }
     }
@@ -167,7 +168,7 @@ fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object, ReadError>
     let mut obj = Object::new();
     let mut count = {
         let mut buf: [u8; 1] = [0; 1];
-        if stream.read(&mut buf)? != 1 {
+        if stream.read_fill(&mut buf)? != 1 {
             return Err(ReadError::Truncation("Object"));
         }
         buf[0]
@@ -175,7 +176,7 @@ fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object, ReadError>
 
     while count > 0 {
         let mut prop: [u8; 9] = [0; 9];
-        if stream.read(&mut prop)? != 9 {
+        if stream.read_fill(&mut prop)? != 9 {
             return Err(ReadError::Truncation("Object"));
         }
         let hash = LittleEndian::read_u64(&prop[0..8]);
@@ -194,7 +195,7 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array, ReadError>
     let mut arr = Array::new();
     let mut count = {
         let mut buf: [u8; 1] = [0; 1];
-        if stream.read(&mut buf)? != 1 {
+        if stream.read_fill(&mut buf)? != 1 {
             return Err(ReadError::Truncation("Array"));
         }
         buf[0]
@@ -202,7 +203,7 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array, ReadError>
 
     while count > 0 {
         let mut type_code: [u8; 1] = [0; 1];
-        if stream.read(&mut type_code)? != 1 {
+        if stream.read_fill(&mut type_code)? != 1 {
             return Err(ReadError::Truncation("Array"));
         }
         match get_value_parser(type_code[0]) {

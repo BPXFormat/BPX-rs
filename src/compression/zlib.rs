@@ -51,6 +51,7 @@ use crate::{
     compression::{Checksum, Deflater, Inflater},
     error::{DeflateError, InflateError}
 };
+use crate::utils::ReadFill;
 
 const ENCODER_BUF_SIZE: usize = 8192;
 const DECODER_BUF_SIZE: usize = ENCODER_BUF_SIZE * 2;
@@ -122,7 +123,7 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
     let mut csize: usize = 0;
 
     loop {
-        let len = input.read(&mut inbuf)?;
+        let len = input.read_fill(&mut inbuf)?;
         count += len;
         chksum.push(&inbuf[0..len]);
         stream.avail_in = len as _;
@@ -175,7 +176,7 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
     let mut remaining = deflated_size;
 
     loop {
-        let len = input.read(&mut inbuf)?;
+        let len = input.read_fill(&mut inbuf)?;
         remaining -= len;
         if remaining == 0 && len == 0 {
             break;

@@ -37,6 +37,7 @@ use crate::{
     builder::{Checksum, CompressionMethod},
     error::ReadError
 };
+use crate::utils::ReadFill;
 
 /// Represents a serializable and deserializable byte structure in a BPX.
 pub trait Struct<const S: usize>
@@ -78,7 +79,7 @@ pub trait Struct<const S: usize>
     fn read<TReader: io::Read>(mut reader: TReader) -> Result<Self::Output, Self::Error>
     {
         let mut buffer: [u8; S] = [0; S];
-        let len = reader.read(&mut buffer)?;
+        let len = reader.read_fill(&mut buffer)?;
         if len != S {
             if let Some(err) = Self::error_buffer_size() {
                 return Err(err);

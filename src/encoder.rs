@@ -62,6 +62,7 @@ use crate::{
     Handle,
     Interface
 };
+use crate::utils::ReadFill;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -459,7 +460,7 @@ fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(
     let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
     let mut count: usize = 0;
     while count < section.size() as usize {
-        let res = section.read(&mut idata)?;
+        let res = section.read_fill(&mut idata)?;
         out.write_all(&idata[0..res])?;
         chksum.push(&idata[0..res]);
         count += res;

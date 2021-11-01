@@ -42,6 +42,7 @@ use std::{
 pub use error::{ReadError, WriteError};
 
 use crate::section::{AutoSection, SectionData};
+use crate::utils::ReadFill;
 
 /// Helper class to manage a BPX string section.
 ///
@@ -139,12 +140,12 @@ fn low_level_read_string(
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
 
     string_section.seek(SeekFrom::Start(ptr as u64))?;
-    if string_section.read(&mut chr)? != 1 {
+    if string_section.read_fill(&mut chr)? != 1 {
         return Err(ReadError::Eos);
     }
     while chr[0] != 0x0 {
         curs.push(chr[0]);
-        if string_section.read(&mut chr)? != 1 {
+        if string_section.read_fill(&mut chr)? != 1 {
             return Err(ReadError::Eos);
         }
     }

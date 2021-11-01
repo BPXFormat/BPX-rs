@@ -54,6 +54,7 @@ use crate::{
     Handle,
     Interface
 };
+use crate::utils::ReadFill;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -279,7 +280,7 @@ fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChec
 
     bpx.seek(io::SeekFrom::Start(header.pointer))?;
     while count < header.size as usize {
-        let res = bpx.read(&mut idata[0..std::cmp::min(READ_BLOCK_SIZE, remaining)])?;
+        let res = bpx.read_fill(&mut idata[0..std::cmp::min(READ_BLOCK_SIZE, remaining)])?;
         output.write_all(&idata[0..res])?;
         chksum.push(&idata[0..res]);
         count += res;

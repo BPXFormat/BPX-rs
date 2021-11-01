@@ -47,6 +47,7 @@ use crate::{
     },
     Interface
 };
+use crate::utils::ReadFill;
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
@@ -263,7 +264,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
         //TODO: Fix
         let mut data = data_id.open()?;
         let mut buf: [u8; DATA_WRITE_BUFFER_SIZE] = [0; DATA_WRITE_BUFFER_SIZE];
-        let mut res = source.read(&mut buf)?;
+        let mut res = source.read_fill(&mut buf)?;
         let mut count = res;
 
         while res > 0 {
@@ -273,7 +274,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
             {
                 return Ok((count, true));
             }
-            res = source.read(&mut buf)?;
+            res = source.read_fill(&mut buf)?;
             count += res;
         }
         return Ok((count, false));
