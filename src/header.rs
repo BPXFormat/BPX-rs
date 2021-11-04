@@ -246,13 +246,13 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
             }
         }
         let head = MainHeader {
-            signature: extract_slice::<T3>(&buffer, 0),
+            signature: extract_slice(&buffer, 0),
             btype: buffer[3],
             chksum: LittleEndian::read_u32(&buffer[4..8]),
             file_size: LittleEndian::read_u64(&buffer[8..16]),
             section_num: LittleEndian::read_u32(&buffer[16..20]),
             version: LittleEndian::read_u32(&buffer[20..24]),
-            type_ext: extract_slice::<T16>(&buffer, 24)
+            type_ext: extract_slice(&buffer, 24)
         };
         if &head.signature != b"BPX"
         {
