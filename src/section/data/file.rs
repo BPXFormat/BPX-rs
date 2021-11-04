@@ -66,13 +66,13 @@ impl Read for FileBasedSection
     {
         let mut cnt: usize = 0;
 
-        for i in 0..data.len() {
+        for byte in data {
             if self.cursor >= self.written {
                 self.cursor = 0;
                 self.written = self.data.read(&mut self.buffer)?;
             }
             if self.cursor < self.written {
-                data[i] = self.buffer[self.cursor];
+                *byte = self.buffer[self.cursor];
                 self.cursor += 1;
                 cnt += 1;
             }

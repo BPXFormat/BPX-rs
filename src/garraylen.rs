@@ -32,8 +32,8 @@ pub fn extract_slice<T: Sized + Copy, const D: usize>(large_buf: &[T], offset: u
 {
     unsafe {
         let mut arr: [MaybeUninit<T>; D] = MaybeUninit::uninit().assume_init();
-        for i in 0..D {
-            arr[i].write(large_buf[offset + i]);
+        for (i, val) in arr.iter_mut().enumerate() {
+            val.write(large_buf[offset + i]);
         }
         return std::mem::transmute_copy(&arr);
     }
