@@ -50,7 +50,7 @@ impl FileBasedSection
     pub fn new(data: File) -> FileBasedSection
     {
         return FileBasedSection {
-            data: data,
+            data,
             buffer: [0; READ_BLOCK_SIZE],
             written: 0,
             cursor: usize::MAX,

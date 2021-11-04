@@ -28,10 +28,20 @@
 
 //! A set of helpers to manipulate BPX string sections.
 
-use std::{collections::HashMap, fs::DirEntry, io::SeekFrom, path::Path, string::String};
+mod error;
 
-use crate::{error::Error, section::SectionData, Interface, Result, SectionHandle};
-use std::collections::hash_map::Entry;
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    fs::DirEntry,
+    io::SeekFrom,
+    path::Path,
+    rc::Rc,
+    string::String
+};
+
+pub use error::{ReadError, WriteError};
+
+use crate::section::{AutoSection, SectionData};
 
 /// Helper class to manage a BPX string section.
 ///
@@ -39,20 +49,20 @@ use std::collections::hash_map::Entry;
 ///
 /// ```
 /// use bpx::encoder::Encoder;
-/// use bpx::header::SectionHeader;
+/// use bpx::header::{SectionHeader, Struct};
 /// use bpx::strings::StringSection;
 /// use bpx::utils::new_byte_buf;
 ///
 /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-/// let handle = file.create_section(SectionHeader::new()).unwrap();
-/// let mut strings = StringSection::new(handle);
-/// let offset = strings.put(&mut file, "Test").unwrap();
-/// let str = strings.get(&mut file, offset).unwrap();
+/// let section = file.create_section(SectionHeader::new()).unwrap();
+/// let mut strings = StringSection::new(section.clone());
+/// let offset = strings.put("Test").unwrap();
+/// let str = strings.get(offset).unwrap();
 /// assert_eq!(str, "Test");
 /// ```
 pub struct StringSection
 {
-    handle: SectionHandle,
+    section: Rc<AutoSection>,
     cache: HashMap<u32, String>
 }
 
@@ -65,10 +75,10 @@ impl StringSection
     /// * `hdl`: handle to the string section.
     ///
     /// returns: StringSection
-    pub fn new(hdl: SectionHandle) -> StringSection
+    pub fn new(section: Rc<AutoSection>) -> StringSection
     {
         return StringSection {
-            handle: hdl,
+            section,
             cache: HashMap::new()
         };
     }
@@ -84,15 +94,15 @@ impl StringSection
     ///
     /// # Errors
     ///
-    /// Returns an [Error](crate::error::Error) if the string could not be read or the
+    /// Returns a [ReadError](crate::strings::ReadError) if the string could not be read or the
     /// section is corrupted/truncated.
-    pub fn get<TInterface: Interface>(&mut self, interface: &mut TInterface, address: u32) -> Result<&str>
+    pub fn get(&mut self, address: u32) -> Result<&str, ReadError>
     {
         let res = match self.cache.entry(address) {
             Entry::Occupied(o) => o.into_mut(),
             Entry::Vacant(o) => {
-                let data = interface.open_section(self.handle)?;
-                let s = low_level_read_string(address, data)?;
+                let mut data = self.section.open()?;
+                let s = low_level_read_string(address, &mut *data)?;
                 o.insert(s)
             }
         };
@@ -110,41 +120,49 @@ impl StringSection
     ///
     /// # Errors
     ///
-    /// Returns an [Error](crate::error::Error) if the string could not be written.
-    pub fn put<TInterface: Interface>(&mut self, interface: &mut TInterface, s: &str) -> Result<u32>
+    /// Returns a [WriteError](crate::strings::WriteError) if the string could not be written.
+    pub fn put(&mut self, s: &str) -> Result<u32, WriteError>
     {
-        let data = interface.open_section(self.handle)?;
-        let address = low_level_write_string(s, data)?;
+        let mut data = self.section.open()?;
+        let address = low_level_write_string(s, &mut *data)?;
         self.cache.insert(address, String::from(s));
         return Ok(address);
     }
 }
 
-fn low_level_read_string(ptr: u32, string_section: &mut dyn SectionData) -> Result<String>
+fn low_level_read_string(
+    ptr: u32,
+    string_section: &mut dyn SectionData
+) -> Result<String, ReadError>
 {
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
 
     string_section.seek(SeekFrom::Start(ptr as u64))?;
-    string_section.read(&mut chr)?;
+    // Read is enough as Sections are guaranteed to fill the buffer as much as possible
+    if string_section.read(&mut chr)? != 1 {
+        return Err(ReadError::Eos);
+    }
     while chr[0] != 0x0 {
         curs.push(chr[0]);
-        let res = string_section.read(&mut chr)?;
-        if res != 1 {
-            return Err(Error::Truncation("string secton read"));
+        if string_section.read(&mut chr)? != 1 {
+            return Err(ReadError::Eos);
         }
     }
     return match String::from_utf8(curs) {
-        Err(_) => Err(Error::Utf8("string section read")),
+        Err(_) => Err(ReadError::Utf8),
         Ok(v) => Ok(v)
-    }
+    };
 }
 
-fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Result<u32>
+fn low_level_write_string(
+    s: &str,
+    string_section: &mut dyn SectionData
+) -> Result<u32, std::io::Error>
 {
     let ptr = string_section.size() as u32;
-    string_section.write(s.as_bytes())?;
-    string_section.write(&[0x0])?;
+    string_section.write_all(s.as_bytes())?;
+    string_section.write_all(&[0x0])?;
     return Ok(ptr);
 }
 
@@ -158,7 +176,7 @@ fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Resu
 ///
 /// # Errors
 ///
-/// Returns an [Error](crate::error::Error) if the path does not have a file name.
+/// Returns Err if the path does not have a file name.
 ///
 /// # Panics
 ///
@@ -173,7 +191,7 @@ fn low_level_write_string(s: &str, string_section: &mut dyn SectionData) -> Resu
 /// let str = get_name_from_path(Path::new("test/file.txt")).unwrap();
 /// assert_eq!(str, "file.txt");
 /// ```
-pub fn get_name_from_path(path: &Path) -> Result<String>
+pub fn get_name_from_path(path: &Path) -> Result<String, ()>
 {
     match path.file_name() {
         Some(v) => match v.to_str() {
@@ -182,7 +200,7 @@ pub fn get_name_from_path(path: &Path) -> Result<String>
             // The reason BPXP cannot support non-unicode strings in paths is simply because this would be incompatible with unicode systems
             None => panic!("Non unicode paths operating systems cannot run BPXP")
         },
-        None => return Err(Error::from("incorrect path format"))
+        None => return Err(())
     }
 }
 

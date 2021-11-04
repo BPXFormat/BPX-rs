@@ -30,11 +30,7 @@ use std::io::Write;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::{
-    error::Error,
-    sd::{Array, Object, Value},
-    Result
-};
+use crate::sd::{error::WriteError, Array, Object, Value};
 
 fn get_value_type_code(val: &Value) -> u8
 {
@@ -57,7 +53,7 @@ fn get_value_type_code(val: &Value) -> u8
     }
 }
 
-fn write_value(val: &Value) -> Result<Vec<u8>>
+fn write_value(val: &Value) -> Result<Vec<u8>, WriteError>
 {
     let mut buf = Vec::new();
 
@@ -122,13 +118,13 @@ fn write_value(val: &Value) -> Result<Vec<u8>>
     return Ok(buf);
 }
 
-fn write_object(obj: &Object) -> Result<Vec<u8>>
+fn write_object(obj: &Object) -> Result<Vec<u8>, WriteError>
 {
     let mut v: Vec<u8> = Vec::new();
     let count = obj.prop_count();
 
     if count > 255 {
-        return Err(Error::PropCountExceeded(count));
+        return Err(WriteError::PropCountExceeded(count));
     }
     v.push(count as u8);
     for hash in obj.get_keys() {
@@ -142,13 +138,13 @@ fn write_object(obj: &Object) -> Result<Vec<u8>>
     return Ok(v);
 }
 
-fn write_array(arr: &Array) -> Result<Vec<u8>>
+fn write_array(arr: &Array) -> Result<Vec<u8>, WriteError>
 {
     let mut v: Vec<u8> = Vec::new();
     let count = arr.len();
 
     if count > 255 {
-        return Err(Error::PropCountExceeded(count));
+        return Err(WriteError::PropCountExceeded(count));
     }
     v.push(count as u8);
     for i in 0..count {
@@ -159,9 +155,12 @@ fn write_array(arr: &Array) -> Result<Vec<u8>>
     return Ok(v);
 }
 
-pub fn write_structured_data<TWrite: Write>(dest: &mut TWrite, obj: &Object) -> Result<()>
+pub fn write_structured_data<TWrite: Write>(
+    mut dest: TWrite,
+    obj: &Object
+) -> Result<(), WriteError>
 {
     let bytes = write_object(obj)?;
-    dest.write(&bytes)?;
+    dest.write_all(&bytes)?;
     return Ok(());
 }

@@ -28,8 +28,7 @@
 
 //! Contains various utilities to be used by other modules.
 
-use std::io::Cursor;
-use std::num::Wrapping;
+use std::{io::Cursor, num::Wrapping};
 
 /// Hash text using the hash function defined in the BPX specification for strings.
 ///
@@ -62,12 +61,30 @@ pub fn hash(s: &str) -> u64
 /// Extension to include get_or_insert_with but with support for Result and errors.
 pub trait OptionExtension<T>
 {
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>;
+    /// Inserts the value returned by `f` if the Option is None then returns a mutable reference
+    /// to the value.
+    ///
+    /// # Arguments
+    ///
+    /// * `f`: the function to insert with.
+    ///
+    /// returns: Result<&mut T, TError>
+    ///
+    /// # Errors
+    ///
+    /// Whatever error type is `TError`.
+    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(
+        &mut self,
+        f: F
+    ) -> Result<&mut T, TError>;
 }
 
 impl<T> OptionExtension<T> for Option<T>
 {
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(&mut self, f: F) -> Result<&mut T, TError>
+    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(
+        &mut self,
+        f: F
+    ) -> Result<&mut T, TError>
     {
         if let None = *self {
             *self = Some(f()?);
@@ -96,4 +113,41 @@ pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>>
         return Cursor::new(Vec::with_capacity(size));
     }
     return Cursor::new(Vec::new());
+}
+
+/// Allows to read into a buffer as much as possible.
+///
+/// *Allows the use BufReader with BPX*
+pub trait ReadFill
+{
+
+    /// Reads into `buf` as much as possible.
+    ///
+    /// *Returns the number of bytes that could be read.*
+    ///
+    /// # Arguments
+    ///
+    /// * `buf`: the buffer to read into.
+    ///
+    /// returns: Result<usize, Error>
+    ///
+    /// # Errors
+    ///
+    /// Returns an [Error](std::io::Error) when read has failed.
+    fn read_fill(&mut self, buf: &mut [u8]) -> std::io::Result<usize>;
+}
+
+impl<T: std::io::Read + ?Sized> ReadFill for T
+{
+    fn read_fill(&mut self, buf: &mut [u8]) -> std::io::Result<usize>
+    {
+        let mut bytes = 0;
+        let mut len = self.read(buf)?;
+        bytes += len;
+        while len > 0 && buf.len() - len > 0 {
+            len = self.read(&mut buf[len..])?;
+            bytes += len;
+        }
+        return Ok(bytes);
+    }
 }

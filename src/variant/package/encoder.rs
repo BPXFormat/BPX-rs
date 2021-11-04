@@ -26,23 +26,28 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::Read;
-
-use byteorder::{ByteOrder, LittleEndian};
+use std::{io::Read, rc::Rc};
 
 use crate::{
     builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
     encoder::{Encoder, IoBackend},
-    header::{SectionHeader, SECTION_TYPE_SD, SECTION_TYPE_STRING},
+    header::{SectionHeader, Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
     sd::Object,
+    section::{AutoSection, Section},
     strings::StringSection,
     utils::OptionExtension,
-    variant::package::{Architecture, Platform, SECTION_TYPE_DATA, SECTION_TYPE_OBJECT_TABLE},
-    Interface,
-    Result,
-    SectionHandle
+    variant::package::{
+        error::WriteError,
+        object::ObjectHeader,
+        Architecture,
+        Platform,
+        SECTION_TYPE_DATA,
+        SECTION_TYPE_OBJECT_TABLE,
+        SUPPORTED_VERSION
+    },
+    Interface
 };
-use crate::variant::package::SUPPORTED_VERSION;
+use crate::utils::ReadFill;
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
@@ -135,39 +140,43 @@ impl PackageBuilder
     ///
     /// # Arguments
     ///
-    /// * `encoder`:
+    /// * `backend`: the [IoBackend](crate::encoder::IoBackend) to use.
     ///
     /// returns: Result<PackageEncoder<TBackend>, Error>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned in case some sections could not be created.
+    /// A [WriteError](crate::variant::package::error::WriteError) is returned in case some sections could not be created.
     ///
     /// # Examples
     ///
     /// ```
     /// use std::io::{Seek, SeekFrom};
     /// use bpx::utils::new_byte_buf;
+    /// use bpx::variant::NamedTable;
     /// use bpx::variant::package::{PackageBuilder, PackageDecoder};
     ///
     /// let mut bpxp = PackageBuilder::new().build(new_byte_buf(0)).unwrap();
     /// bpxp.pack_object("TestObject", "This is a test 你好".as_bytes());
-    /// bpxp.save();
+    /// bpxp.save().unwrap();
     /// //Reset our bytebuf pointer to start
     /// let mut bytebuf = bpxp.into_inner().into_inner();
     /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
     /// //Attempt decoding our in-memory BPXP
-    /// let mut bpxp = PackageDecoder::read(bytebuf).unwrap();
+    /// let mut bpxp = PackageDecoder::new(bytebuf).unwrap();
     /// let table = bpxp.read_object_table().unwrap();
-    /// assert_eq!(table.get_objects().len(), 1);
-    /// let object = table.get_objects()[0];
+    /// assert_eq!(table.get_all().len(), 1);
+    /// let object = table.get_all()[0];
     /// assert_eq!(bpxp.get_object_name(&object).unwrap(), "TestObject");
     /// let mut data = Vec::new();
     /// bpxp.unpack_object(&object, &mut data);
     /// let s = std::str::from_utf8(&data).unwrap();
     /// assert_eq!(s, "This is a test 你好")
     /// ```
-    pub fn build<TBackend: IoBackend>(self, backend: TBackend) -> Result<PackageEncoder<TBackend>>
+    pub fn build<TBackend: IoBackend>(
+        self,
+        backend: TBackend
+    ) -> Result<PackageEncoder<TBackend>, WriteError>
     {
         let mut encoder = Encoder::new(backend)?;
         let mut type_ext: [u8; 16] = [0; 16];
@@ -203,19 +212,21 @@ impl PackageBuilder
             .with_compression(CompressionMethod::Zlib)
             .with_type(SECTION_TYPE_OBJECT_TABLE)
             .build();
-        let strings = encoder.create_section(strings_header)?;
-        let object_table = encoder.create_section(object_table_header)?;
+        let strings = encoder.create_section(strings_header)?.clone();
+        let object_table = encoder.create_section(object_table_header)?.clone();
         if let Some(obj) = self.metadata {
             let metadata_header = SectionHeaderBuilder::new()
                 .with_checksum(Checksum::Weak)
                 .with_compression(CompressionMethod::Zlib)
                 .with_type(SECTION_TYPE_SD)
                 .build();
-            let metadata = encoder.create_section(metadata_header)?;
-            obj.write(&mut encoder.open_section(metadata)?)?;
+            let metadata = encoder.create_section(metadata_header)?.clone();
+            let mut data = metadata.open()?;
+            //TODO: Check
+            obj.write(data.as_mut())?;
         }
         return Ok(PackageEncoder {
-            strings,
+            strings: StringSection::new(strings),
             encoder,
             last_data_section: None,
             object_table
@@ -223,12 +234,12 @@ impl PackageBuilder
     }
 }
 
-/// Represents a BPX Package encoder
+/// Represents a BPX Package encoder.
 pub struct PackageEncoder<TBackend: IoBackend>
 {
-    strings: SectionHandle,
-    last_data_section: Option<SectionHandle>,
-    object_table: SectionHandle,
+    strings: StringSection,
+    last_data_section: Option<Rc<AutoSection>>,
+    object_table: Rc<AutoSection>,
     encoder: Encoder<TBackend>
 }
 
@@ -244,21 +255,26 @@ fn create_data_section_header() -> SectionHeader
 
 impl<TBackend: IoBackend> PackageEncoder<TBackend>
 {
-    fn write_object<TRead: Read>(&mut self, source: &mut TRead, data_id: SectionHandle) -> Result<(usize, bool)>
+    fn write_object<TRead: Read>(
+        &mut self,
+        source: &mut TRead,
+        data_id: &Rc<AutoSection>
+    ) -> Result<(usize, bool), crate::error::WriteError>
     {
-        let data = self.encoder.open_section(data_id)?;
+        //TODO: Fix
+        let mut data = data_id.open()?;
         let mut buf: [u8; DATA_WRITE_BUFFER_SIZE] = [0; DATA_WRITE_BUFFER_SIZE];
-        let mut res = source.read(&mut buf)?;
+        let mut res = source.read_fill(&mut buf)?;
         let mut count = res;
 
         while res > 0 {
-            data.write(&buf[0..res])?;
+            data.write_all(&buf[0..res])?;
             if data.size() >= MAX_DATA_SECTION_SIZE
             //Split sections (this is to avoid reaching the 4Gb max)
             {
                 return Ok((count, true));
             }
-            res = source.read(&mut buf)?;
+            res = source.read_fill(&mut buf)?;
             count += res;
         }
         return Ok((count, false));
@@ -275,39 +291,57 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     /// * `name`: the name of the object.
     /// * `source`: the source object data as a [Read](std::io::Read).
     ///
-    /// returns: Result<(), Error>
-    pub fn pack_object<TRead: Read>(&mut self, name: &str, mut source: TRead) -> Result<()>
+    /// returns: Result<(), WriteError>
+    ///
+    /// # Errors
+    ///
+    /// A [WriteError](crate::variant::package::error::WriteError) is returned if the object could not be written.
+    pub fn pack_object<TRead: Read>(
+        &mut self,
+        name: &str,
+        mut source: TRead
+    ) -> Result<(), WriteError>
     {
         let mut object_size = 0;
         let useless = &mut self.encoder;
-        let mut data_section = *Option::get_or_insert_with_err(&mut self.last_data_section, || {
-            useless.create_section(create_data_section_header())
-        })?;
-        let start = self.encoder.get_section_index(data_section);
-        let offset = self.encoder.open_section(data_section)?.size() as u32;
+        let mut data_section = self
+            .last_data_section
+            .get_or_insert_with_err(|| -> Result<Rc<AutoSection>, crate::error::WriteError> {
+                //Here Rust type inference is even more broken! Cloning needs to be done twice!!!!
+                let fuckyourust = useless.create_section(create_data_section_header())?;
+                return Ok(fuckyourust.clone());
+            })?
+            .clone();
+        let start = self.encoder.get_section_index(data_section.handle());
+        let offset = data_section.size() as u32;
 
         loop {
-            let (count, need_section) = self.write_object(&mut source, data_section)?;
+            let (count, need_section) = self.write_object(&mut source, &data_section)?;
             object_size += count;
             if need_section {
-                data_section = self.encoder.create_section(create_data_section_header())?;
+                data_section = self
+                    .encoder
+                    .create_section(create_data_section_header())?
+                    .clone();
             } else {
                 break;
             }
         }
         {
             // Fill and write the object header
-            let mut buf: [u8; 20] = [0; 20];
-            let mut strings = StringSection::new(self.strings);
-            LittleEndian::write_u64(&mut buf[0..8], object_size as u64);
-            LittleEndian::write_u32(&mut buf[8..12], strings.put(&mut self.encoder, &name)?);
-            LittleEndian::write_u32(&mut buf[12..16], start);
-            LittleEndian::write_u32(&mut buf[16..20], offset);
+            let buf = ObjectHeader {
+                size: object_size as u64,
+                name: self.strings.put(&name)?,
+                start,
+                offset
+            }
+            .to_bytes();
             // Write the object header
-            let object_table = self.encoder.open_section(self.object_table)?;
-            object_table.write(&buf)?;
+            let mut object_table = self.object_table.open()?;
+            object_table.write_all(&buf)?;
         }
-        if self.encoder.open_section(data_section)?.size() > MAX_DATA_SECTION_SIZE {
+        //TODO: Fix
+        if data_section.size() > MAX_DATA_SECTION_SIZE {
             self.last_data_section = None;
         } else {
             self.last_data_section = Some(data_section);
@@ -323,8 +357,8 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if the encoder failed to save.
-    pub fn save(&mut self) -> Result<()>
+    /// A [WriteError](crate::error::WriteError) is returned if the encoder failed to save.
+    pub fn save(&mut self) -> Result<(), crate::error::WriteError>
     {
         return self.encoder.save();
     }

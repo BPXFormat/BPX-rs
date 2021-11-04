@@ -26,26 +26,30 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{SeekFrom, Write};
-
-use byteorder::{ByteOrder, LittleEndian};
+use std::{
+    io::{SeekFrom, Write},
+    rc::Rc
+};
 
 use crate::{
     decoder::{Decoder, IoBackend},
-    error::Error,
-    header::{SECTION_TYPE_SD, SECTION_TYPE_STRING},
+    header::{Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
     sd::Object,
+    section::AutoSection,
     strings::StringSection,
-    variant::package::{
-        object::{ObjectHeader, ObjectTable},
-        Architecture,
-        Platform,
-        SECTION_TYPE_OBJECT_TABLE,
-        SUPPORTED_VERSION
+    variant::{
+        package::{
+            error::{InvalidCodeContext, ReadError, Section},
+            object::{ObjectHeader, ObjectTable},
+            Architecture,
+            Platform,
+            SECTION_TYPE_OBJECT_TABLE,
+            SUPPORTED_VERSION
+        },
+        NamedTable
     },
-    Interface,
-    Result,
-    SectionHandle
+    Handle,
+    Interface
 };
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
@@ -58,10 +62,11 @@ pub struct PackageDecoder<TBackend: IoBackend>
     platform: Platform,
     strings: StringSection,
     decoder: Decoder<TBackend>,
-    object_table: SectionHandle
+    object_table: Rc<AutoSection>
 }
 
-fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Platform)>
+fn get_arch_platform_from_code(acode: u8, pcode: u8)
+    -> Result<(Architecture, Platform), ReadError>
 {
     let arch;
     let platform;
@@ -72,7 +77,7 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Pl
         0x2 => arch = Architecture::X86,
         0x3 => arch = Architecture::Armv7hl,
         0x4 => arch = Architecture::Any,
-        _ => return Err(Error::Corruption(String::from("Architecture code does not exist")))
+        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Arch, acode))
     }
     match pcode {
         0x0 => platform = Platform::Linux,
@@ -80,7 +85,7 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Pl
         0x2 => platform = Platform::Windows,
         0x3 => platform = Platform::Android,
         0x4 => platform = Platform::Any,
-        _ => return Err(Error::Corruption(String::from("Platform code does not exist")))
+        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Platform, pcode))
     }
     return Ok((arch, platform));
 }
@@ -91,28 +96,22 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     ///
     /// # Arguments
     ///
-    /// * `decoder`: the BPX [Decoder](crate::decoder::Decoder) backend to use.
+    /// * `backend`: the [IoBackend](crate::decoder::IoBackend) to use.
     ///
     /// returns: Result<PackageDecoder<TBackend>, Error>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if some sections/headers could not be loaded.
-    pub fn read(backend: TBackend) -> Result<PackageDecoder<TBackend>>
+    /// A [ReadError](crate::variant::package::error::ReadError) is returned if some
+    /// sections/headers could not be loaded.
+    pub fn new(backend: TBackend) -> Result<PackageDecoder<TBackend>, ReadError>
     {
-        let decoder = Decoder::new(backend)?;
+        let mut decoder = Decoder::new(backend)?;
         if decoder.get_main_header().btype != 'P' as u8 {
-            return Err(Error::Corruption(format!(
-                "Unknown variant of BPX: {}",
-                decoder.get_main_header().btype as char
-            )));
+            return Err(ReadError::BadType(decoder.get_main_header().btype));
         }
         if decoder.get_main_header().version != SUPPORTED_VERSION {
-            return Err(Error::Unsupported(format!(
-                "This version of the BPX SDK only supports BPXP version {}, you are trying to decode version {} BPXP",
-                SUPPORTED_VERSION,
-                decoder.get_main_header().version
-            )));
+            return Err(ReadError::BadVersion(decoder.get_main_header().version));
         }
         let (a, p) = get_arch_platform_from_code(
             decoder.get_main_header().type_ext[0],
@@ -120,22 +119,22 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
         )?;
         let strings = match decoder.find_section_by_type(SECTION_TYPE_STRING) {
             Some(v) => v,
-            None => return Err(Error::Corruption(String::from("Unable to locate strings section")))
+            None => return Err(ReadError::MissingSection(Section::Strings))
         };
         let object_table = match decoder.find_section_by_type(SECTION_TYPE_OBJECT_TABLE) {
             Some(v) => v,
-            None => return Err(Error::Corruption(String::from("Unable to locate BPXP object table")))
+            None => return Err(ReadError::MissingSection(Section::ObjectTable))
         };
         return Ok(PackageDecoder {
             architecture: a,
             platform: p,
-            strings: StringSection::new(strings),
+            strings: StringSection::new(decoder.load_section(strings)?.clone()),
             type_code: [
                 decoder.get_main_header().type_ext[2],
                 decoder.get_main_header().type_ext[3]
             ],
-            decoder,
-            object_table
+            object_table: decoder.load_section(object_table)?.clone(),
+            decoder
         });
     }
 
@@ -162,12 +161,13 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned in case of corruption or system error.
-    pub fn read_metadata(&mut self) -> Result<Option<Object>>
+    /// A [ReadError](crate::variant::package::error::ReadError) is returned in case of corruption or system error.
+    pub fn read_metadata(&mut self) -> Result<Option<Object>, ReadError>
     {
         if let Some(handle) = self.decoder.find_section_by_type(SECTION_TYPE_SD) {
-            let mut data = self.decoder.open_section(handle)?;
-            let obj = Object::read(&mut data)?;
+            let section = self.decoder.load_section(handle)?;
+            let mut data = section.open()?;
+            let obj = Object::read(&mut *data)?;
             return Ok(Some(obj));
         }
         return Ok(None);
@@ -177,28 +177,19 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned in case of corruption or system error.
-    pub fn read_object_table(&mut self) -> Result<ObjectTable>
+    /// A [ReadError](crate::variant::package::error::ReadError) is returned in case of
+    /// corruption or system error.
+    pub fn read_object_table(&mut self) -> Result<ObjectTable, ReadError>
     {
+        use crate::section::Section;
         let mut v = Vec::new();
-        let count = self.decoder.get_section_header(self.object_table).size / 20;
-        let object_table = self.decoder.open_section(self.object_table)?;
+        let count = self.object_table.size() / 20;
+        let mut object_table = self.object_table.open()?;
 
         for _ in 0..count {
-            let mut buf: [u8; 20] = [0; 20];
-            if object_table.read(&mut buf)? != 20 {
-                return Err(Error::Truncation("read object table"));
-            }
-            let size = LittleEndian::read_u64(&buf[0..8]);
-            let name_ptr = LittleEndian::read_u32(&buf[8..12]);
-            let start = LittleEndian::read_u32(&buf[12..16]);
-            let offset = LittleEndian::read_u32(&buf[16..20]);
-            v.push(ObjectHeader {
-                size,
-                name: name_ptr,
-                start,
-                offset
-            })
+            //TODO: Check
+            let header = ObjectHeader::read(object_table.as_mut())?;
+            v.push(header);
         }
         return Ok(ObjectTable::new(v));
     }
@@ -213,30 +204,33 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if the name could not be read.
-    pub fn get_object_name(&mut self, obj: &ObjectHeader) -> Result<&str>
+    /// A [ReadError](crate::strings::ReadError) is returned if the name could not be read.
+    pub fn get_object_name(&mut self, obj: &ObjectHeader)
+        -> Result<&str, crate::strings::ReadError>
     {
-        return self.strings.get(&mut self.decoder, obj.name);
+        return self.strings.get(obj.name);
     }
 
     fn load_from_section<TWrite: Write>(
         &mut self,
-        handle: SectionHandle,
+        handle: Handle,
         offset: u32,
         size: u32,
         out: &mut TWrite
-    ) -> Result<u32>
+    ) -> Result<u32, ReadError>
     {
         let mut len = 0;
         let mut buf: [u8; DATA_READ_BUFFER_SIZE] = [0; DATA_READ_BUFFER_SIZE];
-        let data = self.decoder.open_section(handle)?;
+        let section = self.decoder.load_section(handle)?;
+        let mut data = section.open()?;
 
         data.seek(SeekFrom::Start(offset as u64))?;
         while len < size {
             let s = std::cmp::min(size - len, DATA_READ_BUFFER_SIZE as u32);
+            // Read is enough as Sections are guaranteed to fill the buffer as much as possible
             let val = data.read(&mut buf[0..s as usize])?;
             len += val as u32;
-            out.write(&buf[0..val])?;
+            out.write_all(&buf[0..val])?;
         }
         return Ok(len);
     }
@@ -253,8 +247,12 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if the object could not be unpacked.
-    pub fn unpack_object<TWrite: Write>(&mut self, obj: &ObjectHeader, mut out: TWrite) -> Result<u64>
+    /// A [ReadError](crate::variant::package::error::ReadError) is returned if the object could not be unpacked.
+    pub fn unpack_object<TWrite: Write>(
+        &mut self,
+        obj: &ObjectHeader,
+        mut out: TWrite
+    ) -> Result<u64, ReadError>
     {
         let mut section_id = obj.start;
         let mut offset = obj.offset;

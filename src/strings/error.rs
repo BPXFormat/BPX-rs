@@ -26,42 +26,72 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{Read, Write};
+use std::fmt::{Display, Formatter};
 
-mod crc32chksum;
-mod weakchksum;
-mod xz;
-mod zlib;
+use crate::macros::impl_err_conversion;
 
-pub use crc32chksum::Crc32Checksum;
-pub use weakchksum::WeakChecksum;
-pub use xz::XzCompressionMethod;
-pub use zlib::ZlibCompressionMethod;
-
-use crate::error::{DeflateError, InflateError};
-
-pub trait Checksum
+/// Represents a string section read error.
+#[derive(Debug)]
+pub enum ReadError
 {
-    fn push(&mut self, buffer: &[u8]);
-    fn finish(self) -> u32;
+    /// Describes an utf8 decoding/encoding error.
+    Utf8,
+
+    /// Indicates the string reader has reached EOS (End Of Section) before the end of the string.
+    Eos,
+
+    /// Describes an io error.
+    Io(std::io::Error),
+
+    /// A section error.
+    Section(crate::section::Error)
 }
 
-pub trait Inflater
+impl_err_conversion!(
+    ReadError {
+        std::io::Error => Io,
+        crate::section::Error => Section
+    }
+);
+
+impl Display for ReadError
 {
-    fn inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
-        input: TRead,
-        output: TWrite,
-        deflated_size: usize,
-        chksum: &mut TChecksum
-    ) -> Result<(), InflateError>;
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            ReadError::Utf8 => f.write_str("utf8 error"),
+            ReadError::Eos => f.write_str("EOS reached before end of string"),
+            ReadError::Io(e) => f.write_str(&format!("io error: {}", e)),
+            ReadError::Section(e) => f.write_str(&format!("section error: {}", e))
+        }
+    }
 }
 
-pub trait Deflater
+/// Represents a string section write error.
+#[derive(Debug)]
+pub enum WriteError
 {
-    fn deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
-        input: TRead,
-        output: TWrite,
-        inflated_size: usize,
-        chksum: &mut TChecksum
-    ) -> Result<usize, DeflateError>;
+    /// Describes an io error.
+    Io(std::io::Error),
+
+    /// A section error.
+    Section(crate::section::Error)
+}
+
+impl_err_conversion!(
+    WriteError {
+        std::io::Error => Io,
+        crate::section::Error => Section
+    }
+);
+
+impl Display for WriteError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            WriteError::Io(e) => f.write_str(&format!("io error: {}", e)),
+            WriteError::Section(e) => f.write_str(&format!("section error: {}", e))
+        }
+    }
 }

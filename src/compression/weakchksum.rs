@@ -54,6 +54,8 @@ impl WeakChecksum
 {
     pub fn new() -> Self
     {
-        return WeakChecksum { current: Wrapping(0) };
+        return WeakChecksum {
+            current: Wrapping(0)
+        };
     }
 }

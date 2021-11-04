@@ -26,11 +26,14 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#![warn(missing_docs)]
+
 //! This library is the official implementation for the [BPX](https://gitlab.com/bp3d/bpx/bpx/-/blob/master/BPX_Format.pdf) container format.
 
-use std::vec::Vec;
+use std::{rc::Rc, vec::Vec};
 
-pub mod variant;
+use crate::section::AutoSection;
+
 pub mod builder;
 mod compression;
 pub mod decoder;
@@ -38,16 +41,18 @@ pub mod encoder;
 pub mod error;
 mod garraylen;
 pub mod header;
+pub mod macros;
 pub mod sd;
 pub mod section;
 pub mod strings;
 pub mod utils;
+pub mod variant;
 
 /// Represents a pointer to a section.
 ///
 /// *Allows indirect access to a given section instead of sharing mutable references in user code.*
-#[derive(Copy, Clone, Debug)]
-pub struct SectionHandle(usize);
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Handle(u32);
 
 /// The interface implemented by both the BPX encoder and decoder.
 pub trait Interface
@@ -59,7 +64,7 @@ pub trait Interface
     ///
     /// * `btype`: section type byte.
     ///
-    /// returns: Option<SectionHandle>
+    /// returns: Option<Handle>
     ///
     /// # Examples
     ///
@@ -71,7 +76,7 @@ pub trait Interface
     /// let file = Encoder::new(new_byte_buf(0)).unwrap();
     /// assert!(file.find_section_by_type(0).is_none());
     /// ```
-    fn find_section_by_type(&self, btype: u8) -> Option<SectionHandle>;
+    fn find_section_by_type(&self, btype: u8) -> Option<Handle>;
 
     /// Searches for all sections of a given type.
     /// Returns None if no section could be found.
@@ -80,7 +85,7 @@ pub trait Interface
     ///
     /// * `btype`: section type byte.
     ///
-    /// returns: Vec<SectionHandle, Global>
+    /// returns: Vec<Handle, Global>
     ///
     /// # Examples
     ///
@@ -92,7 +97,7 @@ pub trait Interface
     /// let file = Encoder::new(new_byte_buf(0)).unwrap();
     /// assert_eq!(file.find_all_sections_of_type(0).len(), 0);
     /// ```
-    fn find_all_sections_of_type(&self, btype: u8) -> Vec<SectionHandle>;
+    fn find_all_sections_of_type(&self, btype: u8) -> Vec<Handle>;
 
     /// Locates a section by its index in the file.
     /// Returns None if the section does not exist.
@@ -101,7 +106,7 @@ pub trait Interface
     ///
     /// * `index`: the section index to search for.
     ///
-    /// returns: Option<SectionHandle>
+    /// returns: Option<Handle>
     ///
     /// # Examples
     ///
@@ -113,7 +118,7 @@ pub trait Interface
     /// let file = Encoder::new(new_byte_buf(0)).unwrap();
     /// assert!(file.find_section_by_index(0).is_none());
     /// ```
-    fn find_section_by_index(&self, index: u32) -> Option<SectionHandle>;
+    fn find_section_by_index(&self, index: u32) -> Option<Handle>;
 
     /// Returns the BPX section header of a section.
     ///
@@ -133,14 +138,15 @@ pub trait Interface
     /// use bpx::encoder::Encoder;
     /// use bpx::Interface;
     /// use bpx::builder::SectionHeaderBuilder;
+    /// use bpx::section::Section;
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let handle = file.create_section(SectionHeaderBuilder::new().with_type(1).build()).unwrap();
-    /// let header = file.get_section_header(handle);
+    /// let section = file.create_section(SectionHeaderBuilder::new().with_type(1).build()).unwrap().clone();
+    /// let header = file.get_section_header(section.handle());
     /// assert_eq!(header.btype, 1);
     /// ```
-    fn get_section_header(&self, handle: SectionHandle) -> &header::SectionHeader;
+    fn get_section_header(&self, handle: Handle) -> &header::SectionHeader;
 
     /// Returns the section index from a section handle.
     ///
@@ -160,26 +166,22 @@ pub trait Interface
     /// use bpx::encoder::Encoder;
     /// use bpx::Interface;
     /// use bpx::builder::SectionHeaderBuilder;
+    /// use bpx::section::Section;
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let handle = file.create_section(SectionHeaderBuilder::new().build()).unwrap();
-    /// assert_eq!(file.get_section_index(handle), 0);
+    /// let section = file.create_section(SectionHeaderBuilder::new().build()).unwrap().clone();
+    /// assert_eq!(file.get_section_index(section.handle()), 0);
     /// ```
-    fn get_section_index(&self, handle: SectionHandle) -> u32;
+    fn get_section_index(&self, handle: Handle) -> u32;
 
-    /// Opens a section for read and/or write.
+    /// Gets a section for read and/or write.
     ///
     /// # Arguments
     ///
     /// * `handle`: a handle to the section.
     ///
     /// returns: Result<&mut dyn SectionData, Error>
-    ///
-    /// # Errors
-    ///
-    /// A BPX [Error](error::Error) if an IO or any other file error occurs
-    /// while reading the section from the file.
     ///
     /// # Panics
     ///
@@ -194,12 +196,12 @@ pub trait Interface
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let handle = file.create_section(SectionHeaderBuilder::new().build()).unwrap();
-    /// let section = file.open_section(handle).unwrap();
-    /// let data = section.load_in_memory().unwrap();
-    /// assert_eq!(data.len(), 0);
+    /// let section = file.create_section(SectionHeaderBuilder::new().build()).unwrap();
+    /// let mut data = section.open().unwrap();
+    /// let buf = data.load_in_memory().unwrap();
+    /// assert_eq!(buf.len(), 0);
     /// ```
-    fn open_section(&mut self, handle: SectionHandle) -> Result<&mut dyn section::SectionData>;
+    fn get_section(&self, handle: Handle) -> &Rc<AutoSection>;
 
     /// Returns a read-only reference to the BPX main header.
     ///
@@ -218,8 +220,3 @@ pub trait Interface
     /// ```
     fn get_main_header(&self) -> &header::MainHeader;
 }
-
-/// Represents a result from this library.
-///
-/// *This acts as a shortcut to [Result](std::result::Result)<T, [Error](error::Error)>.*
-pub type Result<T> = std::result::Result<T, error::Error>;

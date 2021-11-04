@@ -29,10 +29,8 @@
 use std::{collections::HashMap, convert::TryInto};
 
 use crate::{
-    error::Error,
-    sd::{Array, Object},
-    utils::hash,
-    Result
+    sd::{error::DebugError, Array, Object},
+    utils::hash
 };
 
 /// Provides support for debug symbols to BPXSD object.
@@ -136,7 +134,7 @@ impl DebugSymbols
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned in case the object
+    /// A [DebugError](crate::sd::error::DebugError) is returned in case the object
     /// does not provide debug information or if the debug information
     /// could not be read.
     ///
@@ -160,7 +158,7 @@ impl DebugSymbols
     /// let mut obj = Object::new();
     /// DebugSymbols::read(&obj).unwrap();
     /// ```
-    pub fn read(obj: &Object) -> Result<DebugSymbols>
+    pub fn read(obj: &Object) -> Result<DebugSymbols, DebugError>
     {
         if let Some(val) = obj.get("__debug__") {
             let mut symbols = HashMap::new();
@@ -174,6 +172,6 @@ impl DebugSymbols
                 symbols_map: symbols
             });
         }
-        return Err(Error::MissingProp("__debug__"));
+        return Err(DebugError::MissingProp);
     }
 }

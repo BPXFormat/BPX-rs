@@ -32,12 +32,11 @@ use std::{
 };
 
 use crate::{
-    error::Error,
-    sd::{Array, Object},
-    Result
+    macros::impl_err_conversion,
+    sd::{error::TypeError, Array, Object}
 };
 
-/// Represents a BPXSD value
+/// Represents a BPXSD value.
 #[derive(PartialEq, Clone)]
 pub enum Value
 {
@@ -116,123 +115,30 @@ impl Value
     }
 }
 
-impl From<bool> for Value
-{
-    fn from(v: bool) -> Self
-    {
-        return Value::Bool(v);
+impl_err_conversion!(
+    Value {
+        bool => Bool,
+        u8 => Uint8,
+        u16 => Uint16,
+        u32 => Uint32,
+        u64 => Uint64,
+        i8 => Int8,
+        i16 => Int16,
+        i32 => Int32,
+        i64 => Int64,
+        f32 => Float,
+        f64 => Double,
+        String => String,
+        Array => Array,
+        Object => Object
     }
-}
-
-impl From<u8> for Value
-{
-    fn from(v: u8) -> Self
-    {
-        return Value::Uint8(v);
-    }
-}
-
-impl From<u16> for Value
-{
-    fn from(v: u16) -> Self
-    {
-        return Value::Uint16(v);
-    }
-}
-
-impl From<u32> for Value
-{
-    fn from(v: u32) -> Self
-    {
-        return Value::Uint32(v);
-    }
-}
-
-impl From<u64> for Value
-{
-    fn from(v: u64) -> Self
-    {
-        return Value::Uint64(v);
-    }
-}
-
-impl From<i8> for Value
-{
-    fn from(v: i8) -> Self
-    {
-        return Value::Int8(v);
-    }
-}
-
-impl From<i16> for Value
-{
-    fn from(v: i16) -> Self
-    {
-        return Value::Int16(v);
-    }
-}
-
-impl From<i32> for Value
-{
-    fn from(v: i32) -> Self
-    {
-        return Value::Int32(v);
-    }
-}
-
-impl From<i64> for Value
-{
-    fn from(v: i64) -> Self
-    {
-        return Value::Int64(v);
-    }
-}
-
-impl From<f32> for Value
-{
-    fn from(v: f32) -> Self
-    {
-        return Value::Float(v);
-    }
-}
-
-impl From<f64> for Value
-{
-    fn from(v: f64) -> Self
-    {
-        return Value::Double(v);
-    }
-}
+);
 
 impl From<&str> for Value
 {
     fn from(v: &str) -> Self
     {
         return Value::String(String::from(v));
-    }
-}
-
-impl From<String> for Value
-{
-    fn from(v: String) -> Self
-    {
-        return Value::String(v);
-    }
-}
-
-impl From<Array> for Value
-{
-    fn from(v: Array) -> Self
-    {
-        return Value::Array(v);
-    }
-}
-
-impl From<Object> for Value
-{
-    fn from(v: Object) -> Self
-    {
-        return Value::Object(v);
     }
 }
 
@@ -261,391 +167,403 @@ impl<T: Into<Value>> From<Vec<T>> for Value
 
 impl TryFrom<Value> for bool
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         if let Value::Bool(v) = v {
             return Ok(v);
         }
-        return Err(Error::TypeError("bool", v.get_type_name()));
+        return Err(TypeError::new("bool", v.get_type_name()));
     }
 }
 
 impl TryFrom<Value> for u8
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         if let Value::Uint8(v) = v {
             return Ok(v);
         }
-        return Err(Error::TypeError("uint8", v.get_type_name()));
+        return Err(TypeError::new("uint8", v.get_type_name()));
     }
 }
 
 impl TryFrom<Value> for u16
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Uint16(v) => Ok(v),
             Value::Uint8(v) => Ok(v as u16),
-            _ => Err(Error::TypeError("uint8 or uint16", v.get_type_name()))
+            _ => Err(TypeError::new("uint8 or uint16", v.get_type_name()))
         };
     }
 }
 
 impl TryFrom<Value> for u32
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Uint32(v) => Ok(v),
             Value::Uint16(v) => Ok(v as u32),
             Value::Uint8(v) => Ok(v as u32),
-            _ => Err(Error::TypeError("uint8, uint16 or uint32", v.get_type_name()))
+            _ => Err(TypeError::new("uint8, uint16 or uint32", v.get_type_name()))
         };
     }
 }
 
 impl TryFrom<Value> for u64
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Uint64(v) => Ok(v),
             Value::Uint32(v) => Ok(v as u64),
             Value::Uint16(v) => Ok(v as u64),
             Value::Uint8(v) => Ok(v as u64),
-            _ => Err(Error::TypeError("uint8, uint16, uint32 or uint64", v.get_type_name()))
+            _ => Err(TypeError::new(
+                "uint8, uint16, uint32 or uint64",
+                v.get_type_name()
+            ))
         };
     }
 }
 
 impl TryFrom<Value> for i8
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         if let Value::Int8(v) = v {
             return Ok(v);
         }
-        return Err(Error::TypeError("int8", v.get_type_name()));
+        return Err(TypeError::new("int8", v.get_type_name()));
     }
 }
 
 impl TryFrom<Value> for i16
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Int16(v) => Ok(v),
             Value::Int8(v) => Ok(v as i16),
-            _ => Err(Error::TypeError("int8 or int16", v.get_type_name()))
+            _ => Err(TypeError::new("int8 or int16", v.get_type_name()))
         };
     }
 }
 
 impl TryFrom<Value> for i32
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Int32(v) => Ok(v),
             Value::Int16(v) => Ok(v as i32),
             Value::Int8(v) => Ok(v as i32),
-            _ => Err(Error::TypeError("int8, int16 or int32", v.get_type_name()))
+            _ => Err(TypeError::new("int8, int16 or int32", v.get_type_name()))
         };
     }
 }
 
 impl TryFrom<Value> for i64
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Int64(v) => Ok(v),
             Value::Int32(v) => Ok(v as i64),
             Value::Int16(v) => Ok(v as i64),
             Value::Int8(v) => Ok(v as i64),
-            _ => Err(Error::TypeError("int8, int16, int32 or int64", v.get_type_name()))
+            _ => Err(TypeError::new(
+                "int8, int16, int32 or int64",
+                v.get_type_name()
+            ))
         };
     }
 }
 
 impl TryFrom<Value> for f32
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         if let Value::Float(v) = v {
             return Ok(v);
         }
-        return Err(Error::TypeError("float", v.get_type_name()));
+        return Err(TypeError::new("float", v.get_type_name()));
     }
 }
 
 impl TryFrom<Value> for f64
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Double(v) => Ok(v),
             Value::Float(v) => Ok(v as f64),
-            _ => Err(Error::TypeError("float or double", v.get_type_name()))
+            _ => Err(TypeError::new("float or double", v.get_type_name()))
         };
     }
 }
 
 impl TryFrom<Value> for String
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         if let Value::String(v) = v {
             return Ok(v);
         }
-        return Err(Error::TypeError("string", v.get_type_name()));
+        return Err(TypeError::new("string", v.get_type_name()));
     }
 }
 
 impl TryFrom<Value> for Array
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         if let Value::Array(v) = v {
             return Ok(v);
         }
-        return Err(Error::TypeError("array", v.get_type_name()));
+        return Err(TypeError::new("array", v.get_type_name()));
     }
 }
 
 impl TryFrom<Value> for Object
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self>
+    fn try_from(v: Value) -> Result<Self, TypeError>
     {
         if let Value::Object(v) = v {
             return Ok(v);
         }
-        return Err(Error::TypeError("object", v.get_type_name()));
+        return Err(TypeError::new("object", v.get_type_name()));
     }
 }
 
 impl TryFrom<&Value> for bool
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &Value) -> Result<Self>
+    fn try_from(v: &Value) -> Result<Self, TypeError>
     {
         if let Value::Bool(v) = v {
             return Ok(*v);
         }
-        return Err(Error::TypeError("bool", v.get_type_name()));
+        return Err(TypeError::new("bool", v.get_type_name()));
     }
 }
 
 impl TryFrom<&Value> for u8
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &Value) -> Result<Self>
+    fn try_from(v: &Value) -> Result<Self, TypeError>
     {
         if let Value::Uint8(v) = v {
             return Ok(*v);
         }
-        return Err(Error::TypeError("uint8", v.get_type_name()));
+        return Err(TypeError::new("uint8", v.get_type_name()));
     }
 }
 
 impl TryFrom<&Value> for u16
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &Value) -> Result<Self>
+    fn try_from(v: &Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Uint16(v) => Ok(*v),
             Value::Uint8(v) => Ok(*v as u16),
-            _ => Err(Error::TypeError("uint8 or uint16", v.get_type_name()))
+            _ => Err(TypeError::new("uint8 or uint16", v.get_type_name()))
         };
     }
 }
 
 impl TryFrom<&Value> for u32
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &Value) -> Result<Self>
+    fn try_from(v: &Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Uint32(v) => Ok(*v),
             Value::Uint16(v) => Ok(*v as u32),
             Value::Uint8(v) => Ok(*v as u32),
-            _ => Err(Error::TypeError("uint8, uint16 or uint32", v.get_type_name()))
+            _ => Err(TypeError::new("uint8, uint16 or uint32", v.get_type_name()))
         };
     }
 }
 
 impl TryFrom<&Value> for u64
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &Value) -> Result<Self>
+    fn try_from(v: &Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Uint64(v) => Ok(*v),
             Value::Uint32(v) => Ok(*v as u64),
             Value::Uint16(v) => Ok(*v as u64),
             Value::Uint8(v) => Ok(*v as u64),
-            _ => Err(Error::TypeError("uint8, uint16, uint32 or uint64", v.get_type_name()))
+            _ => Err(TypeError::new(
+                "uint8, uint16, uint32 or uint64",
+                v.get_type_name()
+            ))
         };
     }
 }
 
 impl TryFrom<&Value> for i8
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &Value) -> Result<Self>
+    fn try_from(v: &Value) -> Result<Self, TypeError>
     {
         if let Value::Int8(v) = v {
             return Ok(*v);
         }
-        return Err(Error::TypeError("int8", v.get_type_name()));
+        return Err(TypeError::new("int8", v.get_type_name()));
     }
 }
 
 impl TryFrom<&Value> for i16
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &Value) -> Result<Self>
+    fn try_from(v: &Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Int16(v) => Ok(*v),
             Value::Int8(v) => Ok(*v as i16),
-            _ => Err(Error::TypeError("int8 or int16", v.get_type_name()))
+            _ => Err(TypeError::new("int8 or int16", v.get_type_name()))
         };
     }
 }
 
 impl TryFrom<&Value> for i32
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &Value) -> Result<Self>
+    fn try_from(v: &Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Int32(v) => Ok(*v),
             Value::Int16(v) => Ok(*v as i32),
             Value::Int8(v) => Ok(*v as i32),
-            _ => Err(Error::TypeError("int8, int16 or int32", v.get_type_name()))
+            _ => Err(TypeError::new("int8, int16 or int32", v.get_type_name()))
         };
     }
 }
 
 impl TryFrom<&Value> for i64
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &Value) -> Result<Self>
+    fn try_from(v: &Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Int64(v) => Ok(*v),
             Value::Int32(v) => Ok(*v as i64),
             Value::Int16(v) => Ok(*v as i64),
             Value::Int8(v) => Ok(*v as i64),
-            _ => Err(Error::TypeError("int8, int16, int32 or int64", v.get_type_name()))
+            _ => Err(TypeError::new(
+                "int8, int16, int32 or int64",
+                v.get_type_name()
+            ))
         };
     }
 }
 
 impl TryFrom<&Value> for f32
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &Value) -> Result<Self>
+    fn try_from(v: &Value) -> Result<Self, TypeError>
     {
         if let Value::Float(v) = v {
             return Ok(*v);
         }
-        return Err(Error::TypeError("float", v.get_type_name()));
+        return Err(TypeError::new("float", v.get_type_name()));
     }
 }
 
 impl TryFrom<&Value> for f64
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &Value) -> Result<Self>
+    fn try_from(v: &Value) -> Result<Self, TypeError>
     {
         return match v {
             Value::Double(v) => Ok(*v),
             Value::Float(v) => Ok(*v as f64),
-            _ => Err(Error::TypeError("float or double", v.get_type_name()))
+            _ => Err(TypeError::new("float or double", v.get_type_name()))
         };
     }
 }
 
 impl<'a> TryFrom<&'a Value> for &'a str
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &'a Value) -> Result<Self>
+    fn try_from(v: &'a Value) -> Result<Self, TypeError>
     {
         if let Value::String(v) = v {
             return Ok(&v);
         }
-        return Err(Error::TypeError("string", v.get_type_name()));
+        return Err(TypeError::new("string", v.get_type_name()));
     }
 }
 
 impl<'a> TryFrom<&'a Value> for &'a Array
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &'a Value) -> Result<Self>
+    fn try_from(v: &'a Value) -> Result<Self, TypeError>
     {
         if let Value::Array(v) = v {
             return Ok(&v);
         }
-        return Err(Error::TypeError("array", v.get_type_name()));
+        return Err(TypeError::new("array", v.get_type_name()));
     }
 }
 
 impl<'a> TryFrom<&'a Value> for &'a Object
 {
-    type Error = Error;
+    type Error = TypeError;
 
-    fn try_from(v: &'a Value) -> Result<Self>
+    fn try_from(v: &'a Value) -> Result<Self, TypeError>
     {
         if let Value::Object(v) = v {
             return Ok(v);
         }
-        return Err(Error::TypeError("object", v.get_type_name()));
+        return Err(TypeError::new("object", v.get_type_name()));
     }
 }
 
@@ -654,9 +572,9 @@ macro_rules! generate_option_try_from {
         $(
             impl TryFrom<Value> for Option<$t>
             {
-                type Error = Error;
+                type Error = TypeError;
 
-                fn try_from(v: Value) -> Result<Self>
+                fn try_from(v: Value) -> Result<Self, TypeError>
                 {
                     if let Value::Null = v
                     {
@@ -675,9 +593,9 @@ macro_rules! generate_option_try_from_ref {
         $(
             impl <'a> TryFrom<&'a Value> for Option<&'a $t>
             {
-                type Error = Error;
+                type Error = TypeError;
 
-                fn try_from(v: &'a Value) -> Result<Self>
+                fn try_from(v: &'a Value) -> Result<Self, TypeError>
                 {
                     if let Value::Null = v
                     {
@@ -696,9 +614,9 @@ macro_rules! generate_option_try_from_ref_scalar {
         $(
             impl <'a> TryFrom<&'a Value> for Option<$t>
             {
-                type Error = Error;
+                type Error = TypeError;
 
-                fn try_from(v: &'a Value) -> Result<Self>
+                fn try_from(v: &'a Value) -> Result<Self, TypeError>
                 {
                     if let Value::Null = v
                     {

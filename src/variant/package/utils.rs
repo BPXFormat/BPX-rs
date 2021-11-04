@@ -26,16 +26,24 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! BPXP utility functions.
+
 use std::{
     fs::{metadata, read_dir, File},
     path::{Path, PathBuf}
 };
 
 use crate::{
-    error::Error,
     strings::{get_name_from_dir_entry, get_name_from_path},
-    variant::package::{object::ObjectHeader, PackageDecoder, PackageEncoder},
-    Result
+    variant::{
+        package::{
+            error::{EosContext, ReadError, WriteError},
+            object::ObjectHeader,
+            PackageDecoder,
+            PackageEncoder
+        },
+        NamedTable
+    }
 };
 
 /// Packs a file or folder in a BPXP with the given virtual name.
@@ -54,12 +62,12 @@ use crate::{
 ///
 /// # Errors
 ///
-/// An [Error](crate::error::Error) is returned if some objects could not be packed.
+/// A [WriteError](crate::variant::package::error::WriteError) is returned if some objects could not be packed.
 pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
     package: &mut PackageEncoder<TBackend>,
     vname: &str,
     source: &Path
-) -> Result<()>
+) -> Result<(), WriteError>
 {
     let md = metadata(source)?;
     if md.is_file() {
@@ -96,13 +104,16 @@ pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
 ///
 /// # Errors
 ///
-/// An [Error](crate::error::Error) is returned if some objects could not be packed.
+/// A [WriteError](crate::variant::package::error::WriteError) is returned if some objects could not be packed.
 pub fn pack_file<TBackend: crate::encoder::IoBackend>(
     package: &mut PackageEncoder<TBackend>,
     source: &Path
-) -> Result<()>
+) -> Result<(), WriteError>
 {
-    return pack_file_vname(package, &get_name_from_path(source)?, source);
+    if let Ok(str) = get_name_from_path(source) {
+        return pack_file_vname(package, &str, source);
+    }
+    return Err(WriteError::InvalidPath);
 }
 
 /// Loads an object into memory.
@@ -116,16 +127,16 @@ pub fn pack_file<TBackend: crate::encoder::IoBackend>(
 ///
 /// # Errors
 ///
-/// An [Error](crate::error::Error) is returned if the object could not be unpacked.
+/// A [ReadError](crate::variant::package::error::ReadError) is returned if the object could not be unpacked.
 pub fn unpack_memory<TBackend: crate::decoder::IoBackend>(
     package: &mut PackageDecoder<TBackend>,
     obj: &ObjectHeader
-) -> Result<Vec<u8>>
+) -> Result<Vec<u8>, ReadError>
 {
     let mut v = Vec::with_capacity(obj.size as usize);
     let len = package.unpack_object(obj, &mut v)?;
     if len != obj.size {
-        return Err(Error::Truncation("object unpack memory"));
+        return Err(ReadError::Eos(EosContext::Object));
     }
     return Ok(v);
 }
@@ -142,17 +153,17 @@ pub fn unpack_memory<TBackend: crate::decoder::IoBackend>(
 ///
 /// # Errors
 ///
-/// An [Error](crate::error::Error) is returned if the object could not be unpacked.
+/// An [ReadError](crate::variant::package::error::ReadError) is returned if the object could not be unpacked.
 pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
     package: &mut PackageDecoder<TBackend>,
     obj: &ObjectHeader,
     out: &Path
-) -> Result<File>
+) -> Result<File, ReadError>
 {
     let mut f = File::create(out)?;
     let len = package.unpack_object(obj, &mut f)?;
     if len != obj.size {
-        return Err(Error::Truncation("object unpack file"));
+        return Err(ReadError::Eos(EosContext::Object));
     }
     return Ok(f);
 }
@@ -172,17 +183,17 @@ pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
 ///
 /// # Errors
 ///
-/// An [Error](crate::error::Error) is returned if some objects could not be unpacked.
-pub fn unpack<TBackend: crate::decoder::IoBackend>(package: &mut PackageDecoder<TBackend>, target: &Path)
-    -> Result<()>
+/// An [ReadError](crate::variant::package::error::ReadError) is returned if some objects could not be unpacked.
+pub fn unpack<TBackend: crate::decoder::IoBackend>(
+    package: &mut PackageDecoder<TBackend>,
+    target: &Path
+) -> Result<(), ReadError>
 {
     let table = package.read_object_table()?;
-    for v in table.get_objects() {
+    for v in table.get_all() {
         let path = package.get_object_name(v)?;
         if path == "" {
-            return Err(Error::Corruption(String::from(
-                "Empty path string detected, aborting to prevent damage on host files"
-            )));
+            return Err(ReadError::BlankString);
         }
         #[cfg(feature = "debug-log")]
         println!("Reading {} with {} byte(s)...", path, v.size);

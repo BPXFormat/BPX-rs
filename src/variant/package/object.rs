@@ -26,12 +26,30 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! Contains utilities to work with the object table section.
+
 use std::collections::HashMap;
 
-use crate::{decoder::IoBackend, variant::package::PackageDecoder, Result};
+use byteorder::{ByteOrder, LittleEndian};
+
+use crate::{
+    decoder::IoBackend,
+    header::Struct,
+    variant::{
+        package::{
+            error::{EosContext, ReadError},
+            PackageDecoder
+        },
+        BuildNamedTable,
+        NamedTable
+    }
+};
+
+/// Size in bytes of an object header.
+pub const SIZE_OBJECT_HEADER: usize = 20;
 
 /// Represents an object header as read from the package.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ObjectHeader
 {
     /// The size of the object.
@@ -47,42 +65,88 @@ pub struct ObjectHeader
     pub offset: u32
 }
 
+impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader
+{
+    type Output = ObjectHeader;
+    type Error = ReadError;
+
+    fn new() -> Self
+    {
+        return ObjectHeader {
+            size: 0,
+            name: 0,
+            start: 0,
+            offset: 0
+        };
+    }
+
+    fn error_buffer_size() -> Option<Self::Error>
+    {
+        return Some(ReadError::Eos(EosContext::ObjectTable));
+    }
+
+    fn from_bytes(buffer: [u8; SIZE_OBJECT_HEADER]) -> Result<Self::Output, Self::Error>
+    {
+        let size = LittleEndian::read_u64(&buffer[0..8]);
+        let name_ptr = LittleEndian::read_u32(&buffer[8..12]);
+        let start = LittleEndian::read_u32(&buffer[12..16]);
+        let offset = LittleEndian::read_u32(&buffer[16..20]);
+        return Ok(ObjectHeader {
+            size,
+            name: name_ptr,
+            start,
+            offset
+        });
+    }
+
+    fn to_bytes(&self) -> [u8; SIZE_OBJECT_HEADER]
+    {
+        let mut buf: [u8; SIZE_OBJECT_HEADER] = [0; SIZE_OBJECT_HEADER];
+        LittleEndian::write_u64(&mut buf[0..8], self.size as u64);
+        LittleEndian::write_u32(&mut buf[8..12], self.name);
+        LittleEndian::write_u32(&mut buf[12..16], self.start);
+        LittleEndian::write_u32(&mut buf[16..20], self.offset);
+        return buf;
+    }
+}
+
+/// Helper class to query an object table.
 pub struct ObjectTable
 {
     list: Vec<ObjectHeader>,
     map: Option<HashMap<String, ObjectHeader>>
 }
 
-impl ObjectTable
+impl NamedTable for ObjectTable
 {
-    /// Constructs a new object table from a list of
-    /// [ObjectHeader](crate::variant::package::object::ObjectHeader).
-    ///
-    /// # Arguments
-    ///
-    /// * `list`: the list of object headers.
-    ///
-    /// returns: ObjectTable
-    pub fn new(list: Vec<ObjectHeader>) -> ObjectTable
+    type Inner = ObjectHeader;
+
+    fn new(list: Vec<Self::Inner>) -> Self
     {
         return ObjectTable { list, map: None };
     }
 
-    /// Builds the object map for easy and efficient lookup of objects by name.
-    ///
-    /// **You must call this function before you can use find_object.**
-    ///
-    /// # Arguments
-    ///
-    /// * `package`: the [PackageDecoder](crate::variant::package::PackageDecoder) to load the strings from.
-    ///
-    /// returns: Result<(), Error>
-    ///
-    /// # Errors
-    ///
-    /// An [Error](crate::error::Error) is returned if the strings could
-    /// not be loaded.
-    pub fn build_lookup_table<TBackend: IoBackend>(&mut self, package: &mut PackageDecoder<TBackend>) -> Result<()>
+    fn lookup(&self, name: &str) -> Option<&Self::Inner>
+    {
+        if let Some(map) = &self.map {
+            return map.get(name);
+        } else {
+            panic!("Lookup table has not yet been initialized, please call build_lookup_table");
+        }
+    }
+
+    fn get_all(&self) -> &[Self::Inner]
+    {
+        return &self.list;
+    }
+}
+
+impl<TBackend: IoBackend> BuildNamedTable<PackageDecoder<TBackend>> for ObjectTable
+{
+    fn build_lookup_table(
+        &mut self,
+        package: &mut PackageDecoder<TBackend>
+    ) -> Result<(), crate::strings::ReadError>
     {
         let mut map = HashMap::new();
         for v in &self.list {
@@ -91,30 +155,5 @@ impl ObjectTable
         }
         self.map = Some(map);
         return Ok(());
-    }
-
-    /// Gets all objects in this BPXP.
-    pub fn get_objects(&self) -> &Vec<ObjectHeader>
-    {
-        return &self.list;
-    }
-
-    /// Finds an object by its name.
-    /// Returns None if the object does not exist.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: the name of the object to search for.
-    ///
-    /// returns: Option<&ObjectHeader>
-    ///
-    /// # Examples
-    pub fn find_object(&self, name: &str) -> Option<&ObjectHeader>
-    {
-        if let Some(map) = &self.map {
-            return map.get(name);
-        } else {
-            panic!("ObjectTable lookup table has not yet been initialized, please call build_lookup_table");
-        }
     }
 }

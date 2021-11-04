@@ -28,81 +28,64 @@
 
 //! Utilities to manipulate the content of sections.
 
-use std::{
-    boxed::Box,
-    io::{Read, Result, Seek, Write},
-    vec::Vec
-};
+mod auto;
+mod data;
 
-mod file;
-mod memory;
+use std::fmt::{Display, Formatter};
 
-const MEMORY_THRESHOLD: u32 = 100000000;
+use data::new_section_data;
+pub use data::SectionData;
 
-/// Opaque variant intended to manipulate section data in the form of standard IO operations.
-pub trait SectionData: Read + Write + Seek
+use crate::macros::impl_err_conversion;
+
+/// Represents a section error.
+#[derive(Debug)]
+pub enum Error
 {
-    /// Loads this section into memory.
+    /// The section is already open.
+    AlreadyOpen,
+
+    /// Describes an io error.
+    Io(std::io::Error)
+}
+
+impl_err_conversion!(Error { std::io::Error => Io });
+
+impl Display for Error
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            Error::AlreadyOpen => f.write_str("section is already open"),
+            Error::Io(e) => f.write_str(&format!("io error ({})", e))
+        }
+    }
+}
+
+/// Trait to define basic functionality of a section content.
+pub trait Section
+{
+    /// Returns the size of the section (without opening the section).
+    fn size(&self) -> usize;
+
+    /// Reallocates the section.
+    ///
+    /// # Arguments
+    ///
+    /// * `size`: new section size.
+    ///
+    /// returns: Result<Box<dyn SectionData, Global>, Error>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::error::Error) is returned if the section could not be loaded.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::encoder::Encoder;
-    /// use bpx::header::SectionHeader;
-    /// use bpx::Interface;
-    /// use bpx::utils::new_byte_buf;
-    ///
-    /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let handle = file.create_section(SectionHeader::new()).unwrap();
-    /// let section = file.open_section(handle).unwrap();
-    /// let data = section.load_in_memory().unwrap();
-    /// assert_eq!(data.len(), 0);
-    /// ```
-    fn load_in_memory(&mut self) -> Result<Vec<u8>>;
+    /// Returns an [Error](crate::section::Error) if the section is already open or if
+    /// the temporary file creation has failed.
+    fn realloc(&self, size: u32) -> Result<Box<dyn SectionData>, Error>;
 
-    /// Returns the current size of this section.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::encoder::Encoder;
-    /// use bpx::header::SectionHeader;
-    /// use bpx::Interface;
-    /// use bpx::utils::new_byte_buf;
-    ///
-    /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let handle = file.create_section(SectionHeader::new()).unwrap();
-    /// let section = file.open_section(handle).unwrap();
-    /// assert_eq!(section.size(), 0);
-    /// ```
-    fn size(&self) -> usize;
+    /// Returns the handle of this section.
+    fn handle(&self) -> Handle;
 }
 
-/// Creates new section data by automatically choosing the right container given a section size.
-///
-/// *This function is not intended for direct use.*
-///
-/// # Arguments
-///
-/// * `size`: optional size of section, if None the section will automatically reallocate to fit its content.
-///
-/// returns: Result<Box<dyn SectionData, Global>, Error>
-///
-/// # Errors
-///
-/// An [Error](std::io::Error) is returned in case the temporary file could not be created.
-pub fn new_section_data(size: Option<u32>) -> Result<Box<dyn SectionData>>
-{
-    if let Some(s) = size {
-        if s > MEMORY_THRESHOLD {
-            return Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)));
-        } else {
-            return Ok(Box::new(memory::InMemorySection::new(vec![0; s as usize])));
-        }
-    }
-    return Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)));
-}
+pub use auto::AutoSection;
+
+use crate::Handle;

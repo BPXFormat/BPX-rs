@@ -159,7 +159,7 @@ impl Index<usize> for Array
 {
     type Output = Value;
 
-    fn index<'a>(&'a self, i: usize) -> &'a Value
+    fn index(&self, i: usize) -> &Value
     {
         return &self.data[i];
     }
@@ -167,7 +167,7 @@ impl Index<usize> for Array
 
 impl IndexMut<usize> for Array
 {
-    fn index_mut<'a>(&'a mut self, i: usize) -> &'a mut Value
+    fn index_mut(&mut self, i: usize) -> &mut Value
     {
         return &mut self.data[i];
     }

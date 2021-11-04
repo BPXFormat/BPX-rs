@@ -26,24 +26,22 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{Read, Result, Seek, SeekFrom, Write};
+use std::io::{Cursor, Read, Result, Seek, SeekFrom, Write};
 
-use crate::section::SectionData;
+use crate::{section::SectionData, utils::new_byte_buf};
 
 pub struct InMemorySection
 {
-    data: Vec<u8>,
-    cursor: usize,
+    byte_buf: Cursor<Vec<u8>>,
     cur_size: usize
 }
 
 impl InMemorySection
 {
-    pub fn new(data: Vec<u8>) -> InMemorySection
+    pub fn new(initial: usize) -> InMemorySection
     {
         return InMemorySection {
-            data: data,
-            cursor: 0,
+            byte_buf: new_byte_buf(initial),
             cur_size: 0
         };
     }
@@ -51,64 +49,34 @@ impl InMemorySection
 
 impl Read for InMemorySection
 {
-    fn read(&mut self, data: &mut [u8]) -> Result<usize>
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize>
     {
-        for i in 0..data.len() {
-            if self.cursor >= self.data.len() {
-                return Ok(i);
-            }
-            data[i] = self.data[self.cursor];
-            self.cursor += 1;
-        }
-        return Ok(data.len());
+        return self.byte_buf.read(buf);
     }
 }
 
 impl Write for InMemorySection
 {
-    fn write(&mut self, data: &[u8]) -> Result<usize>
+    fn write(&mut self, buf: &[u8]) -> Result<usize>
     {
-        for i in 0..data.len() {
-            if self.cursor >= self.data.len() {
-                return Ok(i);
-            }
-            self.data[self.cursor] = data[i];
-            self.cursor += 1;
-            if self.cursor >= self.cur_size {
-                self.cur_size += 1
-            }
+        let len = self.byte_buf.write(buf)?;
+        if self.byte_buf.position() as usize >= self.cur_size {
+            self.cur_size = self.byte_buf.position() as usize;
         }
-        return Ok(data.len());
+        return Ok(len);
     }
 
     fn flush(&mut self) -> Result<()>
     {
-        return Ok(());
-    }
-}
-
-fn slow_but_correct_add(value: usize, offset: isize) -> usize
-//Unfortunatly rust requires much slower add operation (another reason to not use rust for large scale projects)
-{
-    if offset < 0 {
-        return value - -offset as usize;
-    } else if offset > 0 {
-        return value + offset as usize;
-    } else {
-        return value;
+        return self.byte_buf.flush();
     }
 }
 
 impl Seek for InMemorySection
 {
-    fn seek(&mut self, state: SeekFrom) -> Result<u64>
+    fn seek(&mut self, pos: SeekFrom) -> Result<u64>
     {
-        match state {
-            SeekFrom::Start(pos) => self.cursor = pos as usize,
-            SeekFrom::End(pos) => self.cursor = slow_but_correct_add(self.data.len(), pos as isize),
-            SeekFrom::Current(pos) => self.cursor = slow_but_correct_add(self.cursor, pos as isize)
-        }
-        return Ok(self.cursor as u64);
+        return self.byte_buf.seek(pos);
     }
 }
 
@@ -116,7 +84,7 @@ impl SectionData for InMemorySection
 {
     fn load_in_memory(&mut self) -> Result<Vec<u8>>
     {
-        return Ok(self.data.clone());
+        return Ok(self.byte_buf.get_ref().clone());
     }
 
     fn size(&self) -> usize

@@ -31,6 +31,7 @@
 use crate::header::{
     MainHeader,
     SectionHeader,
+    Struct,
     FLAG_CHECK_CRC32,
     FLAG_CHECK_WEAK,
     FLAG_COMPRESS_XZ,
@@ -40,6 +41,7 @@ use crate::header::{
 const COMPRESSION_THRESHOLD: u32 = 65536;
 
 /// The compression method to use for a section.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum CompressionMethod
 {
     /// Use the xz compression algorithm with extreme preset.
@@ -54,6 +56,7 @@ pub enum CompressionMethod
 }
 
 /// The checksum algorithm to use for a section
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Checksum
 {
     /// The weak checksum is a very fast algorithm which is computed
@@ -73,6 +76,14 @@ pub enum Checksum
 pub struct SectionHeaderBuilder
 {
     header: SectionHeader
+}
+
+impl Default for SectionHeaderBuilder
+{
+    fn default() -> Self
+    {
+        return Self::new();
+    }
 }
 
 impl SectionHeaderBuilder
@@ -262,6 +273,14 @@ impl SectionHeaderBuilder
 pub struct MainHeaderBuilder
 {
     header: MainHeader
+}
+
+impl Default for MainHeaderBuilder
+{
+    fn default() -> Self
+    {
+        return Self::new();
+    }
 }
 
 impl MainHeaderBuilder
