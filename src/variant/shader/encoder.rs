@@ -174,12 +174,12 @@ impl ShaderPackBuilder
             Target::Any => type_ext[10] = 0xFF
         };
         match self.btype {
-            Type::Assembly => type_ext[11] = 'A' as u8,
-            Type::Pipeline => type_ext[11] = 'P' as u8
+            Type::Assembly => type_ext[11] = b'A',
+            Type::Pipeline => type_ext[11] = b'P'
         };
         LittleEndian::write_u64(&mut type_ext[0..8], self.assembly_hash);
         let header = MainHeaderBuilder::new()
-            .with_type('P' as u8)
+            .with_type(b'P')
             .with_type_ext(type_ext)
             .with_version(SUPPORTED_VERSION)
             .build();

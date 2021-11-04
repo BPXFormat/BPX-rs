@@ -71,10 +71,10 @@ fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), Rea
         0xFF => target = Target::Any,
         _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Target, acode))
     }
-    if tcode == 'A' as u8 {
+    if tcode == b'A' {
         //Rust refuses to parse match properly so use if/else-if blocks
         btype = Type::Assembly;
-    } else if tcode == 'P' as u8 {
+    } else if tcode == b'P' {
         btype = Type::Pipeline;
     } else {
         return Err(ReadError::InvalidCode(InvalidCodeContext::Type, tcode));
@@ -123,7 +123,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     pub fn new(backend: TBackend) -> Result<ShaderPackDecoder<TBackend>, ReadError>
     {
         let mut decoder = Decoder::new(backend)?;
-        if decoder.get_main_header().btype != 'P' as u8 {
+        if decoder.get_main_header().btype != b'P' {
             return Err(ReadError::BadType(decoder.get_main_header().btype));
         }
         if decoder.get_main_header().version != SUPPORTED_VERSION {

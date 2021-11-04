@@ -187,7 +187,7 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
 
     fn find_section_by_index(&self, index: u32) -> Option<Handle>
     {
-        if let Some(_) = self.sections.get(index as usize) {
+        if self.sections.get(index as usize).is_some() {
             return Some(Handle(index as _));
         }
         return None;
@@ -227,7 +227,7 @@ fn load_section<TBackend: IoBackend>(
         if section.flags & FLAG_CHECK_WEAK != 0 {
             let mut chksum = WeakChecksum::new();
             //TODO: Check
-            load_section_checked(file, &section, data.as_mut(), &mut chksum)?;
+            load_section_checked(file, section, data.as_mut(), &mut chksum)?;
             let v = chksum.finish();
             if v != section.chksum {
                 return Err(ReadError::Checksum(v, section.chksum));
@@ -235,7 +235,7 @@ fn load_section<TBackend: IoBackend>(
         } else if section.flags & FLAG_CHECK_CRC32 != 0 {
             let mut chksum = Crc32Checksum::new();
             //TODO: Check
-            load_section_checked(file, &section, data.as_mut(), &mut chksum)?;
+            load_section_checked(file, section, data.as_mut(), &mut chksum)?;
             let v = chksum.finish();
             if v != section.chksum {
                 return Err(ReadError::Checksum(v, section.chksum));
@@ -243,7 +243,7 @@ fn load_section<TBackend: IoBackend>(
         } else {
             let mut chksum = WeakChecksum::new();
             //TODO: Check
-            load_section_checked(file, &section, data.as_mut(), &mut chksum)?;
+            load_section_checked(file, section, data.as_mut(), &mut chksum)?;
         }
         data.seek(io::SeekFrom::Start(0))?;
     } //Amazing: another defect of the Rust borrow checker still so stupid
@@ -258,11 +258,11 @@ fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum:
 ) -> Result<(), ReadError>
 {
     if section.flags & FLAG_COMPRESS_XZ != 0 {
-        load_section_compressed::<XzCompressionMethod, _, _, _>(file, &section, out, chksum)?;
+        load_section_compressed::<XzCompressionMethod, _, _, _>(file, section, out, chksum)?;
     } else if section.flags & FLAG_COMPRESS_ZLIB != 0 {
-        load_section_compressed::<ZlibCompressionMethod, _, _, _>(file, &section, out, chksum)?;
+        load_section_compressed::<ZlibCompressionMethod, _, _, _>(file, section, out, chksum)?;
     } else {
-        load_section_uncompressed(file, &section, out, chksum)?;
+        load_section_uncompressed(file, section, out, chksum)?;
     }
     return Ok(());
 }

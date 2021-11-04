@@ -197,7 +197,7 @@ impl PackageBuilder
         type_ext[2] = self.type_code[0];
         type_ext[3] = self.type_code[1];
         let header = MainHeaderBuilder::new()
-            .with_type('P' as u8)
+            .with_type(b'P')
             .with_type_ext(type_ext)
             .with_version(SUPPORTED_VERSION)
             .build();
@@ -331,7 +331,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
             // Fill and write the object header
             let buf = ObjectHeader {
                 size: object_size as u64,
-                name: self.strings.put(&name)?,
+                name: self.strings.put(name)?,
                 start,
                 offset
             }

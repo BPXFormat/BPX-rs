@@ -73,7 +73,7 @@ impl DebugSymbols
     pub fn lookup(&self, hash: u64) -> Option<&str>
     {
         if let Some(v) = self.symbols_map.get(&hash) {
-            return Some(&v);
+            return Some(v);
         }
         return None;
     }

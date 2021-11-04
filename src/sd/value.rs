@@ -535,7 +535,7 @@ impl<'a> TryFrom<&'a Value> for &'a str
     fn try_from(v: &'a Value) -> Result<Self, TypeError>
     {
         if let Value::String(v) = v {
-            return Ok(&v);
+            return Ok(v);
         }
         return Err(TypeError::new("string", v.get_type_name()));
     }
@@ -548,7 +548,7 @@ impl<'a> TryFrom<&'a Value> for &'a Array
     fn try_from(v: &'a Value) -> Result<Self, TypeError>
     {
         if let Value::Array(v) = v {
-            return Ok(&v);
+            return Ok(v);
         }
         return Err(TypeError::new("array", v.get_type_name()));
     }

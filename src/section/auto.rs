@@ -168,7 +168,7 @@ impl Section for AutoSection
             Err(e) => Err(Error::Io(e)),
             Ok(v) => {
                 {
-                    if let Err(_) = self.open() {
+                    if self.open().is_err() {
                         return Err(Error::AlreadyOpen);
                     }
                 }

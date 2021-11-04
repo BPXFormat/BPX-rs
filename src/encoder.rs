@@ -213,9 +213,8 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         let mut ptr: u64 = file_start_offset as _;
         let mut all_sections_size: usize = 0;
         let mut chksum_sht: u32 = 0;
-        let mut idx: u32 = 0;
 
-        for (_handle, section) in &mut self.sections {
+        for (idx, (_handle, section)) in self.sections.iter_mut().enumerate() {
             //At this point the handle must be valid otherwise sections_in_order is broken
             if section.data.size() > u32::MAX as usize {
                 return Err(WriteError::Capacity(section.data.size()));
@@ -223,8 +222,8 @@ impl<TBackend: IoBackend> Encoder<TBackend>
             let mut data = section.data.open()?;
             let last_section_ptr = data.stream_position()?;
             data.seek(io::SeekFrom::Start(0))?;
-            let flags = get_flags(&section, data.size() as u32);
-            let (csize, chksum) = write_section(flags, &mut *data, &mut self.file)?;
+            let flags = get_flags(section, data.size() as u32);
+            let (csize, chksum) = write_section(flags, data.as_mut(), &mut self.file)?;
             data.seek(io::SeekFrom::Start(last_section_ptr))?;
             section.header.csize = csize as u32;
             section.header.size = data.size() as u32;
@@ -239,7 +238,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
             ptr += csize as u64;
             {
                 //Locate section header offset, then directly write section header
-                let header_start_offset = SIZE_MAIN_HEADER + (idx as usize * SIZE_SECTION_HEADER);
+                let header_start_offset = SIZE_MAIN_HEADER + (idx * SIZE_SECTION_HEADER);
                 self.file.seek(SeekFrom::Start(header_start_offset as _))?;
                 section.header.write(&mut self.file)?;
                 //Reset file pointer back to the end of the last written section
@@ -247,7 +246,6 @@ impl<TBackend: IoBackend> Encoder<TBackend>
             }
             chksum_sht += section.header.get_checksum();
             all_sections_size += csize;
-            idx += 1;
         }
         return Ok((chksum_sht, all_sections_size));
     }
@@ -390,13 +388,10 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
 
     fn find_section_by_index(&self, index: u32) -> Option<Handle>
     {
-        let mut idx: u32 = 0;
-
-        for (handle, _) in &self.sections {
-            if idx == index {
+        for (idx, handle) in self.sections.keys().enumerate() {
+            if idx as u32 == index {
                 return Some(Handle(*handle));
             }
-            idx += 1;
         }
         return None;
     }

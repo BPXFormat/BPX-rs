@@ -86,7 +86,7 @@ impl<T> OptionExtension<T> for Option<T>
         f: F
     ) -> Result<&mut T, TError>
     {
-        if let None = *self {
+        if self.is_none() {
             *self = Some(f()?);
         }
 

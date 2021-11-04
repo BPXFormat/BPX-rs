@@ -136,8 +136,8 @@ where
     {
         let mut checksum: u32 = 0;
         let buf = self.to_bytes();
-        for i in 0..D {
-            checksum += buf[i] as u32;
+        for byte in &buf {
+            checksum += *byte as u32;
         }
         return checksum;
     }
@@ -221,8 +221,8 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
     fn new() -> Self
     {
         return MainHeader {
-            signature: ['B' as u8, 'P' as u8, 'X' as u8], //+0
-            btype: 'P' as u8,                             //+3
+            signature: [b'B', b'P', b'X'],                //+0
+            btype: b'P',                                  //+3
             chksum: 0,                                    //+4
             file_size: SIZE_MAIN_HEADER as u64,           //+8
             section_num: 0,                               //+16
@@ -240,9 +240,9 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
     {
         let mut checksum: u32 = 0;
 
-        for i in 0..SIZE_MAIN_HEADER {
+        for (i, byte) in buffer.iter().enumerate() {
             if i < 4 || i > 7 {
-                checksum += buffer[i] as u32;
+                checksum += *byte as u32;
             }
         }
         let head = MainHeader {
@@ -254,9 +254,9 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
             version: LittleEndian::read_u32(&buffer[20..24]),
             type_ext: extract_slice::<T16>(&buffer, 24)
         };
-        if head.signature[0] != 'B' as u8
-            || head.signature[1] != 'P' as u8
-            || head.signature[2] != 'X' as u8
+        if head.signature[0] != b'B'
+            || head.signature[1] != b'P'
+            || head.signature[2] != b'X'
         {
             return Err(ReadError::BadSignature(head.signature));
         }
@@ -347,8 +347,8 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader
     {
         let mut checksum: u32 = 0;
 
-        for i in 0..SIZE_SECTION_HEADER {
-            checksum += buffer[i] as u32;
+        for byte in &buffer {
+            checksum += *byte as u32;
         }
         return Ok((
             checksum,

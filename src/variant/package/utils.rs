@@ -74,7 +74,7 @@ pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
         #[cfg(feature = "debug-log")]
         println!("Writing file {} with {} byte(s)", vname, md.len());
         let mut fle = File::open(source)?;
-        package.pack_object(&vname, &mut fle)?;
+        package.pack_object(vname, &mut fle)?;
     } else {
         let entries = read_dir(source)?;
         for rentry in entries {

@@ -39,8 +39,8 @@ impl Checksum for WeakChecksum
 {
     fn push(&mut self, data: &[u8])
     {
-        for i in 0..data.len() {
-            self.current += Wrapping(data[i] as u32);
+        for byte in data {
+            self.current += Wrapping(*byte as u32);
         }
     }
 

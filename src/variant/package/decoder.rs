@@ -107,7 +107,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     pub fn new(backend: TBackend) -> Result<PackageDecoder<TBackend>, ReadError>
     {
         let mut decoder = Decoder::new(backend)?;
-        if decoder.get_main_header().btype != 'P' as u8 {
+        if decoder.get_main_header().btype != b'P' {
             return Err(ReadError::BadType(decoder.get_main_header().btype));
         }
         if decoder.get_main_header().version != SUPPORTED_VERSION {
