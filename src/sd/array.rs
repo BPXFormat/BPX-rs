@@ -40,6 +40,14 @@ pub struct Array
     data: Vec<Value>
 }
 
+impl Default for Array
+{
+    fn default() -> Self
+    {
+        return Self::new();
+    }
+}
+
 impl Array
 {
     /// Creates a new array.

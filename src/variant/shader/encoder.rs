@@ -61,6 +61,14 @@ pub struct ShaderPackBuilder
     btype: Type
 }
 
+impl Default for ShaderPackBuilder
+{
+    fn default() -> Self
+    {
+        return Self::new();
+    }
+}
+
 impl ShaderPackBuilder
 {
     /// Creates a new BPX Shader Package builder.

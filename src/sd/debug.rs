@@ -41,6 +41,14 @@ pub struct DebugSymbols
     symbols_list: Vec<String>
 }
 
+impl Default for DebugSymbols
+{
+    fn default() -> Self
+    {
+        return Self::new();
+    }
+}
+
 impl DebugSymbols
 {
     /// Creates a new DebugSymbols.

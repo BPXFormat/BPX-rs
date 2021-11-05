@@ -62,6 +62,14 @@ pub struct PackageBuilder
     type_code: [u8; 2]
 }
 
+impl Default for PackageBuilder
+{
+    fn default() -> Self
+    {
+        return Self::new();
+    }
+}
+
 impl PackageBuilder
 {
     /// Creates a new BPX Package builder.

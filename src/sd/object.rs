@@ -46,6 +46,13 @@ pub struct Object
     props: HashMap<u64, Value>
 }
 
+impl Default for Object
+{
+    fn default() -> Self {
+        return Self::new();
+    }
+}
+
 impl Object
 {
     /// Creates a new object.
