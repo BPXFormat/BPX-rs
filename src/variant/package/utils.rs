@@ -192,7 +192,7 @@ pub fn unpack<TBackend: crate::decoder::IoBackend>(
     let table = package.read_object_table()?;
     for v in table.get_all() {
         let path = package.get_object_name(v)?;
-        if path == "" {
+        if path.is_empty() {
             return Err(ReadError::BlankString);
         }
         #[cfg(feature = "debug-log")]
