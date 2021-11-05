@@ -81,7 +81,7 @@ pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
             let entry = rentry?;
             let mut s = String::from(vname);
             s.push('/');
-            s.push_str(&get_name_from_dir_entry(&entry));
+            s.push_str(&get_name_from_dir_entry(&entry)?);
             pack_file_vname(package, &s, &entry.path())?;
         }
     }
@@ -110,10 +110,8 @@ pub fn pack_file<TBackend: crate::encoder::IoBackend>(
     source: &Path
 ) -> Result<(), WriteError>
 {
-    if let Ok(str) = get_name_from_path(source) {
-        return pack_file_vname(package, &str, source);
-    }
-    return Err(WriteError::InvalidPath);
+    let str = get_name_from_path(source)?;
+    return pack_file_vname(package, str, source);
 }
 
 /// Loads an object into memory.

@@ -95,3 +95,25 @@ impl Display for WriteError
         }
     }
 }
+
+/// Represents a path conversion error.
+#[derive(Debug)]
+pub enum PathError
+{
+    /// Indicates the path is not convertible to UTF-8.
+    Utf8,
+
+    /// Indicates the path does not have a file name, ie the path points to a directory.
+    Directory
+}
+
+impl Display for PathError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            PathError::Utf8 => f.write_str("non unicode paths are not supported by BPX"),
+            PathError::Directory => f.write_str("path is not a file but a directory")
+        }
+    }
+}

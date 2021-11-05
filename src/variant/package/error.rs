@@ -94,7 +94,7 @@ variant_error!(
         Sd(crate::sd::error::WriteError),
 
         /// Indicates an invalid path while attempting to pack some files.
-        InvalidPath
+        InvalidPath(crate::strings::PathError)
     }
 );
 
@@ -108,7 +108,8 @@ impl_err_conversion!(
 impl_err_conversion!(
     WriteError {
         crate::strings::WriteError => Strings,
-        crate::sd::error::WriteError => Sd
+        crate::sd::error::WriteError => Sd,
+        crate::strings::PathError => InvalidPath
     }
 );
 
@@ -146,7 +147,7 @@ impl Display for WriteError
             WriteError::Section(e) => f.write_str(&format!("section error: {}", e)),
             WriteError::Strings(e) => f.write_str(&format!("strings error: {}", e)),
             WriteError::Sd(e) => f.write_str(&format!("BPXSD error: {}", e)),
-            WriteError::InvalidPath => f.write_str("path does not contain any file name")
+            WriteError::InvalidPath(e) => f.write_str(&format!("path error: {}", e)),
         }
     }
 }

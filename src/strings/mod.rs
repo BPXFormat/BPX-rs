@@ -39,7 +39,7 @@ use std::{
     string::String
 };
 
-pub use error::{ReadError, WriteError};
+pub use error::{ReadError, WriteError, PathError};
 
 use crate::section::{AutoSection, SectionData};
 
@@ -191,16 +191,14 @@ fn low_level_write_string(
 /// let str = get_name_from_path(Path::new("test/file.txt")).unwrap();
 /// assert_eq!(str, "file.txt");
 /// ```
-pub fn get_name_from_path(path: &Path) -> Result<String, ()>
+pub fn get_name_from_path(path: &Path) -> Result<&str, PathError>
 {
     match path.file_name() {
         Some(v) => match v.to_str() {
-            Some(v) => return Ok(String::from(v)),
-            // Panic here as a non Unicode system in all cases could just throw a bunch of broken unicode strings in a BPXP
-            // The reason BPXP cannot support non-unicode strings in paths is simply because this would be incompatible with unicode systems
-            None => panic!("Non unicode paths operating systems cannot run BPXP")
+            Some(v) => return Ok(v),
+            None => return Err(PathError::Utf8)
         },
-        None => return Err(())
+        None => return Err(PathError::Directory)
     }
 }
 
@@ -215,10 +213,10 @@ pub fn get_name_from_path(path: &Path) -> Result<String, ()>
 /// # Panics
 ///
 /// Panics in case `entry` is not unicode compatible (BPX only supports UTF-8).
-pub fn get_name_from_dir_entry(entry: &DirEntry) -> String
+pub fn get_name_from_dir_entry(entry: &DirEntry) -> Result<String, PathError>
 {
     match entry.file_name().to_str() {
-        Some(v) => return String::from(v),
-        None => panic!("Non unicode paths operating systems cannot run BPXP")
+        Some(v) => return Ok(v.into()),
+        None => Err(PathError::Utf8)
     }
 }
