@@ -153,6 +153,12 @@ impl Array
     {
         return self.data.len();
     }
+
+    /// Returns true if this array is empty.
+    pub fn is_empty(&self) -> bool
+    {
+        return self.len() == 0;
+    }
 }
 
 impl Index<usize> for Array
