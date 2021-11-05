@@ -241,7 +241,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
         let mut checksum: u32 = 0;
 
         for (i, byte) in buffer.iter().enumerate() {
-            if i < 4 || i > 7 {
+            if !(4..8).contains(&i) {
                 checksum += *byte as u32;
             }
         }
@@ -275,9 +275,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
         LittleEndian::write_u64(&mut block[8..16], self.file_size);
         LittleEndian::write_u32(&mut block[16..20], self.section_num);
         LittleEndian::write_u32(&mut block[20..24], self.version);
-        for i in 24..40 {
-            block[i] = self.type_ext[i - 24];
-        }
+        block[24..40].copy_from_slice(&self.type_ext);
         return block;
     }
 }
