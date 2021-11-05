@@ -215,9 +215,11 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array, ReadError>
     return Ok(arr);
 }
 
+type ValueParserFunc<TRead> = fn(stream: &mut TRead) -> Result<Value, ReadError>;
+
 fn get_value_parser<TRead: Read>(
     type_code: u8
-) -> Option<fn(stream: &mut TRead) -> Result<Value, ReadError>>
+) -> Option<ValueParserFunc<TRead>>
 {
     match type_code {
         0x0 => Some(|_| {
