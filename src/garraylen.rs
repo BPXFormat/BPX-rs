@@ -35,6 +35,6 @@ pub fn extract_slice<T: Sized + Copy, const D: usize>(large_buf: &[T], offset: u
         for (i, val) in arr.iter_mut().enumerate() {
             val.write(large_buf[offset + i]);
         }
-        return std::mem::transmute_copy(&arr);
+        std::mem::transmute_copy(&arr)
     }
 }

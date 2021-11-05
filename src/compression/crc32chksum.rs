@@ -52,10 +52,10 @@ impl Crc32Checksum
             }
             table.push(val);
         }
-        return Crc32Checksum {
+        Crc32Checksum {
             table,
             current: 0xFFFFFFFF
-        };
+        }
     }
 }
 
@@ -72,6 +72,6 @@ impl Checksum for Crc32Checksum
     fn finish(mut self) -> u32
     {
         self.current ^= 0xFFFFFFFF;
-        return self.current;
+        self.current
     }
 }

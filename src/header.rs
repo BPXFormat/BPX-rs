@@ -85,7 +85,7 @@ pub trait Struct<const S: usize>
                 return Err(err);
             }
         }
-        return Self::from_bytes(buffer);
+        Self::from_bytes(buffer)
     }
 
     /// Returns the error to return when the reader did not read a full buffer.
@@ -122,7 +122,7 @@ pub trait Struct<const S: usize>
         let buf = self.to_bytes();
         writer.write_all(&buf)?;
         writer.flush()?;
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -139,7 +139,7 @@ where
         for byte in &buf {
             checksum += *byte as u32;
         }
-        return checksum;
+        checksum
     }
 }
 
@@ -220,7 +220,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
 
     fn new() -> Self
     {
-        return MainHeader {
+        MainHeader {
             signature: *b"BPX",                           //+0
             btype: b'P',                                  //+3
             chksum: 0,                                    //+4
@@ -228,12 +228,12 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
             section_num: 0,                               //+16
             version: BPX_CURRENT_VERSION,                 //+20
             type_ext: [0; 16]
-        };
+        }
     }
 
     fn error_buffer_size() -> Option<Self::Error>
     {
-        return None;
+        None
     }
 
     fn from_bytes(buffer: [u8; SIZE_MAIN_HEADER]) -> Result<Self::Output, Self::Error>
@@ -261,7 +261,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
         if !KNOWN_VERSIONS.contains(&head.version) {
             return Err(ReadError::BadVersion(head.version));
         }
-        return Ok((checksum, head));
+        Ok((checksum, head))
     }
 
     fn to_bytes(&self) -> [u8; SIZE_MAIN_HEADER]
@@ -276,7 +276,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
         LittleEndian::write_u32(&mut block[16..20], self.section_num);
         LittleEndian::write_u32(&mut block[20..24], self.version);
         block[24..40].copy_from_slice(&self.type_ext);
-        return block;
+        block
     }
 }
 
@@ -324,19 +324,19 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader
 
     fn new() -> Self
     {
-        return SectionHeader {
+        SectionHeader {
             pointer: 0, //+0
             csize: 0,   //+8
             size: 0,    //+12
             chksum: 0,  //+16
             btype: 0,   //+20
             flags: 0    //+21
-        };
+        }
     }
 
     fn error_buffer_size() -> Option<Self::Error>
     {
-        return None;
+        None
     }
 
     fn from_bytes(buffer: [u8; SIZE_SECTION_HEADER]) -> Result<Self::Output, Self::Error>
@@ -346,7 +346,7 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader
         for byte in &buffer {
             checksum += *byte as u32;
         }
-        return Ok((
+        Ok((
             checksum,
             SectionHeader {
                 pointer: LittleEndian::read_u64(&buffer[0..8]),
@@ -356,7 +356,7 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader
                 btype: buffer[20],
                 flags: buffer[21]
             }
-        ));
+        ))
     }
 
     fn to_bytes(&self) -> [u8; SIZE_SECTION_HEADER]
@@ -368,7 +368,7 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader
         LittleEndian::write_u32(&mut block[16..20], self.chksum);
         block[20] = self.btype;
         block[21] = self.flags;
-        return block;
+        block
     }
 }
 
@@ -379,18 +379,18 @@ impl SectionHeader
     /// Checks if this section is huge (greater than 100Mb).
     pub fn is_huge(&self) -> bool
     {
-        return self.size > 100000000;
+        self.size > 100000000
     }
 
     /// Extracts compression information from this section.
     pub fn compression(&self) -> Option<(CompressionMethod, u32)>
     {
         if self.flags & FLAG_COMPRESS_ZLIB != 0 {
-            return Some((CompressionMethod::Zlib, self.csize));
+            Some((CompressionMethod::Zlib, self.csize))
         } else if self.flags & FLAG_COMPRESS_XZ != 0 {
-            return Some((CompressionMethod::Xz, self.csize));
+            Some((CompressionMethod::Xz, self.csize))
         } else {
-            return None;
+            None
         }
     }
 
@@ -398,11 +398,11 @@ impl SectionHeader
     pub fn checksum(&self) -> Option<Checksum>
     {
         if self.flags & FLAG_CHECK_WEAK != 0 {
-            return Some(Checksum::Weak);
+            Some(Checksum::Weak)
         } else if self.flags & FLAG_CHECK_CRC32 != 0 {
-            return Some(Checksum::Crc32);
+            Some(Checksum::Crc32)
         } else {
-            return None;
+            None
         }
     }
 }

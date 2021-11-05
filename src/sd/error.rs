@@ -153,10 +153,10 @@ impl TypeError
     /// returns: TypeError
     pub fn new(expected: &'static str, actual: &'static str) -> TypeError
     {
-        return TypeError {
+        TypeError {
             expected_type_name: expected,
             actual_type_name: actual
-        };
+        }
     }
 }
 

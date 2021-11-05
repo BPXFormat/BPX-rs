@@ -95,7 +95,7 @@ impl Value
     /// * a static string reference to the variant name
     pub fn get_type_name(&self) -> &'static str
     {
-        return match self {
+        match self {
             Value::Null => "null",
             Value::Bool(_) => "bool",
             Value::Uint8(_) => "uint8",
@@ -111,7 +111,7 @@ impl Value
             Value::String(_) => "string",
             Value::Array(_) => "array",
             Value::Object(_) => "object"
-        };
+        }
     }
 }
 
@@ -138,7 +138,7 @@ impl From<&str> for Value
 {
     fn from(v: &str) -> Self
     {
-        return Value::String(String::from(v));
+        Value::String(String::from(v))
     }
 }
 
@@ -149,7 +149,7 @@ impl<T: Into<Value>> From<Option<T>> for Value
         if let Some(v) = v {
             return v.into();
         }
-        return Value::Null;
+        Value::Null
     }
 }
 
@@ -161,7 +161,7 @@ impl<T: Into<Value>> From<Vec<T>> for Value
         for v1 in v {
             arr.add(v1.into());
         }
-        return Value::Array(arr);
+        Value::Array(arr)
     }
 }
 

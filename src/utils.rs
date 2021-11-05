@@ -55,7 +55,7 @@ pub fn hash(s: &str) -> u64
     for v in s.as_bytes() {
         val = ((val << 5) + val) + Wrapping(*v as u64);
     }
-    return val.0;
+    val.0
 }
 
 /// Extension to include get_or_insert_with but with support for Result and errors.
@@ -112,7 +112,7 @@ pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>>
     if size > 0 {
         return Cursor::new(Vec::with_capacity(size));
     }
-    return Cursor::new(Vec::new());
+    Cursor::new(Vec::new())
 }
 
 /// Allows to read into a buffer as much as possible.
@@ -148,6 +148,6 @@ impl<T: std::io::Read + ?Sized> ReadFill for T
             len = self.read(&mut buf[len..])?;
             bytes += len;
         }
-        return Ok(bytes);
+        Ok(bytes)
     }
 }

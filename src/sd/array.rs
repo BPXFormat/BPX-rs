@@ -44,7 +44,7 @@ impl Default for Array
 {
     fn default() -> Self
     {
-        return Self::new();
+        Self::new()
     }
 }
 
@@ -53,7 +53,7 @@ impl Array
     /// Creates a new array.
     pub fn new() -> Array
     {
-        return Array { data: Vec::new() };
+        Array { data: Vec::new() }
     }
 
     /// Adds a value at the end of the array.
@@ -153,19 +153,19 @@ impl Array
     /// ```
     pub fn get(&self, pos: usize) -> Option<&Value>
     {
-        return self.data.get(pos);
+        self.data.get(pos)
     }
 
     /// Returns the length of the array.
     pub fn len(&self) -> usize
     {
-        return self.data.len();
+        self.data.len()
     }
 
     /// Returns true if this array is empty.
     pub fn is_empty(&self) -> bool
     {
-        return self.len() == 0;
+        self.len() == 0
     }
 }
 
@@ -175,7 +175,7 @@ impl Index<usize> for Array
 
     fn index(&self, i: usize) -> &Value
     {
-        return &self.data[i];
+        &self.data[i]
     }
 }
 
@@ -183,6 +183,6 @@ impl IndexMut<usize> for Array
 {
     fn index_mut(&mut self, i: usize) -> &mut Value
     {
-        return &mut self.data[i];
+        &mut self.data[i]
     }
 }

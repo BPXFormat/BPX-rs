@@ -103,7 +103,7 @@ pub enum SymbolType
 
 fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType, ReadError>
 {
-    return match scode {
+    match scode {
         0x0 => Ok(SymbolType::Texture),
         0x1 => Ok(SymbolType::Sampler),
         0x2 => Ok(SymbolType::ConstantBuffer),
@@ -114,7 +114,7 @@ fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType, ReadError>
             InvalidCodeContext::SymbolType,
             scode
         ))
-    };
+    }
 }
 
 /// Represents the structure of a symbol.
@@ -144,18 +144,18 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
 
     fn new() -> Self
     {
-        return Symbol {
+        Symbol {
             name: 0,
             extended_data: 0xFFFFFF,
             flags: 0,
             stype: SymbolType::Constant,
             register: 0xFF
-        };
+        }
     }
 
     fn error_buffer_size() -> Option<Self::Error>
     {
-        return Some(ReadError::Eos(EosContext::SymbolTable));
+        Some(ReadError::Eos(EosContext::SymbolTable))
     }
 
     fn from_bytes(buffer: [u8; SIZE_SYMBOL_STRUCTURE]) -> Result<Self::Output, Self::Error>
@@ -165,13 +165,13 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
         let flags = LittleEndian::read_u16(&buffer[8..10]);
         let stype = get_symbol_type_from_code(buffer[10])?;
         let register = buffer[11];
-        return Ok(Symbol {
+        Ok(Symbol {
             name,
             extended_data,
             flags,
             stype,
             register
-        });
+        })
     }
 
     fn to_bytes(&self) -> [u8; SIZE_SYMBOL_STRUCTURE]
@@ -189,7 +189,7 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
             SymbolType::Pipeline => buf[10] = 0x5
         };
         buf[11] = self.register;
-        return buf;
+        buf
     }
 }
 
@@ -206,13 +206,13 @@ impl NamedTable for SymbolTable
 
     fn new(list: Vec<Self::Inner>) -> Self
     {
-        return SymbolTable { list, map: None };
+        SymbolTable { list, map: None }
     }
 
     fn lookup(&self, name: &str) -> Option<&Self::Inner>
     {
         if let Some(map) = &self.map {
-            return map.get(name);
+            map.get(name)
         } else {
             panic!("Lookup table has not yet been initialized, please call build_lookup_table");
         }
@@ -220,7 +220,7 @@ impl NamedTable for SymbolTable
 
     fn get_all(&self) -> &[Self::Inner]
     {
-        return &self.list;
+        &self.list
     }
 }
 
@@ -237,6 +237,6 @@ impl<TBackend: IoBackend> BuildNamedTable<ShaderPackDecoder<TBackend>> for Symbo
             map.insert(name, *v);
         }
         self.map = Some(map);
-        return Ok(());
+        Ok(())
     }
 }

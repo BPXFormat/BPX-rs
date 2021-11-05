@@ -101,13 +101,13 @@ impl<TBackend: IoBackend> Encoder<TBackend>
     /// returns: Result<Encoder<TBackend>, Error>
     pub fn new(file: TBackend) -> Result<Encoder<TBackend>, WriteError>
     {
-        return Ok(Encoder {
+        Ok(Encoder {
             main_header: MainHeader::new(),
             sections: BTreeMap::new(),
             file,
             next_handle: 0,
             modified: true
-        });
+        })
     }
 
     /// Sets the BPX Main Header.
@@ -171,7 +171,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         };
         self.sections.insert(r, entry);
         self.next_handle += 1;
-        return Ok(&self.sections[&r].data);
+        Ok(&self.sections[&r].data)
     }
 
     /// Removes a section from this BPX.
@@ -247,7 +247,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
             chksum_sht += section.header.get_checksum();
             all_sections_size += csize;
         }
-        return Ok((chksum_sht, all_sections_size));
+        Ok((chksum_sht, all_sections_size))
     }
 
     fn internal_save(&mut self) -> Result<(), WriteError>
@@ -265,7 +265,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         self.file.seek(SeekFrom::Start(0))?;
         self.main_header.write(&mut self.file)?;
         self.modified = false;
-        return Ok(());
+        Ok(())
     }
 
     fn write_last_section(&mut self, last_handle: u32) -> Result<(bool, i64), WriteError>
@@ -283,7 +283,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
         entry.header.chksum = chksum;
         entry.header.flags = flags;
         let diff = entry.header.csize as i64 - old.csize as i64;
-        return Ok((old == entry.header, diff));
+        Ok((old == entry.header, diff))
     }
 
     fn internal_save_last(&mut self) -> Result<(), WriteError>
@@ -303,7 +303,7 @@ impl<TBackend: IoBackend> Encoder<TBackend>
             self.main_header.file_size = self.main_header.file_size.wrapping_add(diff as u64);
             self.main_header.write(&mut self.file)?;
         }
-        return Ok(());
+        Ok(())
     }
 
     /// Writes all sections to the underlying IO backend.
@@ -352,13 +352,13 @@ impl<TBackend: IoBackend> Encoder<TBackend>
                 return self.internal_save();
             }
         }
-        return Ok(());
+        Ok(())
     }
 
     /// Consumes this BPX encoder and returns the inner IO backend.
     pub fn into_inner(self) -> TBackend
     {
-        return self.file;
+        self.file
     }
 }
 
@@ -371,7 +371,7 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
                 return Some(Handle(*handle));
             }
         }
-        return None;
+        None
     }
 
     fn find_all_sections_of_type(&self, btype: u8) -> Vec<Handle>
@@ -383,7 +383,7 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
                 v.push(Handle(*handle));
             }
         }
-        return v;
+        v
     }
 
     fn find_section_by_index(&self, index: u32) -> Option<Handle>
@@ -393,12 +393,12 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
                 return Some(Handle(*handle));
             }
         }
-        return None;
+        None
     }
 
     fn get_section_header(&self, handle: Handle) -> &SectionHeader
     {
-        return &self.sections[&handle.0].header;
+        &self.sections[&handle.0].header
     }
 
     fn get_section_index(&self, handle: Handle) -> u32
@@ -411,12 +411,12 @@ impl<TBackend: IoBackend> Interface for Encoder<TBackend>
 
     fn get_section(&self, handle: Handle) -> &Rc<AutoSection>
     {
-        return &self.sections[&handle.0].data;
+        &self.sections[&handle.0].data
     }
 
     fn get_main_header(&self) -> &MainHeader
     {
-        return &self.main_header;
+        &self.main_header
     }
 }
 
@@ -433,7 +433,7 @@ fn get_flags(section: &SectionEntry, size: u32) -> u8
     } else if section.flags & FLAG_COMPRESS_ZLIB != 0 && size > section.threshold {
         flags |= FLAG_COMPRESS_ZLIB;
     }
-    return flags;
+    flags
 }
 
 fn create_section(header: &SectionHeader, handle: Handle) -> Result<Rc<AutoSection>, WriteError>
@@ -443,7 +443,7 @@ fn create_section(header: &SectionHeader, handle: Handle) -> Result<Rc<AutoSecti
         let mut data = section.open().unwrap();
         data.seek(io::SeekFrom::Start(0))?;
     } //Another defect of the Rust borrow checker
-    return Ok(section);
+    Ok(section)
 }
 
 fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(
@@ -461,7 +461,7 @@ fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(
         count += res;
     }
     section.flush()?;
-    return Ok(section.size());
+    Ok(section.size())
 }
 
 fn write_section_compressed<TMethod: Deflater, TWrite: Write, TChecksum: Checksum>(
@@ -472,7 +472,7 @@ fn write_section_compressed<TMethod: Deflater, TWrite: Write, TChecksum: Checksu
 {
     let size = section.size();
     let csize = TMethod::deflate(&mut section, out, size, chksum)?;
-    return Ok(csize);
+    Ok(csize)
 }
 
 fn write_section_checked<TWrite: Write, TChecksum: Checksum>(
@@ -483,11 +483,11 @@ fn write_section_checked<TWrite: Write, TChecksum: Checksum>(
 ) -> Result<usize, WriteError>
 {
     if flags & FLAG_COMPRESS_XZ != 0 {
-        return write_section_compressed::<XzCompressionMethod, _, _>(section, out, chksum);
+        write_section_compressed::<XzCompressionMethod, _, _>(section, out, chksum)
     } else if flags & FLAG_COMPRESS_ZLIB != 0 {
-        return write_section_compressed::<ZlibCompressionMethod, _, _>(section, out, chksum);
+        write_section_compressed::<ZlibCompressionMethod, _, _>(section, out, chksum)
     } else {
-        return write_section_uncompressed(section, out, chksum);
+        write_section_uncompressed(section, out, chksum)
     }
 }
 
@@ -500,14 +500,14 @@ fn write_section<TWrite: Write>(
     if flags & FLAG_CHECK_CRC32 != 0 {
         let mut chksum = Crc32Checksum::new();
         let size = write_section_checked(flags, section, out, &mut chksum)?;
-        return Ok((size, chksum.finish()));
+        Ok((size, chksum.finish()))
     } else if flags & FLAG_CHECK_WEAK != 0 {
         let mut chksum = WeakChecksum::new();
         let size = write_section_checked(flags, section, out, &mut chksum)?;
-        return Ok((size, chksum.finish()));
+        Ok((size, chksum.finish()))
     } else {
         let mut chksum = WeakChecksum::new();
         let size = write_section_checked(flags, section, out, &mut chksum)?;
-        return Ok((size, 0));
+        Ok((size, 0))
     }
 }

@@ -65,7 +65,7 @@ impl Default for ShaderPackBuilder
 {
     fn default() -> Self
     {
-        return Self::new();
+        Self::new()
     }
 }
 
@@ -74,11 +74,11 @@ impl ShaderPackBuilder
     /// Creates a new BPX Shader Package builder.
     pub fn new() -> ShaderPackBuilder
     {
-        return ShaderPackBuilder {
+        ShaderPackBuilder {
             assembly_hash: 0,
             target: Target::Any,
             btype: Type::Pipeline
-        };
+        }
     }
 
     /// Defines the shader assembly this package is linked against.
@@ -93,7 +93,7 @@ impl ShaderPackBuilder
     pub fn with_assembly(mut self, hash: u64) -> Self
     {
         self.assembly_hash = hash;
-        return self;
+        self
     }
 
     /// Defines the target of this shader package.
@@ -108,7 +108,7 @@ impl ShaderPackBuilder
     pub fn with_target(mut self, target: Target) -> Self
     {
         self.target = target;
-        return self;
+        self
     }
 
     /// Defines the shader package type.
@@ -123,7 +123,7 @@ impl ShaderPackBuilder
     pub fn with_type(mut self, btype: Type) -> Self
     {
         self.btype = btype;
-        return self;
+        self
     }
 
     /// Builds the corresponding [ShaderPackEncoder](crate::variant::shader::ShaderPackEncoder).
@@ -204,13 +204,13 @@ impl ShaderPackBuilder
             .build();
         let strings = encoder.create_section(strings_header)?.clone();
         let symbol_table = encoder.create_section(symbol_table_header)?.clone();
-        return Ok(ShaderPackEncoder {
+        Ok(ShaderPackEncoder {
             encoder,
             strings: StringSection::new(strings),
             extended_data: None,
             symbol_table,
             num_symbols: 0
-        });
+        })
     }
 }
 
@@ -238,7 +238,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
                         .with_compression(CompressionMethod::Zlib)
                         .build();
                     let fuckyourust = useless.create_section(header)?;
-                    return Ok(fuckyourust.clone());
+                    Ok(fuckyourust.clone())
                 }
             )?;
             let mut section = handle.open()?;
@@ -247,7 +247,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
             obj.write(section.as_mut())?;
             return Ok(offset as u32);
         }
-        return Ok(0xFFFFFF);
+        Ok(0xFFFFFF)
     }
 
     fn patch_extended_data(&mut self)
@@ -298,7 +298,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
           //So we have to add another scope to workarround that defect
         self.num_symbols += 1;
         self.patch_extended_data();
-        return Ok(());
+        Ok(())
     }
 
     /// Writes a shader into this BPXS.
@@ -332,7 +332,7 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
             Stage::Pixel => buf.insert(0, 0x4)
         };
         data.write_all(&buf)?;
-        return Ok(());
+        Ok(())
     }
 
     /// Saves this BPXS.
@@ -346,12 +346,12 @@ impl<TBackend: IoBackend> ShaderPackEncoder<TBackend>
     /// A [WriteError](crate::error::WriteError) is returned if the encoder failed to save.
     pub fn save(&mut self) -> Result<(), crate::error::WriteError>
     {
-        return self.encoder.save();
+        self.encoder.save()
     }
 
     /// Consumes this BPXS encoder and returns the inner BPX encoder.
     pub fn into_inner(self) -> Encoder<TBackend>
     {
-        return self.encoder;
+        self.encoder
     }
 }

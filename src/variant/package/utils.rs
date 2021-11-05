@@ -85,7 +85,7 @@ pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
             pack_file_vname(package, &s, &entry.path())?;
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 /// Packs a file or folder in a BPXP, automatically computing
@@ -111,7 +111,7 @@ pub fn pack_file<TBackend: crate::encoder::IoBackend>(
 ) -> Result<(), WriteError>
 {
     let str = get_name_from_path(source)?;
-    return pack_file_vname(package, str, source);
+    pack_file_vname(package, str, source)
 }
 
 /// Loads an object into memory.
@@ -136,7 +136,7 @@ pub fn unpack_memory<TBackend: crate::decoder::IoBackend>(
     if len != obj.size {
         return Err(ReadError::Eos(EosContext::Object));
     }
-    return Ok(v);
+    Ok(v)
 }
 
 /// Unpacks an object to the given file.
@@ -163,7 +163,7 @@ pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
     if len != obj.size {
         return Err(ReadError::Eos(EosContext::Object));
     }
-    return Ok(f);
+    Ok(f)
 }
 
 /// Unpacks a BPXP.
@@ -203,5 +203,5 @@ pub fn unpack<TBackend: crate::decoder::IoBackend>(
         }
         unpack_file(package, v, &dest)?;
     }
-    return Ok(());
+    Ok(())
 }

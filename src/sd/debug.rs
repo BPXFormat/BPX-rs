@@ -45,7 +45,7 @@ impl Default for DebugSymbols
 {
     fn default() -> Self
     {
-        return Self::new();
+        Self::new()
     }
 }
 
@@ -54,10 +54,10 @@ impl DebugSymbols
     /// Creates a new DebugSymbols.
     pub fn new() -> DebugSymbols
     {
-        return DebugSymbols {
+        DebugSymbols {
             symbols_list: Vec::new(),
             symbols_map: HashMap::new()
-        };
+        }
     }
 
     /// Performs a lookup for a given hash value in this symbol list.
@@ -83,7 +83,7 @@ impl DebugSymbols
         if let Some(v) = self.symbols_map.get(&hash) {
             return Some(v);
         }
-        return None;
+        None
     }
 
     /// Pushes a new symbol in this symbol list.
@@ -180,6 +180,6 @@ impl DebugSymbols
                 symbols_map: symbols
             });
         }
-        return Err(DebugError::MissingProp);
+        Err(DebugError::MissingProp)
     }
 }

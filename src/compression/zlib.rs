@@ -63,7 +63,7 @@ const DECODER_BUF_SIZE: usize = ENCODER_BUF_SIZE * 2;
 unsafe fn zstream_zeroed() -> z_stream
 {
     let arr: [u8; std::mem::size_of::<z_stream>()] = [0; std::mem::size_of::<z_stream>()];
-    return std::mem::transmute(arr);
+    std::mem::transmute(arr)
 }
 
 fn new_encoder() -> Result<z_stream, DeflateError>
@@ -79,12 +79,12 @@ fn new_encoder() -> Result<z_stream, DeflateError>
         if err == Z_OK {
             return Ok(stream);
         }
-        return match err {
+        match err {
             Z_MEM_ERROR => Err(DeflateError::Memory),
             Z_STREAM_ERROR => Err(DeflateError::Unsupported("compression level")),
             Z_VERSION_ERROR => Err(DeflateError::Unsupported("version")),
             _ => Err(DeflateError::Unknown)
-        };
+        }
     }
 }
 
@@ -100,12 +100,12 @@ fn new_decoder() -> Result<z_stream, InflateError>
         if err == Z_OK {
             return Ok(stream);
         }
-        return match err {
+        match err {
             Z_MEM_ERROR => Err(InflateError::Memory),
             Z_DATA_ERROR => Err(InflateError::Data),
             Z_VERSION_ERROR => Err(InflateError::Unsupported("version")),
             _ => Err(InflateError::Unknown)
-        };
+        }
     }
 }
 
@@ -160,7 +160,7 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
             break;
         }
     }
-    return Ok(csize);
+    Ok(csize)
 }
 
 fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
@@ -204,7 +204,7 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
             }
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 pub struct ZlibCompressionMethod {}
@@ -223,7 +223,7 @@ impl Deflater for ZlibCompressionMethod
         unsafe {
             deflateEnd(&mut encoder);
         }
-        return res;
+        res
     }
 }
 
@@ -241,6 +241,6 @@ impl Inflater for ZlibCompressionMethod
         unsafe {
             inflateEnd(&mut decoder);
         }
-        return res;
+        res
     }
 }

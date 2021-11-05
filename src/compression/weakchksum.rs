@@ -46,7 +46,7 @@ impl Checksum for WeakChecksum
 
     fn finish(self) -> u32
     {
-        return self.current.0;
+        self.current.0
     }
 }
 
@@ -54,8 +54,8 @@ impl WeakChecksum
 {
     pub fn new() -> Self
     {
-        return WeakChecksum {
+        WeakChecksum {
             current: Wrapping(0)
-        };
+        }
     }
 }

@@ -77,10 +77,10 @@ impl StringSection
     /// returns: StringSection
     pub fn new(section: Rc<AutoSection>) -> StringSection
     {
-        return StringSection {
+        StringSection {
             section,
             cache: HashMap::new()
-        };
+        }
     }
 
     /// Reads a string from the section.
@@ -106,7 +106,7 @@ impl StringSection
                 o.insert(s)
             }
         };
-        return Ok(res);
+        Ok(res)
     }
 
     /// Writes a new string into the section.
@@ -126,7 +126,7 @@ impl StringSection
         let mut data = self.section.open()?;
         let address = low_level_write_string(s, &mut *data)?;
         self.cache.insert(address, String::from(s));
-        return Ok(address);
+        Ok(address)
     }
 }
 
@@ -149,10 +149,10 @@ fn low_level_read_string(
             return Err(ReadError::Eos);
         }
     }
-    return match String::from_utf8(curs) {
+    match String::from_utf8(curs) {
         Err(_) => Err(ReadError::Utf8),
         Ok(v) => Ok(v)
-    };
+    }
 }
 
 fn low_level_write_string(
@@ -163,7 +163,7 @@ fn low_level_write_string(
     let ptr = string_section.size() as u32;
     string_section.write_all(s.as_bytes())?;
     string_section.write_all(&[0x0])?;
-    return Ok(ptr);
+    Ok(ptr)
 }
 
 /// Returns the file name as a UTF-8 string from a rust Path.
@@ -195,10 +195,10 @@ pub fn get_name_from_path(path: &Path) -> Result<&str, PathError>
 {
     match path.file_name() {
         Some(v) => match v.to_str() {
-            Some(v) => return Ok(v),
-            None => return Err(PathError::Utf8)
+            Some(v) => Ok(v),
+            None => Err(PathError::Utf8)
         },
-        None => return Err(PathError::Directory)
+        None => Err(PathError::Directory)
     }
 }
 
@@ -216,7 +216,7 @@ pub fn get_name_from_path(path: &Path) -> Result<&str, PathError>
 pub fn get_name_from_dir_entry(entry: &DirEntry) -> Result<String, PathError>
 {
     match entry.file_name().to_str() {
-        Some(v) => return Ok(v.into()),
+        Some(v) => Ok(v.into()),
         None => Err(PathError::Utf8)
     }
 }

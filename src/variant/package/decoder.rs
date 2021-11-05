@@ -87,7 +87,7 @@ fn get_arch_platform_from_code(acode: u8, pcode: u8)
         0x4 => platform = Platform::Any,
         _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Platform, pcode))
     }
-    return Ok((arch, platform));
+    Ok((arch, platform))
 }
 
 impl<TBackend: IoBackend> PackageDecoder<TBackend>
@@ -141,19 +141,19 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     /// Gets the two bytes of BPXP variant.
     pub fn get_variant(&self) -> [u8; 2]
     {
-        return self.type_code;
+        self.type_code
     }
 
     /// Gets the target CPU [Architecture](crate::variant::package::Architecture) for this BPXP.
     pub fn get_architecture(&self) -> Architecture
     {
-        return self.architecture;
+        self.architecture
     }
 
     /// Gets the target [Platform](crate::variant::package::Platform) for this BPXP.
     pub fn get_platform(&self) -> Platform
     {
-        return self.platform;
+        self.platform
     }
 
     /// Reads the metadata section of this BPXP if any.
@@ -170,7 +170,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
             let obj = Object::read(&mut *data)?;
             return Ok(Some(obj));
         }
-        return Ok(None);
+        Ok(None)
     }
 
     /// Reads the object table of this BPXP.
@@ -191,7 +191,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
             let header = ObjectHeader::read(object_table.as_mut())?;
             v.push(header);
         }
-        return Ok(ObjectTable::new(v));
+        Ok(ObjectTable::new(v))
     }
 
     /// Gets the name of an object; loads the string if its not yet loaded.
@@ -208,7 +208,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     pub fn get_object_name(&mut self, obj: &ObjectHeader)
         -> Result<&str, crate::strings::ReadError>
     {
-        return self.strings.get(obj.name);
+        self.strings.get(obj.name)
     }
 
     fn load_from_section<TWrite: Write>(
@@ -232,7 +232,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
             len += val as u32;
             out.write_all(&buf[0..val])?;
         }
-        return Ok(len);
+        Ok(len)
     }
 
     /// Unpacks an object to a raw stream.
@@ -274,12 +274,12 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
             offset = 0;
             section_id += 1;
         }
-        return Ok(obj.size);
+        Ok(obj.size)
     }
 
     /// Consumes this BPXP decoder and returns the inner BPX decoder.
     pub fn into_inner(self) -> Decoder<TBackend>
     {
-        return self.decoder;
+        self.decoder
     }
 }
