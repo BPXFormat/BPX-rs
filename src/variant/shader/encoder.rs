@@ -139,7 +139,6 @@ impl ShaderPackBuilder
     /// ```
     /// use std::io::{Seek, SeekFrom};
     /// use bpx::utils::new_byte_buf;
-    /// use bpx::variant::NamedTable;
     /// use bpx::variant::package::{PackageBuilder, PackageDecoder};
     /// use bpx::variant::shader::{Shader, ShaderPackBuilder, ShaderPackDecoder, Stage};
     /// use bpx::variant::shader::symbol::SymbolType;

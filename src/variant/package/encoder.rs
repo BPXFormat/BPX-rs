@@ -161,7 +161,6 @@ impl PackageBuilder
     /// ```
     /// use std::io::{Seek, SeekFrom};
     /// use bpx::utils::new_byte_buf;
-    /// use bpx::variant::NamedTable;
     /// use bpx::variant::package::{PackageBuilder, PackageDecoder};
     ///
     /// let mut bpxp = PackageBuilder::new().build(new_byte_buf(0)).unwrap();
