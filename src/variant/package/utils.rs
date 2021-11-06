@@ -41,8 +41,7 @@ use crate::{
             object::ObjectHeader,
             PackageDecoder,
             PackageEncoder
-        },
-        NamedTable
+        }
     }
 };
 
@@ -187,9 +186,9 @@ pub fn unpack<TBackend: crate::decoder::IoBackend>(
     target: &Path
 ) -> Result<(), ReadError>
 {
-    let table = package.read_object_table()?;
-    for v in table.get_all() {
-        let path = package.get_object_name(v)?;
+    let (items, mut names) = package.read_object_table()?;
+    for v in &items {
+        let path = names.load(v)?;
         if path.is_empty() {
             return Err(ReadError::BlankString);
         }

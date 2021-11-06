@@ -172,10 +172,11 @@ impl PackageBuilder
     /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
     /// //Attempt decoding our in-memory BPXP
     /// let mut bpxp = PackageDecoder::new(bytebuf).unwrap();
-    /// let table = bpxp.read_object_table().unwrap();
-    /// assert_eq!(table.get_all().len(), 1);
-    /// let object = table.get_all()[0];
-    /// assert_eq!(bpxp.get_object_name(&object).unwrap(), "TestObject");
+    /// let (items, mut names) = bpxp.read_object_table().unwrap();
+    /// assert_eq!(items.len(), 1);
+    /// assert!(!items.is_empty());
+    /// let object = items[0];
+    /// assert_eq!(names.load(&object).unwrap(), "TestObject");
     /// let mut data = Vec::new();
     /// bpxp.unpack_object(&object, &mut data);
     /// let s = std::str::from_utf8(&data).unwrap();

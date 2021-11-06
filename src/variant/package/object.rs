@@ -28,22 +28,17 @@
 
 //! Contains utilities to work with the object table section.
 
-use std::collections::HashMap;
-
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
-    decoder::IoBackend,
     header::Struct,
     variant::{
         package::{
             error::{EosContext, ReadError},
-            PackageDecoder
-        },
-        BuildNamedTable,
-        NamedTable
+        }
     }
 };
+use crate::table::Item;
 
 /// Size in bytes of an object header.
 pub const SIZE_OBJECT_HEADER: usize = 20;
@@ -110,50 +105,10 @@ impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader
     }
 }
 
-/// Helper class to query an object table.
-pub struct ObjectTable
+impl Item for ObjectHeader
 {
-    list: Vec<ObjectHeader>,
-    map: Option<HashMap<String, ObjectHeader>>
-}
-
-impl NamedTable for ObjectTable
-{
-    type Inner = ObjectHeader;
-
-    fn new(list: Vec<Self::Inner>) -> Self
+    fn get_name_address(&self) -> u32
     {
-        ObjectTable { list, map: None }
-    }
-
-    fn lookup(&self, name: &str) -> Option<&Self::Inner>
-    {
-        if let Some(map) = &self.map {
-            map.get(name)
-        } else {
-            panic!("Lookup table has not yet been initialized, please call build_lookup_table");
-        }
-    }
-
-    fn get_all(&self) -> &[Self::Inner]
-    {
-        &self.list
-    }
-}
-
-impl<TBackend: IoBackend> BuildNamedTable<PackageDecoder<TBackend>> for ObjectTable
-{
-    fn build_lookup_table(
-        &mut self,
-        package: &mut PackageDecoder<TBackend>
-    ) -> Result<(), crate::strings::ReadError>
-    {
-        let mut map = HashMap::new();
-        for v in &self.list {
-            let name = String::from(package.get_object_name(v)?);
-            map.insert(name, *v);
-        }
-        self.map = Some(map);
-        Ok(())
+        self.name
     }
 }

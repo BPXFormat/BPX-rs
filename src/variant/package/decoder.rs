@@ -40,17 +40,17 @@ use crate::{
     variant::{
         package::{
             error::{InvalidCodeContext, ReadError, Section},
-            object::{ObjectHeader, ObjectTable},
+            object::ObjectHeader,
             Architecture,
             Platform,
             SECTION_TYPE_OBJECT_TABLE,
             SUPPORTED_VERSION
-        },
-        NamedTable
+        }
     },
     Handle,
     Interface
 };
+use crate::table::{ItemTable, NameTable};
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
@@ -60,7 +60,7 @@ pub struct PackageDecoder<TBackend: IoBackend>
     type_code: [u8; 2],
     architecture: Architecture,
     platform: Platform,
-    strings: StringSection,
+    strings: Handle,
     decoder: Decoder<TBackend>,
     object_table: Rc<AutoSection>
 }
@@ -128,7 +128,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
         Ok(Self {
             architecture: a,
             platform: p,
-            strings: StringSection::new(decoder.load_section(strings)?.clone()),
+            strings,
             type_code: [
                 decoder.get_main_header().type_ext[2],
                 decoder.get_main_header().type_ext[3]
@@ -179,7 +179,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     ///
     /// A [ReadError](crate::variant::package::error::ReadError) is returned in case of
     /// corruption or system error.
-    pub fn read_object_table(&mut self) -> Result<ObjectTable, ReadError>
+    pub fn read_object_table(&mut self) -> Result<(ItemTable<ObjectHeader>, NameTable<ObjectHeader>), ReadError>
     {
         use crate::section::Section;
         let mut v = Vec::new();
@@ -191,24 +191,8 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
             let header = ObjectHeader::read(object_table.as_mut())?;
             v.push(header);
         }
-        Ok(ObjectTable::new(v))
-    }
-
-    /// Gets the name of an object; loads the string if its not yet loaded.
-    ///
-    /// # Arguments
-    ///
-    /// * `obj`: the object header to load the actual name for.
-    ///
-    /// returns: Result<&str, Error>
-    ///
-    /// # Errors
-    ///
-    /// A [ReadError](crate::strings::ReadError) is returned if the name could not be read.
-    pub fn get_object_name(&mut self, obj: &ObjectHeader)
-        -> Result<&str, crate::strings::ReadError>
-    {
-        self.strings.get(obj.name)
+        let strings = self.decoder.load_section(self.strings)?;
+        Ok((ItemTable::new(v), NameTable::new(StringSection::new(strings.clone()))))
     }
 
     fn load_from_section<TWrite: Write>(
