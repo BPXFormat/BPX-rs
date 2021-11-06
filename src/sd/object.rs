@@ -48,7 +48,8 @@ pub struct Object
 
 impl Default for Object
 {
-    fn default() -> Self {
+    fn default() -> Self
+    {
         Self::new()
     }
 }

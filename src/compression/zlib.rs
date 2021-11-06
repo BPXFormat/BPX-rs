@@ -49,9 +49,9 @@ use libz_sys::{
 
 use crate::{
     compression::{Checksum, Deflater, Inflater},
-    error::{DeflateError, InflateError}
+    error::{DeflateError, InflateError},
+    utils::ReadFill
 };
-use crate::utils::ReadFill;
 
 const ENCODER_BUF_SIZE: usize = 8192;
 const DECODER_BUF_SIZE: usize = ENCODER_BUF_SIZE * 2;

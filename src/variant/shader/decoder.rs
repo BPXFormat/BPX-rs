@@ -36,25 +36,23 @@ use crate::{
     sd::Object,
     section::AutoSection,
     strings::StringSection,
+    table::{ItemTable, NameTable},
     utils::OptionExtension,
-    variant::{
-        shader::{
-            error::{EosContext, InvalidCodeContext, ReadError, Section},
-            symbol::{Symbol, FLAG_EXTENDED_DATA, SIZE_SYMBOL_STRUCTURE},
-            Shader,
-            Stage,
-            Target,
-            Type,
-            SECTION_TYPE_EXTENDED_DATA,
-            SECTION_TYPE_SHADER,
-            SECTION_TYPE_SYMBOL_TABLE,
-            SUPPORTED_VERSION
-        }
+    variant::shader::{
+        error::{EosContext, InvalidCodeContext, ReadError, Section},
+        symbol::{Symbol, FLAG_EXTENDED_DATA, SIZE_SYMBOL_STRUCTURE},
+        Shader,
+        Stage,
+        Target,
+        Type,
+        SECTION_TYPE_EXTENDED_DATA,
+        SECTION_TYPE_SHADER,
+        SECTION_TYPE_SYMBOL_TABLE,
+        SUPPORTED_VERSION
     },
     Handle,
     Interface
 };
-use crate::table::{ItemTable, NameTable};
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
 {
@@ -215,7 +213,8 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     /// # Errors
     ///
     /// A [ReadError](crate::variant::shader::error::ReadError) is returned in case of corruption or system error.
-    pub fn read_symbol_table(&mut self) -> Result<(ItemTable<Symbol>, NameTable<Symbol>), ReadError>
+    pub fn read_symbol_table(&mut self)
+        -> Result<(ItemTable<Symbol>, NameTable<Symbol>), ReadError>
     {
         use crate::section::Section;
         let mut v = Vec::new();
@@ -231,7 +230,10 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
             v.push(sym);
         }
         let strings = self.decoder.load_section(self.strings)?;
-        Ok((ItemTable::new(v), NameTable::new(StringSection::new(strings.clone()))))
+        Ok((
+            ItemTable::new(v),
+            NameTable::new(StringSection::new(strings.clone()))
+        ))
     }
 
     /// Reads the extended data object of a symbol.

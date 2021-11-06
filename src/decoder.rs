@@ -50,11 +50,10 @@ use crate::{
         FLAG_COMPRESS_ZLIB
     },
     section::AutoSection,
-    utils::OptionExtension,
+    utils::{OptionExtension, ReadFill},
     Handle,
     Interface
 };
-use crate::utils::ReadFill;
 
 const READ_BLOCK_SIZE: usize = 8192;
 

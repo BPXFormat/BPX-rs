@@ -35,13 +35,11 @@ use std::{
 
 use crate::{
     strings::{get_name_from_dir_entry, get_name_from_path},
-    variant::{
-        package::{
-            error::{EosContext, ReadError, WriteError},
-            object::ObjectHeader,
-            PackageDecoder,
-            PackageEncoder
-        }
+    variant::package::{
+        error::{EosContext, ReadError, WriteError},
+        object::ObjectHeader,
+        PackageDecoder,
+        PackageEncoder
     }
 };
 

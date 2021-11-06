@@ -45,9 +45,9 @@ pub mod macros;
 pub mod sd;
 pub mod section;
 pub mod strings;
+pub mod table;
 pub mod utils;
 pub mod variant;
-pub mod table;
 
 /// Represents a pointer to a section.
 ///

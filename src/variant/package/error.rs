@@ -147,7 +147,7 @@ impl Display for WriteError
             WriteError::Section(e) => f.write_str(&format!("section error: {}", e)),
             WriteError::Strings(e) => f.write_str(&format!("strings error: {}", e)),
             WriteError::Sd(e) => f.write_str(&format!("BPXSD error: {}", e)),
-            WriteError::InvalidPath(e) => f.write_str(&format!("path error: {}", e)),
+            WriteError::InvalidPath(e) => f.write_str(&format!("path error: {}", e))
         }
     }
 }

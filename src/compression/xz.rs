@@ -52,9 +52,9 @@ use lzma_sys::{
 
 use crate::{
     compression::{Checksum, Deflater, Inflater},
-    error::{DeflateError, InflateError}
+    error::{DeflateError, InflateError},
+    utils::ReadFill
 };
-use crate::utils::ReadFill;
 
 const THREADS_MAX: u32 = 8;
 const ENCODER_BUF_SIZE: usize = 8192;

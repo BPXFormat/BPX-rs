@@ -30,8 +30,10 @@ use std::io::Read;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::sd::{error::ReadError, Array, Object, Value};
-use crate::utils::ReadFill;
+use crate::{
+    sd::{error::ReadError, Array, Object, Value},
+    utils::ReadFill
+};
 
 fn read_bool<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
@@ -217,14 +219,10 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array, ReadError>
 
 type ValueParserFunc<TRead> = fn(stream: &mut TRead) -> Result<Value, ReadError>;
 
-fn get_value_parser<TRead: Read>(
-    type_code: u8
-) -> Option<ValueParserFunc<TRead>>
+fn get_value_parser<TRead: Read>(type_code: u8) -> Option<ValueParserFunc<TRead>>
 {
     match type_code {
-        0x0 => Some(|_| {
-            Ok(Value::Null)
-        }),
+        0x0 => Some(|_| Ok(Value::Null)),
         0x1 => Some(read_bool),
         0x2 => Some(read_uint8),
         0x3 => Some(read_uint16),
@@ -237,12 +235,8 @@ fn get_value_parser<TRead: Read>(
         0xA => Some(read_float),
         0xB => Some(read_double),
         0xC => Some(read_string),
-        0xD => Some(|stream| {
-            Ok(Value::Array(parse_array(stream)?))
-        }),
-        0xE => Some(|stream| {
-            Ok(Value::Object(parse_object(stream)?))
-        }),
+        0xD => Some(|stream| Ok(Value::Array(parse_array(stream)?))),
+        0xE => Some(|stream| Ok(Value::Object(parse_object(stream)?))),
         _ => None
     }
 }

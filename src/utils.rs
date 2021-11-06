@@ -120,7 +120,6 @@ pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>>
 /// *Allows the use BufReader with BPX*
 pub trait ReadFill
 {
-
     /// Reads into `buf` as much as possible.
     ///
     /// *Returns the number of bytes that could be read.*

@@ -35,7 +35,7 @@ use crate::{
     sd::Object,
     section::{AutoSection, Section},
     strings::StringSection,
-    utils::OptionExtension,
+    utils::{OptionExtension, ReadFill},
     variant::package::{
         error::WriteError,
         object::ObjectHeader,
@@ -47,7 +47,6 @@ use crate::{
     },
     Interface
 };
-use crate::utils::ReadFill;
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
@@ -253,7 +252,6 @@ pub struct PackageEncoder<TBackend: IoBackend>
 
 fn create_data_section_header() -> SectionHeader
 {
-    
     SectionHeaderBuilder::new()
         .with_type(SECTION_TYPE_DATA)
         .with_compression(CompressionMethod::Xz)

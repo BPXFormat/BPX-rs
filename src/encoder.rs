@@ -59,10 +59,10 @@ use crate::{
         SIZE_SECTION_HEADER
     },
     section::{AutoSection, Section, SectionData},
+    utils::ReadFill,
     Handle,
     Interface
 };
-use crate::utils::ReadFill;
 
 const READ_BLOCK_SIZE: usize = 8192;
 

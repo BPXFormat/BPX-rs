@@ -39,7 +39,7 @@ use std::{
     string::String
 };
 
-pub use error::{ReadError, WriteError, PathError};
+pub use error::{PathError, ReadError, WriteError};
 
 use crate::section::{AutoSection, SectionData};
 

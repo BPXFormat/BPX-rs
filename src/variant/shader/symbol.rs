@@ -32,13 +32,9 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
     header::Struct,
-    variant::{
-        shader::{
-            error::{EosContext, InvalidCodeContext, ReadError}
-        }
-    }
+    table::Item,
+    variant::shader::error::{EosContext, InvalidCodeContext, ReadError}
 };
-use crate::table::Item;
 
 /// Indicates this symbol is used on the vertex stage.
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;

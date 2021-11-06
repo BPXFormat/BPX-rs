@@ -28,9 +28,8 @@
 
 //! This module provides a lookup-table style implementation.
 
-use std::collections::HashMap;
-use std::marker::PhantomData;
-use std::ops::Index;
+use std::{collections::HashMap, marker::PhantomData, ops::Index};
+
 use crate::strings::StringSection;
 
 /// Represents an item to be stored in a NameTable/ItemTable combination.
@@ -44,7 +43,7 @@ pub trait Item
 pub struct ItemTable<T: Item>
 {
     list: Vec<T>,
-    map: Option<HashMap<String, T>>,
+    map: Option<HashMap<String, T>>
 }
 
 impl<T: Item> ItemTable<T>
@@ -58,10 +57,7 @@ impl<T: Item> ItemTable<T>
     /// returns: ItemTable<T>
     pub fn new(list: Vec<T>) -> Self
     {
-        Self {
-            list,
-            map: None
-        }
+        Self { list, map: None }
     }
 
     /// Gets all items in this table.
@@ -140,7 +136,10 @@ impl<T: Item + Clone> ItemTable<T>
     /// # Errors
     ///
     /// A [ReadError](crate::strings::ReadError) is returned if the strings could not be loaded.
-    pub fn build_lookup_table(&mut self, names: &mut NameTable<T>) -> Result<(), crate::strings::ReadError>
+    pub fn build_lookup_table(
+        &mut self,
+        names: &mut NameTable<T>
+    ) -> Result<(), crate::strings::ReadError>
     {
         let mut map: HashMap<String, T> = HashMap::new();
         for v in &self.list {
@@ -161,7 +160,6 @@ pub struct NameTable<T: Item>
 
 impl<T: Item> NameTable<T>
 {
-
     /// Constructs a new NameTable from its corresponding string section.
     ///
     /// # Arguments

@@ -37,20 +37,18 @@ use crate::{
     sd::Object,
     section::AutoSection,
     strings::StringSection,
-    variant::{
-        package::{
-            error::{InvalidCodeContext, ReadError, Section},
-            object::ObjectHeader,
-            Architecture,
-            Platform,
-            SECTION_TYPE_OBJECT_TABLE,
-            SUPPORTED_VERSION
-        }
+    table::{ItemTable, NameTable},
+    variant::package::{
+        error::{InvalidCodeContext, ReadError, Section},
+        object::ObjectHeader,
+        Architecture,
+        Platform,
+        SECTION_TYPE_OBJECT_TABLE,
+        SUPPORTED_VERSION
     },
     Handle,
     Interface
 };
-use crate::table::{ItemTable, NameTable};
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
@@ -179,7 +177,9 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     ///
     /// A [ReadError](crate::variant::package::error::ReadError) is returned in case of
     /// corruption or system error.
-    pub fn read_object_table(&mut self) -> Result<(ItemTable<ObjectHeader>, NameTable<ObjectHeader>), ReadError>
+    pub fn read_object_table(
+        &mut self
+    ) -> Result<(ItemTable<ObjectHeader>, NameTable<ObjectHeader>), ReadError>
     {
         use crate::section::Section;
         let mut v = Vec::new();
@@ -192,7 +192,10 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
             v.push(header);
         }
         let strings = self.decoder.load_section(self.strings)?;
-        Ok((ItemTable::new(v), NameTable::new(StringSection::new(strings.clone()))))
+        Ok((
+            ItemTable::new(v),
+            NameTable::new(StringSection::new(strings.clone()))
+        ))
     }
 
     fn load_from_section<TWrite: Write>(

@@ -35,9 +35,9 @@ use byteorder::{ByteOrder, LittleEndian};
 use super::garraylen::*;
 use crate::{
     builder::{Checksum, CompressionMethod},
-    error::ReadError
+    error::ReadError,
+    utils::ReadFill
 };
-use crate::utils::ReadFill;
 
 /// Represents a serializable and deserializable byte structure in a BPX.
 pub trait Struct<const S: usize>
@@ -221,12 +221,12 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
     fn new() -> Self
     {
         MainHeader {
-            signature: *b"BPX",                           //+0
-            btype: b'P',                                  //+3
-            chksum: 0,                                    //+4
-            file_size: SIZE_MAIN_HEADER as u64,           //+8
-            section_num: 0,                               //+16
-            version: BPX_CURRENT_VERSION,                 //+20
+            signature: *b"BPX",                 //+0
+            btype: b'P',                        //+3
+            chksum: 0,                          //+4
+            file_size: SIZE_MAIN_HEADER as u64, //+8
+            section_num: 0,                     //+16
+            version: BPX_CURRENT_VERSION,       //+20
             type_ext: [0; 16]
         }
     }
@@ -254,8 +254,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
             version: LittleEndian::read_u32(&buffer[20..24]),
             type_ext: extract_slice(&buffer, 24)
         };
-        if &head.signature != b"BPX"
-        {
+        if &head.signature != b"BPX" {
             return Err(ReadError::BadSignature(head.signature));
         }
         if !KNOWN_VERSIONS.contains(&head.version) {
