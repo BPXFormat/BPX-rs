@@ -125,7 +125,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
             Some(v) => v,
             None => return Err(ReadError::MissingSection(Section::ObjectTable))
         };
-        return Ok(PackageDecoder {
+        Ok(Self {
             architecture: a,
             platform: p,
             strings: StringSection::new(decoder.load_section(strings)?.clone()),
@@ -135,7 +135,7 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
             ],
             object_table: decoder.load_section(object_table)?.clone(),
             decoder
-        });
+        })
     }
 
     /// Gets the two bytes of BPXP variant.

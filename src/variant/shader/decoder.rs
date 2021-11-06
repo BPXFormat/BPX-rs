@@ -143,7 +143,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
             Some(v) => v,
             None => return Err(ReadError::MissingSection(Section::SymbolTable))
         };
-        return Ok(ShaderPackDecoder {
+        Ok(Self {
             assembly_hash: hash,
             num_symbols,
             target,
@@ -152,7 +152,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
             strings: StringSection::new(decoder.load_section(strings)?.clone()),
             extended_data: None,
             decoder
-        });
+        })
     }
 
     /// Lists all shaders contained in this shader package.
