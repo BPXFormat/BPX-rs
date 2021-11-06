@@ -156,11 +156,12 @@ impl ShaderPackBuilder
     /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
     /// //Attempt decoding our in-memory BPXP
     /// let mut bpxs = ShaderPackDecoder::new(bytebuf).unwrap();
-    /// let table = bpxs.read_symbol_table().unwrap();
-    /// assert_eq!(table.get_all().len(), 1);
-    /// let sym = table.get_all()[0];
+    /// let (items, mut names) = bpxs.read_symbol_table().unwrap();
+    /// assert_eq!(items.len(), 1);
+    /// assert!(!items.is_empty());
+    /// let sym = items[0];
     /// assert_eq!(bpxs.get_symbol_count(), 1);
-    /// assert_eq!(bpxs.get_symbol_name(&sym).unwrap(), "test");
+    /// assert_eq!(names.load(&sym).unwrap(), "test");
     /// let shader = bpxs.load_shader(bpxs.list_shaders()[0]).unwrap();
     /// assert_eq!(shader.stage, Stage::Pixel);
     /// assert_eq!(shader.data.len(), 0);

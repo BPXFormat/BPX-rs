@@ -40,7 +40,7 @@ use crate::{
     variant::{
         shader::{
             error::{EosContext, InvalidCodeContext, ReadError, Section},
-            symbol::{Symbol, SymbolTable, FLAG_EXTENDED_DATA, SIZE_SYMBOL_STRUCTURE},
+            symbol::{Symbol, FLAG_EXTENDED_DATA, SIZE_SYMBOL_STRUCTURE},
             Shader,
             Stage,
             Target,
@@ -49,12 +49,12 @@ use crate::{
             SECTION_TYPE_SHADER,
             SECTION_TYPE_SYMBOL_TABLE,
             SUPPORTED_VERSION
-        },
-        NamedTable
+        }
     },
     Handle,
     Interface
 };
+use crate::table::{ItemTable, NameTable};
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
 {
@@ -103,7 +103,7 @@ pub struct ShaderPackDecoder<TBackend: IoBackend>
     target: Target,
     btype: Type,
     symbol_table: Rc<AutoSection>,
-    strings: StringSection,
+    strings: Handle,
     extended_data: Option<Rc<AutoSection>>
 }
 
@@ -149,7 +149,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
             target,
             btype,
             symbol_table: decoder.load_section(symbol_table)?.clone(),
-            strings: StringSection::new(decoder.load_section(strings)?.clone()),
+            strings,
             extended_data: None,
             decoder
         })
@@ -210,28 +210,12 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
         self.assembly_hash
     }
 
-    /// Gets the name of a symbol; loads the string if its not yet loaded.
-    ///
-    /// # Arguments
-    ///
-    /// * `sym`: the symbol to load the actual name for.
-    ///
-    /// returns: Result<&str, Error>
-    ///
-    /// # Errors
-    ///
-    /// A [ReadError](crate::strings::ReadError) is returned if the name could not be read.
-    pub fn get_symbol_name(&mut self, sym: &Symbol) -> Result<&str, crate::strings::ReadError>
-    {
-        self.strings.get(sym.name)
-    }
-
     /// Reads the symbol table of this BPXS.
     ///
     /// # Errors
     ///
     /// A [ReadError](crate::variant::shader::error::ReadError) is returned in case of corruption or system error.
-    pub fn read_symbol_table(&mut self) -> Result<SymbolTable, ReadError>
+    pub fn read_symbol_table(&mut self) -> Result<(ItemTable<Symbol>, NameTable<Symbol>), ReadError>
     {
         use crate::section::Section;
         let mut v = Vec::new();
@@ -246,7 +230,8 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
             let sym = Symbol::read(symbol_table.as_mut())?;
             v.push(sym);
         }
-        Ok(SymbolTable::new(v))
+        let strings = self.decoder.load_section(self.strings)?;
+        Ok((ItemTable::new(v), NameTable::new(StringSection::new(strings.clone()))))
     }
 
     /// Reads the extended data object of a symbol.

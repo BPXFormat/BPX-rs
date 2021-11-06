@@ -28,22 +28,17 @@
 
 //! Contains utilities to work with the symbol table section.
 
-use std::collections::HashMap;
-
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
-    decoder::IoBackend,
     header::Struct,
     variant::{
         shader::{
-            error::{EosContext, InvalidCodeContext, ReadError},
-            ShaderPackDecoder
-        },
-        BuildNamedTable,
-        NamedTable
+            error::{EosContext, InvalidCodeContext, ReadError}
+        }
     }
 };
+use crate::table::Item;
 
 /// Indicates this symbol is used on the vertex stage.
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;
@@ -193,50 +188,10 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
     }
 }
 
-/// Helper class to query a symbol table.
-pub struct SymbolTable
+impl Item for Symbol
 {
-    list: Vec<Symbol>,
-    map: Option<HashMap<String, Symbol>>
-}
-
-impl NamedTable for SymbolTable
-{
-    type Inner = Symbol;
-
-    fn new(list: Vec<Self::Inner>) -> Self
+    fn get_name_address(&self) -> u32
     {
-        SymbolTable { list, map: None }
-    }
-
-    fn lookup(&self, name: &str) -> Option<&Self::Inner>
-    {
-        if let Some(map) = &self.map {
-            map.get(name)
-        } else {
-            panic!("Lookup table has not yet been initialized, please call build_lookup_table");
-        }
-    }
-
-    fn get_all(&self) -> &[Self::Inner]
-    {
-        &self.list
-    }
-}
-
-impl<TBackend: IoBackend> BuildNamedTable<ShaderPackDecoder<TBackend>> for SymbolTable
-{
-    fn build_lookup_table(
-        &mut self,
-        package: &mut ShaderPackDecoder<TBackend>
-    ) -> Result<(), crate::strings::ReadError>
-    {
-        let mut map = HashMap::new();
-        for v in &self.list {
-            let name = String::from(package.get_symbol_name(v)?);
-            map.insert(name, *v);
-        }
-        self.map = Some(map);
-        Ok(())
+        self.name
     }
 }
