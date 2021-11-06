@@ -188,6 +188,6 @@ impl<T: Item> NameTable<T>
     /// A [ReadError](crate::strings::ReadError) is returned if the string could not be loaded.
     pub fn load(&mut self, item: &T) -> Result<&str, crate::strings::ReadError>
     {
-        return self.section.get(item.get_name_address());
+        self.section.get(item.get_name_address())
     }
 }
