@@ -61,8 +61,8 @@ impl Display for ReadError
         match self {
             ReadError::Utf8 => f.write_str("utf8 error"),
             ReadError::Eos => f.write_str("EOS reached before end of string"),
-            ReadError::Io(e) => f.write_str(&format!("io error: {}", e)),
-            ReadError::Section(e) => f.write_str(&format!("section error: {}", e))
+            ReadError::Io(e) => write!(f, "io error: {}", e),
+            ReadError::Section(e) => write!(f, "section error: {}", e)
         }
     }
 }
@@ -90,8 +90,8 @@ impl Display for WriteError
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         match self {
-            WriteError::Io(e) => f.write_str(&format!("io error: {}", e)),
-            WriteError::Section(e) => f.write_str(&format!("section error: {}", e))
+            WriteError::Io(e) => write!(f, "io error: {}", e),
+            WriteError::Section(e) => write!(f, "section error: {}", e)
         }
     }
 }

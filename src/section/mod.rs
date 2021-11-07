@@ -57,7 +57,7 @@ impl Display for Error
     {
         match self {
             Error::AlreadyOpen => f.write_str("section is already open"),
-            Error::Io(e) => f.write_str(&format!("io error ({})", e))
+            Error::Io(e) => write!(f, "io error ({})", e)
         }
     }
 }

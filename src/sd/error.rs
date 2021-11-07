@@ -54,9 +54,9 @@ impl Display for WriteError
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         match self {
-            WriteError::Io(e) => f.write_str(&format!("io error: {}", e)),
+            WriteError::Io(e) => write!(f, "io error: {}", e),
             WriteError::PropCountExceeded(count) => {
-                f.write_str(&format!("property count exceeded ({} > 255)", count))
+                write!(f, "property count exceeded ({} > 255)", count)
             },
         }
     }
@@ -96,11 +96,9 @@ impl Display for ReadError
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         match self {
-            ReadError::Io(e) => f.write_str(&format!("io error: {}", e)),
-            ReadError::Truncation(typename) => f.write_str(&format!("failed to read {}", typename)),
-            ReadError::BadTypeCode(code) => {
-                f.write_str(&format!("unknown value type code ({})", code))
-            },
+            ReadError::Io(e) => write!(f, "io error: {}", e),
+            ReadError::Truncation(typename) => write!(f, "failed to read {}", typename),
+            ReadError::BadTypeCode(code) => write!(f, "unknown value type code ({})", code),
             ReadError::Utf8 => f.write_str("utf8 error")
         }
     }
@@ -125,7 +123,7 @@ impl Display for DebugError
     {
         match self {
             DebugError::MissingProp => f.write_str("missing '__debug__' property"),
-            DebugError::Type(e) => f.write_str(&format!("type error: {}", e))
+            DebugError::Type(e) => write!(f, "type error: {}", e)
         }
     }
 }
@@ -164,9 +162,10 @@ impl Display for TypeError
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
-        f.write_str(&format!(
+        write!(
+            f,
             "unsupported type conversion (expected {}, got {})",
             self.expected_type_name, self.actual_type_name
-        ))
+        )
     }
 }

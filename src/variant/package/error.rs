@@ -118,21 +118,21 @@ impl Display for ReadError
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         match self {
-            ReadError::Bpx(e) => f.write_str(&format!("BPX error: {}", e)),
-            ReadError::Io(e) => f.write_str(&format!("io error: {}", e)),
-            ReadError::Section(e) => f.write_str(&format!("section error: {}", e)),
-            ReadError::BadVersion(v) => f.write_str(&format!("unsupported version ({})", v)),
-            ReadError::BadType(t) => f.write_str(&format!("unknown BPX type code ({})", t)),
+            ReadError::Bpx(e) => write!(f, "BPX error: {}", e),
+            ReadError::Io(e) => write!(f, "io error: {}", e),
+            ReadError::Section(e) => write!(f, "section error: {}", e),
+            ReadError::BadVersion(v) => write!(f, "unsupported version ({})", v),
+            ReadError::BadType(t) => write!(f, "unknown BPX type code ({})", t),
             ReadError::InvalidCode(ctx, code) => {
-                f.write_str(&format!("invalid {} code ({})", ctx.name(), code))
+                write!(f, "invalid {} code ({})", ctx.name(), code)
             },
-            ReadError::MissingSection(s) => f.write_str(&format!("missing {} section", s.name())),
-            ReadError::Eos(ctx) => f.write_str(&format!("got EOS while reading {}", ctx.name())),
+            ReadError::MissingSection(s) => write!(f, "missing {} section", s.name()),
+            ReadError::Eos(ctx) => write!(f, "got EOS while reading {}", ctx.name()),
             ReadError::BlankString => {
                 f.write_str("blank strings are not supported when unpacking to file system")
             },
-            ReadError::Sd(e) => f.write_str(&format!("BPXSD error: {}", e)),
-            ReadError::Strings(e) => f.write_str(&format!("strings error: {}", e))
+            ReadError::Sd(e) => write!(f, "BPXSD error: {}", e),
+            ReadError::Strings(e) => write!(f, "strings error: {}", e)
         }
     }
 }
@@ -142,12 +142,12 @@ impl Display for WriteError
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         match self {
-            WriteError::Bpx(e) => f.write_str(&format!("BPX error: {}", e)),
-            WriteError::Io(e) => f.write_str(&format!("io error: {}", e)),
-            WriteError::Section(e) => f.write_str(&format!("section error: {}", e)),
-            WriteError::Strings(e) => f.write_str(&format!("strings error: {}", e)),
-            WriteError::Sd(e) => f.write_str(&format!("BPXSD error: {}", e)),
-            WriteError::InvalidPath(e) => f.write_str(&format!("path error: {}", e))
+            WriteError::Bpx(e) => write!(f, "BPX error: {}", e),
+            WriteError::Io(e) => write!(f, "io error: {}", e),
+            WriteError::Section(e) => write!(f, "section error: {}", e),
+            WriteError::Strings(e) => write!(f, "strings error: {}", e),
+            WriteError::Sd(e) => write!(f, "BPXSD error: {}", e),
+            WriteError::InvalidPath(e) => write!(f, "path error: {}", e)
         }
     }
 }

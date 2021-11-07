@@ -63,10 +63,10 @@ impl Display for DeflateError
     {
         match self {
             DeflateError::Memory => f.write_str("memory allocation failure"),
-            DeflateError::Unsupported(e) => f.write_str(&format!("unsupported operation ({})", e)),
+            DeflateError::Unsupported(e) => write!(f, "unsupported operation ({})", e),
             DeflateError::Data => f.write_str("data error"),
             DeflateError::Unknown => f.write_str("low-level unknown error"),
-            DeflateError::Io(e) => f.write_str(&format!("io error: {}", e))
+            DeflateError::Io(e) => write!(f, "io error: {}", e)
         }
     }
 }
@@ -99,10 +99,10 @@ impl Display for InflateError
     {
         match self {
             InflateError::Memory => f.write_str("memory allocation failure"),
-            InflateError::Unsupported(e) => f.write_str(&format!("unsupported operation ({})", e)),
+            InflateError::Unsupported(e) => write!(f, "unsupported operation ({})", e),
             InflateError::Data => f.write_str("data error"),
             InflateError::Unknown => f.write_str("low-level unknown error"),
-            InflateError::Io(e) => f.write_str(&format!("io error: {}", e))
+            InflateError::Io(e) => write!(f, "io error: {}", e)
         }
     }
 }
@@ -149,17 +149,17 @@ impl Display for ReadError
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         match self {
-            ReadError::Checksum(expected, actual) => f.write_str(&format!(
+            ReadError::Checksum(expected, actual) => write!(
+                f,
                 "checksum validation failed (expected {}, got {})",
                 expected, actual
-            )),
-            ReadError::Io(e) => f.write_str(&format!("io error: {}", e)),
-            ReadError::BadVersion(v) => f.write_str(&format!("unknown file version ({})", v)),
-            ReadError::BadSignature(sig) => f.write_str(&format!(
-                "unknown file signature ({}{}{})",
-                sig[0], sig[1], sig[2]
-            )),
-            ReadError::Inflate(e) => f.write_str(&format!("inflate error: {}", e))
+            ),
+            ReadError::Io(e) => write!(f, "io error: {}", e),
+            ReadError::BadVersion(v) => write!(f, "unknown file version ({})", v),
+            ReadError::BadSignature(sig) => {
+                write!(f, "unknown file signature ({}{}{})", sig[0], sig[1], sig[2])
+            },
+            ReadError::Inflate(e) => write!(f, "inflate error: {}", e)
         }
     }
 }
@@ -198,12 +198,12 @@ impl Display for WriteError
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         match self {
-            WriteError::Io(e) => f.write_str(&format!("io error: {}", e)),
+            WriteError::Io(e) => write!(f, "io error: {}", e),
             WriteError::Capacity(size) => {
-                f.write_str(&format!("maximum section size exceeded ({} > 2^32)", size))
+                write!(f, "maximum section size exceeded ({} > 2^32)", size)
             },
-            WriteError::Deflate(e) => f.write_str(&format!("deflate error: {}", e)),
-            WriteError::Section(e) => f.write_str(&format!("section error: {}", e))
+            WriteError::Deflate(e) => write!(f, "deflate error: {}", e),
+            WriteError::Section(e) => write!(f, "section error: {}", e)
         }
     }
 }
