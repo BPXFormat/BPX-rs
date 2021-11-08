@@ -47,7 +47,8 @@ pub mod section;
 pub mod strings;
 pub mod table;
 pub mod utils;
-pub mod variant;
+pub mod package;
+pub mod shader;
 
 /// Represents a pointer to a section.
 ///

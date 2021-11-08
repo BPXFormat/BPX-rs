@@ -29,18 +29,18 @@
 //! BPXP utility functions.
 
 use std::{
-    fs::{metadata, read_dir, File},
+    fs::{File, metadata, read_dir},
     path::{Path, PathBuf}
 };
 
 use crate::{
-    strings::{get_name_from_dir_entry, get_name_from_path},
-    variant::package::{
-        error::{EosContext, ReadError, WriteError},
-        object::ObjectHeader,
-        PackageDecoder,
-        PackageEncoder
-    }
+    strings::{get_name_from_dir_entry, get_name_from_path}
+};
+use crate::package::{
+    error::{EosContext, ReadError, WriteError},
+    object::ObjectHeader,
+    PackageDecoder,
+    PackageEncoder
 };
 
 /// Packs a file or folder in a BPXP with the given virtual name.

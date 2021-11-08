@@ -33,21 +33,21 @@ use std::{
 
 use crate::{
     decoder::{Decoder, IoBackend},
-    header::{Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
+    Handle,
+    header::{SECTION_TYPE_SD, SECTION_TYPE_STRING, Struct},
+    Interface,
     sd::Object,
     section::AutoSection,
     strings::StringSection,
-    table::{ItemTable, NameTable},
-    variant::package::{
-        error::{InvalidCodeContext, ReadError, Section},
-        object::ObjectHeader,
-        Architecture,
-        Platform,
-        SECTION_TYPE_OBJECT_TABLE,
-        SUPPORTED_VERSION
-    },
-    Handle,
-    Interface
+    table::{ItemTable, NameTable}
+};
+use crate::package::{
+    Architecture,
+    error::{InvalidCodeContext, ReadError, Section},
+    object::ObjectHeader,
+    Platform,
+    SECTION_TYPE_OBJECT_TABLE,
+    SUPPORTED_VERSION
 };
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;

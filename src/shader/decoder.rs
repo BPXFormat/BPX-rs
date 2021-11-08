@@ -32,26 +32,26 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
     decoder::{Decoder, IoBackend},
-    header::{Struct, SECTION_TYPE_STRING},
+    Handle,
+    header::{SECTION_TYPE_STRING, Struct},
+    Interface,
     sd::Object,
     section::AutoSection,
     strings::StringSection,
     table::{ItemTable, NameTable},
-    utils::OptionExtension,
-    variant::shader::{
-        error::{EosContext, InvalidCodeContext, ReadError, Section},
-        symbol::{Symbol, FLAG_EXTENDED_DATA, SIZE_SYMBOL_STRUCTURE},
-        Shader,
-        Stage,
-        Target,
-        Type,
-        SECTION_TYPE_EXTENDED_DATA,
-        SECTION_TYPE_SHADER,
-        SECTION_TYPE_SYMBOL_TABLE,
-        SUPPORTED_VERSION
-    },
-    Handle,
-    Interface
+    utils::OptionExtension
+};
+use crate::shader::{
+    error::{EosContext, InvalidCodeContext, ReadError, Section},
+    SECTION_TYPE_EXTENDED_DATA,
+    SECTION_TYPE_SHADER,
+    SECTION_TYPE_SYMBOL_TABLE,
+    Shader,
+    Stage,
+    SUPPORTED_VERSION,
+    symbol::{FLAG_EXTENDED_DATA, SIZE_SYMBOL_STRUCTURE, Symbol},
+    Target,
+    Type
 };
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>

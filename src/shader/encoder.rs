@@ -33,24 +33,24 @@ use byteorder::{ByteOrder, LittleEndian};
 use crate::{
     builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
     encoder::{Encoder, IoBackend},
-    header::{Struct, SECTION_TYPE_STRING},
+    header::{SECTION_TYPE_STRING, Struct},
+    Interface,
     sd::Object,
     section::AutoSection,
     strings::StringSection,
-    utils::OptionExtension,
-    variant::shader::{
-        error::WriteError,
-        symbol::{Symbol, SymbolType},
-        Shader,
-        Stage,
-        Target,
-        Type,
-        SECTION_TYPE_EXTENDED_DATA,
-        SECTION_TYPE_SHADER,
-        SECTION_TYPE_SYMBOL_TABLE,
-        SUPPORTED_VERSION
-    },
-    Interface
+    utils::OptionExtension
+};
+use crate::shader::{
+    error::WriteError,
+    SECTION_TYPE_EXTENDED_DATA,
+    SECTION_TYPE_SHADER,
+    SECTION_TYPE_SYMBOL_TABLE,
+    Shader,
+    Stage,
+    SUPPORTED_VERSION,
+    symbol::{Symbol, SymbolType},
+    Target,
+    Type
 };
 
 /// Utility to easily generate a [ShaderPackEncoder](crate::variant::shader::ShaderPackEncoder).
@@ -139,9 +139,9 @@ impl ShaderPackBuilder
     /// ```
     /// use std::io::{Seek, SeekFrom};
     /// use bpx::utils::new_byte_buf;
-    /// use bpx::variant::package::{PackageBuilder, PackageDecoder};
-    /// use bpx::variant::shader::{Shader, ShaderPackBuilder, ShaderPackDecoder, Stage};
-    /// use bpx::variant::shader::symbol::SymbolType;
+    /// use bpx::package::{PackageBuilder, PackageDecoder};
+    /// use bpx::shader::{Shader, ShaderPackBuilder, ShaderPackDecoder, Stage};
+    /// use bpx::shader::symbol::SymbolType;
     ///
     /// let mut bpxs = ShaderPackBuilder::new().build(new_byte_buf(0)).unwrap();
     /// bpxs.write_symbol("test", SymbolType::Constant, 0, 0xFF, None).unwrap();
