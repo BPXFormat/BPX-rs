@@ -28,22 +28,13 @@
 
 //! Contains utilities to work with the symbol table section.
 
-use std::collections::HashMap;
-
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
-    decoder::IoBackend,
     header::Struct,
-    variant::{
-        shader::{
-            error::{EosContext, InvalidCodeContext, ReadError},
-            ShaderPackDecoder
-        },
-        BuildNamedTable,
-        NamedTable
-    }
+    table::Item
 };
+use crate::shader::error::{EosContext, InvalidCodeContext, ReadError};
 
 /// Indicates this symbol is used on the vertex stage.
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;
@@ -103,7 +94,7 @@ pub enum SymbolType
 
 fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType, ReadError>
 {
-    return match scode {
+    match scode {
         0x0 => Ok(SymbolType::Texture),
         0x1 => Ok(SymbolType::Sampler),
         0x2 => Ok(SymbolType::ConstantBuffer),
@@ -114,7 +105,7 @@ fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType, ReadError>
             InvalidCodeContext::SymbolType,
             scode
         ))
-    };
+    }
 }
 
 /// Represents the structure of a symbol.
@@ -144,18 +135,18 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
 
     fn new() -> Self
     {
-        return Symbol {
+        Symbol {
             name: 0,
             extended_data: 0xFFFFFF,
             flags: 0,
             stype: SymbolType::Constant,
             register: 0xFF
-        };
+        }
     }
 
     fn error_buffer_size() -> Option<Self::Error>
     {
-        return Some(ReadError::Eos(EosContext::SymbolTable));
+        Some(ReadError::Eos(EosContext::SymbolTable))
     }
 
     fn from_bytes(buffer: [u8; SIZE_SYMBOL_STRUCTURE]) -> Result<Self::Output, Self::Error>
@@ -165,13 +156,13 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
         let flags = LittleEndian::read_u16(&buffer[8..10]);
         let stype = get_symbol_type_from_code(buffer[10])?;
         let register = buffer[11];
-        return Ok(Symbol {
+        Ok(Symbol {
             name,
             extended_data,
             flags,
             stype,
             register
-        });
+        })
     }
 
     fn to_bytes(&self) -> [u8; SIZE_SYMBOL_STRUCTURE]
@@ -189,54 +180,14 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
             SymbolType::Pipeline => buf[10] = 0x5
         };
         buf[11] = self.register;
-        return buf;
+        buf
     }
 }
 
-/// Helper class to query a symbol table.
-pub struct SymbolTable
+impl Item for Symbol
 {
-    list: Vec<Symbol>,
-    map: Option<HashMap<String, Symbol>>
-}
-
-impl NamedTable for SymbolTable
-{
-    type Inner = Symbol;
-
-    fn new(list: Vec<Self::Inner>) -> Self
+    fn get_name_address(&self) -> u32
     {
-        return SymbolTable { list, map: None };
-    }
-
-    fn lookup(&self, name: &str) -> Option<&Self::Inner>
-    {
-        if let Some(map) = &self.map {
-            return map.get(name);
-        } else {
-            panic!("Lookup table has not yet been initialized, please call build_lookup_table");
-        }
-    }
-
-    fn get_all(&self) -> &[Self::Inner]
-    {
-        return &self.list;
-    }
-}
-
-impl<TBackend: IoBackend> BuildNamedTable<ShaderPackDecoder<TBackend>> for SymbolTable
-{
-    fn build_lookup_table(
-        &mut self,
-        package: &mut ShaderPackDecoder<TBackend>
-    ) -> Result<(), crate::strings::ReadError>
-    {
-        let mut map = HashMap::new();
-        for v in &self.list {
-            let name = String::from(package.get_symbol_name(v)?);
-            map.insert(name, *v);
-        }
-        self.map = Some(map);
-        return Ok(());
+        self.name
     }
 }

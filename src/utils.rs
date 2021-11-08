@@ -55,7 +55,7 @@ pub fn hash(s: &str) -> u64
     for v in s.as_bytes() {
         val = ((val << 5) + val) + Wrapping(*v as u64);
     }
-    return val.0;
+    val.0
 }
 
 /// Extension to include get_or_insert_with but with support for Result and errors.
@@ -86,7 +86,7 @@ impl<T> OptionExtension<T> for Option<T>
         f: F
     ) -> Result<&mut T, TError>
     {
-        if let None = *self {
+        if self.is_none() {
             *self = Some(f()?);
         }
 
@@ -112,7 +112,7 @@ pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>>
     if size > 0 {
         return Cursor::new(Vec::with_capacity(size));
     }
-    return Cursor::new(Vec::new());
+    Cursor::new(Vec::new())
 }
 
 /// Allows to read into a buffer as much as possible.
@@ -120,7 +120,6 @@ pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>>
 /// *Allows the use BufReader with BPX*
 pub trait ReadFill
 {
-
     /// Reads into `buf` as much as possible.
     ///
     /// *Returns the number of bytes that could be read.*
@@ -148,6 +147,6 @@ impl<T: std::io::Read + ?Sized> ReadFill for T
             len = self.read(&mut buf[len..])?;
             bytes += len;
         }
-        return Ok(bytes);
+        Ok(bytes)
     }
 }

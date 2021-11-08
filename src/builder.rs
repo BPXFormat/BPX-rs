@@ -82,7 +82,7 @@ impl Default for SectionHeaderBuilder
 {
     fn default() -> Self
     {
-        return Self::new();
+        Self::new()
     }
 }
 
@@ -91,9 +91,9 @@ impl SectionHeaderBuilder
     /// Creates a new section header builder.
     pub fn new() -> SectionHeaderBuilder
     {
-        return SectionHeaderBuilder {
+        SectionHeaderBuilder {
             header: SectionHeader::new()
-        };
+        }
     }
 
     /// Defines the size in bytes of the section.
@@ -120,7 +120,7 @@ impl SectionHeaderBuilder
     pub fn with_size(mut self, size: u32) -> Self
     {
         self.header.size = size;
-        return self;
+        self
     }
 
     /// Defines the type byte of the section.
@@ -146,7 +146,7 @@ impl SectionHeaderBuilder
     pub fn with_type(mut self, typeb: u8) -> Self
     {
         self.header.btype = typeb;
-        return self;
+        self
     }
 
     /// Defines the compression algorithm to use when compressing the section.
@@ -177,7 +177,7 @@ impl SectionHeaderBuilder
             CompressionMethod::Zlib => self.header.flags |= FLAG_COMPRESS_ZLIB
         }
         self.header.csize = COMPRESSION_THRESHOLD;
-        return self;
+        self
     }
 
     /// Defines the maximum size in bytes to keep the section uncompressed.
@@ -207,7 +207,7 @@ impl SectionHeaderBuilder
     pub fn with_threshold(mut self, threshold: u32) -> Self
     {
         self.header.csize = threshold;
-        return self;
+        self
     }
 
     /// Defines the checksum algorithm to use when computing
@@ -239,7 +239,7 @@ impl SectionHeaderBuilder
             Checksum::Crc32 => self.header.flags |= FLAG_CHECK_CRC32,
             Checksum::Weak => self.header.flags |= FLAG_CHECK_WEAK
         }
-        return self;
+        self
     }
 
     /// Consumes self and returns the generated [SectionHeader](crate::header::SectionHeader).
@@ -265,7 +265,7 @@ impl SectionHeaderBuilder
     /// ```
     pub fn build(self) -> SectionHeader
     {
-        return self.header;
+        self.header
     }
 }
 
@@ -279,7 +279,7 @@ impl Default for MainHeaderBuilder
 {
     fn default() -> Self
     {
-        return Self::new();
+        Self::new()
     }
 }
 
@@ -288,9 +288,9 @@ impl MainHeaderBuilder
     /// Creates a new main header builder.
     pub fn new() -> MainHeaderBuilder
     {
-        return MainHeaderBuilder {
+        MainHeaderBuilder {
             header: MainHeader::new()
-        };
+        }
     }
 
     /// Defines the BPX type byte.
@@ -316,7 +316,7 @@ impl MainHeaderBuilder
     pub fn with_type(mut self, typeb: u8) -> Self
     {
         self.header.btype = typeb;
-        return self;
+        self
     }
 
     /// Defines the Extended Type Information field of the BPX.
@@ -342,7 +342,7 @@ impl MainHeaderBuilder
     pub fn with_type_ext(mut self, type_ext: [u8; 16]) -> Self
     {
         self.header.type_ext = type_ext;
-        return self;
+        self
     }
 
     /// Defines the version of the BPX.
@@ -373,7 +373,7 @@ impl MainHeaderBuilder
     pub fn with_version(mut self, version: u32) -> Self
     {
         self.header.version = version;
-        return self;
+        self
     }
 
     /// Consumes self and returns the generated [MainHeader](crate::header::MainHeader).
@@ -394,6 +394,6 @@ impl MainHeaderBuilder
     /// ```
     pub fn build(self) -> MainHeader
     {
-        return self.header;
+        self.header
     }
 }

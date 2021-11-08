@@ -94,5 +94,5 @@ pub fn new_section_data(size: Option<u32>) -> Result<Box<dyn SectionData>>
             )));
         }
     }
-    return Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)));
+    Ok(Box::new(file::FileBasedSection::new(tempfile::tempfile()?)))
 }

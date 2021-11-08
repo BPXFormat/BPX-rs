@@ -50,11 +50,10 @@ use crate::{
         FLAG_COMPRESS_ZLIB
     },
     section::AutoSection,
-    utils::OptionExtension,
+    utils::{OptionExtension, ReadFill},
     Handle,
     Interface
 };
-use crate::utils::ReadFill;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -87,7 +86,7 @@ impl<TBackend: IoBackend> Decoder<TBackend>
         if final_checksum != self.main_header.chksum {
             return Err(ReadError::Checksum(final_checksum, self.main_header.chksum));
         }
-        return Ok(());
+        Ok(())
     }
 
     /// Creates a new BPX decoder.
@@ -131,7 +130,7 @@ impl<TBackend: IoBackend> Decoder<TBackend>
             sections_data: std::iter::repeat_with(|| None).take(num as usize).collect()
         };
         decoder.read_section_header_table(checksum)?;
-        return Ok(decoder);
+        Ok(decoder)
     }
 
     /// Loads a section from this BPX.
@@ -151,13 +150,13 @@ impl<TBackend: IoBackend> Decoder<TBackend>
         let file = &mut self.file;
         let object = self.sections_data[handle.0 as usize]
             .get_or_insert_with_err(|| load_section(file, handle, header))?;
-        return Ok(object);
+        Ok(object)
     }
 
     /// Consumes this BPX decoder and returns the inner IO backend.
     pub fn into_inner(self) -> TBackend
     {
-        return self.file;
+        self.file
     }
 }
 
@@ -170,7 +169,7 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
                 return Some(Handle(i as u32));
             }
         }
-        return None;
+        None
     }
 
     fn find_all_sections_of_type(&self, btype: u8) -> Vec<Handle>
@@ -182,25 +181,25 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
                 v.push(Handle(i as u32));
             }
         }
-        return v;
+        v
     }
 
     fn find_section_by_index(&self, index: u32) -> Option<Handle>
     {
-        if let Some(_) = self.sections.get(index as usize) {
+        if self.sections.get(index as usize).is_some() {
             return Some(Handle(index as _));
         }
-        return None;
+        None
     }
 
     fn get_section_header(&self, handle: Handle) -> &SectionHeader
     {
-        return &self.sections[handle.0 as usize];
+        &self.sections[handle.0 as usize]
     }
 
     fn get_section_index(&self, handle: Handle) -> u32
     {
-        return handle.0 as u32;
+        handle.0 as u32
     }
 
     fn get_section(&self, handle: Handle) -> &Rc<AutoSection>
@@ -210,7 +209,7 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
 
     fn get_main_header(&self) -> &MainHeader
     {
-        return &self.main_header;
+        &self.main_header
     }
 }
 
@@ -227,7 +226,7 @@ fn load_section<TBackend: IoBackend>(
         if section.flags & FLAG_CHECK_WEAK != 0 {
             let mut chksum = WeakChecksum::new();
             //TODO: Check
-            load_section_checked(file, &section, data.as_mut(), &mut chksum)?;
+            load_section_checked(file, section, data.as_mut(), &mut chksum)?;
             let v = chksum.finish();
             if v != section.chksum {
                 return Err(ReadError::Checksum(v, section.chksum));
@@ -235,7 +234,7 @@ fn load_section<TBackend: IoBackend>(
         } else if section.flags & FLAG_CHECK_CRC32 != 0 {
             let mut chksum = Crc32Checksum::new();
             //TODO: Check
-            load_section_checked(file, &section, data.as_mut(), &mut chksum)?;
+            load_section_checked(file, section, data.as_mut(), &mut chksum)?;
             let v = chksum.finish();
             if v != section.chksum {
                 return Err(ReadError::Checksum(v, section.chksum));
@@ -243,11 +242,11 @@ fn load_section<TBackend: IoBackend>(
         } else {
             let mut chksum = WeakChecksum::new();
             //TODO: Check
-            load_section_checked(file, &section, data.as_mut(), &mut chksum)?;
+            load_section_checked(file, section, data.as_mut(), &mut chksum)?;
         }
         data.seek(io::SeekFrom::Start(0))?;
     } //Amazing: another defect of the Rust borrow checker still so stupid
-    return Ok(sdata);
+    Ok(sdata)
 }
 
 fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
@@ -258,13 +257,13 @@ fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum:
 ) -> Result<(), ReadError>
 {
     if section.flags & FLAG_COMPRESS_XZ != 0 {
-        load_section_compressed::<XzCompressionMethod, _, _, _>(file, &section, out, chksum)?;
+        load_section_compressed::<XzCompressionMethod, _, _, _>(file, section, out, chksum)?;
     } else if section.flags & FLAG_COMPRESS_ZLIB != 0 {
-        load_section_compressed::<ZlibCompressionMethod, _, _, _>(file, &section, out, chksum)?;
+        load_section_compressed::<ZlibCompressionMethod, _, _, _>(file, section, out, chksum)?;
     } else {
-        load_section_uncompressed(file, &section, out, chksum)?;
+        load_section_uncompressed(file, section, out, chksum)?;
     }
-    return Ok(());
+    Ok(())
 }
 
 fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
@@ -286,7 +285,7 @@ fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChec
         count += res;
         remaining -= res;
     }
-    return Ok(());
+    Ok(())
 }
 
 fn load_section_compressed<
@@ -303,5 +302,5 @@ fn load_section_compressed<
 {
     bpx.seek(io::SeekFrom::Start(header.pointer))?;
     XzCompressionMethod::inflate(bpx, output, header.csize as usize, chksum)?;
-    return Ok(());
+    Ok(())
 }

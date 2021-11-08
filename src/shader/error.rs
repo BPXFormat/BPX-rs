@@ -26,7 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! BPXP error definitions.
+//! BPXS error definitions.
 
 use std::fmt::{Display, Formatter};
 
@@ -35,32 +35,41 @@ use crate::macros::{impl_err_conversion, named_enum, variant_error};
 named_enum!(
     /// Represents the context of an invalid code.
     InvalidCodeContext {
-        /// Invalid architecture code byte.
-        Arch: "architecture",
+        /// Invalid render API target code.
+        Target: "target",
 
-        /// Invalid platform code byte.
-        Platform: "platform"
+        /// Invalid shader pack type code.
+        Type: "type",
+
+        /// Invalid shader stage type code.
+        Stage: "stage",
+
+        /// Invalid symbol type code.
+        SymbolType: "symbol type"
     }
 );
 
 variant_error!(
     E {
-        /// Reached EOS while reading an object.
-        Object : "object",
+        /// Reached EOS while reading a shader.
+        Shader : "shader",
 
-        /// Reached EOS while reading the object table.
-        ObjectTable : "object table"
+        /// Reached EOS while reading the symbol table.
+        SymbolTable : "symbol table"
     }
 
     S {
         /// Missing strings section.
-        Strings : "string",
+        Strings : "strings",
 
-        /// Missing object table section.
-        ObjectTable : "object table"
+        /// Missing symbol table section.
+        SymbolTable : "symbol table",
+
+        /// Missing optional extended data section.
+        ExtendedData : "extended data"
     }
 
-    /// Represents a BPXP read error.
+    /// Represents a BPXS read error.
     R {
         /// Invalid code.
         ///
@@ -69,32 +78,26 @@ variant_error!(
         /// * the coding byte.
         InvalidCode(InvalidCodeContext, u8),
 
-        /// Describes a missing required section.
+        /// Describes a missing section.
         MissingSection(Section),
 
-        /// Describes an EOS (End Of Section) error while reading some item.
+        /// Describes an EOS (End Of Section) error while reading.
         Eos(EosContext),
 
-        /// Indicates a blank string was obtained when attempting to unpack a BPXP to the file system.
-        BlankString,
+        /// A strings error.
+        Strings(crate::strings::ReadError),
 
         /// Describes a structured data error.
-        Sd(crate::sd::error::ReadError),
-
-        /// A strings error.
-        Strings(crate::strings::ReadError)
+        Sd(crate::sd::error::ReadError)
     }
 
-    /// Represents a BPXP write error.
+    /// Represents a BPXS write error.
     W {
         /// A strings error.
         Strings(crate::strings::WriteError),
 
         /// Describes a structured data error.
-        Sd(crate::sd::error::WriteError),
-
-        /// Indicates an invalid path while attempting to pack some files.
-        InvalidPath
+        Sd(crate::sd::error::WriteError)
     }
 );
 
@@ -117,21 +120,18 @@ impl Display for ReadError
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         match self {
-            ReadError::Bpx(e) => f.write_str(&format!("BPX error: {}", e)),
-            ReadError::Io(e) => f.write_str(&format!("io error: {}", e)),
-            ReadError::Section(e) => f.write_str(&format!("section error: {}", e)),
-            ReadError::BadVersion(v) => f.write_str(&format!("unsupported version ({})", v)),
-            ReadError::BadType(t) => f.write_str(&format!("unknown BPX type code ({})", t)),
+            ReadError::Bpx(e) => write!(f, "BPX error: {}", e),
+            ReadError::Io(e) => write!(f, "io error: {}", e),
+            ReadError::Sd(e) => write!(f, "BPXSD error: {}", e),
+            ReadError::Section(e) => write!(f, "section error: {}", e),
+            ReadError::Strings(e) => write!(f, "strings error: {}", e),
             ReadError::InvalidCode(ctx, code) => {
-                f.write_str(&format!("invalid {} code ({})", ctx.name(), code))
+                write!(f, "invalid {} code ({})", ctx.name(), code)
             },
-            ReadError::MissingSection(s) => f.write_str(&format!("missing {} section", s.name())),
-            ReadError::Eos(ctx) => f.write_str(&format!("got EOS while reading {}", ctx.name())),
-            ReadError::BlankString => {
-                f.write_str("blank strings are not supported when unpacking to file system")
-            },
-            ReadError::Sd(e) => f.write_str(&format!("BPXSD error: {}", e)),
-            ReadError::Strings(e) => f.write_str(&format!("strings error: {}", e))
+            ReadError::BadVersion(v) => write!(f, "unsupported version ({})", v),
+            ReadError::BadType(t) => write!(f, "unknown BPX type code ({})", t),
+            ReadError::MissingSection(s) => write!(f, "missing {} section", s.name()),
+            ReadError::Eos(ctx) => write!(f, "got EOS while reading {}", ctx.name())
         }
     }
 }
@@ -141,12 +141,11 @@ impl Display for WriteError
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         match self {
-            WriteError::Bpx(e) => f.write_str(&format!("BPX error: {}", e)),
-            WriteError::Io(e) => f.write_str(&format!("io error: {}", e)),
-            WriteError::Section(e) => f.write_str(&format!("section error: {}", e)),
-            WriteError::Strings(e) => f.write_str(&format!("strings error: {}", e)),
-            WriteError::Sd(e) => f.write_str(&format!("BPXSD error: {}", e)),
-            WriteError::InvalidPath => f.write_str("path does not contain any file name")
+            WriteError::Bpx(e) => write!(f, "BPX error: {}", e),
+            WriteError::Io(e) => write!(f, "io error: {}", e),
+            WriteError::Strings(e) => write!(f, "strings error: {}", e),
+            WriteError::Section(e) => write!(f, "section error: {}", e),
+            WriteError::Sd(e) => write!(f, "BPXSD error: {}", e)
         }
     }
 }

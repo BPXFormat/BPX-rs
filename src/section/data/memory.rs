@@ -40,10 +40,10 @@ impl InMemorySection
 {
     pub fn new(initial: usize) -> InMemorySection
     {
-        return InMemorySection {
+        InMemorySection {
             byte_buf: new_byte_buf(initial),
             cur_size: 0
-        };
+        }
     }
 }
 
@@ -51,7 +51,7 @@ impl Read for InMemorySection
 {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize>
     {
-        return self.byte_buf.read(buf);
+        self.byte_buf.read(buf)
     }
 }
 
@@ -63,12 +63,12 @@ impl Write for InMemorySection
         if self.byte_buf.position() as usize >= self.cur_size {
             self.cur_size = self.byte_buf.position() as usize;
         }
-        return Ok(len);
+        Ok(len)
     }
 
     fn flush(&mut self) -> Result<()>
     {
-        return self.byte_buf.flush();
+        self.byte_buf.flush()
     }
 }
 
@@ -76,7 +76,7 @@ impl Seek for InMemorySection
 {
     fn seek(&mut self, pos: SeekFrom) -> Result<u64>
     {
-        return self.byte_buf.seek(pos);
+        self.byte_buf.seek(pos)
     }
 }
 
@@ -89,6 +89,6 @@ impl SectionData for InMemorySection
 
     fn size(&self) -> usize
     {
-        return self.cur_size;
+        self.cur_size
     }
 }

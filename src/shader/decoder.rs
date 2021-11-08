@@ -32,28 +32,26 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
     decoder::{Decoder, IoBackend},
-    header::{Struct, SECTION_TYPE_STRING},
+    Handle,
+    header::{SECTION_TYPE_STRING, Struct},
+    Interface,
     sd::Object,
     section::AutoSection,
     strings::StringSection,
-    utils::OptionExtension,
-    variant::{
-        shader::{
-            error::{EosContext, InvalidCodeContext, ReadError, Section},
-            symbol::{Symbol, SymbolTable, FLAG_EXTENDED_DATA, SIZE_SYMBOL_STRUCTURE},
-            Shader,
-            Stage,
-            Target,
-            Type,
-            SECTION_TYPE_EXTENDED_DATA,
-            SECTION_TYPE_SHADER,
-            SECTION_TYPE_SYMBOL_TABLE,
-            SUPPORTED_VERSION
-        },
-        NamedTable
-    },
-    Handle,
-    Interface
+    table::{ItemTable, NameTable},
+    utils::OptionExtension
+};
+use crate::shader::{
+    error::{EosContext, InvalidCodeContext, ReadError, Section},
+    SECTION_TYPE_EXTENDED_DATA,
+    SECTION_TYPE_SHADER,
+    SECTION_TYPE_SYMBOL_TABLE,
+    Shader,
+    Stage,
+    SUPPORTED_VERSION,
+    symbol::{FLAG_EXTENDED_DATA, SIZE_SYMBOL_STRUCTURE, Symbol},
+    Target,
+    Type
 };
 
 fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
@@ -71,27 +69,27 @@ fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), Rea
         0xFF => target = Target::Any,
         _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Target, acode))
     }
-    if tcode == 'A' as u8 {
+    if tcode == b'A' {
         //Rust refuses to parse match properly so use if/else-if blocks
         btype = Type::Assembly;
-    } else if tcode == 'P' as u8 {
+    } else if tcode == b'P' {
         btype = Type::Pipeline;
     } else {
         return Err(ReadError::InvalidCode(InvalidCodeContext::Type, tcode));
     }
-    return Ok((target, btype));
+    Ok((target, btype))
 }
 
 fn get_stage_from_code(code: u8) -> Result<Stage, ReadError>
 {
-    return match code {
+    match code {
         0x0 => Ok(Stage::Vertex),
         0x1 => Ok(Stage::Hull),
         0x2 => Ok(Stage::Domain),
         0x3 => Ok(Stage::Geometry),
         0x4 => Ok(Stage::Pixel),
         _ => Err(ReadError::InvalidCode(InvalidCodeContext::Stage, code))
-    };
+    }
 }
 
 /// Represents a BPX Shader Package decoder.
@@ -103,7 +101,7 @@ pub struct ShaderPackDecoder<TBackend: IoBackend>
     target: Target,
     btype: Type,
     symbol_table: Rc<AutoSection>,
-    strings: StringSection,
+    strings: Handle,
     extended_data: Option<Rc<AutoSection>>
 }
 
@@ -123,7 +121,7 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     pub fn new(backend: TBackend) -> Result<ShaderPackDecoder<TBackend>, ReadError>
     {
         let mut decoder = Decoder::new(backend)?;
-        if decoder.get_main_header().btype != 'P' as u8 {
+        if decoder.get_main_header().btype != b'P' {
             return Err(ReadError::BadType(decoder.get_main_header().btype));
         }
         if decoder.get_main_header().version != SUPPORTED_VERSION {
@@ -143,22 +141,22 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
             Some(v) => v,
             None => return Err(ReadError::MissingSection(Section::SymbolTable))
         };
-        return Ok(ShaderPackDecoder {
+        Ok(Self {
             assembly_hash: hash,
             num_symbols,
             target,
             btype,
             symbol_table: decoder.load_section(symbol_table)?.clone(),
-            strings: StringSection::new(decoder.load_section(strings)?.clone()),
+            strings,
             extended_data: None,
             decoder
-        });
+        })
     }
 
     /// Lists all shaders contained in this shader package.
     pub fn list_shaders(&self) -> Vec<Handle>
     {
-        return self.decoder.find_all_sections_of_type(SECTION_TYPE_SHADER);
+        self.decoder.find_all_sections_of_type(SECTION_TYPE_SHADER)
     }
 
     /// Loads a shader into memory.
@@ -183,47 +181,31 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
         let mut section = s.open()?;
         let mut buf = section.load_in_memory()?;
         let stage = get_stage_from_code(buf.remove(0))?;
-        return Ok(Shader { stage, data: buf });
+        Ok(Shader { stage, data: buf })
     }
 
     /// Returns the shader package type (Assembly or Pipeline).
     pub fn get_type(&self) -> Type
     {
-        return self.btype;
+        self.btype
     }
 
     /// Returns the shader target rendering API.
     pub fn get_target(&self) -> Target
     {
-        return self.target;
+        self.target
     }
 
     /// Returns the number of symbols contained in that BPX.
     pub fn get_symbol_count(&self) -> u16
     {
-        return self.num_symbols;
+        self.num_symbols
     }
 
     /// Returns the hash of the shader assembly this pipeline is linked to.
     pub fn get_assembly_hash(&self) -> u64
     {
-        return self.assembly_hash;
-    }
-
-    /// Gets the name of a symbol; loads the string if its not yet loaded.
-    ///
-    /// # Arguments
-    ///
-    /// * `sym`: the symbol to load the actual name for.
-    ///
-    /// returns: Result<&str, Error>
-    ///
-    /// # Errors
-    ///
-    /// A [ReadError](crate::strings::ReadError) is returned if the name could not be read.
-    pub fn get_symbol_name(&mut self, sym: &Symbol) -> Result<&str, crate::strings::ReadError>
-    {
-        return self.strings.get(sym.name);
+        self.assembly_hash
     }
 
     /// Reads the symbol table of this BPXS.
@@ -231,7 +213,8 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
     /// # Errors
     ///
     /// A [ReadError](crate::variant::shader::error::ReadError) is returned in case of corruption or system error.
-    pub fn read_symbol_table(&mut self) -> Result<SymbolTable, ReadError>
+    pub fn read_symbol_table(&mut self)
+        -> Result<(ItemTable<Symbol>, NameTable<Symbol>), ReadError>
     {
         use crate::section::Section;
         let mut v = Vec::new();
@@ -246,7 +229,11 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
             let sym = Symbol::read(symbol_table.as_mut())?;
             v.push(sym);
         }
-        return Ok(SymbolTable::new(v));
+        let strings = self.decoder.load_section(self.strings)?;
+        Ok((
+            ItemTable::new(v),
+            NameTable::new(StringSection::new(strings.clone()))
+        ))
     }
 
     /// Reads the extended data object of a symbol.
@@ -280,12 +267,12 @@ impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
         data.seek(SeekFrom::Start(sym.extended_data as _))?;
         //TODO: Check
         let obj = Object::read(data.as_mut())?;
-        return Ok(obj);
+        Ok(obj)
     }
 
     /// Consumes this BPXS decoder and returns the inner BPX decoder.
     pub fn into_inner(self) -> Decoder<TBackend>
     {
-        return self.decoder;
+        self.decoder
     }
 }

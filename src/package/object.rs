@@ -28,22 +28,13 @@
 
 //! Contains utilities to work with the object table section.
 
-use std::collections::HashMap;
-
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
-    decoder::IoBackend,
     header::Struct,
-    variant::{
-        package::{
-            error::{EosContext, ReadError},
-            PackageDecoder
-        },
-        BuildNamedTable,
-        NamedTable
-    }
+    table::Item
 };
+use crate::package::error::{EosContext, ReadError};
 
 /// Size in bytes of an object header.
 pub const SIZE_OBJECT_HEADER: usize = 20;
@@ -72,17 +63,17 @@ impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader
 
     fn new() -> Self
     {
-        return ObjectHeader {
+        ObjectHeader {
             size: 0,
             name: 0,
             start: 0,
             offset: 0
-        };
+        }
     }
 
     fn error_buffer_size() -> Option<Self::Error>
     {
-        return Some(ReadError::Eos(EosContext::ObjectTable));
+        Some(ReadError::Eos(EosContext::ObjectTable))
     }
 
     fn from_bytes(buffer: [u8; SIZE_OBJECT_HEADER]) -> Result<Self::Output, Self::Error>
@@ -91,12 +82,12 @@ impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader
         let name_ptr = LittleEndian::read_u32(&buffer[8..12]);
         let start = LittleEndian::read_u32(&buffer[12..16]);
         let offset = LittleEndian::read_u32(&buffer[16..20]);
-        return Ok(ObjectHeader {
+        Ok(ObjectHeader {
             size,
             name: name_ptr,
             start,
             offset
-        });
+        })
     }
 
     fn to_bytes(&self) -> [u8; SIZE_OBJECT_HEADER]
@@ -106,54 +97,14 @@ impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader
         LittleEndian::write_u32(&mut buf[8..12], self.name);
         LittleEndian::write_u32(&mut buf[12..16], self.start);
         LittleEndian::write_u32(&mut buf[16..20], self.offset);
-        return buf;
+        buf
     }
 }
 
-/// Helper class to query an object table.
-pub struct ObjectTable
+impl Item for ObjectHeader
 {
-    list: Vec<ObjectHeader>,
-    map: Option<HashMap<String, ObjectHeader>>
-}
-
-impl NamedTable for ObjectTable
-{
-    type Inner = ObjectHeader;
-
-    fn new(list: Vec<Self::Inner>) -> Self
+    fn get_name_address(&self) -> u32
     {
-        return ObjectTable { list, map: None };
-    }
-
-    fn lookup(&self, name: &str) -> Option<&Self::Inner>
-    {
-        if let Some(map) = &self.map {
-            return map.get(name);
-        } else {
-            panic!("Lookup table has not yet been initialized, please call build_lookup_table");
-        }
-    }
-
-    fn get_all(&self) -> &[Self::Inner]
-    {
-        return &self.list;
-    }
-}
-
-impl<TBackend: IoBackend> BuildNamedTable<PackageDecoder<TBackend>> for ObjectTable
-{
-    fn build_lookup_table(
-        &mut self,
-        package: &mut PackageDecoder<TBackend>
-    ) -> Result<(), crate::strings::ReadError>
-    {
-        let mut map = HashMap::new();
-        for v in &self.list {
-            let name = String::from(package.get_object_name(v)?);
-            map.insert(name, *v);
-        }
-        self.map = Some(map);
-        return Ok(());
+        self.name
     }
 }

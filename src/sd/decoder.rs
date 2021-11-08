@@ -30,8 +30,10 @@ use std::io::Read;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::sd::{error::ReadError, Array, Object, Value};
-use crate::utils::ReadFill;
+use crate::{
+    sd::{error::ReadError, Array, Object, Value},
+    utils::ReadFill
+};
 
 fn read_bool<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
 {
@@ -40,7 +42,7 @@ fn read_bool<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     if stream.read_fill(&mut flag)? != 1 {
         return Err(ReadError::Truncation("bool"));
     }
-    return Ok(Value::Bool(flag[0] == 1));
+    Ok(Value::Bool(flag[0] == 1))
 }
 
 fn read_uint8<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
@@ -50,7 +52,7 @@ fn read_uint8<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     if stream.read_fill(&mut val)? != 1 {
         return Err(ReadError::Truncation("uint8"));
     }
-    return Ok(Value::Uint8(val[0]));
+    Ok(Value::Uint8(val[0]))
 }
 
 fn read_int8<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
@@ -60,7 +62,7 @@ fn read_int8<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     if stream.read_fill(&mut val)? != 1 {
         return Err(ReadError::Truncation("int8"));
     }
-    return Ok(Value::Int8(val[0] as i8));
+    Ok(Value::Int8(val[0] as i8))
 }
 
 fn read_uint16<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
@@ -70,7 +72,7 @@ fn read_uint16<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     if stream.read_fill(&mut val)? != 2 {
         return Err(ReadError::Truncation("uint16"));
     }
-    return Ok(Value::Uint16(LittleEndian::read_u16(&val)));
+    Ok(Value::Uint16(LittleEndian::read_u16(&val)))
 }
 
 fn read_int16<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
@@ -80,7 +82,7 @@ fn read_int16<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     if stream.read_fill(&mut val)? != 2 {
         return Err(ReadError::Truncation("int16"));
     }
-    return Ok(Value::Int16(LittleEndian::read_i16(&val)));
+    Ok(Value::Int16(LittleEndian::read_i16(&val)))
 }
 
 fn read_uint32<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
@@ -90,7 +92,7 @@ fn read_uint32<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     if stream.read_fill(&mut val)? != 4 {
         return Err(ReadError::Truncation("uint32"));
     }
-    return Ok(Value::Uint32(LittleEndian::read_u32(&val)));
+    Ok(Value::Uint32(LittleEndian::read_u32(&val)))
 }
 
 fn read_int32<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
@@ -100,7 +102,7 @@ fn read_int32<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     if stream.read_fill(&mut val)? != 4 {
         return Err(ReadError::Truncation("int32"));
     }
-    return Ok(Value::Int32(LittleEndian::read_i32(&val)));
+    Ok(Value::Int32(LittleEndian::read_i32(&val)))
 }
 
 fn read_uint64<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
@@ -110,7 +112,7 @@ fn read_uint64<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     if stream.read_fill(&mut val)? != 8 {
         return Err(ReadError::Truncation("uint64"));
     }
-    return Ok(Value::Uint64(LittleEndian::read_u64(&val)));
+    Ok(Value::Uint64(LittleEndian::read_u64(&val)))
 }
 
 fn read_int64<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
@@ -120,7 +122,7 @@ fn read_int64<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     if stream.read_fill(&mut val)? != 8 {
         return Err(ReadError::Truncation("int64"));
     }
-    return Ok(Value::Int64(LittleEndian::read_i64(&val)));
+    Ok(Value::Int64(LittleEndian::read_i64(&val)))
 }
 
 fn read_float<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
@@ -130,7 +132,7 @@ fn read_float<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     if stream.read_fill(&mut val)? != 4 {
         return Err(ReadError::Truncation("float"));
     }
-    return Ok(Value::Float(LittleEndian::read_f32(&val)));
+    Ok(Value::Float(LittleEndian::read_f32(&val)))
 }
 
 fn read_double<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
@@ -140,7 +142,7 @@ fn read_double<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
     if stream.read_fill(&mut val)? != 8 {
         return Err(ReadError::Truncation("double"));
     }
-    return Ok(Value::Double(LittleEndian::read_f64(&val)));
+    Ok(Value::Double(LittleEndian::read_f64(&val)))
 }
 
 fn read_string<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
@@ -157,10 +159,10 @@ fn read_string<TRead: Read>(stream: &mut TRead) -> Result<Value, ReadError>
             return Err(ReadError::Truncation("String"));
         }
     }
-    return match String::from_utf8(curs) {
+    match String::from_utf8(curs) {
         Err(_) => Err(ReadError::Utf8),
         Ok(v) => Ok(Value::String(v))
-    };
+    }
 }
 
 fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object, ReadError>
@@ -187,7 +189,7 @@ fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object, ReadError>
         }
         count -= 1;
     }
-    return Ok(obj);
+    Ok(obj)
 }
 
 fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array, ReadError>
@@ -212,17 +214,15 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array, ReadError>
         }
         count -= 1;
     }
-    return Ok(arr);
+    Ok(arr)
 }
 
-fn get_value_parser<TRead: Read>(
-    type_code: u8
-) -> Option<fn(stream: &mut TRead) -> Result<Value, ReadError>>
+type ValueParserFunc<TRead> = fn(stream: &mut TRead) -> Result<Value, ReadError>;
+
+fn get_value_parser<TRead: Read>(type_code: u8) -> Option<ValueParserFunc<TRead>>
 {
     match type_code {
-        0x0 => Some(|_| {
-            return Ok(Value::Null);
-        }),
+        0x0 => Some(|_| Ok(Value::Null)),
         0x1 => Some(read_bool),
         0x2 => Some(read_uint8),
         0x3 => Some(read_uint16),
@@ -235,17 +235,13 @@ fn get_value_parser<TRead: Read>(
         0xA => Some(read_float),
         0xB => Some(read_double),
         0xC => Some(read_string),
-        0xD => Some(|stream| {
-            return Ok(Value::Array(parse_array(stream)?));
-        }),
-        0xE => Some(|stream| {
-            return Ok(Value::Object(parse_object(stream)?));
-        }),
+        0xD => Some(|stream| Ok(Value::Array(parse_array(stream)?))),
+        0xE => Some(|stream| Ok(Value::Object(parse_object(stream)?))),
         _ => None
     }
 }
 
 pub fn read_structured_data<TRead: Read>(mut source: TRead) -> Result<Object, ReadError>
 {
-    return parse_object(&mut source);
+    parse_object(&mut source)
 }

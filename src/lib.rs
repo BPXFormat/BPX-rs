@@ -45,8 +45,13 @@ pub mod macros;
 pub mod sd;
 pub mod section;
 pub mod strings;
+pub mod table;
 pub mod utils;
-pub mod variant;
+
+#[cfg(feature = "package")]
+pub mod package;
+#[cfg(feature = "shader")]
+pub mod shader;
 
 /// Represents a pointer to a section.
 ///

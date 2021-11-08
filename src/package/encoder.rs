@@ -31,23 +31,22 @@ use std::{io::Read, rc::Rc};
 use crate::{
     builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
     encoder::{Encoder, IoBackend},
-    header::{SectionHeader, Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
+    header::{SECTION_TYPE_SD, SECTION_TYPE_STRING, SectionHeader, Struct},
+    Interface,
     sd::Object,
     section::{AutoSection, Section},
     strings::StringSection,
-    utils::OptionExtension,
-    variant::package::{
-        error::WriteError,
-        object::ObjectHeader,
-        Architecture,
-        Platform,
-        SECTION_TYPE_DATA,
-        SECTION_TYPE_OBJECT_TABLE,
-        SUPPORTED_VERSION
-    },
-    Interface
+    utils::{OptionExtension, ReadFill}
 };
-use crate::utils::ReadFill;
+use crate::package::{
+    Architecture,
+    error::WriteError,
+    object::ObjectHeader,
+    Platform,
+    SECTION_TYPE_DATA,
+    SECTION_TYPE_OBJECT_TABLE,
+    SUPPORTED_VERSION
+};
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
@@ -62,17 +61,25 @@ pub struct PackageBuilder
     type_code: [u8; 2]
 }
 
+impl Default for PackageBuilder
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
+
 impl PackageBuilder
 {
     /// Creates a new BPX Package builder.
     pub fn new() -> PackageBuilder
     {
-        return PackageBuilder {
+        PackageBuilder {
             architecture: Architecture::Any,
             platform: Platform::Any,
             metadata: None,
             type_code: [0x50, 0x48]
-        };
+        }
     }
 
     /// Defines the CPU architecture that the package is targeting.
@@ -87,7 +94,7 @@ impl PackageBuilder
     pub fn with_architecture(mut self, arch: Architecture) -> Self
     {
         self.architecture = arch;
-        return self;
+        self
     }
 
     /// Defines the platform that the package is targeting.
@@ -102,7 +109,7 @@ impl PackageBuilder
     pub fn with_platform(mut self, platform: Platform) -> Self
     {
         self.platform = platform;
-        return self;
+        self
     }
 
     /// Defines the metadata for the package.
@@ -117,7 +124,7 @@ impl PackageBuilder
     pub fn with_metadata(mut self, obj: Object) -> Self
     {
         self.metadata = Some(obj);
-        return self;
+        self
     }
 
     /// Defines the type of the package.
@@ -133,7 +140,7 @@ impl PackageBuilder
     pub fn with_type(mut self, type_code: [u8; 2]) -> Self
     {
         self.type_code = type_code;
-        return self;
+        self
     }
 
     /// Builds the corresponding [PackageEncoder](crate::variant::package::PackageEncoder).
@@ -153,8 +160,7 @@ impl PackageBuilder
     /// ```
     /// use std::io::{Seek, SeekFrom};
     /// use bpx::utils::new_byte_buf;
-    /// use bpx::variant::NamedTable;
-    /// use bpx::variant::package::{PackageBuilder, PackageDecoder};
+    /// use bpx::package::{PackageBuilder, PackageDecoder};
     ///
     /// let mut bpxp = PackageBuilder::new().build(new_byte_buf(0)).unwrap();
     /// bpxp.pack_object("TestObject", "This is a test 你好".as_bytes());
@@ -164,10 +170,11 @@ impl PackageBuilder
     /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
     /// //Attempt decoding our in-memory BPXP
     /// let mut bpxp = PackageDecoder::new(bytebuf).unwrap();
-    /// let table = bpxp.read_object_table().unwrap();
-    /// assert_eq!(table.get_all().len(), 1);
-    /// let object = table.get_all()[0];
-    /// assert_eq!(bpxp.get_object_name(&object).unwrap(), "TestObject");
+    /// let (items, mut names) = bpxp.read_object_table().unwrap();
+    /// assert_eq!(items.len(), 1);
+    /// assert!(!items.is_empty());
+    /// let object = items[0];
+    /// assert_eq!(names.load(&object).unwrap(), "TestObject");
     /// let mut data = Vec::new();
     /// bpxp.unpack_object(&object, &mut data);
     /// let s = std::str::from_utf8(&data).unwrap();
@@ -197,7 +204,7 @@ impl PackageBuilder
         type_ext[2] = self.type_code[0];
         type_ext[3] = self.type_code[1];
         let header = MainHeaderBuilder::new()
-            .with_type('P' as u8)
+            .with_type(b'P')
             .with_type_ext(type_ext)
             .with_version(SUPPORTED_VERSION)
             .build();
@@ -225,12 +232,12 @@ impl PackageBuilder
             //TODO: Check
             obj.write(data.as_mut())?;
         }
-        return Ok(PackageEncoder {
+        Ok(PackageEncoder {
             strings: StringSection::new(strings),
             encoder,
             last_data_section: None,
             object_table
-        });
+        })
     }
 }
 
@@ -245,12 +252,11 @@ pub struct PackageEncoder<TBackend: IoBackend>
 
 fn create_data_section_header() -> SectionHeader
 {
-    let header = SectionHeaderBuilder::new()
+    SectionHeaderBuilder::new()
         .with_type(SECTION_TYPE_DATA)
         .with_compression(CompressionMethod::Xz)
         .with_checksum(Checksum::Crc32)
-        .build();
-    return header;
+        .build()
 }
 
 impl<TBackend: IoBackend> PackageEncoder<TBackend>
@@ -277,7 +283,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
             res = source.read_fill(&mut buf)?;
             count += res;
         }
-        return Ok((count, false));
+        Ok((count, false))
     }
 
     /// Stores an object in this BPXP with the given name.
@@ -309,7 +315,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
             .get_or_insert_with_err(|| -> Result<Rc<AutoSection>, crate::error::WriteError> {
                 //Here Rust type inference is even more broken! Cloning needs to be done twice!!!!
                 let fuckyourust = useless.create_section(create_data_section_header())?;
-                return Ok(fuckyourust.clone());
+                Ok(fuckyourust.clone())
             })?
             .clone();
         let start = self.encoder.get_section_index(data_section.handle());
@@ -331,7 +337,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
             // Fill and write the object header
             let buf = ObjectHeader {
                 size: object_size as u64,
-                name: self.strings.put(&name)?,
+                name: self.strings.put(name)?,
                 start,
                 offset
             }
@@ -346,7 +352,7 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
         } else {
             self.last_data_section = Some(data_section);
         }
-        return Ok(());
+        Ok(())
     }
 
     /// Saves this BPXP.
@@ -360,12 +366,12 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     /// A [WriteError](crate::error::WriteError) is returned if the encoder failed to save.
     pub fn save(&mut self) -> Result<(), crate::error::WriteError>
     {
-        return self.encoder.save();
+        self.encoder.save()
     }
 
     /// Consumes this BPXP encoder and returns the inner BPX encoder.
     pub fn into_inner(self) -> Encoder<TBackend>
     {
-        return self.encoder;
+        self.encoder
     }
 }

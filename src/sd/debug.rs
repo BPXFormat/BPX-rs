@@ -41,15 +41,23 @@ pub struct DebugSymbols
     symbols_list: Vec<String>
 }
 
+impl Default for DebugSymbols
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
+
 impl DebugSymbols
 {
     /// Creates a new DebugSymbols.
     pub fn new() -> DebugSymbols
     {
-        return DebugSymbols {
+        DebugSymbols {
             symbols_list: Vec::new(),
             symbols_map: HashMap::new()
-        };
+        }
     }
 
     /// Performs a lookup for a given hash value in this symbol list.
@@ -73,9 +81,9 @@ impl DebugSymbols
     pub fn lookup(&self, hash: u64) -> Option<&str>
     {
         if let Some(v) = self.symbols_map.get(&hash) {
-            return Some(&v);
+            return Some(v);
         }
-        return None;
+        None
     }
 
     /// Pushes a new symbol in this symbol list.
@@ -172,6 +180,6 @@ impl DebugSymbols
                 symbols_map: symbols
             });
         }
-        return Err(DebugError::MissingProp);
+        Err(DebugError::MissingProp)
     }
 }

@@ -115,7 +115,7 @@ fn write_value(val: &Value) -> Result<Vec<u8>, WriteError>
         Value::Array(arr) => buf.append(&mut write_array(arr)?),
         Value::Object(obj) => buf.append(&mut write_object(obj)?)
     }
-    return Ok(buf);
+    Ok(buf)
 }
 
 fn write_object(obj: &Object) -> Result<Vec<u8>, WriteError>
@@ -135,7 +135,7 @@ fn write_object(obj: &Object) -> Result<Vec<u8>, WriteError>
         v.extend_from_slice(&head);
         v.append(&mut write_value(val)?);
     }
-    return Ok(v);
+    Ok(v)
 }
 
 fn write_array(arr: &Array) -> Result<Vec<u8>, WriteError>
@@ -152,7 +152,7 @@ fn write_array(arr: &Array) -> Result<Vec<u8>, WriteError>
         v.push(get_value_type_code(val));
         v.append(&mut write_value(val)?);
     }
-    return Ok(v);
+    Ok(v)
 }
 
 pub fn write_structured_data<TWrite: Write>(
@@ -162,5 +162,5 @@ pub fn write_structured_data<TWrite: Write>(
 {
     let bytes = write_object(obj)?;
     dest.write_all(&bytes)?;
-    return Ok(());
+    Ok(())
 }

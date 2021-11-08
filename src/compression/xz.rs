@@ -52,9 +52,9 @@ use lzma_sys::{
 
 use crate::{
     compression::{Checksum, Deflater, Inflater},
-    error::{DeflateError, InflateError}
+    error::{DeflateError, InflateError},
+    utils::ReadFill
 };
-use crate::utils::ReadFill;
 
 const THREADS_MAX: u32 = 8;
 const ENCODER_BUF_SIZE: usize = 8192;
@@ -85,12 +85,12 @@ fn new_encoder() -> Result<lzma_stream, DeflateError>
         if res == LZMA_OK {
             return Ok(stream);
         }
-        return match res {
+        match res {
             LZMA_MEM_ERROR => Err(DeflateError::Memory),
             LZMA_OPTIONS_ERROR => Err(DeflateError::Unsupported("filter chain")),
             LZMA_UNSUPPORTED_CHECK => Err(DeflateError::Unsupported("integrity check")),
             _ => Err(DeflateError::Unknown)
-        };
+        }
     }
 }
 
@@ -102,12 +102,12 @@ fn new_decoder() -> Result<lzma_stream, InflateError>
         if res == LZMA_OK {
             return Ok(stream);
         }
-        return match res {
+        match res {
             LZMA_MEM_ERROR => Err(InflateError::Memory),
             LZMA_OPTIONS_ERROR => Err(InflateError::Unsupported("filter chain")),
             LZMA_UNSUPPORTED_CHECK => Err(InflateError::Unsupported("integrity check")),
             _ => Err(InflateError::Unknown)
-        };
+        }
     }
 }
 
@@ -161,7 +161,7 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
             }
         }
     }
-    return Ok(csize);
+    Ok(csize)
 }
 
 fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
@@ -212,7 +212,7 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
             }
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 pub struct XzCompressionMethod {}
@@ -231,7 +231,7 @@ impl Deflater for XzCompressionMethod
         unsafe {
             lzma_end(&mut stream);
         }
-        return res;
+        res
     }
 }
 
@@ -249,6 +249,6 @@ impl Inflater for XzCompressionMethod
         unsafe {
             lzma_end(&mut stream);
         }
-        return res;
+        res
     }
 }

@@ -49,14 +49,14 @@ impl FileBasedSection
 {
     pub fn new(data: File) -> FileBasedSection
     {
-        return FileBasedSection {
+        FileBasedSection {
             data,
             buffer: [0; READ_BLOCK_SIZE],
             written: 0,
             cursor: usize::MAX,
             cur_size: 0,
             seek_ptr: 0
-        };
+        }
     }
 }
 
@@ -66,18 +66,18 @@ impl Read for FileBasedSection
     {
         let mut cnt: usize = 0;
 
-        for i in 0..data.len() {
+        for byte in data {
             if self.cursor >= self.written {
                 self.cursor = 0;
                 self.written = self.data.read(&mut self.buffer)?;
             }
             if self.cursor < self.written {
-                data[i] = self.buffer[self.cursor];
+                *byte = self.buffer[self.cursor];
                 self.cursor += 1;
                 cnt += 1;
             }
         }
-        return Ok(cnt);
+        Ok(cnt)
     }
 }
 
@@ -90,14 +90,14 @@ impl Write for FileBasedSection
             self.cur_size += len;
             self.seek_ptr += len as u64;
         }
-        return Ok(len);
+        Ok(len)
     }
 
     fn flush(&mut self) -> Result<()>
     {
         self.data.seek(SeekFrom::Current(self.cursor as i64))?;
         self.cursor = usize::MAX;
-        return self.data.flush();
+        self.data.flush()
     }
 }
 
@@ -106,7 +106,7 @@ impl Seek for FileBasedSection
     fn seek(&mut self, state: SeekFrom) -> Result<u64>
     {
         self.seek_ptr = self.data.seek(state)?;
-        return Ok(self.seek_ptr);
+        Ok(self.seek_ptr)
     }
 }
 
@@ -116,11 +116,11 @@ impl SectionData for FileBasedSection
     {
         let mut data: Vec<u8> = Vec::new();
         self.data.read_to_end(&mut data)?;
-        return Ok(data);
+        Ok(data)
     }
 
     fn size(&self) -> usize
     {
-        return self.cur_size;
+        self.cur_size
     }
 }

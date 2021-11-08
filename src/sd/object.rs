@@ -46,14 +46,22 @@ pub struct Object
     props: HashMap<u64, Value>
 }
 
+impl Default for Object
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
+
 impl Object
 {
     /// Creates a new object.
     pub fn new() -> Object
     {
-        return Object {
+        Object {
             props: HashMap::new()
-        };
+        }
     }
 
     /// Sets a property in the object using a raw property hash.
@@ -121,7 +129,7 @@ impl Object
     /// ```
     pub fn raw_get(&self, hash: u64) -> Option<&Value>
     {
-        return self.props.get(&hash);
+        self.props.get(&hash)
     }
 
     /// Gets a property in the object.
@@ -147,19 +155,19 @@ impl Object
     /// ```
     pub fn get(&self, name: &str) -> Option<&Value>
     {
-        return self.raw_get(utils::hash(name));
+        self.raw_get(utils::hash(name))
     }
 
     /// Returns the number of properties in the object.
     pub fn prop_count(&self) -> usize
     {
-        return self.props.len();
+        self.props.len()
     }
 
     /// Returns a set of all key-value pairs (properties) in the object.
     pub fn get_keys(&self) -> Keys<'_, u64, Value>
     {
-        return self.props.keys();
+        self.props.keys()
     }
 
     /// Attempts to write the object to the given IO backend.
@@ -183,7 +191,7 @@ impl Object
     /// ```
     pub fn write<TWrite: std::io::Write>(&self, dest: TWrite) -> Result<(), WriteError>
     {
-        return super::encoder::write_structured_data(dest, self);
+        super::encoder::write_structured_data(dest, self)
     }
 
     /// Attempts to read a BPXSD object from an IO backend.
@@ -210,7 +218,7 @@ impl Object
     /// ```
     pub fn read<TRead: std::io::Read>(source: TRead) -> Result<Object, ReadError>
     {
-        return super::decoder::read_structured_data(source);
+        super::decoder::read_structured_data(source)
     }
 }
 
@@ -220,7 +228,7 @@ impl Index<&str> for Object
 
     fn index(&self, name: &str) -> &Value
     {
-        return &self.props.index(&utils::hash(name));
+        self.props.index(&utils::hash(name))
     }
 }
 
@@ -230,6 +238,6 @@ impl Index<u64> for Object
 
     fn index(&self, hash: u64) -> &Value
     {
-        return &self.props.index(&hash);
+        self.props.index(&hash)
     }
 }

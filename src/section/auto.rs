@@ -113,12 +113,12 @@ impl AutoSection
     pub fn new(size: u32, handle: Handle) -> Result<AutoSection, std::io::Error>
     {
         let data = new_section_data(Some(size))?;
-        return Ok(AutoSection {
+        Ok(AutoSection {
             data: RefCell::new(data),
             size: Cell::new(0),
             modified: Cell::new(false),
             handle
-        });
+        })
     }
 
     /// Opens this section and returns a reference to it.
@@ -137,7 +137,7 @@ impl AutoSection
                 modified: &self.modified
             });
         }
-        return Err(Error::AlreadyOpen);
+        Err(Error::AlreadyOpen)
     }
 
     /// Returns true if this section has been modified then resets the modified flag to false.
@@ -145,7 +145,7 @@ impl AutoSection
     /// **NOTE: Not intended to be called in user code.**
     pub fn modified(&self) -> bool
     {
-        return self.modified.replace(false);
+        self.modified.replace(false)
     }
 }
 
@@ -153,7 +153,7 @@ impl Section for AutoSection
 {
     fn size(&self) -> usize
     {
-        return self.size.get();
+        self.size.get()
     }
 
     fn realloc(&self, size: u32) -> Result<Box<dyn SectionData>, Error>
@@ -168,7 +168,7 @@ impl Section for AutoSection
             Err(e) => Err(Error::Io(e)),
             Ok(v) => {
                 {
-                    if let Err(_) = self.open() {
+                    if self.open().is_err() {
                         return Err(Error::AlreadyOpen);
                     }
                 }
@@ -181,6 +181,6 @@ impl Section for AutoSection
 
     fn handle(&self) -> Handle
     {
-        return self.handle;
+        self.handle
     }
 }

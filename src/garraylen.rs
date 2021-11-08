@@ -26,44 +26,15 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::convert::TryInto;
+use std::mem::MaybeUninit;
 
-pub trait GenericArrayLen
+pub fn extract_slice<T: Sized + Copy, const D: usize>(large_buf: &[T], offset: usize) -> [T; D]
 {
-    const SIZE: usize;
-    type TArray;
-
-    fn from_array(buf: &[u8]) -> Self::TArray;
-}
-
-pub struct T3 {}
-
-impl GenericArrayLen for T3
-{
-    const SIZE: usize = 3;
-    type TArray = [u8; 3];
-
-    fn from_array(buf: &[u8]) -> Self::TArray
-    {
-        return buf.try_into().unwrap();
+    unsafe {
+        let mut arr: [MaybeUninit<T>; D] = MaybeUninit::uninit().assume_init();
+        for (i, val) in arr.iter_mut().enumerate() {
+            val.write(large_buf[offset + i]);
+        }
+        std::mem::transmute_copy(&arr)
     }
-}
-
-pub struct T16 {}
-
-impl GenericArrayLen for T16
-{
-    const SIZE: usize = 16;
-    type TArray = [u8; 16];
-
-    fn from_array(buf: &[u8]) -> Self::TArray
-    {
-        return buf.try_into().unwrap();
-    }
-}
-
-pub fn extract_slice<TArray: GenericArrayLen>(large_buf: &[u8], offset: usize) -> TArray::TArray
-{
-    let buf = &large_buf[offset..offset + TArray::SIZE];
-    return TArray::from_array(buf);
 }

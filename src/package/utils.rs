@@ -29,21 +29,18 @@
 //! BPXP utility functions.
 
 use std::{
-    fs::{metadata, read_dir, File},
+    fs::{File, metadata, read_dir},
     path::{Path, PathBuf}
 };
 
 use crate::{
-    strings::{get_name_from_dir_entry, get_name_from_path},
-    variant::{
-        package::{
-            error::{EosContext, ReadError, WriteError},
-            object::ObjectHeader,
-            PackageDecoder,
-            PackageEncoder
-        },
-        NamedTable
-    }
+    strings::{get_name_from_dir_entry, get_name_from_path}
+};
+use crate::package::{
+    error::{EosContext, ReadError, WriteError},
+    object::ObjectHeader,
+    PackageDecoder,
+    PackageEncoder
 };
 
 /// Packs a file or folder in a BPXP with the given virtual name.
@@ -74,18 +71,18 @@ pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
         #[cfg(feature = "debug-log")]
         println!("Writing file {} with {} byte(s)", vname, md.len());
         let mut fle = File::open(source)?;
-        package.pack_object(&vname, &mut fle)?;
+        package.pack_object(vname, &mut fle)?;
     } else {
         let entries = read_dir(source)?;
         for rentry in entries {
             let entry = rentry?;
             let mut s = String::from(vname);
             s.push('/');
-            s.push_str(&get_name_from_dir_entry(&entry));
+            s.push_str(&get_name_from_dir_entry(&entry)?);
             pack_file_vname(package, &s, &entry.path())?;
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 /// Packs a file or folder in a BPXP, automatically computing
@@ -110,10 +107,8 @@ pub fn pack_file<TBackend: crate::encoder::IoBackend>(
     source: &Path
 ) -> Result<(), WriteError>
 {
-    if let Ok(str) = get_name_from_path(source) {
-        return pack_file_vname(package, &str, source);
-    }
-    return Err(WriteError::InvalidPath);
+    let str = get_name_from_path(source)?;
+    pack_file_vname(package, str, source)
 }
 
 /// Loads an object into memory.
@@ -138,7 +133,7 @@ pub fn unpack_memory<TBackend: crate::decoder::IoBackend>(
     if len != obj.size {
         return Err(ReadError::Eos(EosContext::Object));
     }
-    return Ok(v);
+    Ok(v)
 }
 
 /// Unpacks an object to the given file.
@@ -165,7 +160,7 @@ pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
     if len != obj.size {
         return Err(ReadError::Eos(EosContext::Object));
     }
-    return Ok(f);
+    Ok(f)
 }
 
 /// Unpacks a BPXP.
@@ -189,10 +184,10 @@ pub fn unpack<TBackend: crate::decoder::IoBackend>(
     target: &Path
 ) -> Result<(), ReadError>
 {
-    let table = package.read_object_table()?;
-    for v in table.get_all() {
-        let path = package.get_object_name(v)?;
-        if path == "" {
+    let (items, mut names) = package.read_object_table()?;
+    for v in &items {
+        let path = names.load(v)?;
+        if path.is_empty() {
             return Err(ReadError::BlankString);
         }
         #[cfg(feature = "debug-log")]
@@ -205,5 +200,5 @@ pub fn unpack<TBackend: crate::decoder::IoBackend>(
         }
         unpack_file(package, v, &dest)?;
     }
-    return Ok(());
+    Ok(())
 }
