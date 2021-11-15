@@ -2,7 +2,7 @@
 name = "bpx"
 version = "3.2.0"
 authors = ["Yuri Edward <yuri6037@outlook.com>"]
-edition = "2018"
+edition = "2021"
 description = "BPX official rust implementation"
 license = "BSD-3-Clause"
 repository = "https://gitlab.com/bp3d/bpx/bpx-rs"
