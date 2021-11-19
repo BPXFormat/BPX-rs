@@ -33,24 +33,24 @@ use byteorder::{ByteOrder, LittleEndian};
 use crate::{
     builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
     encoder::{Encoder, IoBackend},
-    header::{SECTION_TYPE_STRING, Struct},
-    Interface,
+    header::{Struct, SECTION_TYPE_STRING},
     sd::Object,
     section::AutoSection,
+    shader::{
+        error::WriteError,
+        symbol::{Symbol, SymbolType},
+        Shader,
+        Stage,
+        Target,
+        Type,
+        SECTION_TYPE_EXTENDED_DATA,
+        SECTION_TYPE_SHADER,
+        SECTION_TYPE_SYMBOL_TABLE,
+        SUPPORTED_VERSION
+    },
     strings::StringSection,
-    utils::OptionExtension
-};
-use crate::shader::{
-    error::WriteError,
-    SECTION_TYPE_EXTENDED_DATA,
-    SECTION_TYPE_SHADER,
-    SECTION_TYPE_SYMBOL_TABLE,
-    Shader,
-    Stage,
-    SUPPORTED_VERSION,
-    symbol::{Symbol, SymbolType},
-    Target,
-    Type
+    utils::OptionExtension,
+    Interface
 };
 
 /// Utility to easily generate a [ShaderPackEncoder](crate::variant::shader::ShaderPackEncoder).

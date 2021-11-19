@@ -31,21 +31,21 @@ use std::{io::Read, rc::Rc};
 use crate::{
     builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
     encoder::{Encoder, IoBackend},
-    header::{SECTION_TYPE_SD, SECTION_TYPE_STRING, SectionHeader, Struct},
-    Interface,
+    header::{SectionHeader, Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
+    package::{
+        error::WriteError,
+        object::ObjectHeader,
+        Architecture,
+        Platform,
+        SECTION_TYPE_DATA,
+        SECTION_TYPE_OBJECT_TABLE,
+        SUPPORTED_VERSION
+    },
     sd::Object,
     section::{AutoSection, Section},
     strings::StringSection,
-    utils::{OptionExtension, ReadFill}
-};
-use crate::package::{
-    Architecture,
-    error::WriteError,
-    object::ObjectHeader,
-    Platform,
-    SECTION_TYPE_DATA,
-    SECTION_TYPE_OBJECT_TABLE,
-    SUPPORTED_VERSION
+    utils::{OptionExtension, ReadFill},
+    Interface
 };
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
