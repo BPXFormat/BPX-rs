@@ -60,7 +60,7 @@ pub struct Shader
 }
 
 /// Enum of all supported shader targets by BPXS.
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash, Ord, PartialOrd)]
 pub enum Target
 {
     /// DirectX 11
@@ -86,7 +86,7 @@ pub enum Target
 }
 
 /// Enum of all types of BPXS.
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash, Ord, PartialOrd)]
 pub enum Type
 {
     /// A shader assembly.
@@ -97,7 +97,7 @@ pub enum Type
 }
 
 /// Enum of all supported shader stages by BPXS.
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash, Ord, PartialOrd)]
 pub enum Stage
 {
     /// Vertex shader stage.
