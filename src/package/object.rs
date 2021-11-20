@@ -32,9 +32,9 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
     header::Struct,
+    package::error::{EosContext, ReadError},
     table::Item
 };
-use crate::package::error::{EosContext, ReadError};
 
 /// Size in bytes of an object header.
 pub const SIZE_OBJECT_HEADER: usize = 20;

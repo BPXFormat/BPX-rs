@@ -57,7 +57,7 @@ impl Display for WriteError
             WriteError::Io(e) => write!(f, "io error: {}", e),
             WriteError::PropCountExceeded(count) => {
                 write!(f, "property count exceeded ({} > 255)", count)
-            },
+            }
         }
     }
 }
