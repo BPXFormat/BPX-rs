@@ -177,8 +177,19 @@ impl ShaderPackBuilder
             Target::DX12 => type_ext[10] = 0x2,
             Target::GL33 => type_ext[10] = 0x3,
             Target::GL40 => type_ext[10] = 0x4,
-            Target::VK10 => type_ext[10] = 0x5,
-            Target::MT => type_ext[10] = 0x6,
+            Target::GL41 => type_ext[10] = 0x5,
+            Target::GL42 => type_ext[10] = 0x6,
+            Target::GL43 => type_ext[10] = 0x7,
+            Target::GL44 => type_ext[10] = 0x8,
+            Target::GL45 => type_ext[10] = 0x9,
+            Target::GL46 => type_ext[10] = 0xA,
+            Target::ES30 => type_ext[10] = 0xB,
+            Target::ES31 => type_ext[10] = 0xC,
+            Target::ES32 => type_ext[10] = 0xD,
+            Target::VK10 => type_ext[10] = 0xE,
+            Target::VK11 => type_ext[10] = 0xF,
+            Target::VK12 => type_ext[10] = 0x10,
+            Target::MT => type_ext[10] = 0x11,
             Target::Any => type_ext[10] = 0xFF
         };
         match self.btype {
