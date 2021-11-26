@@ -35,34 +35,35 @@ use std::{
     fs::DirEntry,
     io::SeekFrom,
     path::Path,
-    rc::Rc,
     string::String
 };
 
 pub use error::{PathError, ReadError, WriteError};
+use crate::container::Container;
+use crate::Handle;
 
-use crate::section::{AutoSection, SectionData};
+use crate::section::SectionData;
 
 /// Helper class to manage a BPX string section.
 ///
 /// # Examples
 ///
 /// ```
-/// use bpx::encoder::Encoder;
-/// use bpx::header::{SectionHeader, Struct};
+/// use bpx::container::Container;
+/// use bpx::header::{MainHeader, SectionHeader, Struct};
 /// use bpx::strings::StringSection;
 /// use bpx::utils::new_byte_buf;
 ///
-/// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
+/// let mut file = Container::create(new_byte_buf(0), MainHeader::new()).unwrap();
 /// let section = file.create_section(SectionHeader::new()).unwrap();
-/// let mut strings = StringSection::new(section.clone());
-/// let offset = strings.put("Test").unwrap();
-/// let str = strings.get(offset).unwrap();
+/// let mut strings = StringSection::new(section);
+/// let offset = strings.put(&mut file, "Test").unwrap();
+/// let str = strings.get(&mut file, offset).unwrap();
 /// assert_eq!(str, "Test");
 /// ```
 pub struct StringSection
 {
-    section: Rc<AutoSection>,
+    section: Handle,
     cache: HashMap<u32, String>
 }
 
@@ -75,7 +76,7 @@ impl StringSection
     /// * `hdl`: handle to the string section.
     ///
     /// returns: StringSection
-    pub fn new(section: Rc<AutoSection>) -> StringSection
+    pub fn new(section: Handle) -> StringSection
     {
         StringSection {
             section,
@@ -87,7 +88,7 @@ impl StringSection
     ///
     /// # Arguments
     ///
-    /// * `interface`: the BPX IO interface.
+    /// * `container`: the BPX container.
     /// * `address`: the offset to the start of the string.
     ///
     /// returns: Result<&str, Error>
@@ -96,12 +97,12 @@ impl StringSection
     ///
     /// Returns a [ReadError](crate::strings::ReadError) if the string could not be read or the
     /// section is corrupted/truncated.
-    pub fn get(&mut self, address: u32) -> Result<&str, ReadError>
+    pub fn get<T>(&mut self, container: &mut Container<T>, address: u32) -> Result<&str, ReadError>
     {
         let res = match self.cache.entry(address) {
             Entry::Occupied(o) => o.into_mut(),
             Entry::Vacant(o) => {
-                let mut data = self.section.open()?;
+                let mut data = &mut container[self.section];
                 let s = low_level_read_string(address, &mut *data)?;
                 o.insert(s)
             }
@@ -113,7 +114,7 @@ impl StringSection
     ///
     /// # Arguments
     ///
-    /// * `interface`: the BPX IO interface.
+    /// * `container`: the BPX container.
     /// * `s`: the string to write.
     ///
     /// returns: Result<u32, Error>
@@ -121,9 +122,9 @@ impl StringSection
     /// # Errors
     ///
     /// Returns a [WriteError](crate::strings::WriteError) if the string could not be written.
-    pub fn put(&mut self, s: &str) -> Result<u32, WriteError>
+    pub fn put<T>(&mut self, container: &mut Container<T>, s: &str) -> Result<u32, WriteError>
     {
-        let mut data = self.section.open()?;
+        let mut data = &mut container[self.section];
         let address = low_level_write_string(s, &mut *data)?;
         self.cache.insert(address, String::from(s));
         Ok(address)

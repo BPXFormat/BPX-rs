@@ -29,6 +29,7 @@
 //! This module provides a lookup-table style implementation.
 
 use std::{collections::HashMap, marker::PhantomData, ops::Index};
+use crate::container::Container;
 
 use crate::strings::StringSection;
 
@@ -136,14 +137,15 @@ impl<T: Item + Clone> ItemTable<T>
     /// # Errors
     ///
     /// A [ReadError](crate::strings::ReadError) is returned if the strings could not be loaded.
-    pub fn build_lookup_table(
+    pub fn build_lookup_table<T1>(
         &mut self,
+        container: &mut Container<T1>,
         names: &mut NameTable<T>
     ) -> Result<(), crate::strings::ReadError>
     {
         let mut map: HashMap<String, T> = HashMap::new();
         for v in &self.list {
-            let name = names.load(v)?.into();
+            let name = names.load(container, v)?.into();
             map.insert(name, v.clone());
         }
         self.map = Some(map);
@@ -186,8 +188,8 @@ impl<T: Item> NameTable<T>
     /// # Errors
     ///
     /// A [ReadError](crate::strings::ReadError) is returned if the string could not be loaded.
-    pub fn load(&mut self, item: &T) -> Result<&str, crate::strings::ReadError>
+    pub fn load<T1>(&mut self, container: &mut Container<T1>, item: &T) -> Result<&str, crate::strings::ReadError>
     {
-        self.section.get(item.get_name_address())
+        self.section.get(container, item.get_name_address())
     }
 }
