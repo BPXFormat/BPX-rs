@@ -26,18 +26,25 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//TODO: Update section header and main header builders to be reusable
+//TODO: Pass a builder to write_symbol to simplify API
+//Maybe/Possible: Refactor shader and package modules to export Decoder, Encoder and Builder names instead.
+// => Ask Rust IRC first to know what's considered better practice in Rust
+//TODO: Pass main header while constructing a BPX encoder (caller shouldn't rely on MainHeader defaults)
+//TODO: Pass builder directly to shader and package encoder constructor for coherence with Encoder API
+
 #![warn(missing_docs)]
 
 //! This library is the official implementation for the [BPX](https://gitlab.com/bp3d/bpx/bpx/-/blob/master/BPX_Format.pdf) container format.
 
 use std::{rc::Rc, vec::Vec};
 
-use crate::section::AutoSection;
+//use crate::section::AutoSection;
 
 pub mod builder;
 mod compression;
-pub mod decoder;
-pub mod encoder;
+mod decoder;
+mod encoder;
 pub mod error;
 mod garraylen;
 pub mod header;
@@ -53,13 +60,16 @@ pub mod package;
 #[cfg(feature = "shader")]
 pub mod shader;
 
+#[allow(missing_docs)]
+pub mod container;
+
 /// Represents a pointer to a section.
 ///
 /// *Allows indirect access to a given section instead of sharing mutable references in user code.*
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Handle(u32);
 
-/// The interface implemented by both the BPX encoder and decoder.
+/*/// The interface implemented by both the BPX encoder and decoder.
 pub trait Interface
 {
     /// Searches for the first section of a given type.
@@ -225,3 +235,4 @@ pub trait Interface
     /// ```
     fn get_main_header(&self) -> &header::MainHeader;
 }
+*/

@@ -182,7 +182,10 @@ pub enum WriteError
     Deflate(DeflateError),
 
     /// A section error.
-    Section(crate::section::Error)
+    Section(crate::section::Error),
+
+    /// A section has not yet been loaded.
+    SectionNotLoaded
 }
 
 impl_err_conversion!(
@@ -203,7 +206,8 @@ impl Display for WriteError
                 write!(f, "maximum section size exceeded ({} > 2^32)", size)
             },
             WriteError::Deflate(e) => write!(f, "deflate error: {}", e),
-            WriteError::Section(e) => write!(f, "section error: {}", e)
+            WriteError::Section(e) => write!(f, "section error: {}", e),
+            WriteError::SectionNotLoaded => f.write_str("section not loaded")
         }
     }
 }

@@ -49,15 +49,17 @@ use crate::{
         FLAG_COMPRESS_XZ,
         FLAG_COMPRESS_ZLIB
     },
-    section::AutoSection,
+    //section::AutoSection,
     utils::{OptionExtension, ReadFill},
     Handle,
-    Interface
+    //Interface
 };
+use crate::section::{new_section_data, SectionData};
+//use crate::section::{new_section_data, SectionData};
 
 const READ_BLOCK_SIZE: usize = 8192;
 
-/// Represents the IO backend for a BPX decoder.
+/*/// Represents the IO backend for a BPX decoder.
 pub trait IoBackend: io::Seek + io::Read
 {
 }
@@ -211,9 +213,9 @@ impl<TBackend: IoBackend> Interface for Decoder<TBackend>
     {
         &self.main_header
     }
-}
+}*/
 
-fn load_section<TBackend: IoBackend>(
+/*fn load_section<TBackend: IoBackend>(
     file: &mut TBackend,
     handle: Handle,
     section: &SectionHeader
@@ -247,6 +249,38 @@ fn load_section<TBackend: IoBackend>(
         data.seek(io::SeekFrom::Start(0))?;
     } //Amazing: another defect of the Rust borrow checker still so stupid
     Ok(sdata)
+}*/
+
+pub fn load_section1<T: io::Read + io::Seek>(
+    file: &mut T,
+    section: &SectionHeader
+) -> Result<Box<dyn SectionData>, ReadError>
+{
+    let mut data = new_section_data(Some(section.size))?;
+    data.seek(io::SeekFrom::Start(0))?;
+    if section.flags & FLAG_CHECK_WEAK != 0 {
+        let mut chksum = WeakChecksum::new();
+        //TODO: Check
+        load_section_checked(file, section, data.as_mut(), &mut chksum)?;
+        let v = chksum.finish();
+        if v != section.chksum {
+            return Err(ReadError::Checksum(v, section.chksum));
+        }
+    } else if section.flags & FLAG_CHECK_CRC32 != 0 {
+        let mut chksum = Crc32Checksum::new();
+        //TODO: Check
+        load_section_checked(file, section, data.as_mut(), &mut chksum)?;
+        let v = chksum.finish();
+        if v != section.chksum {
+            return Err(ReadError::Checksum(v, section.chksum));
+        }
+    } else {
+        let mut chksum = WeakChecksum::new();
+        //TODO: Check
+        load_section_checked(file, section, data.as_mut(), &mut chksum)?;
+    }
+    data.seek(io::SeekFrom::Start(0))?;
+    Ok(data)
 }
 
 fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(

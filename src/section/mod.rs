@@ -33,7 +33,7 @@ mod data;
 
 use std::fmt::{Display, Formatter};
 
-use data::new_section_data;
+pub use data::new_section_data;
 pub use data::SectionData;
 
 use crate::macros::impl_err_conversion;
