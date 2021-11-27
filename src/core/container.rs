@@ -283,7 +283,7 @@ impl<T: io::Read + io::Seek> Container<T>
         Ok(())
     }
 
-    pub fn load_sections<F: Fn(&Section) -> bool>(&mut self, f: F) -> Result<(), ReadError>
+    pub fn load_sections<F: FnMut(&Section) -> bool>(&mut self, mut f: F) -> Result<(), ReadError>
     {
         for (idx, entry) in &mut self.sections
         {
