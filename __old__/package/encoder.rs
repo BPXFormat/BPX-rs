@@ -28,7 +28,7 @@
 
 use std::{io::Read, rc::Rc};
 
-use crate::{
+/*use crate::{
     builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
     encoder::{Encoder, IoBackend},
     header::{SectionHeader, Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
@@ -374,4 +374,4 @@ impl<TBackend: IoBackend> PackageEncoder<TBackend>
     {
         self.encoder
     }
-}
+}*/

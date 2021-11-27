@@ -35,34 +35,11 @@ use std::{
     ops::Bound,
     rc::Rc
 };
-
-use crate::{
-    compression::{
-        Checksum,
-        Crc32Checksum,
-        Deflater,
-        WeakChecksum,
-        XzCompressionMethod,
-        ZlibCompressionMethod
-    },
-    error::WriteError,
-    header::{
-        GetChecksum,
-        MainHeader,
-        SectionHeader,
-        Struct,
-        FLAG_CHECK_CRC32,
-        FLAG_CHECK_WEAK,
-        FLAG_COMPRESS_XZ,
-        FLAG_COMPRESS_ZLIB,
-        SIZE_MAIN_HEADER,
-        SIZE_SECTION_HEADER
-    },
-    section::{AutoSection, Section, SectionData},
-    utils::ReadFill,
-    Handle,
-    //Interface
-};
+use crate::compression::{Checksum, Crc32Checksum, Deflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod};
+use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB};
+use crate::error::WriteError;
+use crate::section::SectionData;
+use crate::utils::ReadFill;
 
 const READ_BLOCK_SIZE: usize = 8192;
 

@@ -53,7 +53,7 @@ pub trait SectionData: Read + Write + Seek
     ///
     /// ```
     /// use bpx::encoder::Encoder;
-    /// use bpx::header::{SectionHeader, Struct};
+    /// use bpx::core::header::{SectionHeader, Struct};
     /// use bpx::Interface;
     /// use bpx::utils::new_byte_buf;
     ///
@@ -71,7 +71,7 @@ pub trait SectionData: Read + Write + Seek
     ///
     /// ```
     /// use bpx::encoder::Encoder;
-    /// use bpx::header::{SectionHeader, Struct};
+    /// use bpx::core::header::{SectionHeader, Struct};
     /// use bpx::Interface;
     /// use bpx::utils::new_byte_buf;
     ///

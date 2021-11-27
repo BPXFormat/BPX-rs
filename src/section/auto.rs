@@ -32,7 +32,7 @@ use std::{
 };
 
 use crate::{
-    section::{new_section_data, Error, Section, SectionData},
+    section::{new_section_data, Error, Section1, SectionData},
     Handle
 };
 
@@ -149,7 +149,7 @@ impl AutoSection
     }
 }
 
-impl Section for AutoSection
+impl Section1 for AutoSection
 {
     fn size(&self) -> usize
     {

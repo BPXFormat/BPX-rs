@@ -26,65 +26,12 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! Utilities to manipulate the content of sections.
+pub mod container;
 
-mod auto;
-mod data;
+mod decoder;
+mod encoder;
+pub mod builder;
+pub mod header;
 
-use std::fmt::{Display, Formatter};
-
-pub use data::new_section_data;
-pub use data::SectionData;
-
-use crate::macros::impl_err_conversion;
-
-/// Represents a section error.
-#[derive(Debug)]
-pub enum Error
-{
-    /// The section is already open.
-    AlreadyOpen,
-
-    /// Describes an io error.
-    Io(std::io::Error)
-}
-
-impl_err_conversion!(Error { std::io::Error => Io });
-
-impl Display for Error
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
-        match self {
-            Error::AlreadyOpen => f.write_str("section is already open"),
-            Error::Io(e) => write!(f, "io error ({})", e)
-        }
-    }
-}
-
-/// Trait to define basic functionality of a section content.
-pub trait Section1
-{
-    /// Returns the size of the section (without opening the section).
-    fn size(&self) -> usize;
-
-    /// Reallocates the section.
-    ///
-    /// # Arguments
-    ///
-    /// * `size`: new section size.
-    ///
-    /// returns: Result<Box<dyn SectionData, Global>, Error>
-    ///
-    /// # Errors
-    ///
-    /// Returns an [Error](crate::section::Error) if the section is already open or if
-    /// the temporary file creation has failed.
-    fn realloc(&self, size: u32) -> Result<Box<dyn SectionData>, Error>;
-
-    /// Returns the handle of this section.
-    fn handle(&self) -> Handle;
-}
-
-pub use auto::AutoSection;
-use crate::Handle;
+pub use container::Container;
+pub use container::Section;

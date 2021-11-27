@@ -32,12 +32,12 @@ use std::io;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use super::garraylen::*;
+use crate::garraylen::*;
 use crate::{
-    builder::{Checksum, CompressionMethod},
     error::ReadError,
     utils::ReadFill
 };
+use crate::core::builder::{Checksum, CompressionMethod};
 
 /// Represents a serializable and deserializable byte structure in a BPX.
 pub trait Struct<const S: usize>
@@ -71,7 +71,7 @@ pub trait Struct<const S: usize>
     /// # Examples
     ///
     /// ```should_panic
-    /// use bpx::header::{MainHeader, SIZE_MAIN_HEADER, Struct};
+    /// use bpx::core::header::{MainHeader, SIZE_MAIN_HEADER, Struct};
     ///
     /// let mut corrupted: [u8; SIZE_MAIN_HEADER] = [0; SIZE_MAIN_HEADER];
     /// MainHeader::read(&mut corrupted.as_ref()).unwrap();

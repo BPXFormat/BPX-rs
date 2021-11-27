@@ -33,7 +33,7 @@
 //TODO: Pass main header while constructing a BPX encoder (caller shouldn't rely on MainHeader defaults)
 //TODO: Pass builder directly to shader and package encoder constructor for coherence with Encoder API
 
-#![warn(missing_docs)]
+//#![warn(missing_docs)]
 
 //! This library is the official implementation for the [BPX](https://gitlab.com/bp3d/bpx/bpx/-/blob/master/BPX_Format.pdf) container format.
 
@@ -41,27 +41,22 @@ use std::{rc::Rc, vec::Vec};
 
 //use crate::section::AutoSection;
 
-pub mod builder;
 mod compression;
-mod decoder;
-mod encoder;
 pub mod error;
 mod garraylen;
-pub mod header;
 pub mod macros;
-pub mod sd;
+//pub mod sd;
 pub mod section;
-pub mod strings;
-pub mod table;
+//pub mod strings;
+//pub mod table;
 pub mod utils;
 
-#[cfg(feature = "package")]
+pub mod core;
+
+/*#[cfg(feature = "package")]
 pub mod package;
 #[cfg(feature = "shader")]
-pub mod shader;
-
-#[allow(missing_docs)]
-pub mod container;
+pub mod shader;*/
 
 /// Represents a pointer to a section.
 ///

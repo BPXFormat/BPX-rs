@@ -30,8 +30,134 @@ use std::{
     io::{SeekFrom, Write},
     rc::Rc
 };
+use std::io::{Read, Seek};
+use crate::container::Container;
+use crate::Handle;
+use crate::header::{SECTION_TYPE_SD, SECTION_TYPE_STRING};
+use crate::package::{Architecture, Platform, SECTION_TYPE_OBJECT_TABLE, SUPPORTED_VERSION};
+use crate::package::error::{InvalidCodeContext, ReadError, Section};
+use crate::sd::Object;
 
-use crate::{
+fn get_arch_platform_from_code(acode: u8, pcode: u8)
+                               -> Result<(Architecture, Platform), ReadError>
+{
+    let arch;
+    let platform;
+
+    match acode {
+        0x0 => arch = Architecture::X86_64,
+        0x1 => arch = Architecture::Aarch64,
+        0x2 => arch = Architecture::X86,
+        0x3 => arch = Architecture::Armv7hl,
+        0x4 => arch = Architecture::Any,
+        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Arch, acode))
+    }
+    match pcode {
+        0x0 => platform = Platform::Linux,
+        0x1 => platform = Platform::Mac,
+        0x2 => platform = Platform::Windows,
+        0x3 => platform = Platform::Android,
+        0x4 => platform = Platform::Any,
+        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Platform, pcode))
+    }
+    Ok((arch, platform))
+}
+
+pub struct Package<T>
+{
+    type_code: [u8; 2],
+    container: Container<T>,
+    architecture: Architecture,
+    platform: Platform,
+    strings: Handle,
+    object_table: Handle
+}
+
+impl<T: Read + Seek> Package<T>
+{
+    /// Creates a new PackageDecoder by reading from a BPX decoder.
+    ///
+    /// # Arguments
+    ///
+    /// * `backend`: the [IoBackend](crate::decoder::IoBackend) to use.
+    ///
+    /// returns: Result<PackageDecoder<TBackend>, Error>
+    ///
+    /// # Errors
+    ///
+    /// A [ReadError](crate::variant::package::error::ReadError) is returned if some
+    /// sections/headers could not be loaded.
+    pub fn open(backend: T) -> Result<Package<T>, ReadError>
+    {
+        let mut container = Container::open(backend)?;
+        if container.get_main_header().btype != b'P' {
+            return Err(ReadError::BadType(container.get_main_header().btype));
+        }
+        if container.get_main_header().version != SUPPORTED_VERSION {
+            return Err(ReadError::BadVersion(container.get_main_header().version));
+        }
+        let (a, p) = get_arch_platform_from_code(
+            container.get_main_header().type_ext[0],
+            container.get_main_header().type_ext[1]
+        )?;
+        let strings = match container.find_section_by_type(SECTION_TYPE_STRING) {
+            Some(v) => v,
+            None => return Err(ReadError::MissingSection(Section::Strings))
+        };
+        let object_table = match container.find_section_by_type(SECTION_TYPE_OBJECT_TABLE) {
+            Some(v) => v,
+            None => return Err(ReadError::MissingSection(Section::ObjectTable))
+        };
+        container.load_section(object_table)?;
+        Ok(Self {
+            architecture: a,
+            platform: p,
+            strings,
+            type_code: [
+                container.get_main_header().type_ext[2],
+                container.get_main_header().type_ext[3]
+            ],
+            object_table,
+            container
+        })
+    }
+
+    /// Gets the two bytes of BPXP variant.
+    pub fn get_variant(&self) -> [u8; 2]
+    {
+        self.type_code
+    }
+
+    /// Gets the target CPU [Architecture](crate::variant::package::Architecture) for this BPXP.
+    pub fn get_architecture(&self) -> Architecture
+    {
+        self.architecture
+    }
+
+    /// Gets the target [Platform](crate::variant::package::Platform) for this BPXP.
+    pub fn get_platform(&self) -> Platform
+    {
+        self.platform
+    }
+
+    /// Reads the metadata section of this BPXP if any.
+    /// Returns None if there is no metadata in this BPXP.
+    ///
+    /// # Errors
+    ///
+    /// A [ReadError](crate::variant::package::error::ReadError) is returned in case of corruption or system error.
+    pub fn read_metadata(&mut self) -> Result<Option<Object>, ReadError>
+    {
+        if let Some(handle) = self.container.find_section_by_type(SECTION_TYPE_SD) {
+            let section = self.container.load_section(handle)?;
+            let obj = Object::read(section)?;
+            return Ok(Some(obj));
+        }
+        Ok(None)
+    }
+}
+
+/*use crate::{
     decoder::{Decoder, IoBackend},
     header::{Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
     package::{
@@ -269,4 +395,4 @@ impl<TBackend: IoBackend> PackageDecoder<TBackend>
     {
         self.decoder
     }
-}
+}*/

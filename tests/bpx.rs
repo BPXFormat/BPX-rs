@@ -1,6 +1,6 @@
 use std::{fs::File, path::Path};
-use bpx::container::Container;
-use bpx::header::{BPX_CURRENT_VERSION, MainHeader, Struct};
+use bpx::core::Container;
+use bpx::core::header::{BPX_CURRENT_VERSION, MainHeader, Struct};
 
 /*use bpx::{decoder::Decoder, encoder::Encoder, header::BPX_CURRENT_VERSION, Interface};*/
 
@@ -22,7 +22,7 @@ fn attempt_write_empty_bpxp()
     }
 }
 
-#[test]
+/*#[test]
 fn sd_api_test()
 {
     use std::convert::TryInto;
@@ -39,4 +39,4 @@ fn sd_api_test()
     assert_eq!(vu, None);
     assert_eq!(v1u, String::from("test"));
     assert_eq!(v2u, Some(0));
-}
+}*/

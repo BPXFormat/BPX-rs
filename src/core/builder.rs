@@ -28,7 +28,7 @@
 
 //! High-level utilities to generate low-level file headers.
 
-use crate::header::{
+use crate::core::header::{
     MainHeader,
     SectionHeader,
     Struct,
@@ -110,7 +110,7 @@ impl SectionHeaderBuilder
     /// # Examples
     ///
     /// ```
-    /// use bpx::builder::SectionHeaderBuilder;
+    /// use bpx::core::builder::SectionHeaderBuilder;
     ///
     /// let header = SectionHeaderBuilder::new()
     ///     .with_size(128)
@@ -136,7 +136,7 @@ impl SectionHeaderBuilder
     /// # Examples
     ///
     /// ```
-    /// use bpx::builder::SectionHeaderBuilder;
+    /// use bpx::core::builder::SectionHeaderBuilder;
     ///
     /// let header = SectionHeaderBuilder::new()
     ///     .with_type(1)
@@ -162,8 +162,8 @@ impl SectionHeaderBuilder
     /// # Examples
     ///
     /// ```
-    /// use bpx::builder::{CompressionMethod, SectionHeaderBuilder};
-    /// use bpx::header::FLAG_COMPRESS_ZLIB;
+    /// use bpx::core::builder::{CompressionMethod, SectionHeaderBuilder};
+    /// use bpx::core::header::FLAG_COMPRESS_ZLIB;
     ///
     /// let header = SectionHeaderBuilder::new()
     ///     .with_compression(CompressionMethod::Zlib)
@@ -195,7 +195,7 @@ impl SectionHeaderBuilder
     /// # Examples
     ///
     /// ```
-    /// use bpx::builder::{CompressionMethod, SectionHeaderBuilder};
+    /// use bpx::core::builder::{CompressionMethod, SectionHeaderBuilder};
     ///
     /// let header = SectionHeaderBuilder::new()
     ///     .with_compression(CompressionMethod::Zlib)
@@ -225,8 +225,8 @@ impl SectionHeaderBuilder
     /// # Examples
     ///
     /// ```
-    /// use bpx::builder::{Checksum, SectionHeaderBuilder};
-    /// use bpx::header::FLAG_CHECK_CRC32;
+    /// use bpx::core::builder::{Checksum, SectionHeaderBuilder};
+    /// use bpx::core::header::FLAG_CHECK_CRC32;
     ///
     /// let header = SectionHeaderBuilder::new()
     ///     .with_checksum(Checksum::Crc32)
@@ -247,8 +247,8 @@ impl SectionHeaderBuilder
     /// # Examples
     ///
     /// ```
-    /// use bpx::builder::{Checksum, CompressionMethod, SectionHeaderBuilder};
-    /// use bpx::header::{FLAG_CHECK_CRC32, FLAG_COMPRESS_ZLIB};
+    /// use bpx::core::builder::{Checksum, CompressionMethod, SectionHeaderBuilder};
+    /// use bpx::core::header::{FLAG_CHECK_CRC32, FLAG_COMPRESS_ZLIB};
     ///
     /// let header = SectionHeaderBuilder::new()
     ///     .with_size(128)
@@ -306,7 +306,7 @@ impl MainHeaderBuilder
     /// # Examples
     ///
     /// ```
-    /// use bpx::builder::MainHeaderBuilder;
+    /// use bpx::core::builder::MainHeaderBuilder;
     ///
     /// let header = MainHeaderBuilder::new()
     ///     .with_type('M' as u8)
@@ -332,7 +332,7 @@ impl MainHeaderBuilder
     /// # Examples
     ///
     /// ```
-    /// use bpx::builder::MainHeaderBuilder;
+    /// use bpx::core::builder::MainHeaderBuilder;
     ///
     /// let header = MainHeaderBuilder::new()
     ///     .with_type_ext([1; 16])
@@ -363,7 +363,7 @@ impl MainHeaderBuilder
     /// # Examples
     ///
     /// ```
-    /// use bpx::builder::MainHeaderBuilder;
+    /// use bpx::core::builder::MainHeaderBuilder;
     ///
     /// let header = MainHeaderBuilder::new()
     ///     .with_version(1)
@@ -381,7 +381,7 @@ impl MainHeaderBuilder
     /// # Examples
     ///
     /// ```
-    /// use bpx::builder::MainHeaderBuilder;
+    /// use bpx::core::builder::MainHeaderBuilder;
     ///
     /// let header = MainHeaderBuilder::new()
     ///     .with_type('M' as u8)
