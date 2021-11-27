@@ -31,7 +31,7 @@
 use std::{io, io::Write, rc::Rc};
 use crate::compression::{Checksum, Crc32Checksum, Inflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod};
 use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, SectionHeader};
-use crate::error::ReadError;
+use crate::core::error::ReadError;
 
 use crate::section::{new_section_data, SectionData};
 use crate::utils::ReadFill;

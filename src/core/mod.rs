@@ -32,6 +32,7 @@ mod decoder;
 mod encoder;
 pub mod builder;
 pub mod header;
+pub mod error;
 
 pub use container::Container;
 pub use container::Section;

@@ -33,11 +33,9 @@ use std::io;
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::garraylen::*;
-use crate::{
-    error::ReadError,
-    utils::ReadFill
-};
+use crate::utils::ReadFill;
 use crate::core::builder::{Checksum, CompressionMethod};
+use crate::core::error::ReadError;
 
 /// Represents a serializable and deserializable byte structure in a BPX.
 pub trait Struct<const S: usize>

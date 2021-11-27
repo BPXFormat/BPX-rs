@@ -29,32 +29,32 @@
 use std::io::{Read, Write};
 
 use lzma_sys::{
-    lzma_code,
-    lzma_easy_encoder,
-    lzma_end,
-    lzma_mt,
-    lzma_stream,
-    lzma_stream_decoder,
-    lzma_stream_encoder_mt,
     LZMA_BUF_ERROR,
     LZMA_CHECK_NONE,
+    lzma_code,
     LZMA_CONCATENATED,
     LZMA_DATA_ERROR,
+    lzma_easy_encoder,
+    lzma_end,
     LZMA_FINISH,
     LZMA_MEM_ERROR,
+    lzma_mt,
     LZMA_OK,
     LZMA_OPTIONS_ERROR,
     LZMA_PRESET_EXTREME,
     LZMA_RUN,
+    lzma_stream,
+    lzma_stream_decoder,
+    lzma_stream_encoder_mt,
     LZMA_STREAM_END,
     LZMA_UNSUPPORTED_CHECK
 };
 
 use crate::{
     compression::{Checksum, Deflater, Inflater},
-    error::{DeflateError, InflateError},
     utils::ReadFill
 };
+use crate::core::error::{DeflateError, InflateError};
 
 const THREADS_MAX: u32 = 8;
 const ENCODER_BUF_SIZE: usize = 8192;

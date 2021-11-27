@@ -42,7 +42,6 @@ use std::{rc::Rc, vec::Vec};
 //use crate::section::AutoSection;
 
 mod compression;
-pub mod error;
 mod garraylen;
 pub mod macros;
 //pub mod sd;

@@ -28,15 +28,14 @@
 
 use std::io;
 use std::collections::BTreeMap;
-use std::io::{Read, Seek, SeekFrom};
-use std::ops::{DerefMut, Index, IndexMut};
+use std::io::{Seek, SeekFrom};
+use std::ops::{Index, IndexMut};
 use super::decoder::load_section1;
 use super::encoder::write_section;
-use crate::error::{ReadError, WriteError};
+use crate::core::error::{ReadError, WriteError};
 use crate::Handle;
 use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, GetChecksum, MainHeader, SectionHeader, SIZE_MAIN_HEADER, SIZE_SECTION_HEADER, Struct};
 use crate::section::{new_section_data, SectionData};
-use crate::utils::OptionExtension;
 
 pub const DEFAULT_COMPRESSION_THRESHOLD: u32 = 65536;
 
@@ -275,13 +274,13 @@ impl<T: io::Read + io::Seek> Container<T>
     /// # Errors
     ///
     /// A [ReadError](crate::error::ReadError) is returned if the section could not be loaded.
-    pub fn load_section(&mut self, handle: Handle) -> Result<&mut dyn SectionData, ReadError>
+    pub fn load_section(&mut self, handle: Handle) -> Result<(), ReadError>
     {
         let entry = self.sections.get_mut(&handle.0).unwrap();
-        let object = entry.section.data.get_or_insert_with_err(|| load_section1(&mut self.backend, &entry.section.header))?;
+        entry.section.data = Some(load_section1(&mut self.backend, &entry.section.header)?);
         entry.section.modified = true;
         self.modified = true;
-        Ok(object.deref_mut())
+        Ok(())
     }
 
     pub fn load_sections<F: Fn(&Section) -> bool>(&mut self, f: F) -> Result<(), ReadError>

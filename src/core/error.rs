@@ -33,7 +33,7 @@ use std::{
     fmt::{Display, Formatter}
 };
 
-use crate::macros::impl_err_conversion;
+use crate::impl_err_conversion;
 
 /// Represents a generic decompression error.
 #[derive(Debug)]

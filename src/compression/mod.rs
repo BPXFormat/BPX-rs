@@ -38,7 +38,7 @@ pub use weakchksum::WeakChecksum;
 pub use xz::XzCompressionMethod;
 pub use zlib::ZlibCompressionMethod;
 
-use crate::error::{DeflateError, InflateError};
+use crate::core::error::{DeflateError, InflateError};
 
 pub trait Checksum
 {
