@@ -26,7 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-pub mod container;
+mod container;
 
 mod decoder;
 mod encoder;
@@ -34,5 +34,4 @@ pub mod builder;
 pub mod header;
 pub mod error;
 
-pub use container::Container;
-pub use container::Section;
+pub use container::*;
