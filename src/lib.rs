@@ -46,6 +46,7 @@ pub mod core;
 pub mod table;
 
 pub mod package;
+pub mod shader;
 
 /*#[cfg(feature = "package")]
 pub mod package;
