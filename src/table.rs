@@ -28,11 +28,9 @@
 
 //! This module provides a lookup-table style implementation.
 
-use std::{collections::HashMap, ops::Index};
-use std::slice::Iter;
-use crate::core::Container;
+use std::{collections::HashMap, ops::Index, slice::Iter};
 
-use crate::strings::StringSection;
+use crate::{core::Container, strings::StringSection};
 
 /// Represents an item to be stored in an ItemTable.
 pub trait Item

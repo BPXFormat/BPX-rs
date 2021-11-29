@@ -26,16 +26,24 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io;
-use std::collections::{Bound, BTreeMap};
-use crate::core::error::{ReadError, WriteError};
-use crate::Handle;
-use crate::core::header::{MainHeader, SectionHeader, Struct};
-use crate::core::section::{new_section, new_section_mut, SectionEntry, SectionEntry1};
-use crate::core::{Section, SectionMut};
-use crate::core::data::AutoSectionData;
-use crate::core::decoder::read_section_header_table;
-use crate::core::encoder::{internal_save, internal_save_last};
+use std::{
+    collections::{BTreeMap, Bound},
+    io
+};
+
+use crate::{
+    core::{
+        data::AutoSectionData,
+        decoder::read_section_header_table,
+        encoder::{internal_save, internal_save_last},
+        error::{ReadError, WriteError},
+        header::{MainHeader, SectionHeader, Struct},
+        section::{new_section, new_section_mut, SectionEntry, SectionEntry1},
+        Section,
+        SectionMut
+    },
+    Handle
+};
 
 pub const DEFAULT_COMPRESSION_THRESHOLD: u32 = 65536;
 
@@ -108,14 +116,16 @@ impl<T> Container<T>
 
     pub fn get(&self, handle: Handle) -> Section
     {
-        self.sections.get(&handle.0)
+        self.sections
+            .get(&handle.0)
             .map(|v| new_section(v, handle))
             .expect("attempt to use invalid handle")
     }
 
     pub fn get_mut(&mut self, handle: Handle) -> SectionMut<T>
     {
-        self.sections.get_mut(&handle.0)
+        self.sections
+            .get_mut(&handle.0)
             .map(|v| new_section_mut(&mut self.backend, v, handle))
             .expect("attempt to use invalid handle")
     }
@@ -163,17 +173,21 @@ impl<T> Container<T>
         self.sections.remove(&handle.0);
         self.main_header.section_num -= 1;
         self.modified = true;
-        self.sections.range_mut((Bound::Included(handle.0), Bound::Unbounded)).for_each(|(_, v)| {
-            v.index -= 1;
-        });
+        self.sections
+            .range_mut((Bound::Included(handle.0), Bound::Unbounded))
+            .for_each(|(_, v)| {
+                v.index -= 1;
+            });
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=Section>
+    pub fn iter(&self) -> impl Iterator<Item = Section>
     {
-        self.sections.iter().map(|(h, v)| new_section(v, Handle(*h)))
+        self.sections
+            .iter()
+            .map(|(h, v)| new_section(v, Handle(*h)))
     }
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item=SectionMut<T>>
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = SectionMut<T>>
     {
         IterMut {
             backend: &mut self.backend,
@@ -241,10 +255,7 @@ impl<T: io::Write + io::Seek> Container<T>
     /// not be written.
     pub fn save(&mut self) -> Result<(), WriteError>
     {
-        let mut filter = self
-            .sections
-            .iter()
-            .filter(|(_, entry)| entry.modified);
+        let mut filter = self.sections.iter().filter(|(_, entry)| entry.modified);
         let count = filter.by_ref().count();
         if self.modified || count > 1 {
             self.modified = false;
@@ -253,7 +264,12 @@ impl<T: io::Write + io::Seek> Container<T>
             let (handle, _) = filter.last().unwrap();
             if *handle == self.next_handle - 1 {
                 //Save only the last section (no need to re-write every other section
-                internal_save_last(&mut self.backend, &mut self.sections, &mut self.main_header, self.next_handle - 1)
+                internal_save_last(
+                    &mut self.backend,
+                    &mut self.sections,
+                    &mut self.main_header,
+                    self.next_handle - 1
+                )
             } else {
                 //Unfortunately the modified section is not the last one so we can't safely
                 //expand/reduce the file size without corrupting other sections

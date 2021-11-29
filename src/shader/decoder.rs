@@ -27,13 +27,19 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::{Read, Seek};
-use crate::core::Container;
-use crate::core::header::Struct;
-use crate::Handle;
-use crate::shader::{Stage, Target, Type};
-use crate::shader::error::{EosContext, InvalidCodeContext, ReadError};
-use crate::shader::symbol::{SIZE_SYMBOL_STRUCTURE, Symbol};
-use crate::table::ItemTable;
+
+use crate::{
+    core::{header::Struct, Container},
+    shader::{
+        error::{EosContext, InvalidCodeContext, ReadError},
+        symbol::{Symbol, SIZE_SYMBOL_STRUCTURE},
+        Stage,
+        Target,
+        Type
+    },
+    table::ItemTable,
+    Handle
+};
 
 pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
 {
@@ -84,7 +90,12 @@ pub fn get_stage_from_code(code: u8) -> Result<Stage, ReadError>
     }
 }
 
-pub fn read_symbol_table<T: Read + Seek>(container: &mut Container<T>, symbols: &mut Vec<Symbol>, num_symbols: u16, symbol_table: Handle) -> Result<ItemTable<Symbol>, ReadError>
+pub fn read_symbol_table<T: Read + Seek>(
+    container: &mut Container<T>,
+    symbols: &mut Vec<Symbol>,
+    num_symbols: u16,
+    symbol_table: Handle
+) -> Result<ItemTable<Symbol>, ReadError>
 {
     let mut section = container.get_mut(symbol_table);
     let count = section.size as u32 / SIZE_SYMBOL_STRUCTURE as u32;
@@ -98,4 +109,3 @@ pub fn read_symbol_table<T: Read + Seek>(container: &mut Container<T>, symbols: 
     }
     Ok(ItemTable::new(symbols.clone()))
 }
-

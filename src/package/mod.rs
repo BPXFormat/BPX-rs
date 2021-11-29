@@ -28,16 +28,17 @@
 
 //! An implementation of the BPX type P (Package) specification.
 
-pub mod object;
 pub mod error;
+pub mod object;
 
 mod builder;
 mod core;
-pub mod utils;
 mod decoder;
 mod encoder;
+pub mod utils;
 
 pub use builder::*;
+
 pub use self::core::*;
 
 /// The standard type for a data section in a BPX Package (type P).

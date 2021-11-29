@@ -27,6 +27,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use byteorder::{ByteOrder, LittleEndian};
+
 use crate::shader::{Settings, Target, Type};
 
 pub fn get_type_ext(settings: &Settings) -> [u8; 16]

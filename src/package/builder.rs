@@ -26,8 +26,10 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use crate::package::{Architecture, Platform};
-use crate::sd::Object;
+use crate::{
+    package::{Architecture, Platform},
+    sd::Object
+};
 
 #[derive(Clone)]
 pub struct Settings

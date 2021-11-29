@@ -28,17 +28,15 @@
 
 mod container;
 
+pub mod builder;
+mod compression;
+mod data;
 mod decoder;
 mod encoder;
-pub mod builder;
-pub mod header;
 pub mod error;
+pub mod header;
 mod section;
-mod data;
-mod compression;
 
 pub use container::*;
-pub use section::SectionMut;
-pub use section::Section;
-pub use data::SectionData;
-pub use data::AutoSectionData;
+pub use data::{AutoSectionData, SectionData};
+pub use section::{Section, SectionMut};

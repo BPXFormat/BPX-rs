@@ -26,20 +26,34 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{Read, Seek, SeekFrom, Write};
-use std::slice::Iter;
-use crate::core::builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder};
-use crate::core::{Container, SectionData};
-use crate::core::header::{SECTION_TYPE_SD, SECTION_TYPE_STRING, Struct};
-use crate::Handle;
-use crate::package::object::ObjectHeader;
-use crate::package::{Architecture, Platform, SECTION_TYPE_OBJECT_TABLE, Settings, SUPPORTED_VERSION};
-use crate::package::decoder::{get_arch_platform_from_code, read_object_table, unpack_object};
-use crate::package::encoder::{create_data_section_header, get_type_ext};
-use crate::package::error::{ReadError, Section, WriteError};
-use crate::strings::{load_string_section, StringSection};
-use crate::table::ItemTable;
-use crate::utils::{OptionExtension, ReadFill};
+use std::{
+    io::{Read, Seek, SeekFrom, Write},
+    slice::Iter
+};
+
+use crate::{
+    core::{
+        builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
+        header::{Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
+        Container,
+        SectionData
+    },
+    package::{
+        decoder::{get_arch_platform_from_code, read_object_table, unpack_object},
+        encoder::{create_data_section_header, get_type_ext},
+        error::{ReadError, Section, WriteError},
+        object::ObjectHeader,
+        Architecture,
+        Platform,
+        Settings,
+        SECTION_TYPE_OBJECT_TABLE,
+        SUPPORTED_VERSION
+    },
+    strings::{load_string_section, StringSection},
+    table::ItemTable,
+    utils::{OptionExtension, ReadFill},
+    Handle
+};
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
@@ -175,24 +189,33 @@ impl<T: Write + Seek> Package<T>
     pub fn create<S: Into<Settings>>(backend: T, settings: S) -> Result<Package<T>, WriteError>
     {
         let settings = settings.into();
-        let mut container = Container::create(backend, MainHeaderBuilder::new()
-            .with_type(b'P')
-            .with_type_ext(get_type_ext(&settings))
-            .with_version(SUPPORTED_VERSION));
-        let object_table = container.create_section(SectionHeaderBuilder::new()
-            .with_checksum(Checksum::Weak)
-            .with_compression(CompressionMethod::Zlib)
-            .with_type(SECTION_TYPE_OBJECT_TABLE));
-        let string_section = container.create_section(SectionHeaderBuilder::new()
-            .with_checksum(Checksum::Weak)
-            .with_compression(CompressionMethod::Zlib)
-            .with_type(SECTION_TYPE_STRING));
-        let strings = StringSection::new(string_section);
-        if let Some(metadata) = &settings.metadata {
-            let metadata_section = container.create_section(SectionHeaderBuilder::new()
+        let mut container = Container::create(
+            backend,
+            MainHeaderBuilder::new()
+                .with_type(b'P')
+                .with_type_ext(get_type_ext(&settings))
+                .with_version(SUPPORTED_VERSION)
+        );
+        let object_table = container.create_section(
+            SectionHeaderBuilder::new()
                 .with_checksum(Checksum::Weak)
                 .with_compression(CompressionMethod::Zlib)
-                .with_type(SECTION_TYPE_SD));
+                .with_type(SECTION_TYPE_OBJECT_TABLE)
+        );
+        let string_section = container.create_section(
+            SectionHeaderBuilder::new()
+                .with_checksum(Checksum::Weak)
+                .with_compression(CompressionMethod::Zlib)
+                .with_type(SECTION_TYPE_STRING)
+        );
+        let strings = StringSection::new(string_section);
+        if let Some(metadata) = &settings.metadata {
+            let metadata_section = container.create_section(
+                SectionHeaderBuilder::new()
+                    .with_checksum(Checksum::Weak)
+                    .with_compression(CompressionMethod::Zlib)
+                    .with_type(SECTION_TYPE_SD)
+            );
             let mut section = container.get_mut(metadata_section);
             metadata.write(section.open().ok_or(WriteError::SectionNotLoaded)?)?;
         }
@@ -235,7 +258,9 @@ impl<T: Write + Seek> Package<T>
     pub fn pack<R: Read>(&mut self, name: &str, mut source: R) -> Result<(), WriteError>
     {
         let mut object_size = 0;
-        let mut data_section = *self.last_data_section.get_or_insert_with(|| self.container.create_section(create_data_section_header()));
+        let mut data_section = *self
+            .last_data_section
+            .get_or_insert_with(|| self.container.create_section(create_data_section_header()));
         let start = self.container.get(data_section).index();
         let offset = {
             let section = self.container.get(data_section);
@@ -314,10 +339,11 @@ impl<T: Read + Seek> Package<T>
             container.get_main_header().type_ext[0],
             container.get_main_header().type_ext[1]
         )?;
-        let strings = StringSection::new(match container.find_section_by_type(SECTION_TYPE_STRING) {
-            Some(v) => v,
-            None => return Err(ReadError::MissingSection(Section::Strings))
-        });
+        let strings =
+            StringSection::new(match container.find_section_by_type(SECTION_TYPE_STRING) {
+                Some(v) => v,
+                None => return Err(ReadError::MissingSection(Section::Strings))
+            });
         let object_table = match container.find_section_by_type(SECTION_TYPE_OBJECT_TABLE) {
             Some(v) => v,
             None => return Err(ReadError::MissingSection(Section::ObjectTable))
@@ -343,7 +369,9 @@ impl<T: Read + Seek> Package<T>
 
     pub fn objects(&mut self) -> Result<ObjectIter<T>, ReadError>
     {
-        let table = self.table.get_or_insert_with_err(|| read_object_table(&mut self.container, &mut self.objects, self.object_table))?;
+        let table = self.table.get_or_insert_with_err(|| {
+            read_object_table(&mut self.container, &mut self.objects, self.object_table)
+        })?;
         let iter = table.iter();
         Ok(ObjectIter {
             container: &mut self.container,
@@ -386,7 +414,7 @@ impl<T: Read + Seek> Package<T>
     pub fn read_metadata(&mut self) -> Result<Option<crate::sd::Object>, ReadError>
     {
         if let Some(obj) = &self.settings.metadata {
-            return Ok(Some(obj.clone()))
+            return Ok(Some(obj.clone()));
         }
         if let Some(handle) = self.container.find_section_by_type(SECTION_TYPE_SD) {
             let mut section = self.container.get_mut(handle);
@@ -407,7 +435,9 @@ impl<T: Read + Seek> Package<T>
     /// returns: Result<Option<u64>, ReadError>
     pub fn unpack<W: Write>(&mut self, name: &str, out: W) -> Result<Option<u64>, ReadError>
     {
-        let table = self.table.get_or_insert_with_err(|| read_object_table(&mut self.container, &mut self.objects, self.object_table))?;
+        let table = self.table.get_or_insert_with_err(|| {
+            read_object_table(&mut self.container, &mut self.objects, self.object_table)
+        })?;
         load_string_section(&mut self.container, &self.strings)?;
         table.build_lookup_table(&mut self.container, &mut self.strings)?;
         if let Some(header) = table.lookup(name) {

@@ -27,10 +27,13 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::{Read, Seek, SeekFrom, Write};
+
 use tempfile::tempfile;
-use crate::core::data::file::FileBasedSection;
-use crate::core::data::memory::InMemorySection;
-use crate::core::SectionData;
+
+use crate::core::{
+    data::{file::FileBasedSection, memory::InMemorySection},
+    SectionData
+};
 
 const MEMORY_THRESHOLD: u32 = 100000000;
 const INIT_BUF_SIZE: usize = 512;

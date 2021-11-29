@@ -33,17 +33,17 @@ mod error;
 use std::{
     collections::{hash_map::Entry, HashMap},
     fs::DirEntry,
-    io::SeekFrom,
+    io::{Read, Seek, SeekFrom},
     path::Path,
     string::String
 };
-use std::io::{Read, Seek};
 
 pub use error::{PathError, ReadError, WriteError};
-use crate::core::{AutoSectionData, Container};
-use crate::Handle;
 
-use crate::core::SectionData;
+use crate::{
+    core::{AutoSectionData, Container, SectionData},
+    Handle
+};
 
 /// Helper class to manage a BPX string section.
 ///
@@ -98,13 +98,17 @@ impl StringSection
     ///
     /// Returns a [ReadError](crate::strings::ReadError) if the string could not be read or the
     /// section is corrupted/truncated.
-    pub fn get<T>(&mut self, container: &mut Container<T>, address: u32) -> Result<&str, ReadError>
+    pub fn get<T>(&mut self, container: &mut Container<T>, address: u32)
+        -> Result<&str, ReadError>
     {
         let res = match self.cache.entry(address) {
             Entry::Occupied(o) => o.into_mut(),
             Entry::Vacant(o) => {
                 let mut section = container.get_mut(self.section);
-                let s = low_level_read_string(address, section.open().ok_or(ReadError::SectionNotLoaded)?)?;
+                let s = low_level_read_string(
+                    address,
+                    section.open().ok_or(ReadError::SectionNotLoaded)?
+                )?;
                 o.insert(s)
             }
         };
@@ -126,7 +130,8 @@ impl StringSection
     pub fn put<T>(&mut self, container: &mut Container<T>, s: &str) -> Result<u32, WriteError>
     {
         let mut section = container.get_mut(self.section);
-        let address = low_level_write_string(s, section.open().ok_or(WriteError::SectionNotLoaded)?)?;
+        let address =
+            low_level_write_string(s, section.open().ok_or(WriteError::SectionNotLoaded)?)?;
         self.cache.insert(address, String::from(s));
         Ok(address)
     }
@@ -146,7 +151,10 @@ impl StringSection
 /// * `strings`: a reference to the string section.
 ///
 /// returns: Result<(), ReadError>
-pub fn load_string_section<T: Read + Seek>(container: &mut Container<T>, strings: &StringSection) -> Result<(), crate::core::error::ReadError>
+pub fn load_string_section<T: Read + Seek>(
+    container: &mut Container<T>,
+    strings: &StringSection
+) -> Result<(), crate::core::error::ReadError>
 {
     let mut section = container.get_mut(strings.handle());
     section.load()?;

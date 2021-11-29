@@ -28,15 +28,16 @@
 
 //! An implementation of the BPX type S (Shader) specification.
 
-pub mod error;
-pub mod symbol;
-mod core;
 mod builder;
+mod core;
 mod decoder;
 mod encoder;
+pub mod error;
+pub mod symbol;
+
+pub use builder::*;
 
 pub use self::core::*;
-pub use builder::*;
 
 /// The supported BPX version for this shader variant decoder/encoder.
 pub const SUPPORTED_VERSION: u32 = 0x2;
@@ -150,4 +151,3 @@ pub enum Stage
     /// Pixel/fragment shader stage.
     Pixel
 }
-

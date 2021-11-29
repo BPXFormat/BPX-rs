@@ -26,23 +26,42 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{Read, Seek, SeekFrom, Write};
-use std::ops::Deref;
-use std::slice::Iter;
+use std::{
+    io::{Read, Seek, SeekFrom, Write},
+    ops::Deref,
+    slice::Iter
+};
+
 use byteorder::{ByteOrder, LittleEndian};
-use crate::core::builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder};
-use crate::core::{Container, SectionData};
-use crate::core::header::{SECTION_TYPE_STRING, Struct};
-use crate::Handle;
-use crate::sd::Object;
-use crate::shader::{SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SHADER, SECTION_TYPE_SYMBOL_TABLE, Settings, Shader, Stage, SUPPORTED_VERSION, Target, Type};
-use crate::shader::decoder::{get_stage_from_code, get_target_type_from_code, read_symbol_table};
-use crate::shader::encoder::get_type_ext;
-use crate::shader::error::{EosContext, ReadError, Section, WriteError};
-use crate::shader::symbol::{FLAG_EXTENDED_DATA, Symbol, SymbolType};
-use crate::strings::{load_string_section, StringSection};
-use crate::table::ItemTable;
-use crate::utils::OptionExtension;
+
+use crate::{
+    core::{
+        builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
+        header::{Struct, SECTION_TYPE_STRING},
+        Container,
+        SectionData
+    },
+    sd::Object,
+    shader::{
+        decoder::{get_stage_from_code, get_target_type_from_code, read_symbol_table},
+        encoder::get_type_ext,
+        error::{EosContext, ReadError, Section, WriteError},
+        symbol::{Symbol, SymbolType, FLAG_EXTENDED_DATA},
+        Settings,
+        Shader,
+        Stage,
+        Target,
+        Type,
+        SECTION_TYPE_EXTENDED_DATA,
+        SECTION_TYPE_SHADER,
+        SECTION_TYPE_SYMBOL_TABLE,
+        SUPPORTED_VERSION
+    },
+    strings::{load_string_section, StringSection},
+    table::ItemTable,
+    utils::OptionExtension,
+    Handle
+};
 
 pub struct SymbolRef<'a, T>
 {
@@ -78,7 +97,10 @@ impl<'a, T: Read + Seek> SymbolRef<'a, T>
             panic!("The symbol extended data is undefined.");
         }
         let section = *self.extended_data.get_or_insert_with_err(|| {
-            match self.container.find_section_by_type(SECTION_TYPE_EXTENDED_DATA) {
+            match self
+                .container
+                .find_section_by_type(SECTION_TYPE_EXTENDED_DATA)
+            {
                 Some(v) => Ok(v),
                 None => Err(ReadError::MissingSection(Section::ExtendedData))
             }
@@ -202,18 +224,25 @@ impl<T: Write + Seek> ShaderPack<T>
     pub fn create<S: Into<Settings>>(backend: T, settings: S) -> ShaderPack<T>
     {
         let settings = settings.into();
-        let mut container = Container::create(backend, MainHeaderBuilder::new()
-            .with_type(b'P')
-            .with_type_ext(get_type_ext(&settings))
-            .with_version(SUPPORTED_VERSION));
-        let string_section = container.create_section(SectionHeaderBuilder::new()
-            .with_checksum(Checksum::Weak)
-            .with_compression(CompressionMethod::Zlib)
-            .with_type(SECTION_TYPE_STRING));
-        let symbol_table = container.create_section(SectionHeaderBuilder::new()
-            .with_checksum(Checksum::Weak)
-            .with_compression(CompressionMethod::Zlib)
-            .with_type(SECTION_TYPE_SYMBOL_TABLE));
+        let mut container = Container::create(
+            backend,
+            MainHeaderBuilder::new()
+                .with_type(b'P')
+                .with_type_ext(get_type_ext(&settings))
+                .with_version(SUPPORTED_VERSION)
+        );
+        let string_section = container.create_section(
+            SectionHeaderBuilder::new()
+                .with_checksum(Checksum::Weak)
+                .with_compression(CompressionMethod::Zlib)
+                .with_type(SECTION_TYPE_STRING)
+        );
+        let symbol_table = container.create_section(
+            SectionHeaderBuilder::new()
+                .with_checksum(Checksum::Weak)
+                .with_compression(CompressionMethod::Zlib)
+                .with_type(SECTION_TYPE_SYMBOL_TABLE)
+        );
         let strings = StringSection::new(string_section);
         ShaderPack {
             container,
@@ -230,11 +259,14 @@ impl<T: Write + Seek> ShaderPack<T>
     fn write_extended_data(&mut self, extended_data: Option<Object>) -> Result<u32, WriteError>
     {
         if let Some(obj) = extended_data {
-            let handle = *self.extended_data.get_or_insert_with(
-                || self.container.create_section(SectionHeaderBuilder::new()
-                                                     .with_type(SECTION_TYPE_EXTENDED_DATA)
-                                                     .with_checksum(Checksum::Crc32)
-                                                     .with_compression(CompressionMethod::Zlib)));
+            let handle = *self.extended_data.get_or_insert_with(|| {
+                self.container.create_section(
+                    SectionHeaderBuilder::new()
+                        .with_type(SECTION_TYPE_EXTENDED_DATA)
+                        .with_checksum(Checksum::Crc32)
+                        .with_compression(CompressionMethod::Zlib)
+                )
+            });
             let mut section = self.container.get_mut(handle);
             let data = section.open().ok_or(WriteError::SectionNotLoaded)?;
             let offset = data.size();
@@ -319,7 +351,10 @@ impl<T: Write + Seek> ShaderPack<T>
             Stage::Geometry => buf.insert(0, 0x3),
             Stage::Pixel => buf.insert(0, 0x4)
         };
-        section.open().ok_or(WriteError::SectionNotLoaded)?.write_all(&buf)?;
+        section
+            .open()
+            .ok_or(WriteError::SectionNotLoaded)?
+            .write_all(&buf)?;
         Ok(())
     }
 
@@ -382,7 +417,14 @@ impl<T: Read + Seek> ShaderPack<T>
 
     pub fn symbols(&mut self) -> Result<SymbolIter<T>, ReadError>
     {
-        let table = self.table.get_or_insert_with_err(|| read_symbol_table(&mut self.container, &mut self.symbols, self.num_symbols, self.symbol_table))?;
+        let table = self.table.get_or_insert_with_err(|| {
+            read_symbol_table(
+                &mut self.container,
+                &mut self.symbols,
+                self.num_symbols,
+                self.symbol_table
+            )
+        })?;
         let iter = table.iter();
         Ok(SymbolIter {
             extended_data: &mut self.extended_data,
@@ -395,13 +437,16 @@ impl<T: Read + Seek> ShaderPack<T>
     /// Lists all shaders contained in this shader package.
     pub fn list_shaders(&self) -> Vec<Handle>
     {
-        self.container.iter().filter_map(|v| {
-            if v.btype == SECTION_TYPE_SHADER {
-                Some(v.handle())
-            } else {
-                None
-            }
-        }).collect()
+        self.container
+            .iter()
+            .filter_map(|v| {
+                if v.btype == SECTION_TYPE_SHADER {
+                    Some(v.handle())
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     /// Loads a shader into memory.

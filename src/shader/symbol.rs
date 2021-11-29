@@ -31,10 +31,10 @@
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
+    core::header::Struct,
     shader::error::{EosContext, InvalidCodeContext, ReadError},
     table::Item
 };
-use crate::core::header::Struct;
 
 /// Indicates this symbol is used on the vertex stage.
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;

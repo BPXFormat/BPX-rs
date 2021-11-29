@@ -28,9 +28,9 @@
 
 //! Utilities to manipulate the content of sections.
 
+mod auto;
 mod file;
 mod memory;
-mod auto;
 
 use std::{
     io::{Read, Result, Seek, Write},

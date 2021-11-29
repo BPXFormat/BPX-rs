@@ -26,19 +26,32 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{Read, Seek};
-use std::ops::Deref;
-use crate::core::data::AutoSectionData;
-use crate::core::decoder::load_section1;
-use crate::core::error::ReadError;
-use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, SectionHeader};
-use crate::Handle;
-use crate::utils::OptionExtension;
+use std::{
+    io::{Read, Seek},
+    ops::Deref
+};
+
+use crate::{
+    core::{
+        data::AutoSectionData,
+        decoder::load_section1,
+        error::ReadError,
+        header::{
+            SectionHeader,
+            FLAG_CHECK_CRC32,
+            FLAG_CHECK_WEAK,
+            FLAG_COMPRESS_XZ,
+            FLAG_COMPRESS_ZLIB
+        }
+    },
+    utils::OptionExtension,
+    Handle
+};
 
 pub struct SectionEntry1
 {
     pub threshold: u32,
-    pub flags: u8,
+    pub flags: u8
 }
 
 impl SectionEntry1
@@ -80,7 +93,10 @@ impl<'a, T: Read + Seek> SectionMut<'a, T>
 {
     pub fn load(&mut self) -> Result<&mut AutoSectionData, ReadError>
     {
-        let data = self.entry.data.get_or_insert_with_err(|| load_section1(self.backend, &self.entry.header))?;
+        let data = self
+            .entry
+            .data
+            .get_or_insert_with_err(|| load_section1(self.backend, &self.entry.header))?;
         self.entry.modified = true;
         Ok(data)
     }
@@ -115,7 +131,11 @@ impl<'a, T> Deref for SectionMut<'a, T>
     }
 }
 
-pub fn new_section_mut<'a, T>(backend: &'a mut T, entry: &'a mut SectionEntry, handle: Handle) -> SectionMut<'a, T>
+pub fn new_section_mut<'a, T>(
+    backend: &'a mut T,
+    entry: &'a mut SectionEntry,
+    handle: Handle
+) -> SectionMut<'a, T>
 {
     SectionMut {
         backend,
@@ -160,8 +180,5 @@ impl<'a> Deref for Section<'a>
 
 pub fn new_section(entry: &SectionEntry, handle: Handle) -> Section
 {
-    Section {
-        entry,
-        handle
-    }
+    Section { entry, handle }
 }

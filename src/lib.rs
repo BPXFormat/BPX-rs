@@ -37,13 +37,13 @@
 
 //use crate::section::AutoSection;
 
+pub mod core;
 mod garraylen;
 pub mod macros;
 pub mod sd;
 pub mod strings;
-pub mod utils;
-pub mod core;
 pub mod table;
+pub mod utils;
 
 pub mod package;
 pub mod shader;

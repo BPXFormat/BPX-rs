@@ -27,13 +27,18 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::{Read, Seek, SeekFrom, Write};
-use crate::core::Container;
-use crate::core::header::Struct;
-use crate::Handle;
-use crate::package::{Architecture, Platform};
-use crate::package::error::{InvalidCodeContext, ReadError};
-use crate::package::object::ObjectHeader;
-use crate::table::ItemTable;
+
+use crate::{
+    core::{header::Struct, Container},
+    package::{
+        error::{InvalidCodeContext, ReadError},
+        object::ObjectHeader,
+        Architecture,
+        Platform
+    },
+    table::ItemTable,
+    Handle
+};
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
@@ -61,7 +66,11 @@ fn load_from_section<T: Read + Seek, W: Write>(
     Ok(len)
 }
 
-pub fn unpack_object<T: Read + Seek, W: Write>(container: &mut Container<T>, obj: &ObjectHeader, mut out: W) -> Result<u64, ReadError>
+pub fn unpack_object<T: Read + Seek, W: Write>(
+    container: &mut Container<T>,
+    obj: &ObjectHeader,
+    mut out: W
+) -> Result<u64, ReadError>
 {
     let mut section_id = obj.start;
     let mut offset = obj.offset;
@@ -88,7 +97,11 @@ pub fn unpack_object<T: Read + Seek, W: Write>(container: &mut Container<T>, obj
     Ok(obj.size)
 }
 
-pub fn read_object_table<T: Read + Seek>(container: &mut Container<T>, objects: &mut Vec<ObjectHeader>, object_table: Handle) -> Result<ItemTable<ObjectHeader>, ReadError>
+pub fn read_object_table<T: Read + Seek>(
+    container: &mut Container<T>,
+    objects: &mut Vec<ObjectHeader>,
+    object_table: Handle
+) -> Result<ItemTable<ObjectHeader>, ReadError>
 {
     let mut section = container.get_mut(object_table);
     let count = section.size / 20;
@@ -102,7 +115,10 @@ pub fn read_object_table<T: Read + Seek>(container: &mut Container<T>, objects: 
     Ok(ItemTable::new(v))
 }
 
-pub fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture, Platform), ReadError>
+pub fn get_arch_platform_from_code(
+    acode: u8,
+    pcode: u8
+) -> Result<(Architecture, Platform), ReadError>
 {
     let arch;
     let platform;

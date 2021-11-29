@@ -1,6 +1,9 @@
 use std::{fs::File, path::Path};
-use bpx::core::Container;
-use bpx::core::header::{BPX_CURRENT_VERSION, MainHeader, Struct};
+
+use bpx::core::{
+    header::{MainHeader, Struct, BPX_CURRENT_VERSION},
+    Container
+};
 
 /*use bpx::{decoder::Decoder, encoder::Encoder, header::BPX_CURRENT_VERSION, Interface};*/
 

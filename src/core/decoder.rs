@@ -28,21 +28,46 @@
 
 //! The BPX decoder.
 
-use std::{io, io::Write};
-use std::collections::BTreeMap;
-use std::io::{Read, Seek};
-use crate::core::compression::{Checksum, Crc32Checksum, Inflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod};
-use crate::core::{DEFAULT_COMPRESSION_THRESHOLD};
-use crate::core::data::{AutoSectionData};
-use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, MainHeader, SectionHeader, Struct};
-use crate::core::error::ReadError;
-use crate::core::section::{SectionEntry, SectionEntry1};
+use std::{
+    collections::BTreeMap,
+    io,
+    io::{Read, Seek, Write}
+};
 
-use crate::utils::ReadFill;
+use crate::{
+    core::{
+        compression::{
+            Checksum,
+            Crc32Checksum,
+            Inflater,
+            WeakChecksum,
+            XzCompressionMethod,
+            ZlibCompressionMethod
+        },
+        data::AutoSectionData,
+        error::ReadError,
+        header::{
+            MainHeader,
+            SectionHeader,
+            Struct,
+            FLAG_CHECK_CRC32,
+            FLAG_CHECK_WEAK,
+            FLAG_COMPRESS_XZ,
+            FLAG_COMPRESS_ZLIB
+        },
+        section::{SectionEntry, SectionEntry1},
+        DEFAULT_COMPRESSION_THRESHOLD
+    },
+    utils::ReadFill
+};
 
 const READ_BLOCK_SIZE: usize = 8192;
 
-pub fn read_section_header_table<T: Read>(mut backend: &mut T, main_header: &MainHeader, checksum: u32) -> Result<(u32, BTreeMap<u32, SectionEntry>), ReadError>
+pub fn read_section_header_table<T: Read>(
+    mut backend: &mut T,
+    main_header: &MainHeader,
+    checksum: u32
+) -> Result<(u32, BTreeMap<u32, SectionEntry>), ReadError>
 {
     let mut sections = BTreeMap::new();
     let mut final_checksum = checksum;
@@ -51,16 +76,19 @@ pub fn read_section_header_table<T: Read>(mut backend: &mut T, main_header: &Mai
     for i in 0..main_header.section_num {
         let (checksum, header) = SectionHeader::read(&mut backend)?;
         final_checksum += checksum;
-        sections.insert(hdl, SectionEntry {
-            header,
-            data: None,
-            modified: false,
-            index: i,
-            entry1: SectionEntry1 {
-                flags: header.flags,
-                threshold: DEFAULT_COMPRESSION_THRESHOLD
+        sections.insert(
+            hdl,
+            SectionEntry {
+                header,
+                data: None,
+                modified: false,
+                index: i,
+                entry1: SectionEntry1 {
+                    flags: header.flags,
+                    threshold: DEFAULT_COMPRESSION_THRESHOLD
+                }
             }
-        });
+        );
         hdl += 1;
     }
     if final_checksum != main_header.chksum {

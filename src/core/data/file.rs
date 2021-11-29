@@ -30,6 +30,7 @@ use std::{
     fs::File,
     io::{Read, Result, Seek, SeekFrom, Write}
 };
+
 use crate::core::SectionData;
 
 const READ_BLOCK_SIZE: usize = 8192;

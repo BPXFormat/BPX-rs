@@ -31,19 +31,44 @@
 use std::{
     collections::BTreeMap,
     io,
-    io::{SeekFrom, Write}
+    io::{Seek, SeekFrom, Write}
 };
-use std::io::Seek;
-use crate::core::compression::{Checksum, Crc32Checksum, Deflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod};
-use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, GetChecksum, MainHeader, SIZE_MAIN_HEADER, SIZE_SECTION_HEADER, Struct};
-use crate::core::error::WriteError;
-use crate::core::section::SectionEntry;
-use crate::core::SectionData;
-use crate::utils::ReadFill;
+
+use crate::{
+    core::{
+        compression::{
+            Checksum,
+            Crc32Checksum,
+            Deflater,
+            WeakChecksum,
+            XzCompressionMethod,
+            ZlibCompressionMethod
+        },
+        error::WriteError,
+        header::{
+            GetChecksum,
+            MainHeader,
+            Struct,
+            FLAG_CHECK_CRC32,
+            FLAG_CHECK_WEAK,
+            FLAG_COMPRESS_XZ,
+            FLAG_COMPRESS_ZLIB,
+            SIZE_MAIN_HEADER,
+            SIZE_SECTION_HEADER
+        },
+        section::SectionEntry,
+        SectionData
+    },
+    utils::ReadFill
+};
 
 const READ_BLOCK_SIZE: usize = 8192;
 
-fn write_sections<T: Write + Seek>(mut backend: T, sections: &mut BTreeMap<u32, SectionEntry>, file_start_offset: usize) -> Result<(u32, usize), WriteError>
+fn write_sections<T: Write + Seek>(
+    mut backend: T,
+    sections: &mut BTreeMap<u32, SectionEntry>,
+    file_start_offset: usize
+) -> Result<(u32, usize), WriteError>
 {
     let mut ptr: u64 = file_start_offset as _;
     let mut all_sections_size: usize = 0;
@@ -86,14 +111,19 @@ fn write_sections<T: Write + Seek>(mut backend: T, sections: &mut BTreeMap<u32, 
     Ok((chksum_sht, all_sections_size))
 }
 
-pub fn internal_save<T: Write + Seek>(mut backend: T, sections: &mut BTreeMap<u32, SectionEntry>, main_header: &mut MainHeader) -> Result<(), WriteError>
+pub fn internal_save<T: Write + Seek>(
+    mut backend: T,
+    sections: &mut BTreeMap<u32, SectionEntry>,
+    main_header: &mut MainHeader
+) -> Result<(), WriteError>
 {
     let file_start_offset =
         SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * main_header.section_num as usize);
     //Seek to the start of the actual file content
     backend.seek(SeekFrom::Start(file_start_offset as _))?;
     //Write all section data and section headers
-    let (chksum_sht, all_sections_size) = write_sections(&mut backend, sections, file_start_offset)?;
+    let (chksum_sht, all_sections_size) =
+        write_sections(&mut backend, sections, file_start_offset)?;
     main_header.file_size = all_sections_size as u64 + file_start_offset as u64;
     main_header.chksum = 0;
     main_header.chksum = chksum_sht + main_header.get_checksum();
@@ -103,7 +133,11 @@ pub fn internal_save<T: Write + Seek>(mut backend: T, sections: &mut BTreeMap<u3
     Ok(())
 }
 
-fn write_last_section<T: Write + Seek>(mut backend: T, sections: &mut BTreeMap<u32, SectionEntry>, last_handle: u32) -> Result<(bool, i64), WriteError>
+fn write_last_section<T: Write + Seek>(
+    mut backend: T,
+    sections: &mut BTreeMap<u32, SectionEntry>,
+    last_handle: u32
+) -> Result<(bool, i64), WriteError>
 {
     let entry = sections.get_mut(&last_handle).unwrap();
     backend.seek(SeekFrom::Start(entry.header.pointer))?;
@@ -121,12 +155,18 @@ fn write_last_section<T: Write + Seek>(mut backend: T, sections: &mut BTreeMap<u
     Ok((old == entry.header, diff))
 }
 
-pub fn internal_save_last<T: Write + Seek>(mut backend: T, sections: &mut BTreeMap<u32, SectionEntry>, main_header: &mut MainHeader, last_handle: u32) -> Result<(), WriteError>
+pub fn internal_save_last<T: Write + Seek>(
+    mut backend: T,
+    sections: &mut BTreeMap<u32, SectionEntry>,
+    main_header: &mut MainHeader,
+    last_handle: u32
+) -> Result<(), WriteError>
 {
     // This function saves only the last section.
     let (update_sht, diff) = write_last_section(&mut backend, sections, last_handle)?;
     if update_sht {
-        let offset_section_header = SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * (main_header.section_num - 1) as usize);
+        let offset_section_header =
+            SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * (main_header.section_num - 1) as usize);
         backend.seek(SeekFrom::Start(offset_section_header as _))?;
         let entry = &sections[&last_handle];
         entry.header.write(&mut backend)?;

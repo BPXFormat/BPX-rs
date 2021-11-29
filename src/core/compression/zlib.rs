@@ -35,6 +35,7 @@ use libz_sys::{
     inflate,
     inflateEnd,
     inflateInit_,
+    z_stream,
     Z_DATA_ERROR,
     Z_DEFAULT_COMPRESSION,
     Z_FINISH,
@@ -42,14 +43,17 @@ use libz_sys::{
     Z_NEED_DICT,
     Z_NO_FLUSH,
     Z_OK,
-    z_stream,
     Z_STREAM_ERROR,
     Z_VERSION_ERROR
 };
 
-use crate::utils::ReadFill;
-use crate::core::compression::{Checksum, Deflater, Inflater};
-use crate::core::error::{DeflateError, InflateError};
+use crate::{
+    core::{
+        compression::{Checksum, Deflater, Inflater},
+        error::{DeflateError, InflateError}
+    },
+    utils::ReadFill
+};
 
 const ENCODER_BUF_SIZE: usize = 8192;
 const DECODER_BUF_SIZE: usize = ENCODER_BUF_SIZE * 2;

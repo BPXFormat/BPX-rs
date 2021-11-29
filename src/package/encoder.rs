@@ -26,9 +26,13 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use crate::core::builder::{Checksum, CompressionMethod, SectionHeaderBuilder};
-use crate::core::header::SectionHeader;
-use crate::package::{Architecture, Platform, SECTION_TYPE_DATA, Settings};
+use crate::{
+    core::{
+        builder::{Checksum, CompressionMethod, SectionHeaderBuilder},
+        header::SectionHeader
+    },
+    package::{Architecture, Platform, Settings, SECTION_TYPE_DATA}
+};
 
 pub fn create_data_section_header() -> SectionHeader
 {
