@@ -107,13 +107,10 @@ macro_rules! variant_error {
         pub enum ReadError
         {
             /// Low-level BPX decoder error.
-            Bpx(crate::error::ReadError),
+            Bpx(crate::core::error::ReadError),
 
             /// Describes an io error.
             Io(std::io::Error),
-
-            /// A section error.
-            Section(crate::section::Error),
 
             /// Unsupported BPX version.
             BadVersion(u32),
@@ -129,9 +126,8 @@ macro_rules! variant_error {
 
         impl_err_conversion!(
             ReadError {
-                crate::error::ReadError => Bpx,
-                std::io::Error => Io,
-                crate::section::Error => Section
+                crate::core::error::ReadError => Bpx,
+                std::io::Error => Io
             }
         );
 
@@ -140,13 +136,10 @@ macro_rules! variant_error {
         pub enum WriteError
         {
             /// Low-level BPX encoder error.
-            Bpx(crate::error::WriteError),
+            Bpx(crate::core::error::WriteError),
 
             /// Describes an io error.
             Io(std::io::Error),
-
-            /// A section error.
-            Section(crate::section::Error),
 
             $(
                 $(#[$werr_outer])*
@@ -156,9 +149,8 @@ macro_rules! variant_error {
 
         impl_err_conversion!(
             WriteError {
-                crate::error::WriteError => Bpx,
-                std::io::Error => Io,
-                crate::section::Error => Section
+                crate::core::error::WriteError => Bpx,
+                std::io::Error => Io
             }
         );
     };
