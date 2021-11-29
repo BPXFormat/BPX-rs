@@ -145,8 +145,8 @@ pub struct Package<T>
 
 impl<T> Package<T>
 {
-    /// Gets the two bytes of BPXP variant.
-    pub fn get_variant(&self) -> [u8; 2]
+    /// Gets the two bytes of BPXP type.
+    pub fn get_type_code(&self) -> [u8; 2]
     {
         self.settings.type_code
     }
