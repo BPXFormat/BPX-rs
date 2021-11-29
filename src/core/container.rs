@@ -34,6 +34,9 @@ use super::encoder::write_section;
 use crate::core::error::{ReadError, WriteError};
 use crate::Handle;
 use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, GetChecksum, MainHeader, SectionHeader, SIZE_MAIN_HEADER, SIZE_SECTION_HEADER, Struct};
+use crate::core::section::{new_section, new_section_mut, SectionEntry, SectionEntry1};
+use crate::core::{Section, SectionMut};
+use crate::core::decoder::read_section_header_table;
 use crate::section::{new_section_data, SectionData};
 use crate::utils::OptionExtension;
 
@@ -54,125 +57,9 @@ impl<'a, T> Iterator for IterMut<'a, T>
         let (h, v) = self.sections.next()?;
         unsafe {
             let ptr = self.backend as *mut T;
-            Some(SectionMut {
-                backend: &mut *ptr,
-                entry: v,
-                handle: Handle(*h)
-            })
+            Some(new_section_mut(&mut *ptr, v, Handle(*h)))
         }
     }
-}
-
-pub struct SectionMut<'a, T>
-{
-    backend: &'a mut T,
-    entry: &'a mut SectionEntry,
-    handle: Handle
-}
-
-impl<'a, T: Read + Seek> SectionMut<'a, T>
-{
-    pub fn load(&mut self) -> Result<&mut dyn SectionData, ReadError>
-    {
-        let data = self.entry.data.get_or_insert_with_err(|| load_section1(self.backend, &self.entry.header))?;
-        self.entry.modified = true;
-        Ok(&mut **data)
-    }
-}
-
-impl<'a, T> SectionMut<'a, T>
-{
-    pub fn open(&mut self) -> Option<&mut dyn SectionData>
-    {
-        self.entry.modified = true;
-        match &mut self.entry.data {
-            Some(v) => Some(&mut **v),
-            None => None
-        }
-    }
-
-    pub fn handle(&self) -> Handle
-    {
-        self.handle
-    }
-
-    pub fn header(&self) -> &SectionHeader
-    {
-        &self.entry.header
-    }
-
-    pub fn size(&self) -> usize
-    {
-        self.entry.data.as_ref().map(|v| v.size()).unwrap_or(0)
-    }
-
-    pub fn index(&self) -> u32
-    {
-        self.entry.index
-    }
-}
-
-pub struct Section<'a>
-{
-    entry: &'a SectionEntry,
-    handle: Handle
-}
-
-impl<'a> Section<'a>
-{
-    pub fn size(&self) -> usize
-    {
-        self.entry.data.as_ref().map(|v| v.size()).unwrap_or(0)
-    }
-
-    pub fn handle(&self) -> Handle
-    {
-        self.handle
-    }
-
-    pub fn header(&self) -> &SectionHeader
-    {
-        &self.entry.header
-    }
-
-    pub fn index(&self) -> u32
-    {
-        self.entry.index
-    }
-}
-
-struct SectionEntry1
-{
-    threshold: u32,
-    flags: u8,
-}
-
-impl SectionEntry1
-{
-    pub fn get_flags(&self, size: u32) -> u8
-    {
-        let mut flags = 0;
-        if self.flags & FLAG_CHECK_WEAK != 0 {
-            flags |= FLAG_CHECK_WEAK;
-        } else if self.flags & FLAG_CHECK_CRC32 != 0 {
-            flags |= FLAG_CHECK_CRC32;
-        }
-        if self.flags & FLAG_COMPRESS_XZ != 0 && size > self.threshold {
-            flags |= FLAG_COMPRESS_XZ;
-        } else if self.flags & FLAG_COMPRESS_ZLIB != 0 && size > self.threshold {
-            flags |= FLAG_COMPRESS_ZLIB;
-        }
-        flags
-    }
-}
-
-struct SectionEntry
-{
-    entry1: SectionEntry1,
-    header: SectionHeader,
-    data: Option<Box<dyn SectionData>>,
-    index: u32,
-    modified: bool
 }
 
 pub struct Container<T>
@@ -224,19 +111,16 @@ impl<T> Container<T>
 
     pub fn get(&self, handle: Handle) -> Section
     {
-        self.sections.get(&handle.0).map(|v| Section {
-            handle,
-            entry: v
-        }).expect("attempt to use invalid handle")
+        self.sections.get(&handle.0)
+            .map(|v| new_section(v, handle))
+            .expect("attempt to use invalid handle")
     }
 
     pub fn get_mut(&mut self, handle: Handle) -> SectionMut<T>
     {
-        self.sections.get_mut(&handle.0).map(|v| SectionMut {
-            handle,
-            entry: v,
-            backend: &mut self.backend
-        }).expect("attempt to use invalid handle")
+        self.sections.get_mut(&handle.0)
+            .map(|v| new_section_mut(&mut self.backend, v, handle))
+            .expect("attempt to use invalid handle")
     }
 
     /// Creates a new section in the BPX
@@ -289,10 +173,7 @@ impl<T> Container<T>
 
     pub fn iter(&self) -> impl Iterator<Item=Section>
     {
-        self.sections.iter().map(|(h, v)| Section {
-            handle: Handle(*h),
-            entry: v
-        })
+        self.sections.iter().map(|(h, v)| new_section(v, Handle(*h)))
     }
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item=SectionMut<T>>
@@ -312,31 +193,6 @@ impl<T> Container<T>
 
 impl<T: io::Read + io::Seek> Container<T>
 {
-    fn read_section_header_table(&mut self, checksum: u32) -> Result<(), ReadError>
-    {
-        let mut final_checksum = checksum;
-
-        for i in 0..self.main_header.section_num {
-            let (checksum, header) = SectionHeader::read(&mut self.backend)?;
-            final_checksum += checksum;
-            self.sections.insert(self.next_handle, SectionEntry {
-                header,
-                data: None,
-                modified: false,
-                index: i,
-                entry1: SectionEntry1 {
-                    flags: header.flags,
-                    threshold: DEFAULT_COMPRESSION_THRESHOLD
-                }
-            });
-            self.next_handle += 1;
-        }
-        if final_checksum != self.main_header.chksum {
-            return Err(ReadError::Checksum(final_checksum, self.main_header.chksum));
-        }
-        Ok(())
-    }
-
     /// Creates a new BPX decoder.
     ///
     /// # Arguments
@@ -352,15 +208,14 @@ impl<T: io::Read + io::Seek> Container<T>
     pub fn open(mut backend: T) -> Result<Container<T>, ReadError>
     {
         let (checksum, header) = MainHeader::read(&mut backend)?;
-        let mut container = Container {
+        let (next_handle, sections) = read_section_header_table(&mut backend, &header, checksum)?;
+        Ok(Container {
             backend,
             main_header: header,
-            sections: BTreeMap::new(),
-            next_handle: 0,
+            sections,
+            next_handle,
             modified: false
-        };
-        container.read_section_header_table(checksum)?;
-        Ok(container)
+        })
     }
 }
 

@@ -33,5 +33,8 @@ mod encoder;
 pub mod builder;
 pub mod header;
 pub mod error;
+mod section;
 
 pub use container::*;
+pub use section::SectionMut;
+pub use section::Section;
