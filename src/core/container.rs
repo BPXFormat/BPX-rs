@@ -28,18 +28,14 @@
 
 use std::io;
 use std::collections::{Bound, BTreeMap};
-use std::io::{Read, Seek, SeekFrom};
-use super::decoder::load_section1;
-use super::encoder::write_section;
 use crate::core::error::{ReadError, WriteError};
 use crate::Handle;
-use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, GetChecksum, MainHeader, SectionHeader, SIZE_MAIN_HEADER, SIZE_SECTION_HEADER, Struct};
+use crate::core::header::{MainHeader, SectionHeader, Struct};
 use crate::core::section::{new_section, new_section_mut, SectionEntry, SectionEntry1};
 use crate::core::{Section, SectionMut};
 use crate::core::decoder::read_section_header_table;
 use crate::core::encoder::{internal_save, internal_save_last};
-use crate::section::{new_section_data, SectionData};
-use crate::utils::OptionExtension;
+use crate::section::new_section_data;
 
 pub const DEFAULT_COMPRESSION_THRESHOLD: u32 = 65536;
 
@@ -252,19 +248,20 @@ impl<T: io::Write + io::Seek> Container<T>
         let count = filter.by_ref().count();
         if self.modified || count > 1 {
             self.modified = false;
-            return internal_save(&mut self.backend, &mut self.sections, &mut self.main_header);
+            internal_save(&mut self.backend, &mut self.sections, &mut self.main_header)
         } else if !self.modified && count == 1 {
             let (handle, _) = filter.last().unwrap();
             if *handle == self.next_handle - 1 {
                 //Save only the last section (no need to re-write every other section
-                return internal_save_last(&mut self.backend, &mut self.sections, &mut self.main_header, self.next_handle - 1);
+                internal_save_last(&mut self.backend, &mut self.sections, &mut self.main_header, self.next_handle - 1)
             } else {
                 //Unfortunately the modified section is not the last one so we can't safely
                 //expand/reduce the file size without corrupting other sections
                 self.modified = false;
-                return internal_save(&mut self.backend, &mut self.sections, &mut self.main_header);
+                internal_save(&mut self.backend, &mut self.sections, &mut self.main_header)
             }
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 }
