@@ -26,11 +26,9 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//TODO: Update section header and main header builders to be reusable
 //TODO: Pass a builder to write_symbol to simplify API
 //Maybe/Possible: Refactor shader and package modules to export Decoder, Encoder and Builder names instead.
 // => Ask Rust IRC first to know what's considered better practice in Rust
-//TODO: Pass main header while constructing a BPX encoder (caller shouldn't rely on MainHeader defaults)
 //TODO: Pass builder directly to shader and package encoder constructor for coherence with Encoder API
 
 //#![warn(missing_docs)]

@@ -117,7 +117,7 @@ impl SectionHeaderBuilder
     ///     .build();
     /// assert_eq!(header.size, 128);
     /// ```
-    pub fn with_size(mut self, size: u32) -> Self
+    pub fn with_size(&mut self, size: u32) -> &mut Self
     {
         self.header.size = size;
         self
@@ -143,7 +143,7 @@ impl SectionHeaderBuilder
     ///     .build();
     /// assert_eq!(header.btype, 1);
     /// ```
-    pub fn with_type(mut self, typeb: u8) -> Self
+    pub fn with_type(&mut self, typeb: u8) -> &mut Self
     {
         self.header.btype = typeb;
         self
@@ -170,7 +170,7 @@ impl SectionHeaderBuilder
     ///     .build();
     /// assert_ne!(header.flags & FLAG_COMPRESS_ZLIB, 0);
     /// ```
-    pub fn with_compression(mut self, method: CompressionMethod) -> Self
+    pub fn with_compression(&mut self, method: CompressionMethod) -> &mut Self
     {
         match method {
             CompressionMethod::Xz => self.header.flags |= FLAG_COMPRESS_XZ,
@@ -204,7 +204,7 @@ impl SectionHeaderBuilder
     /// // The compression threshold value is stored in csize
     /// assert_eq!(header.csize, 0);
     /// ```
-    pub fn with_threshold(mut self, threshold: u32) -> Self
+    pub fn with_threshold(&mut self, threshold: u32) -> &mut Self
     {
         self.header.csize = threshold;
         self
@@ -233,7 +233,7 @@ impl SectionHeaderBuilder
     ///     .build();
     /// assert_ne!(header.flags & FLAG_CHECK_CRC32, 0);
     /// ```
-    pub fn with_checksum(mut self, chksum: Checksum) -> Self
+    pub fn with_checksum(&mut self, chksum: Checksum) -> &mut Self
     {
         match chksum {
             Checksum::Crc32 => self.header.flags |= FLAG_CHECK_CRC32,
@@ -263,7 +263,7 @@ impl SectionHeaderBuilder
     /// assert_eq!(header.csize, 0);
     /// assert_ne!(header.flags & FLAG_CHECK_CRC32, 0);
     /// ```
-    pub fn build(self) -> SectionHeader
+    pub fn build(&self) -> SectionHeader
     {
         self.header
     }
@@ -313,7 +313,7 @@ impl MainHeaderBuilder
     ///     .build();
     /// assert_eq!(header.btype, 'M' as u8);
     /// ```
-    pub fn with_type(mut self, typeb: u8) -> Self
+    pub fn with_type(&mut self, typeb: u8) -> &mut Self
     {
         self.header.btype = typeb;
         self
@@ -339,7 +339,7 @@ impl MainHeaderBuilder
     ///     .build();
     /// assert_eq!(header.type_ext, [1; 16]);
     /// ```
-    pub fn with_type_ext(mut self, type_ext: [u8; 16]) -> Self
+    pub fn with_type_ext(&mut self, type_ext: [u8; 16]) -> &mut Self
     {
         self.header.type_ext = type_ext;
         self
@@ -370,7 +370,7 @@ impl MainHeaderBuilder
     ///     .build();
     /// assert_eq!(header.version, 1);
     /// ```
-    pub fn with_version(mut self, version: u32) -> Self
+    pub fn with_version(&mut self, version: u32) -> &mut Self
     {
         self.header.version = version;
         self
@@ -392,7 +392,7 @@ impl MainHeaderBuilder
     /// assert_eq!(header.type_ext, [1; 16]);
     /// assert_eq!(header.version, 1);
     /// ```
-    pub fn build(self) -> MainHeader
+    pub fn build(&self) -> MainHeader
     {
         self.header
     }
