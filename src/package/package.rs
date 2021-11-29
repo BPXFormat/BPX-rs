@@ -30,16 +30,17 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::slice::Iter;
 use crate::core::builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder};
 use crate::core::{Container, SectionData};
-use crate::core::header::{SECTION_TYPE_SD, SECTION_TYPE_STRING, SectionHeader, Struct};
+use crate::core::header::{SECTION_TYPE_SD, SECTION_TYPE_STRING, Struct};
 use crate::Handle;
 use crate::package::object::ObjectHeader;
-use crate::package::{Architecture, Platform, SECTION_TYPE_DATA, SECTION_TYPE_OBJECT_TABLE, Settings, SUPPORTED_VERSION};
-use crate::package::error::{InvalidCodeContext, ReadError, Section, WriteError};
+use crate::package::{Architecture, Platform, SECTION_TYPE_OBJECT_TABLE, Settings, SUPPORTED_VERSION};
+use crate::package::decoder::{get_arch_platform_from_code, load_string_section, read_object_table, unpack_object};
+use crate::package::encoder::{create_data_section_header, get_type_ext};
+use crate::package::error::{ReadError, Section, WriteError};
 use crate::strings::{StringSection};
 use crate::table::ItemTable;
 use crate::utils::{OptionExtension, ReadFill};
 
-const DATA_READ_BUFFER_SIZE: usize = 8192;
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
 const MAX_DATA_SECTION_SIZE: usize = 200000000 - MIN_DATA_REMAINING_SIZE; //200MB
@@ -95,22 +96,6 @@ impl<'a, T> Iterator for ObjectIter<'a, T>
             })
         }
     }
-}
-
-fn load_string_section<T: Read + Seek>(container: &mut Container<T>, strings: &StringSection) -> Result<(), ReadError>
-{
-    let mut section = container.get_mut(strings.handle());
-    section.load()?;
-    Ok(())
-}
-
-fn create_data_section_header() -> SectionHeader
-{
-    SectionHeaderBuilder::new()
-        .with_type(SECTION_TYPE_DATA)
-        .with_compression(CompressionMethod::Xz)
-        .with_checksum(Checksum::Crc32)
-        .build()
 }
 
 /// A BPXP (Package).
@@ -190,26 +175,9 @@ impl<T: Write + Seek> Package<T>
     pub fn create<S: Into<Settings>>(backend: T, settings: S) -> Result<Package<T>, WriteError>
     {
         let settings = settings.into();
-        let mut type_ext: [u8; 16] = [0; 16];
-        match settings.architecture {
-            Architecture::X86_64 => type_ext[0] = 0x0,
-            Architecture::Aarch64 => type_ext[0] = 0x1,
-            Architecture::X86 => type_ext[0] = 0x2,
-            Architecture::Armv7hl => type_ext[0] = 0x3,
-            Architecture::Any => type_ext[0] = 0x4
-        }
-        match settings.platform {
-            Platform::Linux => type_ext[1] = 0x0,
-            Platform::Mac => type_ext[1] = 0x1,
-            Platform::Windows => type_ext[1] = 0x2,
-            Platform::Android => type_ext[1] = 0x3,
-            Platform::Any => type_ext[1] = 0x4
-        }
-        type_ext[2] = settings.type_code[0];
-        type_ext[3] = settings.type_code[1];
         let mut container = Container::create(backend, MainHeaderBuilder::new()
             .with_type(b'P')
-            .with_type_ext(type_ext)
+            .with_type_ext(get_type_ext(&settings))
             .with_version(SUPPORTED_VERSION));
         let object_table = container.create_section(SectionHeaderBuilder::new()
             .with_checksum(Checksum::Weak)
@@ -319,95 +287,6 @@ impl<T: Write + Seek> Package<T>
     }
 }
 
-fn get_arch_platform_from_code(acode: u8, pcode: u8)
-                               -> Result<(Architecture, Platform), ReadError>
-{
-    let arch;
-    let platform;
-
-    match acode {
-        0x0 => arch = Architecture::X86_64,
-        0x1 => arch = Architecture::Aarch64,
-        0x2 => arch = Architecture::X86,
-        0x3 => arch = Architecture::Armv7hl,
-        0x4 => arch = Architecture::Any,
-        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Arch, acode))
-    }
-    match pcode {
-        0x0 => platform = Platform::Linux,
-        0x1 => platform = Platform::Mac,
-        0x2 => platform = Platform::Windows,
-        0x3 => platform = Platform::Android,
-        0x4 => platform = Platform::Any,
-        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Platform, pcode))
-    }
-    Ok((arch, platform))
-}
-
-fn load_from_section<T: Read + Seek, W: Write>(
-    container: &mut Container<T>,
-    handle: Handle,
-    offset: u32,
-    size: u32,
-    out: &mut W
-) -> Result<u32, ReadError>
-{
-    let mut len = 0;
-    let mut buf: [u8; DATA_READ_BUFFER_SIZE] = [0; DATA_READ_BUFFER_SIZE];
-    let mut section = container.get_mut(handle);
-    let data = section.load()?;
-
-    data.seek(SeekFrom::Start(offset as u64))?;
-    while len < size {
-        let s = std::cmp::min(size - len, DATA_READ_BUFFER_SIZE as u32);
-        // Read is enough as Sections are guaranteed to fill the buffer as much as possible
-        let val = data.read(&mut buf[0..s as usize])?;
-        len += val as u32;
-        out.write_all(&buf[0..val])?;
-    }
-    Ok(len)
-}
-
-fn unpack_object<T: Read + Seek, W: Write>(container: &mut Container<T>, obj: &ObjectHeader, mut out: W) -> Result<u64, ReadError>
-{
-    let mut section_id = obj.start;
-    let mut offset = obj.offset;
-    let mut len = obj.size;
-
-    while len > 0 {
-        let handle = match container.find_section_by_index(section_id) {
-            Some(i) => i,
-            None => break
-        };
-        let section = container.get(handle);
-        let remaining_section_size = section.header().size - offset;
-        let val = load_from_section(
-            container,
-            handle,
-            offset,
-            std::cmp::min(remaining_section_size as u64, len) as u32,
-            &mut out
-        )?;
-        len -= val as u64;
-        offset = 0;
-        section_id += 1;
-    }
-    Ok(obj.size)
-}
-
-fn read_object_table<T: Read + Seek>(container: &mut Container<T>, object_table: Handle) -> Result<Vec<ObjectHeader>, ReadError>
-{
-    let mut section = container.get_mut(object_table);
-    let count = section.header().size / 20;
-    let mut v = Vec::with_capacity(count as _);
-
-    for _ in 0..count {
-        let header = ObjectHeader::read(section.load()?)?;
-        v.push(header);
-    }
-    Ok(v)
-}
-
 impl<T: Read + Seek> Package<T>
 {
     /// Creates a new Package by reading from a BPX decoder.
@@ -464,11 +343,7 @@ impl<T: Read + Seek> Package<T>
 
     pub fn objects(&mut self) -> Result<ObjectIter<T>, ReadError>
     {
-        let table = self.table.get_or_insert_with_err(|| -> Result<ItemTable<ObjectHeader>, ReadError> {
-            let v = read_object_table(&mut self.container, self.object_table)?;
-            self.objects = v.clone();
-            Ok(ItemTable::new(v))
-        })?;
+        let table = self.table.get_or_insert_with_err(|| read_object_table(&mut self.container, &mut self.objects, self.object_table))?;
         let iter = table.iter();
         Ok(ObjectIter {
             container: &mut self.container,
@@ -532,11 +407,7 @@ impl<T: Read + Seek> Package<T>
     /// returns: Result<Option<u64>, ReadError>
     pub fn unpack<W: Write>(&mut self, name: &str, out: W) -> Result<Option<u64>, ReadError>
     {
-        let table = self.table.get_or_insert_with_err(|| -> Result<ItemTable<ObjectHeader>, ReadError> {
-            let v = read_object_table(&mut self.container, self.object_table)?;
-            self.objects = v.clone();
-            Ok(ItemTable::new(v))
-        })?;
+        let table = self.table.get_or_insert_with_err(|| read_object_table(&mut self.container, &mut self.objects, self.object_table))?;
         load_string_section(&mut self.container, &self.strings)?;
         table.build_lookup_table(&mut self.container, &mut self.strings)?;
         if let Some(header) = table.lookup(name) {

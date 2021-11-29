@@ -32,6 +32,8 @@ pub mod error;
 mod builder;
 mod package;
 pub mod utils;
+mod decoder;
+mod encoder;
 
 pub use builder::*;
 pub use package::*;
