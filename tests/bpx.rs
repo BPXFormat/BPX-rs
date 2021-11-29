@@ -21,7 +21,7 @@ fn attempt_write_empty_bpxp()
     }
 }
 
-/*#[test]
+#[test]
 fn sd_api_test()
 {
     use std::convert::TryInto;
@@ -38,4 +38,4 @@ fn sd_api_test()
     assert_eq!(vu, None);
     assert_eq!(v1u, String::from("test"));
     assert_eq!(v2u, Some(0));
-}*/
+}

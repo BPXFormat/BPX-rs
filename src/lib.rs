@@ -41,7 +41,7 @@
 
 mod garraylen;
 pub mod macros;
-//pub mod sd;
+pub mod sd;
 //pub mod strings;
 //pub mod table;
 pub mod utils;
