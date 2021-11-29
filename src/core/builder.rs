@@ -413,3 +413,19 @@ impl From<&mut SectionHeaderBuilder> for SectionHeader
         builder.build()
     }
 }
+
+impl From<MainHeaderBuilder> for MainHeader
+{
+    fn from(builder: MainHeaderBuilder) -> Self
+    {
+        builder.build()
+    }
+}
+
+impl From<SectionHeaderBuilder> for SectionHeader
+{
+    fn from(builder: SectionHeaderBuilder) -> Self
+    {
+        builder.build()
+    }
+}

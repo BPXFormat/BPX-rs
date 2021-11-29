@@ -142,3 +142,11 @@ impl From<&mut Builder> for Settings
         builder.build()
     }
 }
+
+impl From<Builder> for Settings
+{
+    fn from(builder: Builder) -> Self
+    {
+        builder.build()
+    }
+}

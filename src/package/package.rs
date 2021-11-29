@@ -108,6 +108,32 @@ fn create_data_section_header() -> SectionHeader
         .build()
 }
 
+/// A BPXP (Package)
+///
+/// # Examples
+///
+/// ```
+/// use std::io::{Seek, SeekFrom};
+/// use bpx::utils::new_byte_buf;
+/// use bpx::package::{Builder, Package};
+///
+/// let mut bpxp = Package::create(new_byte_buf(128), Builder::new()).unwrap();
+/// bpxp.pack("TestObject", "This is a test 你好".as_bytes());
+/// bpxp.save().unwrap();
+/// //Reset our bytebuf pointer to start
+/// let mut bytebuf = bpxp.into_inner().into_inner();
+/// bytebuf.seek(SeekFrom::Start(0)).unwrap();
+/// //Attempt decoding our in-memory BPXP
+/// let mut bpxp = Package::open(bytebuf).unwrap();
+/// let items = bpxp.objects().unwrap().count();
+/// assert_eq!(items, 1);
+/// let mut object = bpxp.objects().unwrap().last().unwrap();
+/// assert_eq!(object.load_name().unwrap(), "TestObject");
+/// let mut data = Vec::new();
+/// object.unpack(&mut data);
+/// let s = std::str::from_utf8(&data).unwrap();
+/// assert_eq!(s, "This is a test 你好")
+/// ```
 pub struct Package<T>
 {
     settings: Settings,
