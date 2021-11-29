@@ -41,3 +41,4 @@ pub use container::*;
 pub use section::SectionMut;
 pub use section::Section;
 pub use data::SectionData;
+pub use data::AutoSectionData;

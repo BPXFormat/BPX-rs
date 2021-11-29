@@ -132,9 +132,9 @@ pub struct Section<'a>
 
 impl<'a> Section<'a>
 {
-    pub fn size(&self) -> usize
+    pub fn open(&self) -> Option<&AutoSectionData>
     {
-        self.entry.data.as_ref().map(|v| v.size()).unwrap_or(0)
+        self.entry.data.as_ref()
     }
 
     pub fn handle(&self) -> Handle
