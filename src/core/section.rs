@@ -30,8 +30,8 @@ use std::io::{Read, Seek};
 use crate::core::decoder::load_section1;
 use crate::core::error::ReadError;
 use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, SectionHeader};
+use crate::core::SectionData;
 use crate::Handle;
-use crate::section::SectionData;
 use crate::utils::OptionExtension;
 
 pub struct SectionEntry1

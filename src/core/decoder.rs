@@ -32,12 +32,12 @@ use std::{io, io::Write, rc::Rc};
 use std::collections::BTreeMap;
 use std::io::Read;
 use crate::compression::{Checksum, Crc32Checksum, Inflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod};
-use crate::core::DEFAULT_COMPRESSION_THRESHOLD;
+use crate::core::{DEFAULT_COMPRESSION_THRESHOLD, SectionData};
+use crate::core::data::new_section_data;
 use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, MainHeader, SectionHeader, Struct};
 use crate::core::error::ReadError;
 use crate::core::section::{SectionEntry, SectionEntry1};
 
-use crate::section::{new_section_data, SectionData};
 use crate::utils::ReadFill;
 
 const READ_BLOCK_SIZE: usize = 8192;

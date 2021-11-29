@@ -34,7 +34,9 @@ pub mod builder;
 pub mod header;
 pub mod error;
 mod section;
+mod data;
 
 pub use container::*;
 pub use section::SectionMut;
 pub use section::Section;
+pub use data::SectionData;

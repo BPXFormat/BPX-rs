@@ -33,9 +33,9 @@ use crate::Handle;
 use crate::core::header::{MainHeader, SectionHeader, Struct};
 use crate::core::section::{new_section, new_section_mut, SectionEntry, SectionEntry1};
 use crate::core::{Section, SectionMut};
+use crate::core::data::new_section_data;
 use crate::core::decoder::read_section_header_table;
 use crate::core::encoder::{internal_save, internal_save_last};
-use crate::section::new_section_data;
 
 pub const DEFAULT_COMPRESSION_THRESHOLD: u32 = 65536;
 

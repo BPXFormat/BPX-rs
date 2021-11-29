@@ -31,16 +31,14 @@
 use std::{
     collections::BTreeMap,
     io,
-    io::{SeekFrom, Write},
-    ops::Bound,
-    rc::Rc
+    io::{SeekFrom, Write}
 };
 use std::io::Seek;
 use crate::compression::{Checksum, Crc32Checksum, Deflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod};
 use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, GetChecksum, MainHeader, SIZE_MAIN_HEADER, SIZE_SECTION_HEADER, Struct};
 use crate::core::error::WriteError;
 use crate::core::section::SectionEntry;
-use crate::section::SectionData;
+use crate::core::SectionData;
 use crate::utils::ReadFill;
 
 const READ_BLOCK_SIZE: usize = 8192;

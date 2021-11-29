@@ -26,65 +26,96 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{Cursor, Read, Result, Seek, SeekFrom, Write};
+use std::{
+    fs::File,
+    io::{Read, Result, Seek, SeekFrom, Write}
+};
+use crate::core::SectionData;
 
-use crate::{section::SectionData, utils::new_byte_buf};
+const READ_BLOCK_SIZE: usize = 8192;
 
-pub struct InMemorySection
+pub struct FileBasedSection
 {
-    byte_buf: Cursor<Vec<u8>>,
-    cur_size: usize
+    data: File,
+    buffer: [u8; READ_BLOCK_SIZE],
+    written: usize,
+    cursor: usize,
+    cur_size: usize,
+    seek_ptr: u64
 }
 
-impl InMemorySection
+impl FileBasedSection
 {
-    pub fn new(initial: usize) -> InMemorySection
+    pub fn new(data: File) -> FileBasedSection
     {
-        InMemorySection {
-            byte_buf: new_byte_buf(initial),
-            cur_size: 0
+        FileBasedSection {
+            data,
+            buffer: [0; READ_BLOCK_SIZE],
+            written: 0,
+            cursor: usize::MAX,
+            cur_size: 0,
+            seek_ptr: 0
         }
     }
 }
 
-impl Read for InMemorySection
+impl Read for FileBasedSection
 {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize>
+    fn read(&mut self, data: &mut [u8]) -> Result<usize>
     {
-        self.byte_buf.read(buf)
+        let mut cnt: usize = 0;
+
+        for byte in data {
+            if self.cursor >= self.written {
+                self.cursor = 0;
+                self.written = self.data.read(&mut self.buffer)?;
+            }
+            if self.cursor < self.written {
+                *byte = self.buffer[self.cursor];
+                self.cursor += 1;
+                cnt += 1;
+            }
+        }
+        Ok(cnt)
     }
 }
 
-impl Write for InMemorySection
+impl Write for FileBasedSection
 {
-    fn write(&mut self, buf: &[u8]) -> Result<usize>
+    fn write(&mut self, data: &[u8]) -> Result<usize>
     {
-        let len = self.byte_buf.write(buf)?;
-        if self.byte_buf.position() as usize >= self.cur_size {
-            self.cur_size = self.byte_buf.position() as usize;
+        let len = self.data.write(data)?;
+        if self.seek_ptr >= self.cur_size as u64 {
+            self.cur_size += len;
+            self.seek_ptr += len as u64;
         }
         Ok(len)
     }
 
     fn flush(&mut self) -> Result<()>
     {
-        self.byte_buf.flush()
+        self.data.seek(SeekFrom::Current(self.cursor as i64))?;
+        self.cursor = usize::MAX;
+        self.data.flush()
     }
 }
 
-impl Seek for InMemorySection
+impl Seek for FileBasedSection
 {
-    fn seek(&mut self, pos: SeekFrom) -> Result<u64>
+    fn seek(&mut self, state: SeekFrom) -> Result<u64>
     {
-        self.byte_buf.seek(pos)
+        self.seek_ptr = self.data.seek(state)?;
+        Ok(self.seek_ptr)
     }
 }
 
-impl SectionData for InMemorySection
+impl SectionData for FileBasedSection
 {
     fn load_in_memory(&mut self) -> Result<Vec<u8>>
     {
-        return Ok(self.byte_buf.get_ref().clone());
+        let mut data: Vec<u8> = Vec::new();
+        self.data.read_to_end(&mut data)?;
+        Ok(data)
     }
 
     fn size(&self) -> usize
