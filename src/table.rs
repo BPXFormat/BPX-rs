@@ -29,6 +29,7 @@
 //! This module provides a lookup-table style implementation.
 
 use std::{collections::HashMap, ops::Index};
+use std::slice::Iter;
 use crate::core::Container;
 
 use crate::strings::StringSection;
@@ -62,7 +63,7 @@ impl<T: Item> ItemTable<T>
     }
 
     /// Gets all items in this table.
-    pub fn iter(&self) -> impl Iterator<Item = &T>
+    pub fn iter(&self) -> Iter<T>
     {
         self.list.iter()
     }

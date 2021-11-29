@@ -41,11 +41,11 @@ mod garraylen;
 pub mod macros;
 pub mod sd;
 pub mod strings;
-//pub mod table;
 pub mod utils;
-
 pub mod core;
 pub mod table;
+
+pub mod package;
 
 /*#[cfg(feature = "package")]
 pub mod package;

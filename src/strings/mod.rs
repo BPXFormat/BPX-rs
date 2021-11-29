@@ -130,6 +130,12 @@ impl StringSection
         self.cache.insert(address, String::from(s));
         Ok(address)
     }
+
+    /// Returns the section handle.
+    pub fn handle(&self) -> Handle
+    {
+        self.section
+    }
 }
 
 fn low_level_read_string(

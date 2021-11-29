@@ -94,7 +94,10 @@ variant_error!(
         Sd(crate::sd::error::WriteError),
 
         /// Indicates an invalid path while attempting to pack some files.
-        InvalidPath(crate::strings::PathError)
+        InvalidPath(crate::strings::PathError),
+
+        /// Indicates a section wasn't loaded.
+        SectionNotLoaded
     }
 );
 
@@ -120,7 +123,6 @@ impl Display for ReadError
         match self {
             ReadError::Bpx(e) => write!(f, "BPX error: {}", e),
             ReadError::Io(e) => write!(f, "io error: {}", e),
-            ReadError::Section(e) => write!(f, "section error: {}", e),
             ReadError::BadVersion(v) => write!(f, "unsupported version ({})", v),
             ReadError::BadType(t) => write!(f, "unknown BPX type code ({})", t),
             ReadError::InvalidCode(ctx, code) => {
@@ -144,10 +146,10 @@ impl Display for WriteError
         match self {
             WriteError::Bpx(e) => write!(f, "BPX error: {}", e),
             WriteError::Io(e) => write!(f, "io error: {}", e),
-            WriteError::Section(e) => write!(f, "section error: {}", e),
             WriteError::Strings(e) => write!(f, "strings error: {}", e),
             WriteError::Sd(e) => write!(f, "BPXSD error: {}", e),
-            WriteError::InvalidPath(e) => write!(f, "path error: {}", e)
+            WriteError::InvalidPath(e) => write!(f, "path error: {}", e),
+            WriteError::SectionNotLoaded => f.write_str("section not loaded")
         }
     }
 }
