@@ -33,7 +33,7 @@ use crate::Handle;
 use crate::core::header::{MainHeader, SectionHeader, Struct};
 use crate::core::section::{new_section, new_section_mut, SectionEntry, SectionEntry1};
 use crate::core::{Section, SectionMut};
-use crate::core::data::new_section_data;
+use crate::core::data::AutoSectionData;
 use crate::core::decoder::read_section_header_table;
 use crate::core::encoder::{internal_save, internal_save_last};
 
@@ -127,12 +127,12 @@ impl<T> Container<T>
     /// * `header`: the [SectionHeader](crate::header::SectionHeader) of the new section.
     ///
     /// returns: Result<Handle, Error>
-    pub fn create_section<H: Into<SectionHeader>>(&mut self, header: H) -> Result<Handle, WriteError>
+    pub fn create_section<H: Into<SectionHeader>>(&mut self, header: H) -> Handle
     {
         self.modified = true;
         self.main_header.section_num += 1;
         let r = self.next_handle;
-        let section = new_section_data(None)?;
+        let section = AutoSectionData::new();
         let h = header.into();
         let entry = SectionEntry {
             header: h,
@@ -146,7 +146,7 @@ impl<T> Container<T>
         };
         self.sections.insert(r, entry);
         self.next_handle += 1;
-        Ok(Handle(r))
+        Handle(r)
     }
 
     /// Removes a section from this BPX.

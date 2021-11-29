@@ -58,7 +58,7 @@ fn write_sections<T: Write + Seek>(mut backend: T, sections: &mut BTreeMap<u32, 
         let last_section_ptr = data.stream_position()?;
         data.seek(io::SeekFrom::Start(0))?;
         let flags = section.entry1.get_flags(data.size() as u32);
-        let (csize, chksum) = write_section(flags, data.as_mut(), &mut backend)?;
+        let (csize, chksum) = write_section(flags, data, &mut backend)?;
         data.seek(io::SeekFrom::Start(last_section_ptr))?;
         section.header.csize = csize as u32;
         section.header.size = data.size() as u32;
@@ -110,7 +110,7 @@ fn write_last_section<T: Write + Seek>(mut backend: T, sections: &mut BTreeMap<u
     let data = entry.data.as_mut().ok_or_else(|| WriteError::SectionNotLoaded)?;
     let last_section_ptr = data.stream_position()?;
     let flags = entry.entry1.get_flags(data.size() as u32);
-    let (csize, chksum) = write_section(flags, data.as_mut(), &mut backend)?;
+    let (csize, chksum) = write_section(flags, data, &mut backend)?;
     data.seek(io::SeekFrom::Start(last_section_ptr))?;
     let old = entry.header;
     entry.header.csize = csize as u32;

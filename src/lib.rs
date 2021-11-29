@@ -37,8 +37,6 @@
 
 //! This library is the official implementation for the [BPX](https://gitlab.com/bp3d/bpx/bpx/-/blob/master/BPX_Format.pdf) container format.
 
-use std::{rc::Rc, vec::Vec};
-
 //use crate::section::AutoSection;
 
 mod compression;

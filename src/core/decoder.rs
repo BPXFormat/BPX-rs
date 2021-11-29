@@ -28,12 +28,12 @@
 
 //! The BPX decoder.
 
-use std::{io, io::Write, rc::Rc};
+use std::{io, io::Write};
 use std::collections::BTreeMap;
-use std::io::Read;
+use std::io::{Read, Seek};
 use crate::compression::{Checksum, Crc32Checksum, Inflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod};
-use crate::core::{DEFAULT_COMPRESSION_THRESHOLD, SectionData};
-use crate::core::data::new_section_data;
+use crate::core::{DEFAULT_COMPRESSION_THRESHOLD};
+use crate::core::data::{AutoSectionData};
 use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, MainHeader, SectionHeader, Struct};
 use crate::core::error::ReadError;
 use crate::core::section::{SectionEntry, SectionEntry1};
@@ -72,14 +72,14 @@ pub fn read_section_header_table<T: Read>(mut backend: &mut T, main_header: &Mai
 pub fn load_section1<T: io::Read + io::Seek>(
     file: &mut T,
     section: &SectionHeader
-) -> Result<Box<dyn SectionData>, ReadError>
+) -> Result<AutoSectionData, ReadError>
 {
-    let mut data = new_section_data(Some(section.size))?;
+    let mut data = AutoSectionData::new_with_size(section.size)?;
     data.seek(io::SeekFrom::Start(0))?;
     if section.flags & FLAG_CHECK_WEAK != 0 {
         let mut chksum = WeakChecksum::new();
         //TODO: Check
-        load_section_checked(file, section, data.as_mut(), &mut chksum)?;
+        load_section_checked(file, section, &mut data, &mut chksum)?;
         let v = chksum.finish();
         if v != section.chksum {
             return Err(ReadError::Checksum(v, section.chksum));
@@ -87,7 +87,7 @@ pub fn load_section1<T: io::Read + io::Seek>(
     } else if section.flags & FLAG_CHECK_CRC32 != 0 {
         let mut chksum = Crc32Checksum::new();
         //TODO: Check
-        load_section_checked(file, section, data.as_mut(), &mut chksum)?;
+        load_section_checked(file, section, &mut data, &mut chksum)?;
         let v = chksum.finish();
         if v != section.chksum {
             return Err(ReadError::Checksum(v, section.chksum));
@@ -95,7 +95,7 @@ pub fn load_section1<T: io::Read + io::Seek>(
     } else {
         let mut chksum = WeakChecksum::new();
         //TODO: Check
-        load_section_checked(file, section, data.as_mut(), &mut chksum)?;
+        load_section_checked(file, section, &mut data, &mut chksum)?;
     }
     data.seek(io::SeekFrom::Start(0))?;
     Ok(data)

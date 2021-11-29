@@ -27,6 +27,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::{Read, Seek};
+use crate::core::data::AutoSectionData;
 use crate::core::decoder::load_section1;
 use crate::core::error::ReadError;
 use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, SectionHeader};
@@ -63,7 +64,7 @@ pub struct SectionEntry
 {
     pub entry1: SectionEntry1,
     pub header: SectionHeader,
-    pub data: Option<Box<dyn SectionData>>,
+    pub data: Option<AutoSectionData>,
     pub index: u32,
     pub modified: bool
 }
@@ -77,23 +78,20 @@ pub struct SectionMut<'a, T>
 
 impl<'a, T: Read + Seek> SectionMut<'a, T>
 {
-    pub fn load(&mut self) -> Result<&mut dyn SectionData, ReadError>
+    pub fn load(&mut self) -> Result<&mut AutoSectionData, ReadError>
     {
         let data = self.entry.data.get_or_insert_with_err(|| load_section1(self.backend, &self.entry.header))?;
         self.entry.modified = true;
-        Ok(&mut **data)
+        Ok(data)
     }
 }
 
 impl<'a, T> SectionMut<'a, T>
 {
-    pub fn open(&mut self) -> Option<&mut dyn SectionData>
+    pub fn open(&mut self) -> Option<&mut AutoSectionData>
     {
         self.entry.modified = true;
-        match &mut self.entry.data {
-            Some(v) => Some(&mut **v),
-            None => None
-        }
+        self.entry.data.as_mut()
     }
 
     pub fn handle(&self) -> Handle
