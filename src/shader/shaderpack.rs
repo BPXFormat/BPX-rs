@@ -123,8 +123,9 @@ impl<'a, T> Iterator for SymbolIter<'a, T>
 /// # Examples
 ///
 /// ```
-/// use std::io::Seek;
-/// use bpx::shader::{Builder, Shader, ShaderPack};
+/// use std::io::{Seek, SeekFrom};
+/// use bpx::shader::{Builder, Shader, ShaderPack, Stage};
+/// use bpx::shader::symbol::{FLAG_EXTENDED_DATA, SymbolType};
 /// use bpx::utils::new_byte_buf;
 ///
 /// let mut bpxs = ShaderPack::create(new_byte_buf(0), Builder::new());
@@ -138,13 +139,13 @@ impl<'a, T> Iterator for SymbolIter<'a, T>
 /// let mut bytebuf = bpxs.into_inner().into_inner();
 /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
 /// //Attempt decoding our in-memory BPXP
-/// let mut bpxs = ShaderPackDecoder::new(bytebuf).unwrap();
-/// let (items, mut names) = bpxs.read_symbol_table().unwrap();
-/// assert_eq!(items.len(), 1);
-/// assert!(!items.is_empty());
-/// let sym = items[0];
+/// let mut bpxs = ShaderPack::open(bytebuf).unwrap();
+/// let count = bpxs.symbols().unwrap().count();
+/// assert_eq!(count, 1);
 /// assert_eq!(bpxs.get_symbol_count(), 1);
-/// assert_eq!(names.load(&sym).unwrap(), "test");
+/// let mut sym = bpxs.symbols().unwrap().last().unwrap();
+/// assert_eq!(sym.load_name().unwrap(), "test");
+/// assert_eq!(sym.flags & FLAG_EXTENDED_DATA, 0);
 /// let shader = bpxs.load_shader(bpxs.list_shaders()[0]).unwrap();
 /// assert_eq!(shader.stage, Stage::Pixel);
 /// assert_eq!(shader.data.len(), 0);
