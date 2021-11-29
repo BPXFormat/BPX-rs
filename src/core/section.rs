@@ -27,6 +27,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::{Read, Seek};
+use std::ops::Deref;
 use crate::core::data::AutoSectionData;
 use crate::core::decoder::load_section1;
 use crate::core::error::ReadError;
@@ -98,14 +99,19 @@ impl<'a, T> SectionMut<'a, T>
         self.handle
     }
 
-    pub fn header(&self) -> &SectionHeader
-    {
-        &self.entry.header
-    }
-
     pub fn index(&self) -> u32
     {
         self.entry.index
+    }
+}
+
+impl<'a, T> Deref for SectionMut<'a, T>
+{
+    type Target = SectionHeader;
+
+    fn deref(&self) -> &Self::Target
+    {
+        &self.entry.header
     }
 }
 
@@ -136,14 +142,19 @@ impl<'a> Section<'a>
         self.handle
     }
 
-    pub fn header(&self) -> &SectionHeader
-    {
-        &self.entry.header
-    }
-
     pub fn index(&self) -> u32
     {
         self.entry.index
+    }
+}
+
+impl<'a> Deref for Section<'a>
+{
+    type Target = SectionHeader;
+
+    fn deref(&self) -> &Self::Target
+    {
+        &self.entry.header
     }
 }
 

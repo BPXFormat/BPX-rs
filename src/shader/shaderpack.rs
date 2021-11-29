@@ -419,7 +419,7 @@ fn get_stage_from_code(code: u8) -> Result<Stage, ReadError>
 fn read_symbol_table<T: Read + Seek>(container: &mut Container<T>, symbols: &mut Vec<Symbol>, num_symbols: u16, symbol_table: Handle) -> Result<ItemTable<Symbol>, ReadError>
 {
     let mut section = container.get_mut(symbol_table);
-    let count = section.header().csize as u32 / SIZE_SYMBOL_STRUCTURE as u32;
+    let count = section.size as u32 / SIZE_SYMBOL_STRUCTURE as u32;
 
     if count != num_symbols as u32 {
         return Err(ReadError::Eos(EosContext::SymbolTable));
@@ -489,7 +489,7 @@ impl<T: Read + Seek> ShaderPack<T>
     pub fn list_shaders(&self) -> Vec<Handle>
     {
         self.container.iter().filter_map(|v| {
-            if v.header().btype == SECTION_TYPE_SHADER {
+            if v.btype == SECTION_TYPE_SHADER {
                 Some(v.handle())
             } else {
                 None
@@ -511,7 +511,7 @@ impl<T: Read + Seek> ShaderPack<T>
     pub fn load_shader(&mut self, handle: Handle) -> Result<Shader, ReadError>
     {
         let mut section = self.container.get_mut(handle);
-        if section.header().size < 1 {
+        if section.size < 1 {
             //We must at least find a stage byte
             return Err(ReadError::Eos(EosContext::Shader));
         }

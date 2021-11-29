@@ -73,7 +73,7 @@ pub fn unpack_object<T: Read + Seek, W: Write>(container: &mut Container<T>, obj
             None => break
         };
         let section = container.get(handle);
-        let remaining_section_size = section.header().size - offset;
+        let remaining_section_size = section.size - offset;
         let val = load_from_section(
             container,
             handle,
@@ -91,7 +91,7 @@ pub fn unpack_object<T: Read + Seek, W: Write>(container: &mut Container<T>, obj
 pub fn read_object_table<T: Read + Seek>(container: &mut Container<T>, objects: &mut Vec<ObjectHeader>, object_table: Handle) -> Result<ItemTable<ObjectHeader>, ReadError>
 {
     let mut section = container.get_mut(object_table);
-    let count = section.header().size / 20;
+    let count = section.size / 20;
     let mut v = Vec::with_capacity(count as _);
 
     for _ in 0..count {
