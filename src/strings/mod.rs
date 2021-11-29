@@ -37,25 +37,26 @@ use std::{
     path::Path,
     string::String
 };
+use std::io::{Read, Seek};
 
 pub use error::{PathError, ReadError, WriteError};
-use crate::container::Container;
+use crate::core::{AutoSectionData, Container};
 use crate::Handle;
 
-use crate::section::SectionData;
+use crate::core::SectionData;
 
 /// Helper class to manage a BPX string section.
 ///
 /// # Examples
 ///
 /// ```
-/// use bpx::container::Container;
-/// use bpx::header::{MainHeader, SectionHeader, Struct};
+/// use bpx::core::Container;
+/// use bpx::core::header::{MainHeader, SectionHeader, Struct};
 /// use bpx::strings::StringSection;
 /// use bpx::utils::new_byte_buf;
 ///
-/// let mut file = Container::create(new_byte_buf(0), MainHeader::new()).unwrap();
-/// let section = file.create_section(SectionHeader::new()).unwrap();
+/// let mut file = Container::create(new_byte_buf(0), MainHeader::new());
+/// let section = file.create_section(SectionHeader::new());
 /// let mut strings = StringSection::new(section);
 /// let offset = strings.put(&mut file, "Test").unwrap();
 /// let str = strings.get(&mut file, offset).unwrap();
@@ -102,8 +103,8 @@ impl StringSection
         let res = match self.cache.entry(address) {
             Entry::Occupied(o) => o.into_mut(),
             Entry::Vacant(o) => {
-                let mut data = &mut container[self.section];
-                let s = low_level_read_string(address, &mut *data)?;
+                let mut section = container.get_mut(self.section);
+                let s = low_level_read_string(address, section.open().ok_or(ReadError::SectionNotLoaded)?)?;
                 o.insert(s)
             }
         };
@@ -124,8 +125,8 @@ impl StringSection
     /// Returns a [WriteError](crate::strings::WriteError) if the string could not be written.
     pub fn put<T>(&mut self, container: &mut Container<T>, s: &str) -> Result<u32, WriteError>
     {
-        let mut data = &mut container[self.section];
-        let address = low_level_write_string(s, &mut *data)?;
+        let mut section = container.get_mut(self.section);
+        let address = low_level_write_string(s, section.open().ok_or(WriteError::SectionNotLoaded)?)?;
         self.cache.insert(address, String::from(s));
         Ok(address)
     }
@@ -133,7 +134,7 @@ impl StringSection
 
 fn low_level_read_string(
     ptr: u32,
-    string_section: &mut dyn SectionData
+    string_section: &mut AutoSectionData
 ) -> Result<String, ReadError>
 {
     let mut curs: Vec<u8> = Vec::new();

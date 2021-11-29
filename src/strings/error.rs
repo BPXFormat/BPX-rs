@@ -43,14 +43,13 @@ pub enum ReadError
     /// Describes an io error.
     Io(std::io::Error),
 
-    /// A section error.
-    Section(crate::section::Error)
+    /// Indicates the section is not loaded.
+    SectionNotLoaded
 }
 
 impl_err_conversion!(
     ReadError {
-        std::io::Error => Io,
-        crate::section::Error => Section
+        std::io::Error => Io
     }
 );
 
@@ -61,8 +60,8 @@ impl Display for ReadError
         match self {
             ReadError::Utf8 => f.write_str("utf8 error"),
             ReadError::Eos => f.write_str("EOS reached before end of string"),
-            ReadError::Io(e) => write!(f, "io error: {}", e),
-            ReadError::Section(e) => write!(f, "section error: {}", e)
+            ReadError::SectionNotLoaded => f.write_str("section not loaded"),
+            ReadError::Io(e) => write!(f, "io error: {}", e)
         }
     }
 }
@@ -74,14 +73,13 @@ pub enum WriteError
     /// Describes an io error.
     Io(std::io::Error),
 
-    /// A section error.
-    Section(crate::section::Error)
+    /// Indicates the section is not loaded.
+    SectionNotLoaded
 }
 
 impl_err_conversion!(
     WriteError {
-        std::io::Error => Io,
-        crate::section::Error => Section
+        std::io::Error => Io
     }
 );
 
@@ -90,8 +88,8 @@ impl Display for WriteError
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         match self {
-            WriteError::Io(e) => write!(f, "io error: {}", e),
-            WriteError::Section(e) => write!(f, "section error: {}", e)
+            WriteError::SectionNotLoaded => f.write_str("section not loaded"),
+            WriteError::Io(e) => write!(f, "io error: {}", e)
         }
     }
 }
