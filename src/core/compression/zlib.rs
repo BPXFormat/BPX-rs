@@ -47,10 +47,8 @@ use libz_sys::{
     Z_VERSION_ERROR
 };
 
-use crate::{
-    compression::{Checksum, Deflater, Inflater},
-    utils::ReadFill
-};
+use crate::utils::ReadFill;
+use crate::core::compression::{Checksum, Deflater, Inflater};
 use crate::core::error::{DeflateError, InflateError};
 
 const ENCODER_BUF_SIZE: usize = 8192;

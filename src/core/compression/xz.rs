@@ -50,10 +50,8 @@ use lzma_sys::{
     LZMA_UNSUPPORTED_CHECK
 };
 
-use crate::{
-    compression::{Checksum, Deflater, Inflater},
-    utils::ReadFill
-};
+use crate::utils::ReadFill;
+use crate::core::compression::{Checksum, Deflater, Inflater};
 use crate::core::error::{DeflateError, InflateError};
 
 const THREADS_MAX: u32 = 8;

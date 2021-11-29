@@ -35,6 +35,7 @@ pub mod header;
 pub mod error;
 mod section;
 mod data;
+mod compression;
 
 pub use container::*;
 pub use section::SectionMut;

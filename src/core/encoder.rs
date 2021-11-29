@@ -34,7 +34,7 @@ use std::{
     io::{SeekFrom, Write}
 };
 use std::io::Seek;
-use crate::compression::{Checksum, Crc32Checksum, Deflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod};
+use crate::core::compression::{Checksum, Crc32Checksum, Deflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod};
 use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, GetChecksum, MainHeader, SIZE_MAIN_HEADER, SIZE_SECTION_HEADER, Struct};
 use crate::core::error::WriteError;
 use crate::core::section::SectionEntry;

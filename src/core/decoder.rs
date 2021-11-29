@@ -31,7 +31,7 @@
 use std::{io, io::Write};
 use std::collections::BTreeMap;
 use std::io::{Read, Seek};
-use crate::compression::{Checksum, Crc32Checksum, Inflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod};
+use crate::core::compression::{Checksum, Crc32Checksum, Inflater, WeakChecksum, XzCompressionMethod, ZlibCompressionMethod};
 use crate::core::{DEFAULT_COMPRESSION_THRESHOLD};
 use crate::core::data::{AutoSectionData};
 use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, MainHeader, SectionHeader, Struct};

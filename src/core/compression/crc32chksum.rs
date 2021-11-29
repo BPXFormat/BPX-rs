@@ -26,36 +26,52 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::num::Wrapping;
+use std::vec::Vec;
 
-use crate::compression::Checksum;
+use crate::core::compression::Checksum;
 
-pub struct WeakChecksum
+const POLYNOMIAL: u32 = 0xEDB88320;
+
+pub struct Crc32Checksum
 {
-    current: Wrapping<u32>
+    table: Vec<u32>,
+    current: u32
 }
 
-impl Checksum for WeakChecksum
+impl Crc32Checksum
 {
-    fn push(&mut self, data: &[u8])
+    pub fn new() -> Crc32Checksum
     {
-        for byte in data {
-            self.current += Wrapping(*byte as u32);
+        let mut table = Vec::with_capacity(256);
+        for i in 0..256 {
+            let mut val = i as u32;
+            if (val & 0x1) != 0 {
+                val = (val >> 1) ^ POLYNOMIAL;
+            } else {
+                val >>= 1;
+            }
+            table.push(val);
+        }
+        Crc32Checksum {
+            table,
+            current: 0xFFFFFFFF
+        }
+    }
+}
+
+impl Checksum for Crc32Checksum
+{
+    fn push(&mut self, buffer: &[u8])
+    {
+        for byte in buffer {
+            let index = (self.current ^ *byte as u32) & 0xFF;
+            self.current = (self.current >> 8) ^ self.table[index as usize];
         }
     }
 
-    fn finish(self) -> u32
+    fn finish(mut self) -> u32
     {
-        self.current.0
-    }
-}
-
-impl WeakChecksum
-{
-    pub fn new() -> Self
-    {
-        WeakChecksum {
-            current: Wrapping(0)
-        }
+        self.current ^= 0xFFFFFFFF;
+        self.current
     }
 }

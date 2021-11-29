@@ -39,7 +39,6 @@
 
 //use crate::section::AutoSection;
 
-mod compression;
 mod garraylen;
 pub mod macros;
 //pub mod sd;
