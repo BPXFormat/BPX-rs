@@ -242,7 +242,7 @@ impl SectionHeaderBuilder
         self
     }
 
-    /// Consumes self and returns the generated [SectionHeader](crate::header::SectionHeader).
+    /// Returns the generated [SectionHeader](crate::header::SectionHeader).
     ///
     /// # Examples
     ///
@@ -376,7 +376,7 @@ impl MainHeaderBuilder
         self
     }
 
-    /// Consumes self and returns the generated [MainHeader](crate::header::MainHeader).
+    /// Returns the generated [MainHeader](crate::header::MainHeader).
     ///
     /// # Examples
     ///
@@ -395,5 +395,21 @@ impl MainHeaderBuilder
     pub fn build(&self) -> MainHeader
     {
         self.header
+    }
+}
+
+impl From<&mut MainHeaderBuilder> for MainHeader
+{
+    fn from(builder: &mut MainHeaderBuilder) -> Self
+    {
+        builder.build()
+    }
+}
+
+impl From<&mut SectionHeaderBuilder> for SectionHeader
+{
+    fn from(builder: &mut SectionHeaderBuilder) -> Self
+    {
+        builder.build()
     }
 }
