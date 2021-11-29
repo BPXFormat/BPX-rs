@@ -27,15 +27,10 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //TODO: Pass a builder to write_symbol to simplify API
-//Maybe/Possible: Refactor shader and package modules to export Decoder, Encoder and Builder names instead.
-// => Ask Rust IRC first to know what's considered better practice in Rust
-//TODO: Pass builder directly to shader and package encoder constructor for coherence with Encoder API
 
 //#![warn(missing_docs)]
 
 //! This library is the official implementation for the [BPX](https://gitlab.com/bp3d/bpx/bpx/-/blob/master/BPX_Format.pdf) container format.
-
-//use crate::section::AutoSection;
 
 pub mod core;
 mod garraylen;
@@ -45,13 +40,10 @@ pub mod strings;
 pub mod table;
 pub mod utils;
 
-pub mod package;
-pub mod shader;
-
-/*#[cfg(feature = "package")]
+#[cfg(feature = "package")]
 pub mod package;
 #[cfg(feature = "shader")]
-pub mod shader;*/
+pub mod shader;
 
 /// Represents a pointer to a section.
 ///
