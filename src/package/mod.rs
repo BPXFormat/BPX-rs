@@ -31,6 +31,7 @@ pub mod error;
 
 mod builder;
 mod package;
+pub mod utils;
 
 pub use builder::*;
 pub use package::*;

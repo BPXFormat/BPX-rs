@@ -32,16 +32,16 @@ use std::{
     fs::{metadata, read_dir, File},
     path::{Path, PathBuf}
 };
+use std::io::{Read, Seek, Write};
 
 use crate::{
     package::{
-        error::{EosContext, ReadError, WriteError},
-        object::ObjectHeader,
-        PackageDecoder,
-        PackageEncoder
+        error::{ReadError, WriteError}
     },
     strings::{get_name_from_dir_entry, get_name_from_path}
 };
+use crate::package::error::EosContext;
+use crate::package::Package;
 
 /// Packs a file or folder in a BPXP with the given virtual name.
 ///
@@ -51,7 +51,7 @@ use crate::{
 ///
 /// # Arguments
 ///
-/// * `package`: the BPXP [PackageEncoder](crate::variant::package::PackageEncoder) to use.
+/// * `package`: the [Package](crate::package::Package) to use.
 /// * `vname`: the virtual name for the root source path.
 /// * `source`: the source [Path](std::path::Path) to pack.
 ///
@@ -60,8 +60,8 @@ use crate::{
 /// # Errors
 ///
 /// A [WriteError](crate::variant::package::error::WriteError) is returned if some objects could not be packed.
-pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
-    package: &mut PackageEncoder<TBackend>,
+pub fn pack_file_vname<T: Write + Seek>(
+    package: &mut Package<T>,
     vname: &str,
     source: &Path
 ) -> Result<(), WriteError>
@@ -71,7 +71,7 @@ pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
         #[cfg(feature = "debug-log")]
         println!("Writing file {} with {} byte(s)", vname, md.len());
         let mut fle = File::open(source)?;
-        package.pack_object(vname, &mut fle)?;
+        package.pack(vname, &mut fle)?;
     } else {
         let entries = read_dir(source)?;
         for rentry in entries {
@@ -94,7 +94,7 @@ pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
 ///
 /// # Arguments
 ///
-/// * `package`: the BPXP [PackageEncoder](crate::variant::package::PackageEncoder) to use.
+/// * `package`: the [Package](crate::package::Package) to use.
 /// * `source`: the source [Path](std::path::Path) to pack.
 ///
 /// returns: Result<(), Error>
@@ -102,65 +102,13 @@ pub fn pack_file_vname<TBackend: crate::encoder::IoBackend>(
 /// # Errors
 ///
 /// A [WriteError](crate::variant::package::error::WriteError) is returned if some objects could not be packed.
-pub fn pack_file<TBackend: crate::encoder::IoBackend>(
-    package: &mut PackageEncoder<TBackend>,
+pub fn pack_file<T: Write + Seek>(
+    package: &mut Package<T>,
     source: &Path
 ) -> Result<(), WriteError>
 {
     let str = get_name_from_path(source)?;
     pack_file_vname(package, str, source)
-}
-
-/// Loads an object into memory.
-///
-/// # Arguments
-///
-/// * `package`: the BPXP [PackageDecoder](crate::variant::package::PackageDecoder) to use.
-/// * `obj`: the object header.
-///
-/// returns: Result<Vec<u8>, Error>
-///
-/// # Errors
-///
-/// A [ReadError](crate::variant::package::error::ReadError) is returned if the object could not be unpacked.
-pub fn unpack_memory<TBackend: crate::decoder::IoBackend>(
-    package: &mut PackageDecoder<TBackend>,
-    obj: &ObjectHeader
-) -> Result<Vec<u8>, ReadError>
-{
-    let mut v = Vec::with_capacity(obj.size as usize);
-    let len = package.unpack_object(obj, &mut v)?;
-    if len != obj.size {
-        return Err(ReadError::Eos(EosContext::Object));
-    }
-    Ok(v)
-}
-
-/// Unpacks an object to the given file.
-///
-/// # Arguments
-///
-/// * `package`: the BPXP [PackageDecoder](crate::variant::package::PackageDecoder) to use.
-/// * `obj`: the object header.
-/// * `out`: the output [Path](std::path::Path).
-///
-/// returns: Result<File, Error>
-///
-/// # Errors
-///
-/// An [ReadError](crate::variant::package::error::ReadError) is returned if the object could not be unpacked.
-pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
-    package: &mut PackageDecoder<TBackend>,
-    obj: &ObjectHeader,
-    out: &Path
-) -> Result<File, ReadError>
-{
-    let mut f = File::create(out)?;
-    let len = package.unpack_object(obj, &mut f)?;
-    if len != obj.size {
-        return Err(ReadError::Eos(EosContext::Object));
-    }
-    Ok(f)
 }
 
 /// Unpacks a BPXP.
@@ -171,7 +119,7 @@ pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
 ///
 /// # Arguments
 ///
-/// * `package`: the BPXP [PackageDecoder](crate::variant::package::PackageDecoder) to unpack.
+/// * `package`: the [Package](crate::package::Package) to use.
 /// * `target`: the target [Path](std::path::Path) to extract the content to.
 ///
 /// returns: Result<(), Error>
@@ -179,26 +127,30 @@ pub fn unpack_file<TBackend: crate::decoder::IoBackend>(
 /// # Errors
 ///
 /// An [ReadError](crate::variant::package::error::ReadError) is returned if some objects could not be unpacked.
-pub fn unpack<TBackend: crate::decoder::IoBackend>(
-    package: &mut PackageDecoder<TBackend>,
+pub fn unpack<T: Read + Seek>(
+    package: &mut Package<T>,
     target: &Path
 ) -> Result<(), ReadError>
 {
-    let (items, mut names) = package.read_object_table()?;
-    for v in &items {
-        let path = names.load(v)?;
+    for mut v in package.objects()? {
+        let size = v.size();
+        let path = v.load_name()?;
         if path.is_empty() {
             return Err(ReadError::BlankString);
         }
         #[cfg(feature = "debug-log")]
-        println!("Reading {} with {} byte(s)...", path, v.size);
+        println!("Reading {} with {} byte(s)...", path, size);
         let mut dest = PathBuf::new();
         dest.push(target);
         dest.push(Path::new(path));
         if let Some(v) = dest.parent() {
             std::fs::create_dir_all(v)?;
         }
-        unpack_file(package, v, &dest)?;
+        let f = File::create(dest)?;
+        let s = v.unpack(f)?;
+        if size != s {
+            return Err(ReadError::Eos(EosContext::Object))
+        }
     }
     Ok(())
 }

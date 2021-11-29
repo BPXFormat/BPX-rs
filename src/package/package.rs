@@ -64,6 +64,11 @@ impl<'a, T: Read + Seek> Object<'a, T>
         let name = self.strings.get(self.container, self.header.name)?;
         Ok(name)
     }
+
+    pub fn size(&self) -> u64
+    {
+        self.header.size
+    }
 }
 
 pub struct ObjectIter<'a, T>
