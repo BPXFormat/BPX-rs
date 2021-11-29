@@ -108,7 +108,7 @@ fn create_data_section_header() -> SectionHeader
         .build()
 }
 
-/// A BPXP (Package)
+/// A BPXP (Package).
 ///
 /// # Examples
 ///
@@ -129,10 +129,18 @@ fn create_data_section_header() -> SectionHeader
 /// assert_eq!(items, 1);
 /// let mut object = bpxp.objects().unwrap().last().unwrap();
 /// assert_eq!(object.load_name().unwrap(), "TestObject");
-/// let mut data = Vec::new();
-/// object.unpack(&mut data);
-/// let s = std::str::from_utf8(&data).unwrap();
-/// assert_eq!(s, "This is a test 你好")
+/// {
+///     let mut data = Vec::new();
+///     object.unpack(&mut data);
+///     let s = std::str::from_utf8(&data).unwrap();
+///     assert_eq!(s, "This is a test 你好")
+/// }
+/// {
+///     let mut data = Vec::new();
+///     bpxp.unpack("TestObject", &mut data).unwrap();
+///     let s = std::str::from_utf8(&data).unwrap();
+///     assert_eq!(s, "This is a test 你好")
+/// }
 /// ```
 pub struct Package<T>
 {
