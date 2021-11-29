@@ -33,17 +33,9 @@ use crate::Handle;
 use crate::package::{Architecture, Platform};
 use crate::package::error::{InvalidCodeContext, ReadError};
 use crate::package::object::ObjectHeader;
-use crate::strings::StringSection;
 use crate::table::ItemTable;
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
-
-pub fn load_string_section<T: Read + Seek>(container: &mut Container<T>, strings: &StringSection) -> Result<(), ReadError>
-{
-    let mut section = container.get_mut(strings.handle());
-    section.load()?;
-    Ok(())
-}
 
 fn load_from_section<T: Read + Seek, W: Write>(
     container: &mut Container<T>,

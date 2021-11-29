@@ -34,10 +34,10 @@ use crate::core::header::{SECTION_TYPE_SD, SECTION_TYPE_STRING, Struct};
 use crate::Handle;
 use crate::package::object::ObjectHeader;
 use crate::package::{Architecture, Platform, SECTION_TYPE_OBJECT_TABLE, Settings, SUPPORTED_VERSION};
-use crate::package::decoder::{get_arch_platform_from_code, load_string_section, read_object_table, unpack_object};
+use crate::package::decoder::{get_arch_platform_from_code, read_object_table, unpack_object};
 use crate::package::encoder::{create_data_section_header, get_type_ext};
 use crate::package::error::{ReadError, Section, WriteError};
-use crate::strings::{StringSection};
+use crate::strings::{load_string_section, StringSection};
 use crate::table::ItemTable;
 use crate::utils::{OptionExtension, ReadFill};
 

@@ -138,6 +138,21 @@ impl StringSection
     }
 }
 
+/// Ensures string section is loaded. This is used to enable lazy loading on BPX types.
+///
+/// # Arguments
+///
+/// * `container`: the container which owns the string section.
+/// * `strings`: a reference to the string section.
+///
+/// returns: Result<(), ReadError>
+pub fn load_string_section<T: Read + Seek>(container: &mut Container<T>, strings: &StringSection) -> Result<(), crate::core::error::ReadError>
+{
+    let mut section = container.get_mut(strings.handle());
+    section.load()?;
+    Ok(())
+}
+
 fn low_level_read_string(
     ptr: u32,
     string_section: &mut AutoSectionData
