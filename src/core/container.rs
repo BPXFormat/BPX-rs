@@ -37,6 +37,7 @@ use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, F
 use crate::core::section::{new_section, new_section_mut, SectionEntry, SectionEntry1};
 use crate::core::{Section, SectionMut};
 use crate::core::decoder::read_section_header_table;
+use crate::core::encoder::{internal_save, internal_save_last};
 use crate::section::{new_section_data, SectionData};
 use crate::utils::OptionExtension;
 
@@ -232,105 +233,6 @@ impl<T: io::Write + io::Seek> Container<T>
         }
     }
 
-    fn write_sections(&mut self, file_start_offset: usize) -> Result<(u32, usize), WriteError>
-    {
-        let mut ptr: u64 = file_start_offset as _;
-        let mut all_sections_size: usize = 0;
-        let mut chksum_sht: u32 = 0;
-
-        for (idx, (_handle, section)) in self.sections.iter_mut().enumerate() {
-            //At this point the handle must be valid otherwise sections_in_order is broken
-            let data = section.data.as_mut().ok_or_else(|| WriteError::SectionNotLoaded)?;
-            if data.size() > u32::MAX as usize {
-                return Err(WriteError::Capacity(data.size()));
-            }
-            let last_section_ptr = data.stream_position()?;
-            data.seek(io::SeekFrom::Start(0))?;
-            let flags = section.entry1.get_flags(data.size() as u32);
-            let (csize, chksum) = write_section(flags, data.as_mut(), &mut self.backend)?;
-            data.seek(io::SeekFrom::Start(last_section_ptr))?;
-            section.header.csize = csize as u32;
-            section.header.size = data.size() as u32;
-            section.header.chksum = chksum;
-            section.header.flags = flags;
-            section.header.pointer = ptr;
-            section.index = idx as _;
-            #[cfg(feature = "debug-log")]
-            println!(
-                "Writing section #{}: Size = {}, Size after compression = {}, Handle = {}",
-                idx, section.header.size, section.header.csize, _handle
-            );
-            ptr += csize as u64;
-            {
-                //Locate section header offset, then directly write section header
-                let header_start_offset = SIZE_MAIN_HEADER + (idx * SIZE_SECTION_HEADER);
-                self.backend.seek(SeekFrom::Start(header_start_offset as _))?;
-                section.header.write(&mut self.backend)?;
-                //Reset file pointer back to the end of the last written section
-                self.backend.seek(SeekFrom::Start(ptr))?;
-            }
-            chksum_sht += section.header.get_checksum();
-            all_sections_size += csize;
-        }
-        Ok((chksum_sht, all_sections_size))
-    }
-
-    fn internal_save(&mut self) -> Result<(), WriteError>
-    {
-        let file_start_offset =
-            SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * self.main_header.section_num as usize);
-        //Seek to the start of the actual file content
-        self.backend.seek(SeekFrom::Start(file_start_offset as _))?;
-        //Write all section data and section headers
-        let (chksum_sht, all_sections_size) = self.write_sections(file_start_offset)?;
-        self.main_header.file_size = all_sections_size as u64 + file_start_offset as u64;
-        self.main_header.chksum = 0;
-        self.main_header.chksum = chksum_sht + self.main_header.get_checksum();
-        //Relocate to the start of the file and write the BPX main header
-        self.backend.seek(SeekFrom::Start(0))?;
-        self.main_header.write(&mut self.backend)?;
-        self.modified = false;
-        Ok(())
-    }
-
-    fn write_last_section(&mut self, last_handle: u32) -> Result<(bool, i64), WriteError>
-    {
-        let entry = self.sections.get_mut(&last_handle).unwrap();
-        self.backend.seek(SeekFrom::Start(entry.header.pointer))?;
-        let data = entry.data.as_mut().ok_or_else(|| WriteError::SectionNotLoaded)?;
-        let last_section_ptr = data.stream_position()?;
-        let flags = entry.entry1.get_flags(data.size() as u32);
-        let (csize, chksum) = write_section(flags, data.as_mut(), &mut self.backend)?;
-        data.seek(io::SeekFrom::Start(last_section_ptr))?;
-        let old = entry.header;
-        entry.header.csize = csize as u32;
-        entry.header.size = data.size() as u32;
-        entry.header.chksum = chksum;
-        entry.header.flags = flags;
-        let diff = entry.header.csize as i64 - old.csize as i64;
-        Ok((old == entry.header, diff))
-    }
-
-    fn internal_save_last(&mut self) -> Result<(), WriteError>
-    {
-        // This function saves only the last section.
-        let (update_sht, diff) = self.write_last_section(self.next_handle - 1)?;
-        if update_sht {
-            let offset_section_header = SIZE_MAIN_HEADER
-                + (SIZE_SECTION_HEADER * (self.main_header.section_num - 1) as usize);
-            self.backend
-                .seek(SeekFrom::Start(offset_section_header as _))?;
-            let entry = &self.sections[&(self.next_handle - 1)];
-            entry.header.write(&mut self.backend)?;
-        }
-        if diff != 0 {
-            self.backend.seek(SeekFrom::Start(0))?;
-            self.main_header.file_size = self.main_header.file_size.wrapping_add(diff as u64);
-            self.main_header.write(&mut self.backend)?;
-        }
-        Ok(())
-    }
-
     /// Writes all sections to the underlying IO backend.
     ///
     /// **This function prints some information to standard output as a way
@@ -350,16 +252,17 @@ impl<T: io::Write + io::Seek> Container<T>
         let count = filter.by_ref().count();
         if self.modified || count > 1 {
             self.modified = false;
-            return self.internal_save();
+            return internal_save(&mut self.backend, &mut self.sections, &mut self.main_header);
         } else if !self.modified && count == 1 {
             let (handle, _) = filter.last().unwrap();
             if *handle == self.next_handle - 1 {
                 //Save only the last section (no need to re-write every other section
-                return self.internal_save_last();
+                return internal_save_last(&mut self.backend, &mut self.sections, &mut self.main_header, self.next_handle - 1);
             } else {
                 //Unfortunately the modified section is not the last one so we can't safely
                 //expand/reduce the file size without corrupting other sections
-                return self.internal_save();
+                self.modified = false;
+                return internal_save(&mut self.backend, &mut self.sections, &mut self.main_header);
             }
         }
         Ok(())
