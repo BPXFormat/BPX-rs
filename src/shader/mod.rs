@@ -30,12 +30,12 @@
 
 pub mod error;
 pub mod symbol;
-mod shaderpack;
+mod core;
 mod builder;
 mod decoder;
 mod encoder;
 
-pub use shaderpack::*;
+pub use self::core::*;
 pub use builder::*;
 
 /// The supported BPX version for this shader variant decoder/encoder.

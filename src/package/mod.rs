@@ -32,13 +32,13 @@ pub mod object;
 pub mod error;
 
 mod builder;
-mod package;
+mod core;
 pub mod utils;
 mod decoder;
 mod encoder;
 
 pub use builder::*;
-pub use package::*;
+pub use self::core::*;
 
 /// The standard type for a data section in a BPX Package (type P).
 pub const SECTION_TYPE_DATA: u8 = 0x1;
