@@ -32,6 +32,8 @@ pub mod error;
 pub mod symbol;
 mod shaderpack;
 mod builder;
+mod decoder;
+mod encoder;
 
 pub use shaderpack::*;
 pub use builder::*;

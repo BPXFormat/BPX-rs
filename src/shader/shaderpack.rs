@@ -36,8 +36,10 @@ use crate::core::header::{SECTION_TYPE_STRING, Struct};
 use crate::Handle;
 use crate::sd::Object;
 use crate::shader::{SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SHADER, SECTION_TYPE_SYMBOL_TABLE, Settings, Shader, Stage, SUPPORTED_VERSION, Target, Type};
-use crate::shader::error::{EosContext, InvalidCodeContext, ReadError, Section, WriteError};
-use crate::shader::symbol::{FLAG_EXTENDED_DATA, SIZE_SYMBOL_STRUCTURE, Symbol, SymbolType};
+use crate::shader::decoder::{get_stage_from_code, get_target_type_from_code, read_symbol_table};
+use crate::shader::encoder::get_type_ext;
+use crate::shader::error::{EosContext, ReadError, Section, WriteError};
+use crate::shader::symbol::{FLAG_EXTENDED_DATA, Symbol, SymbolType};
 use crate::strings::{load_string_section, StringSection};
 use crate::table::ItemTable;
 use crate::utils::OptionExtension;
@@ -195,37 +197,6 @@ impl<T> ShaderPack<T>
     }
 }
 
-fn get_type_ext(settings: &Settings) -> [u8; 16]
-{
-    let mut type_ext: [u8; 16] = [0; 16];
-    match settings.target {
-        Target::DX11 => type_ext[10] = 0x1,
-        Target::DX12 => type_ext[10] = 0x2,
-        Target::GL33 => type_ext[10] = 0x3,
-        Target::GL40 => type_ext[10] = 0x4,
-        Target::GL41 => type_ext[10] = 0x5,
-        Target::GL42 => type_ext[10] = 0x6,
-        Target::GL43 => type_ext[10] = 0x7,
-        Target::GL44 => type_ext[10] = 0x8,
-        Target::GL45 => type_ext[10] = 0x9,
-        Target::GL46 => type_ext[10] = 0xA,
-        Target::ES30 => type_ext[10] = 0xB,
-        Target::ES31 => type_ext[10] = 0xC,
-        Target::ES32 => type_ext[10] = 0xD,
-        Target::VK10 => type_ext[10] = 0xE,
-        Target::VK11 => type_ext[10] = 0xF,
-        Target::VK12 => type_ext[10] = 0x10,
-        Target::MT => type_ext[10] = 0x11,
-        Target::Any => type_ext[10] = 0xFF
-    };
-    match settings.btype {
-        Type::Assembly => type_ext[11] = b'A',
-        Type::Pipeline => type_ext[11] = b'P'
-    };
-    LittleEndian::write_u64(&mut type_ext[0..8], settings.assembly_hash);
-    type_ext
-}
-
 impl<T: Write + Seek> ShaderPack<T>
 {
     pub fn create<S: Into<Settings>>(backend: T, settings: S) -> ShaderPack<T>
@@ -365,70 +336,6 @@ impl<T: Write + Seek> ShaderPack<T>
         self.container.save()?;
         Ok(())
     }
-}
-
-fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
-{
-    let target;
-    let btype;
-
-    match acode {
-        0x1 => target = Target::DX11,
-        0x2 => target = Target::DX12,
-        0x3 => target = Target::GL33,
-        0x4 => target = Target::GL40,
-        0x5 => target = Target::GL41,
-        0x6 => target = Target::GL42,
-        0x7 => target = Target::GL43,
-        0x8 => target = Target::GL44,
-        0x9 => target = Target::GL45,
-        0xA => target = Target::GL46,
-        0xB => target = Target::ES30,
-        0xC => target = Target::ES31,
-        0xD => target = Target::ES32,
-        0xE => target = Target::VK10,
-        0xF => target = Target::VK11,
-        0x10 => target = Target::VK12,
-        0x11 => target = Target::MT,
-        0xFF => target = Target::Any,
-        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Target, acode))
-    }
-    if tcode == b'A' {
-        //Rust refuses to parse match properly so use if/else-if blocks
-        btype = Type::Assembly;
-    } else if tcode == b'P' {
-        btype = Type::Pipeline;
-    } else {
-        return Err(ReadError::InvalidCode(InvalidCodeContext::Type, tcode));
-    }
-    Ok((target, btype))
-}
-
-fn get_stage_from_code(code: u8) -> Result<Stage, ReadError>
-{
-    match code {
-        0x0 => Ok(Stage::Vertex),
-        0x1 => Ok(Stage::Hull),
-        0x2 => Ok(Stage::Domain),
-        0x3 => Ok(Stage::Geometry),
-        0x4 => Ok(Stage::Pixel),
-        _ => Err(ReadError::InvalidCode(InvalidCodeContext::Stage, code))
-    }
-}
-
-fn read_symbol_table<T: Read + Seek>(container: &mut Container<T>, symbols: &mut Vec<Symbol>, num_symbols: u16, symbol_table: Handle) -> Result<ItemTable<Symbol>, ReadError>
-{
-    let mut section = container.get_mut(symbol_table);
-    let count = section.size as u32 / SIZE_SYMBOL_STRUCTURE as u32;
-
-    if count != num_symbols as u32 {
-        return Err(ReadError::Eos(EosContext::SymbolTable));
-    }
-    for _ in 0..count {
-        let header = Symbol::read(section.load()?)?;
-        symbols.push(header);
-    }
-    Ok(ItemTable::new(symbols.clone()))
 }
 
 impl<T: Read + Seek> ShaderPack<T>
