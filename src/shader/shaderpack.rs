@@ -78,10 +78,10 @@ impl<'a, T: Read + Seek> SymbolRef<'a, T>
             panic!("The symbol extended data is undefined.");
         }
         let section = *self.extended_data.get_or_insert_with_err(|| {
-            return match self.container.find_section_by_type(SECTION_TYPE_EXTENDED_DATA) {
+            match self.container.find_section_by_type(SECTION_TYPE_EXTENDED_DATA) {
                 Some(v) => Ok(v),
                 None => Err(ReadError::MissingSection(Section::ExtendedData))
-            };
+            }
         })?;
         let mut section = self.container.get_mut(section);
         let data = section.load()?;

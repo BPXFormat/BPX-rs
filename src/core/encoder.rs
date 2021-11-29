@@ -51,7 +51,7 @@ fn write_sections<T: Write + Seek>(mut backend: T, sections: &mut BTreeMap<u32, 
 
     for (idx, (_handle, section)) in sections.iter_mut().enumerate() {
         //At this point the handle must be valid otherwise sections_in_order is broken
-        let data = section.data.as_mut().ok_or_else(|| WriteError::SectionNotLoaded)?;
+        let data = section.data.as_mut().ok_or(WriteError::SectionNotLoaded)?;
         if data.size() > u32::MAX as usize {
             return Err(WriteError::Capacity(data.size()));
         }
@@ -107,7 +107,7 @@ fn write_last_section<T: Write + Seek>(mut backend: T, sections: &mut BTreeMap<u
 {
     let entry = sections.get_mut(&last_handle).unwrap();
     backend.seek(SeekFrom::Start(entry.header.pointer))?;
-    let data = entry.data.as_mut().ok_or_else(|| WriteError::SectionNotLoaded)?;
+    let data = entry.data.as_mut().ok_or(WriteError::SectionNotLoaded)?;
     let last_section_ptr = data.stream_position()?;
     let flags = entry.entry1.get_flags(data.size() as u32);
     let (csize, chksum) = write_section(flags, data, &mut backend)?;

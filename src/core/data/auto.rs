@@ -46,6 +46,14 @@ pub struct AutoSectionData
     inner: DynSectionData
 }
 
+impl Default for AutoSectionData
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
+
 impl AutoSectionData
 {
     pub fn new() -> AutoSectionData
