@@ -45,6 +45,7 @@ pub mod strings;
 pub mod utils;
 
 pub mod core;
+pub mod table;
 
 /*#[cfg(feature = "package")]
 pub mod package;

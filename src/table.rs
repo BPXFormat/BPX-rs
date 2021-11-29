@@ -28,12 +28,12 @@
 
 //! This module provides a lookup-table style implementation.
 
-use std::{collections::HashMap, marker::PhantomData, ops::Index};
-use crate::container::Container;
+use std::{collections::HashMap, ops::Index};
+use crate::core::Container;
 
 use crate::strings::StringSection;
 
-/// Represents an item to be stored in a NameTable/ItemTable combination.
+/// Represents an item to be stored in an ItemTable.
 pub trait Item
 {
     /// Returns the address of the name of this item in its string section.
@@ -140,56 +140,15 @@ impl<T: Item + Clone> ItemTable<T>
     pub fn build_lookup_table<T1>(
         &mut self,
         container: &mut Container<T1>,
-        names: &mut NameTable<T>
+        names: &mut StringSection
     ) -> Result<(), crate::strings::ReadError>
     {
         let mut map: HashMap<String, T> = HashMap::new();
         for v in &self.list {
-            let name = names.load(container, v)?.into();
+            let name = names.get(container, v.get_name_address())?.into();
             map.insert(name, v.clone());
         }
         self.map = Some(map);
         Ok(())
-    }
-}
-
-/// Represents a name table with on demand name loading (strings are only loaded when requested).
-pub struct NameTable<T: Item>
-{
-    section: StringSection,
-    useless: PhantomData<T>
-}
-
-impl<T: Item> NameTable<T>
-{
-    /// Constructs a new NameTable from its corresponding string section.
-    ///
-    /// # Arguments
-    ///
-    /// * `section`: the string section.
-    ///
-    /// returns: NameTable<T>
-    pub fn new(section: StringSection) -> Self
-    {
-        Self {
-            section,
-            useless: PhantomData::default()
-        }
-    }
-
-    /// Loads the name of an item.
-    ///
-    /// # Arguments
-    ///
-    /// * `item`: the item to load the name for.
-    ///
-    /// returns: Result<&str, ReadError>
-    ///
-    /// # Errors
-    ///
-    /// A [ReadError](crate::strings::ReadError) is returned if the string could not be loaded.
-    pub fn load<T1>(&mut self, container: &mut Container<T1>, item: &T) -> Result<&str, crate::strings::ReadError>
-    {
-        self.section.get(container, item.get_name_address())
     }
 }
