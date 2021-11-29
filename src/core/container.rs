@@ -27,17 +27,119 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io;
-use std::collections::BTreeMap;
-use std::io::{Seek, SeekFrom};
-use std::ops::{Index, IndexMut};
+use std::collections::{Bound, BTreeMap};
+use std::io::{Read, Seek, SeekFrom};
 use super::decoder::load_section1;
 use super::encoder::write_section;
 use crate::core::error::{ReadError, WriteError};
 use crate::Handle;
 use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, GetChecksum, MainHeader, SectionHeader, SIZE_MAIN_HEADER, SIZE_SECTION_HEADER, Struct};
 use crate::section::{new_section_data, SectionData};
+use crate::utils::OptionExtension;
 
 pub const DEFAULT_COMPRESSION_THRESHOLD: u32 = 65536;
+
+pub struct IterMut<'a, T>
+{
+    backend: &'a mut T,
+    sections: std::collections::btree_map::IterMut<'a, u32, SectionEntry>
+}
+
+impl<'a, T> Iterator for IterMut<'a, T>
+{
+    type Item = SectionMut<'a, T>;
+
+    fn next(&mut self) -> Option<Self::Item>
+    {
+        let (h, v) = self.sections.next()?;
+        unsafe {
+            let ptr = self.backend as *mut T;
+            Some(SectionMut {
+                backend: &mut *ptr,
+                entry: v,
+                handle: Handle(*h)
+            })
+        }
+    }
+}
+
+pub struct SectionMut<'a, T>
+{
+    backend: &'a mut T,
+    entry: &'a mut SectionEntry,
+    handle: Handle
+}
+
+impl<'a, T: Read + Seek> SectionMut<'a, T>
+{
+    pub fn load(&mut self) -> Result<&mut dyn SectionData, ReadError>
+    {
+        let data = self.entry.data.get_or_insert_with_err(|| load_section1(self.backend, &self.entry.header))?;
+        self.entry.modified = true;
+        Ok(&mut **data)
+    }
+}
+
+impl<'a, T> SectionMut<'a, T>
+{
+    pub fn open(&mut self) -> Option<&mut dyn SectionData>
+    {
+        self.entry.modified = true;
+        match &mut self.entry.data {
+            Some(v) => Some(&mut **v),
+            None => None
+        }
+    }
+
+    pub fn handle(&self) -> Handle
+    {
+        self.handle
+    }
+
+    pub fn header(&self) -> &SectionHeader
+    {
+        &self.entry.header
+    }
+
+    pub fn size(&self) -> usize
+    {
+        self.entry.data.as_ref().map(|v| v.size()).unwrap_or(0)
+    }
+
+    pub fn index(&self) -> u32
+    {
+        self.entry.index
+    }
+}
+
+pub struct Section<'a>
+{
+    entry: &'a SectionEntry,
+    handle: Handle
+}
+
+impl<'a> Section<'a>
+{
+    pub fn size(&self) -> usize
+    {
+        self.entry.data.as_ref().map(|v| v.size()).unwrap_or(0)
+    }
+
+    pub fn handle(&self) -> Handle
+    {
+        self.handle
+    }
+
+    pub fn header(&self) -> &SectionHeader
+    {
+        &self.entry.header
+    }
+
+    pub fn index(&self) -> u32
+    {
+        self.entry.index
+    }
+}
 
 struct SectionEntry1
 {
@@ -64,37 +166,13 @@ impl SectionEntry1
     }
 }
 
-pub struct Section
+struct SectionEntry
 {
+    entry1: SectionEntry1,
     header: SectionHeader,
     data: Option<Box<dyn SectionData>>,
     index: u32,
     modified: bool
-}
-
-impl Section
-{
-    pub fn is_loaded(&self) -> bool
-    {
-        self.data.is_some()
-    }
-
-    pub fn open(&mut self) -> &mut dyn SectionData
-    {
-        self.modified = true;
-        &mut **self.data.as_mut().unwrap()
-    }
-
-    pub fn size(&self) -> usize
-    {
-        self.data.as_ref().unwrap().size()
-    }
-}
-
-struct SectionEntry
-{
-    section: Section,
-    entry1: SectionEntry1
 }
 
 pub struct Container<T>
@@ -111,7 +189,7 @@ impl<T> Container<T>
     pub fn find_section_by_type(&self, btype: u8) -> Option<Handle>
     {
         for (handle, entry) in &self.sections {
-            if entry.section.header.btype == btype {
+            if entry.header.btype == btype {
                 return Some(Handle(*handle));
             }
         }
@@ -144,14 +222,21 @@ impl<T> Container<T>
         &self.main_header
     }
 
-    pub fn get_section(&self, handle: Handle) -> Option<&Section>
+    pub fn get(&self, handle: Handle) -> Section
     {
-        self.sections.get(&handle.0).map(|v| &v.section)
+        self.sections.get(&handle.0).map(|v| Section {
+            handle,
+            entry: v
+        }).expect("attempt to use invalid handle")
     }
 
-    pub fn get_section_mut(&mut self, handle: Handle) -> Option<&mut Section>
+    pub fn get_mut(&mut self, handle: Handle) -> SectionMut<T>
     {
-        self.sections.get_mut(&handle.0).map(|v| &mut v.section)
+        self.sections.get_mut(&handle.0).map(|v| SectionMut {
+            handle,
+            entry: v,
+            backend: &mut self.backend
+        }).expect("attempt to use invalid handle")
     }
 
     /// Creates a new section in the BPX
@@ -169,12 +254,10 @@ impl<T> Container<T>
         let section = new_section_data(None)?;
         let h = header.into();
         let entry = SectionEntry {
-            section: Section {
-                header: h,
-                data: Some(section),
-                modified: false,
-                index: r
-            },
+            header: h,
+            data: Some(section),
+            modified: false,
+            index: self.main_header.section_num - 1,
             entry1: SectionEntry1 {
                 threshold: h.csize,
                 flags: h.flags
@@ -199,6 +282,25 @@ impl<T> Container<T>
         self.sections.remove(&handle.0);
         self.main_header.section_num -= 1;
         self.modified = true;
+        self.sections.range_mut((Bound::Included(handle.0), Bound::Unbounded)).for_each(|(_, v)| {
+            v.index -= 1;
+        });
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item=Section>
+    {
+        self.sections.iter().map(|(h, v)| Section {
+            handle: Handle(*h),
+            entry: v
+        })
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item=SectionMut<T>>
+    {
+        IterMut {
+            backend: &mut self.backend,
+            sections: self.sections.iter_mut()
+        }
     }
 
     /// Consumes this BPX container and returns the inner IO backend.
@@ -218,12 +320,10 @@ impl<T: io::Read + io::Seek> Container<T>
             let (checksum, header) = SectionHeader::read(&mut self.backend)?;
             final_checksum += checksum;
             self.sections.insert(self.next_handle, SectionEntry {
-                section: Section {
-                    header,
-                    data: None,
-                    modified: false,
-                    index: i
-                },
+                header,
+                data: None,
+                modified: false,
+                index: i,
                 entry1: SectionEntry1 {
                     flags: header.flags,
                     threshold: DEFAULT_COMPRESSION_THRESHOLD
@@ -262,38 +362,6 @@ impl<T: io::Read + io::Seek> Container<T>
         container.read_section_header_table(checksum)?;
         Ok(container)
     }
-
-    /// Loads a section from this BPX.
-    ///
-    /// # Arguments
-    ///
-    /// * `handle`: a handle to the section.
-    ///
-    /// returns: Result<&mut dyn SectionData, ReadError>
-    ///
-    /// # Errors
-    ///
-    /// A [ReadError](crate::error::ReadError) is returned if the section could not be loaded.
-    pub fn load_section(&mut self, handle: Handle) -> Result<(), ReadError>
-    {
-        let entry = self.sections.get_mut(&handle.0).unwrap();
-        entry.section.data = Some(load_section1(&mut self.backend, &entry.section.header)?);
-        entry.section.modified = true;
-        self.modified = true;
-        Ok(())
-    }
-
-    pub fn load_sections<F: FnMut(&Section) -> bool>(&mut self, mut f: F) -> Result<(), ReadError>
-    {
-        for (idx, entry) in &mut self.sections
-        {
-            entry.section.index = *idx;
-            if f(&entry.section) {
-                entry.section.data = Some(load_section1(&mut self.backend, &entry.section.header)?);
-            }
-        }
-        Ok(())
-    }
 }
 
 impl<T: io::Write + io::Seek> Container<T>
@@ -317,7 +385,7 @@ impl<T: io::Write + io::Seek> Container<T>
 
         for (idx, (_handle, section)) in self.sections.iter_mut().enumerate() {
             //At this point the handle must be valid otherwise sections_in_order is broken
-            let data = section.section.data.as_mut().ok_or_else(|| WriteError::SectionNotLoaded)?;
+            let data = section.data.as_mut().ok_or_else(|| WriteError::SectionNotLoaded)?;
             if data.size() > u32::MAX as usize {
                 return Err(WriteError::Capacity(data.size()));
             }
@@ -326,27 +394,27 @@ impl<T: io::Write + io::Seek> Container<T>
             let flags = section.entry1.get_flags(data.size() as u32);
             let (csize, chksum) = write_section(flags, data.as_mut(), &mut self.backend)?;
             data.seek(io::SeekFrom::Start(last_section_ptr))?;
-            section.section.header.csize = csize as u32;
-            section.section.header.size = data.size() as u32;
-            section.section.header.chksum = chksum;
-            section.section.header.flags = flags;
-            section.section.header.pointer = ptr;
-            section.section.index = idx as _;
+            section.header.csize = csize as u32;
+            section.header.size = data.size() as u32;
+            section.header.chksum = chksum;
+            section.header.flags = flags;
+            section.header.pointer = ptr;
+            section.index = idx as _;
             #[cfg(feature = "debug-log")]
             println!(
                 "Writing section #{}: Size = {}, Size after compression = {}, Handle = {}",
-                idx, section.section.header.size, section.section.header.csize, _handle
+                idx, section.header.size, section.header.csize, _handle
             );
             ptr += csize as u64;
             {
                 //Locate section header offset, then directly write section header
                 let header_start_offset = SIZE_MAIN_HEADER + (idx * SIZE_SECTION_HEADER);
                 self.backend.seek(SeekFrom::Start(header_start_offset as _))?;
-                section.section.header.write(&mut self.backend)?;
+                section.header.write(&mut self.backend)?;
                 //Reset file pointer back to the end of the last written section
                 self.backend.seek(SeekFrom::Start(ptr))?;
             }
-            chksum_sht += section.section.header.get_checksum();
+            chksum_sht += section.header.get_checksum();
             all_sections_size += csize;
         }
         Ok((chksum_sht, all_sections_size))
@@ -373,19 +441,19 @@ impl<T: io::Write + io::Seek> Container<T>
     fn write_last_section(&mut self, last_handle: u32) -> Result<(bool, i64), WriteError>
     {
         let entry = self.sections.get_mut(&last_handle).unwrap();
-        self.backend.seek(SeekFrom::Start(entry.section.header.pointer))?;
-        let data = entry.section.data.as_mut().ok_or_else(|| WriteError::SectionNotLoaded)?;
+        self.backend.seek(SeekFrom::Start(entry.header.pointer))?;
+        let data = entry.data.as_mut().ok_or_else(|| WriteError::SectionNotLoaded)?;
         let last_section_ptr = data.stream_position()?;
         let flags = entry.entry1.get_flags(data.size() as u32);
         let (csize, chksum) = write_section(flags, data.as_mut(), &mut self.backend)?;
         data.seek(io::SeekFrom::Start(last_section_ptr))?;
-        let old = entry.section.header;
-        entry.section.header.csize = csize as u32;
-        entry.section.header.size = data.size() as u32;
-        entry.section.header.chksum = chksum;
-        entry.section.header.flags = flags;
-        let diff = entry.section.header.csize as i64 - old.csize as i64;
-        Ok((old == entry.section.header, diff))
+        let old = entry.header;
+        entry.header.csize = csize as u32;
+        entry.header.size = data.size() as u32;
+        entry.header.chksum = chksum;
+        entry.header.flags = flags;
+        let diff = entry.header.csize as i64 - old.csize as i64;
+        Ok((old == entry.header, diff))
     }
 
     fn internal_save_last(&mut self) -> Result<(), WriteError>
@@ -398,7 +466,7 @@ impl<T: io::Write + io::Seek> Container<T>
             self.backend
                 .seek(SeekFrom::Start(offset_section_header as _))?;
             let entry = &self.sections[&(self.next_handle - 1)];
-            entry.section.header.write(&mut self.backend)?;
+            entry.header.write(&mut self.backend)?;
         }
         if diff != 0 {
             self.backend.seek(SeekFrom::Start(0))?;
@@ -423,7 +491,7 @@ impl<T: io::Write + io::Seek> Container<T>
         let mut filter = self
             .sections
             .iter()
-            .filter(|(_, entry)| entry.section.modified);
+            .filter(|(_, entry)| entry.modified);
         let count = filter.by_ref().count();
         if self.modified || count > 1 {
             self.modified = false;
@@ -440,23 +508,5 @@ impl<T: io::Write + io::Seek> Container<T>
             }
         }
         Ok(())
-    }
-}
-
-impl<T> Index<Handle> for Container<T>
-{
-    type Output = Section;
-
-    fn index(&self, index: Handle) -> &Self::Output
-    {
-        self.get_section(index).unwrap()
-    }
-}
-
-impl<T> IndexMut<Handle> for Container<T>
-{
-    fn index_mut(&mut self, index: Handle) -> &mut Self::Output
-    {
-        self.get_section_mut(index).unwrap()
     }
 }

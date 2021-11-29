@@ -10,7 +10,6 @@ fn attempt_write_empty_bpxp()
     {
         let mut file = File::create(Path::new("./the_very_first_bpx.bpx")).unwrap();
         let mut container = Container::create(file, MainHeader::new());
-        //let mut encoder = Encoder::new(&mut file).unwrap();
         container.save().unwrap();
     }
     {

@@ -48,38 +48,9 @@ pub trait SectionData: Read + Write + Seek
     /// # Errors
     ///
     /// An [Error](std::io::Error) is returned if the section could not be loaded.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::encoder::Encoder;
-    /// use bpx::core::header::{SectionHeader, Struct};
-    /// use bpx::Interface;
-    /// use bpx::utils::new_byte_buf;
-    ///
-    /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let section = file.create_section(SectionHeader::new()).unwrap();
-    /// let mut data = section.open().unwrap();
-    /// let buf = data.load_in_memory().unwrap();
-    /// assert_eq!(buf.len(), 0);
-    /// ```
     fn load_in_memory(&mut self) -> Result<Vec<u8>>;
 
     /// Returns the current size of this section.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::encoder::Encoder;
-    /// use bpx::core::header::{SectionHeader, Struct};
-    /// use bpx::Interface;
-    /// use bpx::utils::new_byte_buf;
-    ///
-    /// let mut file = Encoder::new(new_byte_buf(0)).unwrap();
-    /// let section = file.create_section(SectionHeader::new()).unwrap();
-    /// let data = section.open().unwrap();
-    /// assert_eq!(data.size(), 0);
-    /// ```
     fn size(&self) -> usize;
 }
 
