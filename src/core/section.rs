@@ -31,7 +31,6 @@ use crate::core::data::AutoSectionData;
 use crate::core::decoder::load_section1;
 use crate::core::error::ReadError;
 use crate::core::header::{FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB, SectionHeader};
-use crate::core::SectionData;
 use crate::Handle;
 use crate::utils::OptionExtension;
 
@@ -102,11 +101,6 @@ impl<'a, T> SectionMut<'a, T>
     pub fn header(&self) -> &SectionHeader
     {
         &self.entry.header
-    }
-
-    pub fn size(&self) -> usize
-    {
-        self.entry.data.as_ref().map(|v| v.size()).unwrap_or(0)
     }
 
     pub fn index(&self) -> u32
