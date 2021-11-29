@@ -59,7 +59,7 @@ use crate::package::Package;
 ///
 /// # Errors
 ///
-/// A [WriteError](crate::variant::package::error::WriteError) is returned if some objects could not be packed.
+/// A [WriteError](crate::package::error::WriteError) is returned if some objects could not be packed.
 pub fn pack_file_vname<T: Write + Seek>(
     package: &mut Package<T>,
     vname: &str,
@@ -101,7 +101,7 @@ pub fn pack_file_vname<T: Write + Seek>(
 ///
 /// # Errors
 ///
-/// A [WriteError](crate::variant::package::error::WriteError) is returned if some objects could not be packed.
+/// A [WriteError](crate::package::error::WriteError) is returned if some objects could not be packed.
 pub fn pack_file<T: Write + Seek>(
     package: &mut Package<T>,
     source: &Path
@@ -126,7 +126,7 @@ pub fn pack_file<T: Write + Seek>(
 ///
 /// # Errors
 ///
-/// An [ReadError](crate::variant::package::error::ReadError) is returned if some objects could not be unpacked.
+/// An [ReadError](crate::package::error::ReadError) is returned if some objects could not be unpacked.
 pub fn unpack<T: Read + Seek>(
     package: &mut Package<T>,
     target: &Path
