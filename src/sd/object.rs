@@ -64,6 +64,14 @@ impl Object
         }
     }
 
+    /// Allocates a new object with a specified initial capacity
+    pub fn with_capacity(capacity: usize) -> Object
+    {
+        Object {
+            props: HashMap::with_capacity(capacity)
+        }
+    }
+
     /// Sets a property in the object using a raw property hash.
     ///
     /// # Arguments
