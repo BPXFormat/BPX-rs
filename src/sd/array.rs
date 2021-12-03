@@ -104,9 +104,13 @@ impl Array
     /// arr.remove_at(0);
     /// assert_eq!(arr.len(), 0);
     /// ```
-    pub fn remove_at(&mut self, pos: usize)
+    pub fn remove_at(&mut self, pos: usize) -> Option<Value>
     {
-        self.data.remove(pos);
+        if pos > self.data.len() {
+            None
+        } else {
+            Some(self.data.remove(pos))
+        }
     }
 
     /// Removes a range of values from the array.
