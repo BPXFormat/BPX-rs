@@ -520,3 +520,81 @@ impl serde::Serializer for Serializer
         })
     }
 }
+
+#[cfg(test)]
+mod tests
+{
+    use serde::Deserialize;
+    use serde::Serialize;
+
+    use super::*;
+    use crate::sd::{Array, Object, Value};
+    use crate::sd::serde::Deserializer;
+
+    #[test]
+    fn basic_enum()
+    {
+        #[derive(Deserialize, Serialize, Eq, PartialEq, Debug)]
+        enum MyEnum
+        {
+            Val,
+            Val1,
+            Val2
+        }
+        let e = MyEnum::Val.serialize(Serializer::new(EnumSize::U8)).unwrap();
+        let e1 = MyEnum::Val1.serialize(Serializer::new(EnumSize::U16)).unwrap();
+        let e2 = MyEnum::Val2.serialize(Serializer::new(EnumSize::U32)).unwrap();
+        assert_eq!(
+            MyEnum::deserialize(Deserializer::new(EnumSize::U8, e)).unwrap(),
+            MyEnum::Val
+        );
+        assert_eq!(
+            MyEnum::deserialize(Deserializer::new(EnumSize::U16, e1)).unwrap(),
+            MyEnum::Val1
+        );
+        assert_eq!(
+            MyEnum::deserialize(Deserializer::new(EnumSize::U32, e2)).unwrap(),
+            MyEnum::Val2
+        );
+    }
+
+    #[test]
+    fn tuple_enum()
+    {
+        #[derive(Deserialize, Serialize, Eq, PartialEq, Debug)]
+        enum MyEnum
+        {
+            Val(u8),
+            Val1,
+            Val2(u8, u8)
+        }
+        let e = MyEnum::Val2(0, 42).serialize(Serializer::new(EnumSize::U8)).unwrap();
+        let e = MyEnum::deserialize(Deserializer::new(EnumSize::U8, e)).unwrap();
+        assert_eq!(e, MyEnum::Val2(0, 42));
+    }
+
+    #[test]
+    fn basic_struct()
+    {
+        #[derive(Deserialize, Serialize)]
+        struct MyStruct
+        {
+            val: u8,
+            val1: u8,
+            val2: String,
+            val3: (f32, f32, f32)
+        }
+        let val = MyStruct {
+            val: 42,
+            val1: 84,
+            val2: "test string".into(),
+            val3: (1.0, 2.0, 3.0)
+        }.serialize(Serializer::new(EnumSize::U8)).unwrap();
+        let test = MyStruct::deserialize(Deserializer::new(EnumSize::U8, val)).unwrap();
+        assert_eq!(test.val, 42);
+        assert_eq!(test.val1, 84);
+        assert_eq!(test.val2, "test string");
+        assert_eq!(test.val3, (1.0, 2.0, 3.0));
+    }
+}
+
