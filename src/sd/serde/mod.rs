@@ -26,20 +26,66 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! The BPX Structured Data format (BPXSD).
+mod deserialize;
+mod serialize;
 
-mod array;
-mod debug;
-mod decoder;
-mod encoder;
-pub mod error;
-mod object;
-mod value;
+use std::fmt::{Display, Formatter};
 
-pub use array::Array;
-pub use debug::DebugSymbols;
-pub use object::Object;
-pub use value::Value;
+use serde::ser::StdError;
 
-#[cfg(feature = "serde")]
-pub mod serde;
+use crate::sd::error::TypeError;
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum EnumSize
+{
+    U8,
+    U16,
+    U32
+}
+
+#[derive(Debug)]
+pub enum Error
+{
+    UnsupportedType,
+    TypeMismatch(TypeError),
+    Message(String),
+    InvalidUtf32(u32),
+    MissingMapKey,
+    MissingMapValue,
+    InvalidMapCall,
+    InvalidEnum,
+    MissingVariantData,
+    MissingStructKey(&'static str)
+}
+
+impl From<TypeError> for Error
+{
+    fn from(e: TypeError) -> Self
+    {
+        Self::TypeMismatch(e)
+    }
+}
+
+impl Display for Error
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            Error::UnsupportedType => f.write_str("unsupported type"),
+            Error::TypeMismatch(e) => write!(f, "{}", e),
+            Error::Message(s) => f.write_str(s),
+            Error::InvalidUtf32(v) => write!(f, "invalid utf-32 character ({})", v),
+            Error::MissingMapKey => f.write_str("missing map key"),
+            Error::MissingMapValue => f.write_str("missing map value"),
+            Error::InvalidMapCall => f.write_str("invalid map call"),
+            Error::InvalidEnum => f.write_str("invalid enum type"),
+            Error::MissingVariantData => f.write_str("missing variant data"),
+            Error::MissingStructKey(name) => write!(f, "missing struct key '{}'", name)
+        }
+    }
+}
+
+impl StdError for Error {}
+
+pub use deserialize::Deserializer;
+pub use serialize::Serializer;
