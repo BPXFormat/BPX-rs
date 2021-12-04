@@ -59,7 +59,9 @@ impl Array
     /// Allocates a new array with a specified initial capacity
     pub fn with_capacity(capacity: usize) -> Array
     {
-        Array { data: Vec::with_capacity(capacity) }
+        Array {
+            data: Vec::with_capacity(capacity)
+        }
     }
 
     /// Adds a value at the end of the array.
