@@ -26,8 +26,6 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//TODO: Pass a builder to write_symbol to simplify API
-
 //#![warn(missing_docs)]
 
 //! This library is the official implementation for the [BPX](https://gitlab.com/bp3d/bpx/bpx/-/blob/master/BPX_Format.pdf) container format.
@@ -35,13 +33,20 @@
 pub mod core;
 mod garraylen;
 pub mod macros;
-pub mod sd;
-pub mod strings;
-pub mod table;
 pub mod utils;
+
+#[cfg(feature = "table")]
+pub mod table;
+
+#[cfg(feature = "sd")]
+pub mod sd;
+
+#[cfg(feature = "strings")]
+pub mod strings;
 
 #[cfg(feature = "package")]
 pub mod package;
+
 #[cfg(feature = "shader")]
 pub mod shader;
 

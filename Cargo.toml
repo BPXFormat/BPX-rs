@@ -22,5 +22,8 @@ serde = { version = "1.0.130", features = ["derive"], optional = true }
 
 [features]
 debug-log = []
-package = []
-shader = []
+package = ["sd", "table"]
+shader = ["sd", "table"]
+sd = []
+strings = []
+table = ["strings"]

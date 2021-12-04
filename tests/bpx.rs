@@ -25,6 +25,7 @@ fn attempt_write_empty_bpxp()
 }
 
 #[test]
+#[cfg(feature = "sd")]
 fn sd_api_test()
 {
     use std::convert::TryInto;
