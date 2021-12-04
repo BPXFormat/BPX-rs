@@ -385,7 +385,11 @@ impl serde::Serializer for Serializer
         _: &'static str
     ) -> Result<Self::Ok, Self::Error>
     {
-        Ok(Value::Uint32(variant_index))
+        Ok(match self.enum_size {
+            EnumSize::U8 => Value::Uint8(variant_index as u8),
+            EnumSize::U16 => Value::Uint16(variant_index as u16),
+            EnumSize::U32 => Value::Uint32(variant_index)
+        })
     }
 
     fn serialize_newtype_struct<T: ?Sized>(
@@ -410,7 +414,11 @@ impl serde::Serializer for Serializer
         T: Serialize
     {
         let mut arr = Array::with_capacity(2);
-        arr.add(variant_index.into());
+        match self.enum_size {
+            EnumSize::U8 => arr.add((variant_index as u8).into()),
+            EnumSize::U16 => arr.add((variant_index as u16).into()),
+            EnumSize::U32 => arr.add(variant_index.into())
+        }
         arr.add(value.serialize(self)?);
         Ok(arr.into())
     }
@@ -456,7 +464,11 @@ impl serde::Serializer for Serializer
     ) -> Result<Self::SerializeTupleVariant, Self::Error>
     {
         let mut arr = Array::with_capacity(len + 1);
-        arr.add(variant_index.into());
+        match self.enum_size {
+            EnumSize::U8 => arr.add((variant_index as u8).into()),
+            EnumSize::U16 => arr.add((variant_index as u16).into()),
+            EnumSize::U32 => arr.add(variant_index.into())
+        }
         Ok(Seq {
             arr,
             enum_size: self.enum_size
@@ -497,7 +509,11 @@ impl serde::Serializer for Serializer
     ) -> Result<Self::SerializeStructVariant, Self::Error>
     {
         let mut obj = Object::with_capacity(len + 1);
-        obj.set("__variant__", variant_index.into());
+        match self.enum_size {
+            EnumSize::U8 => obj.set("__variant__", (variant_index as u8).into()),
+            EnumSize::U16 => obj.set("__variant__", (variant_index as u16).into()),
+            EnumSize::U32 => obj.set("__variant__", variant_index.into())
+        }
         Ok(Struct {
             obj,
             enum_size: self.enum_size
