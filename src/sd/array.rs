@@ -30,6 +30,7 @@ use std::{
     ops::{Index, IndexMut},
     vec::Vec
 };
+use std::slice::Iter;
 
 use crate::sd::Value;
 
@@ -178,6 +179,23 @@ impl Array
     pub fn is_empty(&self) -> bool
     {
         self.len() == 0
+    }
+
+    /// Returns an iterator to this array.
+    pub fn iter(&self) -> Iter<Value>
+    {
+        self.data.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Array
+{
+    type Item = &'a Value;
+    type IntoIter = Iter<'a, Value>;
+
+    fn into_iter(self) -> Self::IntoIter
+    {
+        self.iter()
     }
 }
 

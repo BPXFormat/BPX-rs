@@ -52,7 +52,7 @@ impl<'a> Iterator for Iter<'a>
 }
 
 /// Provides support for debug symbols to BPXSD object.
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub struct Debugger
 {
     inner: Object,
