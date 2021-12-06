@@ -121,16 +121,15 @@ fn write_value(val: &Value) -> Result<Vec<u8>, WriteError>
 fn write_object(obj: &Object) -> Result<Vec<u8>, WriteError>
 {
     let mut v: Vec<u8> = Vec::new();
-    let count = obj.prop_count();
+    let count = obj.len();
 
     if count > 255 {
-        return Err(WriteError::PropCountExceeded(count));
+        return Err(WriteError::CapacityExceeded(count));
     }
     v.push(count as u8);
-    for hash in obj.get_keys() {
-        let val = &obj[*hash];
+    for (hash, val) in obj {
         let mut head: [u8; 9] = [0; 9];
-        LittleEndian::write_u64(&mut head[0..8], *hash);
+        LittleEndian::write_u64(&mut head[0..8], hash);
         head[8] = get_value_type_code(val);
         v.extend_from_slice(&head);
         v.append(&mut write_value(val)?);
@@ -144,7 +143,7 @@ fn write_array(arr: &Array) -> Result<Vec<u8>, WriteError>
     let count = arr.len();
 
     if count > 255 {
-        return Err(WriteError::PropCountExceeded(count));
+        return Err(WriteError::CapacityExceeded(count));
     }
     v.push(count as u8);
     for i in 0..count {

@@ -27,7 +27,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::{
-    collections::{hash_map::Keys, HashMap},
+    collections::HashMap,
     ops::Index
 };
 
@@ -38,6 +38,21 @@ use crate::{
     },
     utils
 };
+
+pub struct Iter<'a>
+{
+    props: std::collections::hash_map::Iter<'a, u64, Value>
+}
+
+impl<'a> Iterator for Iter<'a>
+{
+    type Item = (u64, &'a Value);
+
+    fn next(&mut self) -> Option<Self::Item>
+    {
+        self.props.next().map(|(k, v)| (*k, v))
+    }
+}
 
 /// Represents a BPX Structured Data Object.
 #[derive(PartialEq, Clone)]
@@ -85,9 +100,9 @@ impl Object
     /// use bpx::sd::Object;
     ///
     /// let mut obj = Object::new();
-    /// assert_eq!(obj.prop_count(), 0);
+    /// assert!(obj.is_empty());
     /// obj.raw_set(0, 12.into());
-    /// assert_eq!(obj.prop_count(), 1);
+    /// assert_eq!(obj.len(), 1);
     /// ```
     pub fn raw_set(&mut self, hash: u64, value: Value)
     {
@@ -107,9 +122,9 @@ impl Object
     /// use bpx::sd::Object;
     ///
     /// let mut obj = Object::new();
-    /// assert_eq!(obj.prop_count(), 0);
+    /// assert!(obj.is_empty());
     /// obj.set("Test", 12.into());
-    /// assert_eq!(obj.prop_count(), 1);
+    /// assert_eq!(obj.len(), 1);
     /// ```
     pub fn set(&mut self, name: &str, value: Value)
     {
@@ -167,15 +182,23 @@ impl Object
     }
 
     /// Returns the number of properties in the object.
-    pub fn prop_count(&self) -> usize
+    pub fn len(&self) -> usize
     {
         self.props.len()
     }
 
-    /// Returns a set of all key-value pairs (properties) in the object.
-    pub fn get_keys(&self) -> Keys<'_, u64, Value>
+    /// Returns whether this object is empty
+    pub fn is_empty(&self) -> bool
     {
-        self.props.keys()
+        self.props.is_empty()
+    }
+
+    /// Iterate through the object keys and values.
+    pub fn iter(&self) -> Iter
+    {
+        Iter {
+            props: self.props.iter()
+        }
     }
 
     /// Attempts to write the object to the given IO backend.
@@ -227,6 +250,17 @@ impl Object
     pub fn read<TRead: std::io::Read>(source: TRead) -> Result<Object, ReadError>
     {
         super::decoder::read_structured_data(source)
+    }
+}
+
+impl<'a> IntoIterator for &'a Object
+{
+    type Item = (u64, &'a Value);
+    type IntoIter = Iter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter
+    {
+        self.iter()
     }
 }
 

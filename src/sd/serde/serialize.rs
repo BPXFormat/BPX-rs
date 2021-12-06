@@ -528,7 +528,6 @@ mod tests
     use serde::Serialize;
 
     use super::*;
-    use crate::sd::{Array, Object, Value};
     use crate::sd::serde::Deserializer;
 
     #[test]
