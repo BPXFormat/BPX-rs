@@ -49,7 +49,7 @@ build-win64:
         - . ./.gitlab/support/windows.ps1
         - startsection deps "Install job dependencies"
         - choco install -y rust-ms
-        - $env:Path += "C:\Users\gitlab_runner\.cargo\bin"
+        - $env:Path += ";C:\Users\gitlab_runner\.cargo\bin;"
         - cargo install gitlab-report
         - endsection deps
     extends:
