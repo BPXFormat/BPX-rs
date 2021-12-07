@@ -56,6 +56,7 @@ build-win64:
     before_script:
         - . ./.gitlab/support/windows.ps1
         - startsection deps "Install job dependencies"
+        - chcp 65001
         - choco install -y rust-ms
         - $env:Path += ";C:\Users\gitlab_runner\.cargo\bin;"
         - cargo install gitlab-report
