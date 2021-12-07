@@ -14,7 +14,27 @@ variables:
         - startsection build "Build & test"
         - cargo build
         - cargo test
+            --all-features
+            --no-fail-fast
+            -- -Z unstable-options --format json
+            | gitlab-report -p test > report.xml
+        - cargo clippy
+            --all-features
+            --message-format=json
+            | gitlab-report -p clippy > gl-code-quality-report.json
+        - cargo bench
+            --all-features
+            -- -Z unstable-options --format json
+            | gitlab-report -p bench > metrics.txt
+        - cargo audit --all-features --json | gitlab-report -p audit > gl-sast-report.json
         - endsection build
+    artifacts:
+        when: always
+        reports:
+            sast: gl-sast-report.json
+            codequality: gl-code-quality-report.json
+            junit: results.xml
+            metrics: metrics.txt
 
 build-linux:
     stage: build
@@ -25,6 +45,10 @@ build-linux:
         - .build-script
     before_script:
         - . ./.gitlab/support/unix.sh
+        - startsection deps "Install job dependencies"
+        - cargo install gitlab-report
+        - cargo install cargo-audit
+        - endsection deps
 
 build-win64:
     stage: build
@@ -38,6 +62,8 @@ build-win64:
         - . ./.gitlab/support/windows.ps1
         - startsection deps "Install job dependencies"
         - choco install -y rust-ms
+        - cargo install gitlab-report
+        - cargo install cargo-audit
         - endsection deps
     extends:
         - .build-script
