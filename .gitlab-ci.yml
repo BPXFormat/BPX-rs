@@ -54,6 +54,27 @@ build-win64:
     extends:
         - .build-script
 
+reports-audit:
+    stage: build
+    except:
+        - master
+    image: registry.gitlab.com/tobip64/rust-gitlab-ci:latest
+    before_script:
+        - . ./.gitlab/support/unix.sh
+    script:
+        - startsection init "Attempting to correct cargo audit"
+        - cargo uninstall cargo-audit
+        - export RUSTFLAGS="-C target-feature=-crt-static"
+        - cargo install carg-audit
+        - endsection init
+        - startsection build "Build & test"
+        - cargo audit --color=always --json | gitlab-report -p audit -f gl-sast > gl-sast-report.json
+        - endsection build
+    artifacts:
+        when: always
+        reports:
+            sast: gl-sast-report.json
+
 reports:
     stage: build
     except:
@@ -71,12 +92,10 @@ reports:
             --all-features
             -- -Z unstable-options --format json
             | gitlab-report -p bench > metrics.txt
-        - cargo audit --color=always --json | gitlab-report -p audit -f gl-sast > gl-sast-report.json
         - endsection build
     artifacts:
         when: always
         reports:
-            sast: gl-sast-report.json
             codequality: gl-code-quality-report.json
             metrics: metrics.txt
 
