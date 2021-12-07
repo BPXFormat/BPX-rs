@@ -16,13 +16,21 @@ variables:
         - cargo test
             --all-features
             --no-fail-fast
-            -- -Z unstable-options --format json
-            | gitlab-report -p test > report.xml
+            -- -Z unstable-options --format json > test_output.json
+        - gitlab-report -p test -i test_output.json -o report.xml
+        - cargo bench
+            --all-features
+            -- -Z unstable-options --format json > bench_output.json
+        - gitlab-report -p bench -i bench_output.json -o metrics.txt
         - endsection build
     artifacts:
         when: always
+        paths:
+            - test_output.json
+            - bench_output.json
         reports:
             junit: report.xml
+            metrics: metrics.txt
 
 build-linux:
     stage: build
@@ -55,7 +63,7 @@ build-win64:
     extends:
         - .build-script
 
-reports-audit:
+audit:
     stage: build
     except:
         - master
@@ -63,11 +71,11 @@ reports-audit:
     before_script:
         - . ./.gitlab/support/unix.sh
     script:
-        - startsection init "Installing audit tool"
+        - startsection init "Installing tools"
         - cargo install cargo-audit
         - cargo install gitlab-report
         - endsection init
-        - startsection build "Build & test"
+        - startsection build "Running cargo audit"
         - cargo audit --color=always --json | gitlab-report -p audit -f gl-sast > gl-sast-report.json
         - endsection build
     artifacts:
@@ -75,7 +83,7 @@ reports-audit:
         reports:
             sast: gl-sast-report.json
 
-reports:
+codequality:
     stage: build
     except:
         - master
@@ -83,21 +91,16 @@ reports:
     before_script:
         - . ./.gitlab/support/unix.sh
     script:
-        - startsection build "Build & test"
+        - startsection build "Running cargo clippy"
         - cargo clippy
             --all-features
             --message-format=json
             | gitlab-report -p clippy > gl-code-quality-report.json
-        - cargo bench
-            --all-features
-            -- -Z unstable-options --format json
-            | gitlab-report -p bench > metrics.txt
         - endsection build
     artifacts:
         when: always
         reports:
             codequality: gl-code-quality-report.json
-            metrics: metrics.txt
 
 #------------------#
 # Release pipeline #
