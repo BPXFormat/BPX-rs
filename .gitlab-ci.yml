@@ -50,6 +50,7 @@ build-win64:
         - startsection deps "Install job dependencies"
         - choco install -y rust-ms
         - cargo install gitlab-report
+        - $env:Path += "$env:USERPROFILE/.cargo/bin"
         - endsection deps
     extends:
         - .build-script
@@ -58,14 +59,13 @@ reports-audit:
     stage: build
     except:
         - master
-    image: registry.gitlab.com/tobip64/rust-gitlab-ci:latest
+    image: rust:latest
     before_script:
         - . ./.gitlab/support/unix.sh
     script:
-        - startsection init "Attempting to correct cargo audit"
-        - cargo uninstall cargo-audit
-        - export RUSTFLAGS="-C target-feature=-crt-static"
-        - cargo install carg-audit
+        - startsection init "Installing audit tool"
+        - cargo install cargo-audit
+        - cargo install gitlab-report
         - endsection init
         - startsection build "Build & test"
         - cargo audit --color=always --json | gitlab-report -p audit -f gl-sast > gl-sast-report.json
