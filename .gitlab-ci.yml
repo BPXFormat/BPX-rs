@@ -10,19 +10,6 @@ variables:
 #------------------#
 .build-script:
     stage: build
-    script:
-        - startsection build "Build & test"
-        - cargo build
-        - cargo test
-            --all-features
-            --no-fail-fast
-            -- -Z unstable-options --format json > test_output.json
-        - gitlab-report -p test -i test_output.json -o report.xml
-        - cargo bench
-            --all-features
-            -- -Z unstable-options --format json > bench_output.json
-        - gitlab-report -p bench -i bench_output.json -o metrics.txt
-        - endsection build
     artifacts:
         when: always
         paths:
@@ -39,6 +26,19 @@ build-linux:
     image: "rust:latest"
     extends:
         - .build-script
+    script:
+        - startsection build "Build & test"
+        - cargo build
+        - cargo test
+            --all-features
+            --no-fail-fast
+            -- -Z unstable-options --format json > test_output.json
+        - gitlab-report -p test -i test_output.json -o report.xml
+        - cargo bench
+            --all-features
+            -- -Z unstable-options --format json > bench_output.json
+        - gitlab-report -p bench -i bench_output.json -o metrics.txt
+        - endsection build
     before_script:
         - . ./.gitlab/support/unix.sh
         - startsection deps "Install job dependencies"
@@ -56,11 +56,23 @@ build-win64:
     before_script:
         - . ./.gitlab/support/windows.ps1
         - startsection deps "Install job dependencies"
-        - chcp 65001
         - choco install -y rust-ms
         - $env:Path += ";C:\Users\gitlab_runner\.cargo\bin;"
         - cargo install gitlab-report
         - endsection deps
+    script:
+        - startsection build "Build & test"
+        - cargo build
+        - cargo test
+            --all-features
+            --no-fail-fast
+            -- -Z unstable-options --format json | Out-File -Encoding "UTF8" "test_output.json"
+        - gitlab-report -p test -i test_output.json -o report.xml
+        - cargo bench
+            --all-features
+            -- -Z unstable-options --format json | Out-File -Encoding "UTF8" "bench_output.json"
+        - gitlab-report -p bench -i bench_output.json -o metrics.txt
+        - endsection build
     extends:
         - .build-script
 
