@@ -22,7 +22,7 @@ variables:
     artifacts:
         when: always
         reports:
-            junit: results.xml
+            junit: report.xml
 
 build-linux:
     stage: build
@@ -71,7 +71,7 @@ reports:
             --all-features
             -- -Z unstable-options --format json
             | gitlab-report -p bench > metrics.txt
-        - cargo audit --all-features --json | gitlab-report -p audit > gl-sast-report.json
+        - cargo audit --all-features --color=always --json | gitlab-report -p audit -f gl-sast > gl-sast-report.json
         - endsection build
     artifacts:
         when: always
