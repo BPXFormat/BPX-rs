@@ -56,7 +56,7 @@ build-win64:
         - choco install -y rust-ms
         - $env:Path += ";C:\Users\gitlab_runner\.cargo\bin;"
         - cargo install gitlab-report
-        - \[Console\]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+        - "[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)"
         - endsection deps
     extends:
         - .build-script
