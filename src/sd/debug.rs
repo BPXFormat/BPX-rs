@@ -47,7 +47,13 @@ impl<'a> Iterator for Iter<'a>
 
     fn next(&mut self) -> Option<Self::Item>
     {
-        self.inner.next().map(|(k, v)| (self.symbols_map.get(&k).map(|v| &**v), k, v))
+        let (mut k, mut v) = self.inner.next()?;
+        while k == hash("__debug__") {
+            let (k1, v1) = self.inner.next()?;
+            k = k1;
+            v = v1;
+        }
+        Some((self.symbols_map.get(&k).map(|v| &**v), k, v))
     }
 }
 
