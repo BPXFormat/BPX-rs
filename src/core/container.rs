@@ -67,6 +67,22 @@ impl<'a, T> Iterator for IterMut<'a, T>
     }
 }
 
+pub struct Iter<'a>
+{
+    sections: std::collections::btree_map::Iter<'a, u32, SectionEntry>
+}
+
+impl<'a> Iterator for Iter<'a>
+{
+    type Item = Section<'a>;
+
+    fn next(&mut self) -> Option<Self::Item>
+    {
+        let (h, v) = self.sections.next()?;
+        Some(new_section(v, Handle(*h)))
+    }
+}
+
 pub struct Container<T>
 {
     backend: T,
@@ -180,14 +196,14 @@ impl<T> Container<T>
             });
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = Section>
+    pub fn iter(&self) -> Iter
     {
-        self.sections
-            .iter()
-            .map(|(h, v)| new_section(v, Handle(*h)))
+        Iter {
+            sections: self.sections.iter()
+        }
     }
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = SectionMut<T>>
+    pub fn iter_mut(&mut self) -> IterMut<T>
     {
         IterMut {
             backend: &mut self.backend,
@@ -199,6 +215,28 @@ impl<T> Container<T>
     pub fn into_inner(self) -> T
     {
         self.backend
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Container<T>
+{
+    type Item = Section<'a>;
+    type IntoIter = Iter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter
+    {
+        self.iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut Container<T>
+{
+    type Item = SectionMut<'a, T>;
+    type IntoIter = IterMut<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter
+    {
+        self.iter_mut()
     }
 }
 
