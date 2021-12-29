@@ -41,12 +41,52 @@ use serde::{
     Serialize
 };
 
-use crate::sd::{
-    serde::{EnumSize, Error},
-    Array,
-    Object,
-    Value
-};
+use crate::sd::{serde::{EnumSize, Error}, Array, Object, Value, Debugger};
+
+enum DebuggerOrObject
+{
+    Debugger(crate::sd::Debugger),
+    Object(crate::sd::Object)
+}
+
+impl DebuggerOrObject
+{
+    pub fn with_capacity(capacity: usize, debug: bool) -> DebuggerOrObject
+    {
+        if debug {
+            DebuggerOrObject::Debugger(Debugger::attach(Object::with_capacity(capacity)).unwrap())
+        } else {
+            DebuggerOrObject::Object(Object::with_capacity(capacity))
+        }
+    }
+
+    pub fn get(&self, key: &str) -> Option<&crate::sd::Value>
+    {
+        match self {
+            DebuggerOrObject::Debugger(v) => v.get(key),
+            DebuggerOrObject::Object(v) => v.get(key)
+        }
+    }
+
+    pub fn set(&mut self, key: &str, value: crate::sd::Value)
+    {
+        match self {
+            DebuggerOrObject::Debugger(v) => v.set(key, value),
+            DebuggerOrObject::Object(v) => v.set(key, value)
+        }
+    }
+}
+
+impl Into<crate::sd::Value> for DebuggerOrObject
+{
+    fn into(self) -> Value
+    {
+        match self {
+            DebuggerOrObject::Debugger(v) => v.detach().into(),
+            DebuggerOrObject::Object(v) => v.into()
+        }
+    }
+}
 
 impl serde::ser::Error for Error
 {
@@ -61,7 +101,8 @@ impl serde::ser::Error for Error
 pub struct Seq
 {
     arr: Array,
-    enum_size: EnumSize
+    enum_size: EnumSize,
+    debug: bool
 }
 
 impl Seq
@@ -71,7 +112,7 @@ impl Seq
         T: Serialize
     {
         self.arr
-            .add(value.serialize(Serializer::new(self.enum_size))?);
+            .add(value.serialize(Serializer::new(self.enum_size, self.debug))?);
         Ok(())
     }
 }
@@ -150,9 +191,10 @@ impl SerializeTupleVariant for Seq
 
 pub struct Map
 {
-    cur_obj: Object,
+    cur_obj: DebuggerOrObject,
     arr: Array,
-    enum_size: EnumSize
+    enum_size: EnumSize,
+    debug: bool
 }
 
 impl Map
@@ -160,7 +202,7 @@ impl Map
     fn check_update(&mut self)
     {
         if self.cur_obj.get("__key__").is_some() && self.cur_obj.get("__value__").is_some() {
-            let val = std::mem::replace(&mut self.cur_obj, Object::with_capacity(2));
+            let val = std::mem::replace(&mut self.cur_obj, DebuggerOrObject::with_capacity(2, self.debug));
             self.arr.add(val.into());
         }
     }
@@ -176,7 +218,7 @@ impl SerializeMap for Map
         T: Serialize
     {
         self.cur_obj
-            .set("__key__", key.serialize(Serializer::new(self.enum_size))?);
+            .set("__key__", key.serialize(Serializer::new(self.enum_size, self.debug))?);
         self.check_update();
         Ok(())
     }
@@ -187,7 +229,7 @@ impl SerializeMap for Map
     {
         self.cur_obj.set(
             "__value__",
-            value.serialize(Serializer::new(self.enum_size))?
+            value.serialize(Serializer::new(self.enum_size, self.debug))?
         );
         self.check_update();
         Ok(())
@@ -201,8 +243,9 @@ impl SerializeMap for Map
 
 pub struct Struct
 {
-    obj: Object,
-    enum_size: EnumSize
+    obj: DebuggerOrObject,
+    enum_size: EnumSize,
+    debug: bool
 }
 
 impl Struct
@@ -212,7 +255,7 @@ impl Struct
         T: Serialize
     {
         self.obj
-            .set(key, value.serialize(Serializer::new(self.enum_size))?);
+            .set(key, value.serialize(Serializer::new(self.enum_size, self.debug))?);
         Ok(())
     }
 }
@@ -263,14 +306,15 @@ impl SerializeStructVariant for Struct
 
 pub struct Serializer
 {
-    enum_size: EnumSize
+    enum_size: EnumSize,
+    debug: bool
 }
 
 impl Serializer
 {
-    pub fn new(enum_size: EnumSize) -> Serializer
+    pub fn new(enum_size: EnumSize, debug: bool) -> Serializer
     {
-        Serializer { enum_size }
+        Serializer { enum_size, debug }
     }
 }
 
@@ -431,7 +475,8 @@ impl serde::Serializer for Serializer
             } else {
                 Array::new()
             },
-            enum_size: self.enum_size
+            enum_size: self.enum_size,
+            debug: self.debug
         })
     }
 
@@ -439,7 +484,8 @@ impl serde::Serializer for Serializer
     {
         Ok(Seq {
             arr: Array::with_capacity(len),
-            enum_size: self.enum_size
+            enum_size: self.enum_size,
+            debug: self.debug
         })
     }
 
@@ -451,7 +497,8 @@ impl serde::Serializer for Serializer
     {
         Ok(Seq {
             arr: Array::with_capacity(len),
-            enum_size: self.enum_size
+            enum_size: self.enum_size,
+            debug: self.debug
         })
     }
 
@@ -471,20 +518,22 @@ impl serde::Serializer for Serializer
         }
         Ok(Seq {
             arr,
-            enum_size: self.enum_size
+            enum_size: self.enum_size,
+            debug: self.debug
         })
     }
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error>
     {
         Ok(Map {
-            cur_obj: Object::with_capacity(2),
+            cur_obj: DebuggerOrObject::with_capacity(2, self.debug),
             arr: if let Some(len) = len {
                 Array::with_capacity(len)
             } else {
                 Array::new()
             },
-            enum_size: self.enum_size
+            enum_size: self.enum_size,
+            debug: self.debug
         })
     }
 
@@ -495,8 +544,9 @@ impl serde::Serializer for Serializer
     ) -> Result<Self::SerializeStruct, Self::Error>
     {
         Ok(Struct {
-            obj: Object::with_capacity(len),
-            enum_size: self.enum_size
+            obj: DebuggerOrObject::with_capacity(len, self.debug),
+            enum_size: self.enum_size,
+            debug: self.debug
         })
     }
 
@@ -508,7 +558,7 @@ impl serde::Serializer for Serializer
         len: usize
     ) -> Result<Self::SerializeStructVariant, Self::Error>
     {
-        let mut obj = Object::with_capacity(len + 1);
+        let mut obj = DebuggerOrObject::with_capacity(len + 1, self.debug);
         match self.enum_size {
             EnumSize::U8 => obj.set("__variant__", (variant_index as u8).into()),
             EnumSize::U16 => obj.set("__variant__", (variant_index as u16).into()),
@@ -516,7 +566,8 @@ impl serde::Serializer for Serializer
         }
         Ok(Struct {
             obj,
-            enum_size: self.enum_size
+            enum_size: self.enum_size,
+            debug: self.debug
         })
     }
 }
@@ -540,9 +591,9 @@ mod tests
             Val1,
             Val2
         }
-        let e = MyEnum::Val.serialize(Serializer::new(EnumSize::U8)).unwrap();
-        let e1 = MyEnum::Val1.serialize(Serializer::new(EnumSize::U16)).unwrap();
-        let e2 = MyEnum::Val2.serialize(Serializer::new(EnumSize::U32)).unwrap();
+        let e = MyEnum::Val.serialize(Serializer::new(EnumSize::U8, false)).unwrap();
+        let e1 = MyEnum::Val1.serialize(Serializer::new(EnumSize::U16, false)).unwrap();
+        let e2 = MyEnum::Val2.serialize(Serializer::new(EnumSize::U32, false)).unwrap();
         assert_eq!(
             MyEnum::deserialize(Deserializer::new(EnumSize::U8, e)).unwrap(),
             MyEnum::Val
@@ -567,7 +618,7 @@ mod tests
             Val1,
             Val2(u8, u8)
         }
-        let e = MyEnum::Val2(0, 42).serialize(Serializer::new(EnumSize::U8)).unwrap();
+        let e = MyEnum::Val2(0, 42).serialize(Serializer::new(EnumSize::U8, false)).unwrap();
         let e = MyEnum::deserialize(Deserializer::new(EnumSize::U8, e)).unwrap();
         assert_eq!(e, MyEnum::Val2(0, 42));
     }
@@ -588,7 +639,7 @@ mod tests
             val1: 84,
             val2: "test string".into(),
             val3: (1.0, 2.0, 3.0)
-        }.serialize(Serializer::new(EnumSize::U8)).unwrap();
+        }.serialize(Serializer::new(EnumSize::U8, false)).unwrap();
         let test = MyStruct::deserialize(Deserializer::new(EnumSize::U8, val)).unwrap();
         assert_eq!(test.val, 42);
         assert_eq!(test.val1, 84);
