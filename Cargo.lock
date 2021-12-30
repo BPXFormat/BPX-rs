@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "bpx"
-version = "4.0.0-preview2"
+version = "4.0.0-preview3"
 dependencies = [
  "byteorder",
  "libz-sys",
