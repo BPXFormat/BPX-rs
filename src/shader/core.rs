@@ -46,7 +46,7 @@ use crate::{
         decoder::{get_stage_from_code, get_target_type_from_code, read_symbol_table},
         encoder::get_type_ext,
         error::{EosContext, ReadError, Section, WriteError},
-        symbol::{Symbol, SymbolType, FLAG_EXTENDED_DATA},
+        symbol::{Symbol, FLAG_EXTENDED_DATA},
         Settings,
         Shader,
         Stage,
@@ -62,6 +62,7 @@ use crate::{
     utils::OptionExtension,
     Handle
 };
+use crate::shader::symbol::OwnedSymbol;
 
 pub struct SymbolRef<'a, T>
 {
@@ -149,11 +150,12 @@ impl<'a, T> Iterator for SymbolIter<'a, T>
 /// ```
 /// use std::io::{Seek, SeekFrom};
 /// use bpx::shader::{Builder, Shader, ShaderPack, Stage};
-/// use bpx::shader::symbol::{FLAG_EXTENDED_DATA, SymbolType};
+/// use bpx::shader::symbol;
+/// use bpx::shader::symbol::FLAG_EXTENDED_DATA;
 /// use bpx::utils::new_byte_buf;
 ///
 /// let mut bpxs = ShaderPack::create(new_byte_buf(0), Builder::new());
-/// bpxs.add_symbol("test", SymbolType::Constant, 0, 0xFF, None).unwrap();
+/// bpxs.add_symbol(symbol::Builder::new("test")).unwrap();
 /// bpxs.add_shader(Shader {
 ///     stage: Stage::Pixel,
 ///     data: Vec::new()
@@ -298,23 +300,17 @@ impl<T: Write + Seek> ShaderPack<T>
     /// # Errors
     ///
     /// A [WriteError](crate::variant::shader::error::WriteError) is returned if the symbol could not be written.
-    pub fn add_symbol<S: AsRef<str>>(
-        &mut self,
-        name: S,
-        stype: SymbolType,
-        flags: u16,
-        register: u8,
-        extended_data: Option<Object>
-    ) -> Result<(), WriteError>
+    pub fn add_symbol<S: Into<OwnedSymbol>>(&mut self, sym: S) -> Result<(), WriteError>
     {
-        let address = self.strings.put(&mut self.container, name.as_ref())?;
-        let extended_data = self.write_extended_data(extended_data)?;
+        let owned = sym.into();
+        let address = self.strings.put(&mut self.container, &owned.name)?;
+        let extended_data = self.write_extended_data(owned.extended_data)?;
         let buf = Symbol {
             name: address,
             extended_data,
-            flags,
-            stype,
-            register
+            flags: owned.flags,
+            stype: owned.ty,
+            register: owned.register
         };
         self.symbols.push(buf);
         self.num_symbols += 1;

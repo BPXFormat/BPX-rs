@@ -35,6 +35,8 @@ use crate::{
     shader::error::{EosContext, InvalidCodeContext, ReadError},
     table::Item
 };
+use crate::sd::Object;
+use crate::shader::Stage;
 
 /// Indicates this symbol is used on the vertex stage.
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;
@@ -189,5 +191,107 @@ impl Item for Symbol
     fn get_name_address(&self) -> u32
     {
         self.name
+    }
+}
+
+#[derive(Clone)]
+pub struct OwnedSymbol
+{
+    pub name: String,
+    pub extended_data: Option<Object>,
+    pub ty: SymbolType,
+    pub flags: u16,
+    pub register: u8
+}
+
+pub struct Builder
+{
+    sym: OwnedSymbol
+}
+
+impl Builder
+{
+    pub fn new<S: Into<String>>(name: S) -> Builder
+    {
+        Builder {
+            sym: OwnedSymbol {
+                name: name.into(),
+                extended_data: None,
+                ty: SymbolType::Constant,
+                flags: 0,
+                register: 0xFF
+            }
+        }
+    }
+
+    pub fn ty(&mut self, ty: SymbolType) -> &mut Self
+    {
+        self.sym.ty = ty;
+        self
+    }
+
+    pub fn extended_data(&mut self, obj: Object) -> &mut Self
+    {
+        self.sym.extended_data = Some(obj);
+        self.sym.flags |= FLAG_EXTENDED_DATA;
+        self
+    }
+
+    pub fn register(&mut self, register: u8) -> &mut Self
+    {
+        self.sym.register = register;
+        self.sym.flags |= FLAG_REGISTER;
+        self
+    }
+
+    pub fn internal(&mut self) -> &mut Self
+    {
+        self.sym.flags |= FLAG_INTERNAL;
+        self
+    }
+
+    pub fn external(&mut self) -> &mut Self
+    {
+        self.sym.flags |= FLAG_EXTERNAL;
+        self
+    }
+
+    pub fn assembly(&mut self) -> &mut Self
+    {
+        self.sym.flags |= FLAG_ASSEMBLY;
+        self
+    }
+
+    pub fn stage(&mut self, stage: Stage) -> &mut Self
+    {
+        match stage {
+            Stage::Vertex => self.sym.flags |= FLAG_VERTEX_STAGE,
+            Stage::Hull => self.sym.flags |= FLAG_HULL_STAGE,
+            Stage::Domain => self.sym.flags |= FLAG_DOMAIN_STAGE,
+            Stage::Geometry => self.sym.flags |= FLAG_GEOMETRY_STAGE,
+            Stage::Pixel => self.sym.flags |= FLAG_PIXEL_STAGE
+        }
+        self
+    }
+
+    pub fn build(&self) -> OwnedSymbol
+    {
+        self.sym.clone()
+    }
+}
+
+impl From<&mut Builder> for OwnedSymbol
+{
+    fn from(builder: &mut Builder) -> Self
+    {
+        builder.build()
+    }
+}
+
+impl From<Builder> for OwnedSymbol
+{
+    fn from(builder: Builder) -> Self
+    {
+        builder.build()
     }
 }
