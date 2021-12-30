@@ -28,7 +28,7 @@
 
 //#![warn(missing_docs)]
 
-//! This library is the official implementation for the [BPX](https://gitlab.com/bp3d/bpx/bpx/-/blob/master/BPX_Format.pdf) container format.
+//! This library is the official implementation for the [BPX](https://gitlab.com/bp3d/bpx/bpx/-/blob/rev2/BPX_Format.pdf) container format.
 
 pub mod core;
 mod garraylen;
