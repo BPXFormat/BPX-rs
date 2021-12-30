@@ -75,10 +75,10 @@ impl Builder
     ///
     /// # Arguments
     ///
-    /// * `arch`:
+    /// * `arch`: the CPU architecture this package is designed to work on.
     ///
     /// returns: PackageBuilder
-    pub fn with_architecture(&mut self, arch: Architecture) -> &mut Self
+    pub fn architecture(&mut self, arch: Architecture) -> &mut Self
     {
         self.settings.architecture = arch;
         self
@@ -90,10 +90,10 @@ impl Builder
     ///
     /// # Arguments
     ///
-    /// * `platform`:
+    /// * `platform`: the platform this package is designed to work on.
     ///
     /// returns: PackageBuilder
-    pub fn with_platform(&mut self, platform: Platform) -> &mut Self
+    pub fn platform(&mut self, platform: Platform) -> &mut Self
     {
         self.settings.platform = platform;
         self
@@ -105,10 +105,10 @@ impl Builder
     ///
     /// # Arguments
     ///
-    /// * `obj`:
+    /// * `obj`: the BPXSD metadata object.
     ///
     /// returns: PackageBuilder
-    pub fn with_metadata(&mut self, obj: Object) -> &mut Self
+    pub fn metadata(&mut self, obj: Object) -> &mut Self
     {
         self.settings.metadata = Some(obj);
         self
@@ -121,10 +121,10 @@ impl Builder
     ///
     /// # Arguments
     ///
-    /// * `type_code`:
+    /// * `type_code`: the type code of this package.
     ///
     /// returns: PackageBuilder
-    pub fn with_type(&mut self, type_code: [u8; 2]) -> &mut Self
+    pub fn type_code(&mut self, type_code: [u8; 2]) -> &mut Self
     {
         self.settings.type_code = type_code;
         self

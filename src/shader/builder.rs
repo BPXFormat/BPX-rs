@@ -73,7 +73,7 @@ impl Builder
     /// * `hash`: the shader assembly hash.
     ///
     /// returns: ShaderPackBuilder
-    pub fn with_assembly(mut self, hash: u64) -> Self
+    pub fn assembly(mut self, hash: u64) -> Self
     {
         self.settings.assembly_hash = hash;
         self
@@ -88,7 +88,7 @@ impl Builder
     /// * `target`: the shader target.
     ///
     /// returns: ShaderPackBuilder
-    pub fn with_target(mut self, target: Target) -> Self
+    pub fn target(mut self, target: Target) -> Self
     {
         self.settings.target = target;
         self
@@ -103,7 +103,7 @@ impl Builder
     /// * `ty`: the shader package type (pipeline/program or assembly).
     ///
     /// returns: ShaderPackBuilder
-    pub fn with_type(mut self, ty: Type) -> Self
+    pub fn ty(mut self, ty: Type) -> Self
     {
         self.settings.ty = ty;
         self
