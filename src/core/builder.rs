@@ -72,7 +72,7 @@ pub enum Checksum
     Crc32
 }
 
-/// Utility to easily generate a [SectionHeader](crate::header::SectionHeader).
+/// Utility to easily generate a [SectionHeader](crate::core::header::SectionHeader).
 pub struct SectionHeaderBuilder
 {
     header: SectionHeader
@@ -242,7 +242,7 @@ impl SectionHeaderBuilder
         self
     }
 
-    /// Returns the generated [SectionHeader](crate::header::SectionHeader).
+    /// Returns the generated [SectionHeader](crate::core::header::SectionHeader).
     ///
     /// # Examples
     ///
@@ -269,7 +269,7 @@ impl SectionHeaderBuilder
     }
 }
 
-/// Utility to easily generate a [MainHeader](crate::header::MainHeader).
+/// Utility to easily generate a [MainHeader](crate::core::header::MainHeader).
 pub struct MainHeaderBuilder
 {
     header: MainHeader
@@ -348,9 +348,9 @@ impl MainHeaderBuilder
     /// Defines the version of the BPX.
     ///
     /// *The default value of the version int is given by
-    /// [BPX_CURRENT_VERSION](crate::header::BPX_CURRENT_VERSION).*
+    /// [BPX_CURRENT_VERSION](crate::core::header::BPX_CURRENT_VERSION).*
     ///
-    /// **Note: A version which is not specified in [KNOWN_VERSIONS](crate::header::KNOWN_VERSIONS)
+    /// **Note: A version which is not specified in [KNOWN_VERSIONS](crate::core::header::KNOWN_VERSIONS)
     /// will cause the decoder to fail loading the file, complaining that
     /// the file is corrupted.**
     ///
@@ -376,7 +376,7 @@ impl MainHeaderBuilder
         self
     }
 
-    /// Returns the generated [MainHeader](crate::header::MainHeader).
+    /// Returns the generated [MainHeader](crate::core::header::MainHeader).
     ///
     /// # Examples
     ///

@@ -118,7 +118,7 @@ impl<T> Container<T>
     ///
     /// # Arguments
     ///
-    /// * `main_header`: the new [MainHeader](crate::header::MainHeader).
+    /// * `main_header`: the new [MainHeader](crate::core::header::MainHeader).
     pub fn set_main_header<H: Into<MainHeader>>(&mut self, main_header: H)
     {
         self.main_header = main_header.into();
@@ -150,7 +150,7 @@ impl<T> Container<T>
     ///
     /// # Arguments
     ///
-    /// * `header`: the [SectionHeader](crate::header::SectionHeader) of the new section.
+    /// * `header`: the [SectionHeader](crate::core::header::SectionHeader) of the new section.
     ///
     /// returns: Result<Handle, Error>
     pub fn create_section<H: Into<SectionHeader>>(&mut self, header: H) -> Handle
@@ -246,13 +246,13 @@ impl<T: io::Read + io::Seek> Container<T>
     ///
     /// # Arguments
     ///
-    /// * `file`: An [IoBackend](self::IoBackend) to use for reading the data.
+    /// * `backend`: A [Read](std::io::Read) + [Seek](std::io::Seek) backend to use for reading the BPX container.
     ///
     /// returns: Result<Decoder<TBackend>, Error>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::error::ReadError) is returned if some headers
+    /// A [ReadError](crate::core::error::ReadError) is returned if some headers
     /// could not be read or if the header data is corrupted.
     pub fn open(mut backend: T) -> Result<Container<T>, ReadError>
     {
@@ -289,7 +289,7 @@ impl<T: io::Write + io::Seek> Container<T>
     ///
     /// # Errors
     ///
-    /// A [WriteError](crate::error::WriteError) is returned if some data could
+    /// A [WriteError](crate::core::error::WriteError) is returned if some data could
     /// not be written.
     pub fn save(&mut self) -> Result<(), WriteError>
     {
