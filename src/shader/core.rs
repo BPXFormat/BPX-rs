@@ -229,21 +229,21 @@ impl<T: Write + Seek> ShaderPack<T>
         let mut container = Container::create(
             backend,
             MainHeaderBuilder::new()
-                .with_type(b'P')
-                .with_type_ext(get_type_ext(&settings))
-                .with_version(SUPPORTED_VERSION)
+                .ty(b'P')
+                .type_ext(get_type_ext(&settings))
+                .version(SUPPORTED_VERSION)
         );
         let string_section = container.create_section(
             SectionHeaderBuilder::new()
-                .with_checksum(Checksum::Weak)
-                .with_compression(CompressionMethod::Zlib)
-                .with_type(SECTION_TYPE_STRING)
+                .checksum(Checksum::Weak)
+                .compression(CompressionMethod::Zlib)
+                .ty(SECTION_TYPE_STRING)
         );
         let symbol_table = container.create_section(
             SectionHeaderBuilder::new()
-                .with_checksum(Checksum::Weak)
-                .with_compression(CompressionMethod::Zlib)
-                .with_type(SECTION_TYPE_SYMBOL_TABLE)
+                .checksum(Checksum::Weak)
+                .compression(CompressionMethod::Zlib)
+                .ty(SECTION_TYPE_SYMBOL_TABLE)
         );
         let strings = StringSection::new(string_section);
         ShaderPack {
@@ -264,9 +264,9 @@ impl<T: Write + Seek> ShaderPack<T>
             let handle = *self.extended_data.get_or_insert_with(|| {
                 self.container.create_section(
                     SectionHeaderBuilder::new()
-                        .with_type(SECTION_TYPE_EXTENDED_DATA)
-                        .with_checksum(Checksum::Crc32)
-                        .with_compression(CompressionMethod::Zlib)
+                        .ty(SECTION_TYPE_EXTENDED_DATA)
+                        .checksum(Checksum::Crc32)
+                        .compression(CompressionMethod::Zlib)
                 )
             });
             let mut section = self.container.get_mut(handle);
@@ -330,10 +330,10 @@ impl<T: Write + Seek> ShaderPack<T>
     {
         let section = self.container.create_section(
             SectionHeaderBuilder::new()
-                .with_type(SECTION_TYPE_SHADER)
-                .with_checksum(Checksum::Crc32)
-                .with_compression(CompressionMethod::Xz)
-                .with_size(shader.data.len() as u32 + 1)
+                .ty(SECTION_TYPE_SHADER)
+                .checksum(Checksum::Crc32)
+                .compression(CompressionMethod::Xz)
+                .size(shader.data.len() as u32 + 1)
         );
         let mut section = self.container.get_mut(section);
         let mut buf = shader.data;

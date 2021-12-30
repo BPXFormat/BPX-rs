@@ -192,29 +192,29 @@ impl<T: Write + Seek> Package<T>
         let mut container = Container::create(
             backend,
             MainHeaderBuilder::new()
-                .with_type(b'P')
-                .with_type_ext(get_type_ext(&settings))
-                .with_version(SUPPORTED_VERSION)
+                .ty(b'P')
+                .type_ext(get_type_ext(&settings))
+                .version(SUPPORTED_VERSION)
         );
         let object_table = container.create_section(
             SectionHeaderBuilder::new()
-                .with_checksum(Checksum::Weak)
-                .with_compression(CompressionMethod::Zlib)
-                .with_type(SECTION_TYPE_OBJECT_TABLE)
+                .checksum(Checksum::Weak)
+                .compression(CompressionMethod::Zlib)
+                .ty(SECTION_TYPE_OBJECT_TABLE)
         );
         let string_section = container.create_section(
             SectionHeaderBuilder::new()
-                .with_checksum(Checksum::Weak)
-                .with_compression(CompressionMethod::Zlib)
-                .with_type(SECTION_TYPE_STRING)
+                .checksum(Checksum::Weak)
+                .compression(CompressionMethod::Zlib)
+                .ty(SECTION_TYPE_STRING)
         );
         let strings = StringSection::new(string_section);
         if let Some(metadata) = &settings.metadata {
             let metadata_section = container.create_section(
                 SectionHeaderBuilder::new()
-                    .with_checksum(Checksum::Weak)
-                    .with_compression(CompressionMethod::Zlib)
-                    .with_type(SECTION_TYPE_SD)
+                    .checksum(Checksum::Weak)
+                    .compression(CompressionMethod::Zlib)
+                    .ty(SECTION_TYPE_SD)
             );
             let mut section = container.get_mut(metadata_section);
             metadata.write(section.open().ok_or(WriteError::SectionNotLoaded)?)?;

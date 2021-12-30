@@ -37,9 +37,9 @@ use crate::{
 pub fn create_data_section_header() -> SectionHeader
 {
     SectionHeaderBuilder::new()
-        .with_type(SECTION_TYPE_DATA)
-        .with_compression(CompressionMethod::Xz)
-        .with_checksum(Checksum::Crc32)
+        .ty(SECTION_TYPE_DATA)
+        .compression(CompressionMethod::Xz)
+        .checksum(Checksum::Crc32)
         .build()
 }
 

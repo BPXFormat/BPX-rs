@@ -113,11 +113,11 @@ impl SectionHeaderBuilder
     /// use bpx::core::builder::SectionHeaderBuilder;
     ///
     /// let header = SectionHeaderBuilder::new()
-    ///     .with_size(128)
+    ///     .size(128)
     ///     .build();
     /// assert_eq!(header.size, 128);
     /// ```
-    pub fn with_size(&mut self, size: u32) -> &mut Self
+    pub fn size(&mut self, size: u32) -> &mut Self
     {
         self.header.size = size;
         self
@@ -139,11 +139,11 @@ impl SectionHeaderBuilder
     /// use bpx::core::builder::SectionHeaderBuilder;
     ///
     /// let header = SectionHeaderBuilder::new()
-    ///     .with_type(1)
+    ///     .ty(1)
     ///     .build();
     /// assert_eq!(header.ty, 1);
     /// ```
-    pub fn with_type(&mut self, ty: u8) -> &mut Self
+    pub fn ty(&mut self, ty: u8) -> &mut Self
     {
         self.header.ty = ty;
         self
@@ -166,11 +166,11 @@ impl SectionHeaderBuilder
     /// use bpx::core::header::FLAG_COMPRESS_ZLIB;
     ///
     /// let header = SectionHeaderBuilder::new()
-    ///     .with_compression(CompressionMethod::Zlib)
+    ///     .compression(CompressionMethod::Zlib)
     ///     .build();
     /// assert_ne!(header.flags & FLAG_COMPRESS_ZLIB, 0);
     /// ```
-    pub fn with_compression(&mut self, method: CompressionMethod) -> &mut Self
+    pub fn compression(&mut self, method: CompressionMethod) -> &mut Self
     {
         match method {
             CompressionMethod::Xz => self.header.flags |= FLAG_COMPRESS_XZ,
@@ -198,13 +198,13 @@ impl SectionHeaderBuilder
     /// use bpx::core::builder::{CompressionMethod, SectionHeaderBuilder};
     ///
     /// let header = SectionHeaderBuilder::new()
-    ///     .with_compression(CompressionMethod::Zlib)
-    ///     .with_threshold(0)
+    ///     .compression(CompressionMethod::Zlib)
+    ///     .threshold(0)
     ///     .build();
     /// // The compression threshold value is stored in csize
     /// assert_eq!(header.csize, 0);
     /// ```
-    pub fn with_threshold(&mut self, threshold: u32) -> &mut Self
+    pub fn threshold(&mut self, threshold: u32) -> &mut Self
     {
         self.header.csize = threshold;
         self
@@ -229,11 +229,11 @@ impl SectionHeaderBuilder
     /// use bpx::core::header::FLAG_CHECK_CRC32;
     ///
     /// let header = SectionHeaderBuilder::new()
-    ///     .with_checksum(Checksum::Crc32)
+    ///     .checksum(Checksum::Crc32)
     ///     .build();
     /// assert_ne!(header.flags & FLAG_CHECK_CRC32, 0);
     /// ```
-    pub fn with_checksum(&mut self, chksum: Checksum) -> &mut Self
+    pub fn checksum(&mut self, chksum: Checksum) -> &mut Self
     {
         match chksum {
             Checksum::Crc32 => self.header.flags |= FLAG_CHECK_CRC32,
@@ -251,11 +251,11 @@ impl SectionHeaderBuilder
     /// use bpx::core::header::{FLAG_CHECK_CRC32, FLAG_COMPRESS_ZLIB};
     ///
     /// let header = SectionHeaderBuilder::new()
-    ///     .with_size(128)
-    ///     .with_type(1)
-    ///     .with_compression(CompressionMethod::Zlib)
-    ///     .with_threshold(0)
-    ///     .with_checksum(Checksum::Crc32)
+    ///     .size(128)
+    ///     .ty(1)
+    ///     .compression(CompressionMethod::Zlib)
+    ///     .threshold(0)
+    ///     .checksum(Checksum::Crc32)
     ///     .build();
     /// assert_eq!(header.size, 128);
     /// assert_eq!(header.ty, 1);
@@ -309,11 +309,11 @@ impl MainHeaderBuilder
     /// use bpx::core::builder::MainHeaderBuilder;
     ///
     /// let header = MainHeaderBuilder::new()
-    ///     .with_type('M' as u8)
+    ///     .ty('M' as u8)
     ///     .build();
     /// assert_eq!(header.ty, 'M' as u8);
     /// ```
-    pub fn with_type(&mut self, ty: u8) -> &mut Self
+    pub fn ty(&mut self, ty: u8) -> &mut Self
     {
         self.header.ty = ty;
         self
@@ -335,11 +335,11 @@ impl MainHeaderBuilder
     /// use bpx::core::builder::MainHeaderBuilder;
     ///
     /// let header = MainHeaderBuilder::new()
-    ///     .with_type_ext([1; 16])
+    ///     .type_ext([1; 16])
     ///     .build();
     /// assert_eq!(header.type_ext, [1; 16]);
     /// ```
-    pub fn with_type_ext(&mut self, type_ext: [u8; 16]) -> &mut Self
+    pub fn type_ext(&mut self, type_ext: [u8; 16]) -> &mut Self
     {
         self.header.type_ext = type_ext;
         self
@@ -366,11 +366,11 @@ impl MainHeaderBuilder
     /// use bpx::core::builder::MainHeaderBuilder;
     ///
     /// let header = MainHeaderBuilder::new()
-    ///     .with_version(1)
+    ///     .version(1)
     ///     .build();
     /// assert_eq!(header.version, 1);
     /// ```
-    pub fn with_version(&mut self, version: u32) -> &mut Self
+    pub fn version(&mut self, version: u32) -> &mut Self
     {
         self.header.version = version;
         self
@@ -384,9 +384,9 @@ impl MainHeaderBuilder
     /// use bpx::core::builder::MainHeaderBuilder;
     ///
     /// let header = MainHeaderBuilder::new()
-    ///     .with_type('M' as u8)
-    ///     .with_type_ext([1; 16])
-    ///     .with_version(1)
+    ///     .ty('M' as u8)
+    ///     .type_ext([1; 16])
+    ///     .version(1)
     ///     .build();
     /// assert_eq!(header.ty, 'M' as u8);
     /// assert_eq!(header.type_ext, [1; 16]);
