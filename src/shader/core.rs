@@ -193,7 +193,7 @@ impl<T> ShaderPack<T>
     /// Returns the shader package type (Assembly or Pipeline).
     pub fn get_type(&self) -> Type
     {
-        self.settings.btype
+        self.settings.ty
     }
 
     /// Returns the shader target rendering API.
@@ -374,15 +374,15 @@ impl<T: Read + Seek> ShaderPack<T>
     pub fn open(backend: T) -> Result<ShaderPack<T>, ReadError>
     {
         let container = Container::open(backend)?;
-        if container.get_main_header().btype != b'P' {
-            return Err(ReadError::BadType(container.get_main_header().btype));
+        if container.get_main_header().ty != b'P' {
+            return Err(ReadError::BadType(container.get_main_header().ty));
         }
         if container.get_main_header().version != SUPPORTED_VERSION {
             return Err(ReadError::BadVersion(container.get_main_header().version));
         }
         let assembly_hash = LittleEndian::read_u64(&container.get_main_header().type_ext[0..8]);
         let num_symbols = LittleEndian::read_u16(&container.get_main_header().type_ext[8..10]);
-        let (target, btype) = get_target_type_from_code(
+        let (target, ty) = get_target_type_from_code(
             container.get_main_header().type_ext[10],
             container.get_main_header().type_ext[11]
         )?;
@@ -399,7 +399,7 @@ impl<T: Read + Seek> ShaderPack<T>
             settings: Settings {
                 assembly_hash,
                 target,
-                btype
+                ty
             },
             num_symbols,
             symbol_table,
@@ -436,7 +436,7 @@ impl<T: Read + Seek> ShaderPack<T>
         self.container
             .iter()
             .filter_map(|v| {
-                if v.btype == SECTION_TYPE_SHADER {
+                if v.ty == SECTION_TYPE_SHADER {
                     Some(v.handle())
                 } else {
                     None

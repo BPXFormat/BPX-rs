@@ -44,7 +44,7 @@ use crate::{
 pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
 {
     let target;
-    let btype;
+    let ty;
 
     match acode {
         0x1 => target = Target::DX11,
@@ -69,13 +69,13 @@ pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type),
     }
     if tcode == b'A' {
         //Rust refuses to parse match properly so use if/else-if blocks
-        btype = Type::Assembly;
+        ty = Type::Assembly;
     } else if tcode == b'P' {
-        btype = Type::Pipeline;
+        ty = Type::Pipeline;
     } else {
         return Err(ReadError::InvalidCode(InvalidCodeContext::Type, tcode));
     }
-    Ok((target, btype))
+    Ok((target, ty))
 }
 
 pub fn get_stage_from_code(code: u8) -> Result<Stage, ReadError>

@@ -94,10 +94,10 @@ pub struct Container<T>
 
 impl<T> Container<T>
 {
-    pub fn find_section_by_type(&self, btype: u8) -> Option<Handle>
+    pub fn find_section_by_type(&self, ty: u8) -> Option<Handle>
     {
         for (handle, entry) in &self.sections {
-            if entry.header.btype == btype {
+            if entry.header.ty == ty {
                 return Some(Handle(*handle));
             }
         }

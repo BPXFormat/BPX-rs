@@ -33,7 +33,7 @@ pub struct Settings
 {
     pub assembly_hash: u64,
     pub target: Target,
-    pub btype: Type
+    pub ty: Type
 }
 
 /// Build create info for a BPXS.
@@ -59,7 +59,7 @@ impl Builder
             settings: Settings {
                 assembly_hash: 0,
                 target: Target::Any,
-                btype: Type::Pipeline
+                ty: Type::Pipeline
             }
         }
     }
@@ -100,12 +100,12 @@ impl Builder
     ///
     /// # Arguments
     ///
-    /// * `btype`: the shader package type (pipeline/program or assembly).
+    /// * `ty`: the shader package type (pipeline/program or assembly).
     ///
     /// returns: ShaderPackBuilder
-    pub fn with_type(mut self, btype: Type) -> Self
+    pub fn with_type(mut self, ty: Type) -> Self
     {
-        self.settings.btype = btype;
+        self.settings.ty = ty;
         self
     }
 

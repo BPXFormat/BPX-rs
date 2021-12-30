@@ -329,8 +329,8 @@ impl<T: Read + Seek> Package<T>
     pub fn open(backend: T) -> Result<Package<T>, ReadError>
     {
         let container = Container::open(backend)?;
-        if container.get_main_header().btype != b'P' {
-            return Err(ReadError::BadType(container.get_main_header().btype));
+        if container.get_main_header().ty != b'P' {
+            return Err(ReadError::BadType(container.get_main_header().ty));
         }
         if container.get_main_header().version != SUPPORTED_VERSION {
             return Err(ReadError::BadVersion(container.get_main_header().version));

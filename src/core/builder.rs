@@ -129,7 +129,7 @@ impl SectionHeaderBuilder
     ///
     /// # Arguments
     ///
-    /// * `typeb`: the type byte of the section.
+    /// * `ty`: the type byte of the section.
     ///
     /// returns: SectionHeaderBuilder
     ///
@@ -141,11 +141,11 @@ impl SectionHeaderBuilder
     /// let header = SectionHeaderBuilder::new()
     ///     .with_type(1)
     ///     .build();
-    /// assert_eq!(header.btype, 1);
+    /// assert_eq!(header.ty, 1);
     /// ```
-    pub fn with_type(&mut self, typeb: u8) -> &mut Self
+    pub fn with_type(&mut self, ty: u8) -> &mut Self
     {
-        self.header.btype = typeb;
+        self.header.ty = ty;
         self
     }
 
@@ -258,7 +258,7 @@ impl SectionHeaderBuilder
     ///     .with_checksum(Checksum::Crc32)
     ///     .build();
     /// assert_eq!(header.size, 128);
-    /// assert_eq!(header.btype, 1);
+    /// assert_eq!(header.ty, 1);
     /// assert_ne!(header.flags & FLAG_COMPRESS_ZLIB, 0);
     /// assert_eq!(header.csize, 0);
     /// assert_ne!(header.flags & FLAG_CHECK_CRC32, 0);
@@ -299,7 +299,7 @@ impl MainHeaderBuilder
     ///
     /// # Arguments
     ///
-    /// * `typeb`: the BPX type byte.
+    /// * `ty`: the BPX type byte.
     ///
     /// returns: MainHeaderBuilder
     ///
@@ -311,11 +311,11 @@ impl MainHeaderBuilder
     /// let header = MainHeaderBuilder::new()
     ///     .with_type('M' as u8)
     ///     .build();
-    /// assert_eq!(header.btype, 'M' as u8);
+    /// assert_eq!(header.ty, 'M' as u8);
     /// ```
-    pub fn with_type(&mut self, typeb: u8) -> &mut Self
+    pub fn with_type(&mut self, ty: u8) -> &mut Self
     {
-        self.header.btype = typeb;
+        self.header.ty = ty;
         self
     }
 
@@ -388,7 +388,7 @@ impl MainHeaderBuilder
     ///     .with_type_ext([1; 16])
     ///     .with_version(1)
     ///     .build();
-    /// assert_eq!(header.btype, 'M' as u8);
+    /// assert_eq!(header.ty, 'M' as u8);
     /// assert_eq!(header.type_ext, [1; 16]);
     /// assert_eq!(header.version, 1);
     /// ```

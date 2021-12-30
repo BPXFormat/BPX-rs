@@ -53,7 +53,7 @@ pub fn get_type_ext(settings: &Settings) -> [u8; 16]
         Target::MT => type_ext[10] = 0x11,
         Target::Any => type_ext[10] = 0xFF
     };
-    match settings.btype {
+    match settings.ty {
         Type::Assembly => type_ext[11] = b'A',
         Type::Pipeline => type_ext[11] = b'P'
     };
