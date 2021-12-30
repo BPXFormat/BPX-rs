@@ -124,7 +124,7 @@ pub struct Symbol
     pub flags: u16,
 
     /// The type of symbol.
-    pub stype: SymbolType,
+    pub ty: SymbolType,
 
     /// The register number for this symbol.
     pub register: u8
@@ -141,7 +141,7 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
             name: 0,
             extended_data: 0xFFFFFF,
             flags: 0,
-            stype: SymbolType::Constant,
+            ty: SymbolType::Constant,
             register: 0xFF
         }
     }
@@ -156,13 +156,13 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
         let name = LittleEndian::read_u32(&buffer[0..4]);
         let extended_data = LittleEndian::read_u32(&buffer[4..8]);
         let flags = LittleEndian::read_u16(&buffer[8..10]);
-        let stype = get_symbol_type_from_code(buffer[10])?;
+        let ty = get_symbol_type_from_code(buffer[10])?;
         let register = buffer[11];
         Ok(Symbol {
             name,
             extended_data,
             flags,
-            stype,
+            ty,
             register
         })
     }
@@ -173,7 +173,7 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
         LittleEndian::write_u32(&mut buf[0..4], self.name);
         LittleEndian::write_u32(&mut buf[4..8], self.extended_data);
         LittleEndian::write_u16(&mut buf[8..10], self.flags);
-        match self.stype {
+        match self.ty {
             SymbolType::Texture => buf[10] = 0x0,
             SymbolType::Sampler => buf[10] = 0x1,
             SymbolType::ConstantBuffer => buf[10] = 0x2,

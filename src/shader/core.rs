@@ -290,10 +290,7 @@ impl<T: Write + Seek> ShaderPack<T>
     /// # Arguments
     ///
     /// * `name`: the name of the symbols.
-    /// * `stype`: the [SymbolType](crate::variant::shader::symbol::SymbolType).
-    /// * `flags`: the symbol flags (see the FLAG_ constants in the [symbol](crate::variant::shader::symbol) module).
-    /// * `register`: the register number of this symbol.
-    /// * `extended_data`: an optional BPXSD object to write as extended symbol data.
+    /// * `sym`: an [OwnedSymbol](crate::shader::symbol::OwnedSymbol), see [Builder](crate::shader::symbol::Builder) for more information
     ///
     /// returns: Result<(), Error>
     ///
@@ -309,7 +306,7 @@ impl<T: Write + Seek> ShaderPack<T>
             name: address,
             extended_data,
             flags: owned.flags,
-            stype: owned.ty,
+            ty: owned.ty,
             register: owned.register
         };
         self.symbols.push(buf);
