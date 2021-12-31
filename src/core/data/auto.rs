@@ -44,6 +44,10 @@ enum DynSectionData
     Memory(InMemorySection)
 }
 
+/// Automatic section data implementation.
+///
+/// *This automatically switches an in-memory section data into a file backed section data
+/// when the size of the data exceeds 100Mb.*
 pub struct AutoSectionData
 {
     inner: DynSectionData
@@ -59,6 +63,7 @@ impl Default for AutoSectionData
 
 impl AutoSectionData
 {
+    /// Creates a new section data backed by a dynamically sized in-memory buffer.
     pub fn new() -> AutoSectionData
     {
         AutoSectionData {
@@ -66,6 +71,19 @@ impl AutoSectionData
         }
     }
 
+
+    /// Creates a new section data with a known size limit.
+    ///
+    /// # Arguments
+    ///
+    /// * `size`: the size of the new section data.
+    ///
+    /// returns: Result<AutoSectionData, Error>
+    ///
+    /// # Errors
+    ///
+    /// This function returns an [Error](std::io::Error) if a file backed section was needed,
+    /// given the size constraint, but failed to initialize.
     pub fn new_with_size(size: u32) -> std::io::Result<AutoSectionData>
     {
         if size >= MEMORY_THRESHOLD {
@@ -93,6 +111,7 @@ impl AutoSectionData
         Ok(())
     }
 
+    /// Clears this section data and resets to a default dynamically sized in-memory buffer.
     pub fn clear(&mut self)
     {
         self.inner = DynSectionData::Memory(InMemorySection::new(INIT_BUF_SIZE))
