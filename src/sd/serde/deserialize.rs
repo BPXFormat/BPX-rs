@@ -96,6 +96,7 @@ impl<'de> MapAccess<'de> for Map
         if let Some(obj) = self.arr.remove_at(0) {
             let obj: Object = obj.try_into()?;
             let key = obj.get("__key__").ok_or(Error::MissingMapKey)?;
+            self.value = Some(obj.clone());
             seed.deserialize(Deserializer::new(self.enum_size, key.clone()))
                 .map(Some)
         } else {
