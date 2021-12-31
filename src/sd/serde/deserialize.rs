@@ -218,6 +218,7 @@ impl<'de> EnumAccess<'de> for Enum
     }
 }
 
+/// An implementation of a `serde` deserializer for BPXSD [Value](crate::sd::Value).
 pub struct Deserializer
 {
     enum_size: EnumSize,

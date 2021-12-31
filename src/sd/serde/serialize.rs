@@ -304,6 +304,7 @@ impl SerializeStructVariant for Struct
     }
 }
 
+/// An implementation of a `serde` serializer for BPXSD [Value](crate::sd::Value).
 pub struct Serializer
 {
     enum_size: EnumSize,

@@ -26,6 +26,10 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! Provides support for `serde` based serialization and deserialization for [Value](crate::sd::Value).
+//!
+//! *This is only available when the `serde` cargo feature is enabled.*
+
 mod deserialize;
 mod serialize;
 
@@ -35,26 +39,54 @@ use serde::ser::StdError;
 
 use crate::sd::error::TypeError;
 
+/// The size of an enum variant index when serializing/deserializing Rust enums.
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum EnumSize
 {
+    /// Indicates all enum variant indices should be encoded with a single byte.
+    ///
+    /// *This is generally the preferred option.*
     U8,
+
+    /// Indicates all enum variant indices should be encoded with 2 bytes.
     U16,
+
+    /// Indicates all enum variant indices should be encoded with 4 bytes.
     U32
 }
 
+/// Represents a serializer/deserializer error.
 #[derive(Debug)]
 pub enum Error
 {
+    /// The type is unsupported by this implementation.
     UnsupportedType,
+
+    /// A mismatch in the type expected by `serde` and the actual [Value](crate::sd::Value) type.
     TypeMismatch(TypeError),
+
+    /// A generic `serde` message.
     Message(String),
+
+    /// The character to serialize is not a known UTF-32 code.
     InvalidUtf32(u32),
+
+    /// When deserializing a map, the key of an entry wasn't found.
     MissingMapKey,
+
+    /// When deserializing a map, the value of an entry wasn't found.
     MissingMapValue,
+
+    /// The `next_value_seed` function was called in an unexpected order.
     InvalidMapCall,
+
+    /// An enum variant index was of an unexpected type.
     InvalidEnum,
+
+    /// A part of the variant data was missing while deserializing a given enum variant.
     MissingVariantData,
+
+    /// The specified property wasn't found in the BPXSD object.
     MissingStructKey(&'static str)
 }
 
