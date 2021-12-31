@@ -29,7 +29,7 @@
 //! The BPX Structured Data format (BPXSD).
 
 mod array;
-mod debug;
+pub mod debug;
 mod decoder;
 mod encoder;
 pub mod error;

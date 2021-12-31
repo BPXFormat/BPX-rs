@@ -26,6 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! Provides support for debug symbols to BPXSD object.
+
 use std::{collections::HashMap, convert::TryInto};
 
 use crate::{
@@ -35,6 +37,7 @@ use crate::{
 use crate::sd::error::TypeError;
 use crate::sd::Value;
 
+/// A BPXSD object debugger iterator.
 pub struct Iter<'a>
 {
     inner: crate::sd::object::Iter<'a>,
@@ -57,7 +60,7 @@ impl<'a> Iterator for Iter<'a>
     }
 }
 
-/// Provides support for debug symbols to BPXSD object.
+/// A wrapper to BPXSD object with debugging capabilities.
 #[derive(PartialEq, Clone)]
 pub struct Debugger
 {
