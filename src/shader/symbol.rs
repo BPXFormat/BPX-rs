@@ -120,7 +120,7 @@ pub struct Symbol
     /// The pointer to the BPXSD object attached to this symbol.
     pub extended_data: u32,
 
-    /// The symbol flags (see the FLAG_ constants in the [symbol](crate::variant::shader::symbol) module).
+    /// The symbol flags (see the FLAG_ constants in the [symbol](crate::shader::symbol) module).
     pub flags: u16,
 
     /// The type of symbol.

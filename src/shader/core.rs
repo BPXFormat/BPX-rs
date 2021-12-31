@@ -296,7 +296,7 @@ impl<T: Write + Seek> ShaderPack<T>
     ///
     /// # Errors
     ///
-    /// A [WriteError](crate::variant::shader::error::WriteError) is returned if the symbol could not be written.
+    /// A [WriteError](crate::shader::error::WriteError) is returned if the symbol could not be written.
     pub fn add_symbol<S: Into<OwnedSymbol>>(&mut self, sym: S) -> Result<(), WriteError>
     {
         let owned = sym.into();
@@ -319,13 +319,13 @@ impl<T: Write + Seek> ShaderPack<T>
     ///
     /// # Arguments
     ///
-    /// * `shader`: the [Shader](crate::variant::shader::Shader) to write.
+    /// * `shader`: the [Shader](crate::shader::Shader) to write.
     ///
     /// returns: Result<(), Error>
     ///
     /// # Errors
     ///
-    /// A [WriteError](crate::variant::shader::error::WriteError) is returned if the shader could not be written.
+    /// A [WriteError](crate::shader::error::WriteError) is returned if the shader could not be written.
     pub fn add_shader(&mut self, shader: Shader) -> Result<(), WriteError>
     {
         let section = self.container.create_section(
@@ -452,7 +452,7 @@ impl<T: Read + Seek> ShaderPack<T>
     ///
     /// # Errors
     ///
-    /// An [ReadError](crate::variant::shader::error::ReadError) is returned if the shader could not be loaded.
+    /// An [ReadError](crate::shader::error::ReadError) is returned if the shader could not be loaded.
     pub fn load_shader(&mut self, handle: Handle) -> Result<Shader, ReadError>
     {
         let mut section = self.container.get_mut(handle);

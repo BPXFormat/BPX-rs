@@ -165,13 +165,13 @@ impl<T> Package<T>
         self.settings.type_code
     }
 
-    /// Gets the target CPU [Architecture](crate::variant::package::Architecture) for this BPXP.
+    /// Gets the target CPU [Architecture](crate::package::Architecture) for this BPXP.
     pub fn get_architecture(&self) -> Architecture
     {
         self.settings.architecture
     }
 
-    /// Gets the target [Platform](crate::variant::package::Platform) for this BPXP.
+    /// Gets the target [Platform](crate::package::Platform) for this BPXP.
     pub fn get_platform(&self) -> Platform
     {
         self.settings.platform
@@ -318,13 +318,13 @@ impl<T: Read + Seek> Package<T>
     ///
     /// # Arguments
     ///
-    /// * `backend`: the [IoBackend](crate::decoder::IoBackend) to use.
+    /// * `backend`: a [Read](std::io::Read) + [Seek](std::io::Seek) to use as backend.
     ///
     /// returns: Result<PackageDecoder<TBackend>, Error>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::variant::package::error::ReadError) is returned if some
+    /// A [ReadError](crate::package::error::ReadError) is returned if some
     /// sections/headers could not be loaded.
     pub fn open(backend: T) -> Result<Package<T>, ReadError>
     {
@@ -410,7 +410,7 @@ impl<T: Read + Seek> Package<T>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::variant::package::error::ReadError) is returned in case of corruption or system error.
+    /// A [ReadError](crate::package::error::ReadError) is returned in case of corruption or system error.
     pub fn read_metadata(&mut self) -> Result<Option<crate::sd::Object>, ReadError>
     {
         if let Some(obj) = &self.settings.metadata {
