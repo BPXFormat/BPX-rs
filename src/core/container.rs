@@ -88,6 +88,7 @@ impl<'a> Iterator for Iter<'a>
     }
 }
 
+/// The main BPX container implementation.
 pub struct Container<T>
 {
     backend: T,
@@ -99,6 +100,25 @@ pub struct Container<T>
 
 impl<T> Container<T>
 {
+    /// Searches for the first section of a given type.
+    /// Returns None if no section could be found.
+    ///
+    /// # Arguments
+    ///
+    /// * `btype`: section type byte.
+    ///
+    /// returns: Option<Handle>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::builder::MainHeaderBuilder;
+    /// use bpx::core::Container;
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// assert!(file.find_section_by_type(0).is_none());
+    /// ```
     pub fn find_section_by_type(&self, ty: u8) -> Option<Handle>
     {
         for (handle, entry) in &self.sections {
@@ -109,6 +129,25 @@ impl<T> Container<T>
         None
     }
 
+    /// Locates a section by its index in the file.
+    /// Returns None if the section does not exist.
+    ///
+    /// # Arguments
+    ///
+    /// * `index`: the section index to search for.
+    ///
+    /// returns: Option<Handle>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::builder::MainHeaderBuilder;
+    /// use bpx::core::Container;
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// assert!(file.find_section_by_index(0).is_none());
+    /// ```
     pub fn find_section_by_index(&self, index: u32) -> Option<Handle>
     {
         for (idx, handle) in self.sections.keys().enumerate() {
@@ -124,17 +163,64 @@ impl<T> Container<T>
     /// # Arguments
     ///
     /// * `main_header`: the new [MainHeader](crate::core::header::MainHeader).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::builder::MainHeaderBuilder;
+    /// use bpx::core::Container;
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// file.set_main_header(MainHeaderBuilder::new().ty(1));
+    /// assert_eq!(file.get_main_header().ty, 1);
+    /// ```
     pub fn set_main_header<H: Into<MainHeader>>(&mut self, main_header: H)
     {
         self.main_header = main_header.into();
         self.modified = true;
     }
 
+    /// Returns a read-only reference to the BPX main header.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::builder::MainHeaderBuilder;
+    /// use bpx::core::Container;
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let header = file.get_main_header();
+    /// //Default BPX variant/type is 'P'
+    /// assert_eq!(header.ty, 'P' as u8);
+    /// ```
     pub fn get_main_header(&self) -> &MainHeader
     {
         &self.main_header
     }
 
+    /// Obtains read-only access to a given section.
+    ///
+    /// # Arguments
+    ///
+    /// * `handle`: a handle to the wanted section.
+    ///
+    /// returns: Section
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::builder::{MainHeaderBuilder, SectionHeaderBuilder};
+    /// use bpx::core::Container;
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let section = file.create_section(SectionHeaderBuilder::new());
+    /// let section = file.get(section);
+    /// // Default section type is 0x0.
+    /// assert_eq!(section.ty, 0x0);
+    /// ```
     pub fn get(&self, handle: Handle) -> Section
     {
         self.sections
@@ -143,6 +229,27 @@ impl<T> Container<T>
             .expect("attempt to use invalid handle")
     }
 
+    /// Obtains mutable access to a given section.
+    ///
+    /// # Arguments
+    ///
+    /// * `handle`: a handle to the wanted section.
+    ///
+    /// returns: SectionMut
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::builder::{MainHeaderBuilder, SectionHeaderBuilder};
+    /// use bpx::core::{Container, SectionData};
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let section = file.create_section(SectionHeaderBuilder::new());
+    /// let mut section = file.get_mut(section);
+    /// let buf = section.open().unwrap().load_in_memory().unwrap();
+    /// assert_eq!(buf.len(), 0);
+    /// ```
     pub fn get_mut(&mut self, handle: Handle) -> SectionMut<T>
     {
         self.sections
@@ -157,7 +264,20 @@ impl<T> Container<T>
     ///
     /// * `header`: the [SectionHeader](crate::core::header::SectionHeader) of the new section.
     ///
-    /// returns: Result<Handle, Error>
+    /// returns: Handle
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::builder::{MainHeaderBuilder, SectionHeaderBuilder};
+    /// use bpx::core::{Container, SectionData};
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// assert_eq!(file.get_main_header().section_num, 0);
+    /// file.create_section(SectionHeaderBuilder::new());
+    /// assert_eq!(file.get_main_header().section_num, 1);
+    /// ```
     pub fn create_section<H: Into<SectionHeader>>(&mut self, header: H) -> Handle
     {
         self.modified = true;
@@ -189,6 +309,22 @@ impl<T> Container<T>
     /// # Arguments
     ///
     /// * `handle`: a handle to the section.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::builder::{MainHeaderBuilder, SectionHeaderBuilder};
+    /// use bpx::core::{Container, SectionData};
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let section = file.create_section(SectionHeaderBuilder::new());
+    /// file.save();
+    /// assert_eq!(file.get_main_header().section_num, 1);
+    /// file.remove_section(section);
+    /// file.save();
+    /// assert_eq!(file.get_main_header().section_num, 0);
+    /// ```
     pub fn remove_section(&mut self, handle: Handle)
     {
         self.sections.remove(&handle.0);
@@ -201,6 +337,7 @@ impl<T> Container<T>
             });
     }
 
+    /// Creates an immutable iterator over each [Section](crate::core::Section) in this container.
     pub fn iter(&self) -> Iter
     {
         Iter {
@@ -208,6 +345,7 @@ impl<T> Container<T>
         }
     }
 
+    /// Creates a mutable iterator over each [SectionMut](crate::core::SectionMut) in this container.
     pub fn iter_mut(&mut self) -> IterMut<T>
     {
         IterMut {
@@ -247,7 +385,7 @@ impl<'a, T> IntoIterator for &'a mut Container<T>
 
 impl<T: io::Read + io::Seek> Container<T>
 {
-    /// Creates a new BPX decoder.
+    /// Loads a BPX container from the given `backend`.
     ///
     /// # Arguments
     ///
@@ -259,6 +397,22 @@ impl<T: io::Read + io::Seek> Container<T>
     ///
     /// A [ReadError](crate::core::error::ReadError) is returned if some headers
     /// could not be read or if the header data is corrupted.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::builder::MainHeaderBuilder;
+    /// use bpx::core::Container;
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// file.save().unwrap();
+    /// let mut buf = file.into_inner();
+    /// buf.set_position(0);
+    /// let file = Container::open(buf).unwrap();
+    /// //Default BPX variant/type is 'P'
+    /// assert_eq!(file.get_main_header().ty, 'P' as u8);
+    /// ```
     pub fn open(mut backend: T) -> Result<Container<T>, ReadError>
     {
         let (checksum, header) = MainHeader::read(&mut backend)?;
@@ -275,6 +429,27 @@ impl<T: io::Read + io::Seek> Container<T>
 
 impl<T: io::Write + io::Seek> Container<T>
 {
+    /// Creates a new BPX container in the given `backend`.
+    ///
+    /// # Arguments
+    ///
+    /// * `backend`: A [Write](std::io::Write) + [Seek](std::io::Seek) backend to use for writing the BPX container.
+    /// * `header`: The [MainHeader](crate::core::header::MainHeader) to initialize the new container.
+    ///
+    /// returns: Container<T>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::builder::MainHeaderBuilder;
+    /// use bpx::core::Container;
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// assert_eq!(file.get_main_header().section_num, 0);
+    /// //Default BPX variant/type is 'P'
+    /// assert_eq!(file.get_main_header().ty, 'P' as u8);
+    /// ```
     pub fn create<H: Into<MainHeader>>(backend: T, header: H) -> Container<T>
     {
         Container {
@@ -296,6 +471,19 @@ impl<T: io::Write + io::Seek> Container<T>
     ///
     /// A [WriteError](crate::core::error::WriteError) is returned if some data could
     /// not be written.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::builder::MainHeaderBuilder;
+    /// use bpx::core::Container;
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// file.save().unwrap();
+    /// let buf = file.into_inner();
+    /// assert!(!buf.into_inner().is_empty());
+    /// ```
     pub fn save(&mut self) -> Result<(), WriteError>
     {
         let mut filter = self.sections.iter().filter(|(_, entry)| entry.modified);
