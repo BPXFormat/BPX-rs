@@ -45,8 +45,12 @@ use crate::{
     Handle
 };
 
+/// The default maximum size of uncompressed sections.
+///
+/// *Used as default compression threshold when a section is marked compressible.*
 pub const DEFAULT_COMPRESSION_THRESHOLD: u32 = 65536;
 
+/// Mutable iterator over [SectionMut](crate::core::SectionMut) for a [Container](crate::core::Container).
 pub struct IterMut<'a, T>
 {
     backend: &'a mut T,
@@ -67,6 +71,7 @@ impl<'a, T> Iterator for IterMut<'a, T>
     }
 }
 
+/// Iterator over [Section](crate::core::Section) for a [Container](crate::core::Container).
 pub struct Iter<'a>
 {
     sections: std::collections::btree_map::Iter<'a, u32, SectionEntry>
