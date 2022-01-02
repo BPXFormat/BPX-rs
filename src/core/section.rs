@@ -82,6 +82,7 @@ pub struct SectionEntry
     pub modified: bool
 }
 
+/// A mutable reference to a section.
 pub struct SectionMut<'a, T>
 {
     backend: &'a mut T,
@@ -91,6 +92,13 @@ pub struct SectionMut<'a, T>
 
 impl<'a, T: Read + Seek> SectionMut<'a, T>
 {
+    /// Gets a mutable reference to the inner section data.
+    /// Loads the section if needed.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [ReadError](crate::core::error::ReadError) if the section is corrupted,
+    /// truncated or if some data couldn't be read.
     pub fn load(&mut self) -> Result<&mut AutoSectionData, ReadError>
     {
         let data = self
@@ -104,17 +112,21 @@ impl<'a, T: Read + Seek> SectionMut<'a, T>
 
 impl<'a, T> SectionMut<'a, T>
 {
+    /// Gets a mutable reference to the inner section data.
+    /// Returns None if the section is not loaded.
     pub fn open(&mut self) -> Option<&mut AutoSectionData>
     {
         self.entry.modified = true;
         self.entry.data.as_mut()
     }
 
+    /// Gets the handle of this section.
     pub fn handle(&self) -> Handle
     {
         self.handle
     }
 
+    /// Gets the index of this section.
     pub fn index(&self) -> u32
     {
         self.entry.index
@@ -144,6 +156,7 @@ pub fn new_section_mut<'a, T>(
     }
 }
 
+/// An immutable reference to a section.
 pub struct Section<'a>
 {
     entry: &'a SectionEntry,
@@ -152,16 +165,20 @@ pub struct Section<'a>
 
 impl<'a> Section<'a>
 {
+    /// Gets an immutable reference to the inner section data.
+    /// Returns None if the section is not loaded.
     pub fn open(&self) -> Option<&AutoSectionData>
     {
         self.entry.data.as_ref()
     }
 
+    /// Gets the handle of this section.
     pub fn handle(&self) -> Handle
     {
         self.handle
     }
 
+    /// Gets the index of this section.
     pub fn index(&self) -> u32
     {
         self.entry.index

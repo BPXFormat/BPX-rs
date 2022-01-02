@@ -47,7 +47,7 @@ use crate::{
 
 /// The default maximum size of uncompressed sections.
 ///
-/// *Used as default compression threshold when a section is marked compressible.*
+/// *Used as default compression threshold when a section is marked as compressible.*
 pub const DEFAULT_COMPRESSION_THRESHOLD: u32 = 65536;
 
 /// Mutable iterator over [SectionMut](crate::core::SectionMut) for a [Container](crate::core::Container).
