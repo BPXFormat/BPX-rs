@@ -208,6 +208,10 @@ impl<T> Container<T>
     ///
     /// returns: Section
     ///
+    /// # Panics
+    ///
+    /// Panics if the given section handle is invalid.
+    ///
     /// # Examples
     ///
     /// ```
@@ -236,6 +240,10 @@ impl<T> Container<T>
     /// * `handle`: a handle to the wanted section.
     ///
     /// returns: SectionMut
+    ///
+    /// # Panics
+    ///
+    /// Panics if the given section handle is invalid.
     ///
     /// # Examples
     ///
