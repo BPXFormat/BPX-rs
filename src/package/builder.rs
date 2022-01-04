@@ -31,16 +31,26 @@ use crate::{
     sd::Object
 };
 
+/// The needed options to create a new BPXP.
+///
+/// *This is intended to be generated with help of [Builder](crate::package::Builder).*
 #[derive(Clone)]
 pub struct Settings
 {
+    /// The package target architecture.
     pub architecture: Architecture,
+
+    /// The package target platform/OS.
     pub platform: Platform,
+
+    /// The package metadata (stored as a BPXSD [Object](crate::sd::Object)).
     pub metadata: Option<Object>,
+
+    /// The package type code.
     pub type_code: [u8; 2]
 }
 
-/// Build create info for a BPXP.
+/// Utility to simplify generation of [Settings](crate::package::Settings) required when creating a new BPXP.
 pub struct Builder
 {
     settings: Settings

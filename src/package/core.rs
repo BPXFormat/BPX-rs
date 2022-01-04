@@ -59,6 +59,7 @@ const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
 const MAX_DATA_SECTION_SIZE: usize = 200000000 - MIN_DATA_REMAINING_SIZE; //200MB
 
+/// Represents an object reference.
 pub struct Object<'a, T>
 {
     container: &'a mut Container<T>,
@@ -68,11 +69,28 @@ pub struct Object<'a, T>
 
 impl<'a, T: Read + Seek> Object<'a, T>
 {
+
+    /// Unpacks this object to the given `out` io backend.
+    ///
+    /// # Arguments
+    ///
+    /// * `out`: A [Write](std::io::Write) to unpack object data to.
+    ///
+    /// returns: Result<u64, ReadError>
+    ///
+    /// # Errors
+    ///
+    /// Returns a [ReadError](crate::package::error::ReadError) if the object couldn't be unpacked.
     pub fn unpack<W: Write>(&mut self, out: W) -> Result<u64, ReadError>
     {
         unpack_object(self.container, self.header, out)
     }
 
+    /// Loads the name of this object if it's not already loaded.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [ReadError](crate::package::error::ReadError) if the name couldn't be loaded.
     pub fn load_name(&mut self) -> Result<&str, ReadError>
     {
         load_string_section(self.container, self.strings)?;
@@ -80,12 +98,14 @@ impl<'a, T: Read + Seek> Object<'a, T>
         Ok(name)
     }
 
+    /// Returns the size in bytes of this object.
     pub fn size(&self) -> u64
     {
         self.header.size
     }
 }
 
+/// An iterator over [Object](crate::package::Object).
 pub struct ObjectIter<'a, T>
 {
     container: &'a mut Container<T>,
