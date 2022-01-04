@@ -238,6 +238,26 @@ impl<T> ShaderPack<T>
 
 impl<T: Write + Seek> ShaderPack<T>
 {
+    /// Creates a BPX type S.
+    ///
+    /// # Arguments
+    ///
+    /// * `backend`: A [Write](std::io::Write) + [Seek](std::io::Seek) to use as backend.
+    /// * `settings`: The shader package creation settings.
+    ///
+    /// returns: ShaderPack<T>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::shader::Builder;
+    /// use bpx::shader::ShaderPack;
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let mut bpxs = ShaderPack::create(new_byte_buf(0), Builder::new());
+    /// bpxs.save();
+    /// assert!(!bpxs.into_inner().into_inner().into_inner().is_empty());
+    /// ```
     pub fn create<S: Into<Settings>>(backend: T, settings: S) -> ShaderPack<T>
     {
         let settings = settings.into();
@@ -304,14 +324,15 @@ impl<T: Write + Seek> ShaderPack<T>
     ///
     /// # Arguments
     ///
-    /// * `name`: the name of the symbols.
-    /// * `sym`: an [OwnedSymbol](crate::shader::symbol::OwnedSymbol), see [Builder](crate::shader::symbol::Builder) for more information
+    /// * `name`: The name of the symbols.
+    /// * `sym`: An [OwnedSymbol](crate::shader::symbol::OwnedSymbol), see [Builder](crate::shader::symbol::Builder) for more information
     ///
     /// returns: Result<(), Error>
     ///
     /// # Errors
     ///
-    /// A [WriteError](crate::shader::error::WriteError) is returned if the symbol could not be written.
+    /// A [WriteError](crate::shader::error::WriteError) is returned if the symbol could not be
+    /// written.
     pub fn add_symbol<S: Into<OwnedSymbol>>(&mut self, sym: S) -> Result<(), WriteError>
     {
         let owned = sym.into();
@@ -340,7 +361,8 @@ impl<T: Write + Seek> ShaderPack<T>
     ///
     /// # Errors
     ///
-    /// A [WriteError](crate::shader::error::WriteError) is returned if the shader could not be written.
+    /// A [WriteError](crate::shader::error::WriteError) is returned if the shader could not be
+    /// written.
     pub fn add_shader(&mut self, shader: Shader) -> Result<(), WriteError>
     {
         let section = self.container.create_section(
@@ -366,6 +388,12 @@ impl<T: Write + Seek> ShaderPack<T>
         Ok(())
     }
 
+    /// Saves this shader package.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [WriteError](crate::shader::error::WriteError) if some parts of this shader
+    /// package couldn't be saved.
     pub fn save(&mut self) -> Result<(), WriteError>
     {
         {
@@ -383,6 +411,33 @@ impl<T: Write + Seek> ShaderPack<T>
 
 impl<T: Read + Seek> ShaderPack<T>
 {
+    /// Opens a BPX type S.
+    ///
+    /// # Arguments
+    ///
+    /// * `backend`: A [Read](std::io::Read) + [Seek](std::io::Seek) to use as backend.
+    ///
+    /// returns: Result<ShaderPack<T>, ReadError>
+    ///
+    /// # Errors
+    ///
+    /// A [ReadError](crate::shader::error::ReadError) is returned if some
+    /// sections/headers could not be loaded.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::shader::Builder;
+    /// use bpx::shader::ShaderPack;
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let mut bpxs = ShaderPack::create(new_byte_buf(0), Builder::new());
+    /// bpxs.save();
+    /// let mut buf = bpxs.into_inner().into_inner();
+    /// buf.set_position(0);
+    /// let mut bpxs = ShaderPack::open(buf).unwrap();
+    /// assert_eq!(bpxs.symbols().unwrap().count(), 0);
+    /// ```
     pub fn open(backend: T) -> Result<ShaderPack<T>, ReadError>
     {
         let container = Container::open(backend)?;
@@ -423,6 +478,12 @@ impl<T: Read + Seek> ShaderPack<T>
         })
     }
 
+    /// Gets an iterator over all [SymbolRef](crate::shader::SymbolRef) in this shader package.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [ReadError](crate::shader::error::ReadError) if the section couldn't be loaded
+    /// or if the symbol table is truncated.
     pub fn symbols(&mut self) -> Result<SymbolIter<T>, ReadError>
     {
         let table = self.table.get_or_insert_with_err(|| {

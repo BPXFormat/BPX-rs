@@ -207,6 +207,26 @@ impl<T> Package<T>
 
 impl<T: Write + Seek> Package<T>
 {
+    /// Creates a new BPX type P.
+    ///
+    /// # Arguments
+    ///
+    /// * `backend`: A [Write](std::io::Write) + [Seek](std::io::Seek) to use as backend.
+    /// * `settings`: The package creation settings.
+    ///
+    /// returns: Result<Package<T>, WriteError>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::package::Builder;
+    /// use bpx::package::Package;
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let mut bpxp = Package::create(new_byte_buf(0), Builder::new()).unwrap();
+    /// bpxp.save();
+    /// assert!(!bpxp.into_inner().into_inner().into_inner().is_empty());
+    /// ```
     pub fn create<S: Into<Settings>>(backend: T, settings: S) -> Result<Package<T>, WriteError>
     {
         let settings = settings.into();
@@ -276,6 +296,19 @@ impl<T: Write + Seek> Package<T>
         Ok((count, false))
     }
 
+    /// Creates a new object in this package.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: The name of the object.
+    /// * `source`: A [Read](std::io::Read) to read object data from.
+    ///
+    /// returns: Result<(), WriteError>
+    ///
+    /// # Errors
+    ///
+    /// Returns a [WriteError](crate::package::error::WriteError) if the object couldn't be saved
+    /// in this package.
     pub fn pack<R: Read>(&mut self, name: &str, mut source: R) -> Result<(), WriteError>
     {
         let mut object_size = 0;
@@ -318,6 +351,12 @@ impl<T: Write + Seek> Package<T>
         Ok(())
     }
 
+    /// Saves this package.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [WriteError](crate::package::error::WriteError) if some parts of this package
+    /// couldn't be saved.
     pub fn save(&mut self) -> Result<(), WriteError>
     {
         {
@@ -335,11 +374,11 @@ impl<T: Write + Seek> Package<T>
 
 impl<T: Read + Seek> Package<T>
 {
-    /// Creates a new Package by reading from a BPX decoder.
+    /// Opens a BPX type P.
     ///
     /// # Arguments
     ///
-    /// * `backend`: a [Read](std::io::Read) + [Seek](std::io::Seek) to use as backend.
+    /// * `backend`: A [Read](std::io::Read) + [Seek](std::io::Seek) to use as backend.
     ///
     /// returns: Result<PackageDecoder<TBackend>, Error>
     ///
@@ -347,6 +386,21 @@ impl<T: Read + Seek> Package<T>
     ///
     /// A [ReadError](crate::package::error::ReadError) is returned if some
     /// sections/headers could not be loaded.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::package::Builder;
+    /// use bpx::package::Package;
+    /// use bpx::utils::new_byte_buf;
+    ///
+    /// let mut bpxp = Package::create(new_byte_buf(0), Builder::new()).unwrap();
+    /// bpxp.save();
+    /// let mut buf = bpxp.into_inner().into_inner();
+    /// buf.set_position(0);
+    /// let mut bpxp = Package::open(buf).unwrap();
+    /// assert_eq!(bpxp.objects().unwrap().count(), 0);
+    /// ```
     pub fn open(backend: T) -> Result<Package<T>, ReadError>
     {
         let container = Container::open(backend)?;
@@ -388,6 +442,12 @@ impl<T: Read + Seek> Package<T>
         })
     }
 
+    /// Gets an iterator over all [Object](crate::package::Object) in this package.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [ReadError](crate::package::error::ReadError) if the section couldn't be loaded
+    /// or if the object table is truncated.
     pub fn objects(&mut self) -> Result<ObjectIter<T>, ReadError>
     {
         let table = self.table.get_or_insert_with_err(|| {
@@ -403,11 +463,18 @@ impl<T: Read + Seek> Package<T>
 
     /// Removes an object from this package.
     ///
+    /// Returns true if the object exists and was removed, false otherwise.
+    ///
     /// # Arguments
     ///
     /// * `name`: the name of the object to remove.
     ///
     /// returns: Result<bool, ReadError>
+    ///
+    /// # Errors
+    ///
+    /// Returns a [ReadError](crate::package::error::ReadError) if some strings couldn't be loaded
+    /// from the string section.
     pub fn remove(&mut self, name: &str) -> Result<bool, ReadError>
     {
         let mut idx = None;
