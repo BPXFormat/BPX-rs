@@ -31,7 +31,7 @@ use crate::{
     sd::Object
 };
 
-/// The needed options to create a new BPXP.
+/// The required settings to create a new BPXP.
 ///
 /// *This is intended to be generated with help of [Builder](crate::package::Builder).*
 #[derive(Clone)]

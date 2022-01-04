@@ -69,7 +69,6 @@ pub struct Object<'a, T>
 
 impl<'a, T: Read + Seek> Object<'a, T>
 {
-
     /// Unpacks this object to the given `out` io backend.
     ///
     /// # Arguments
@@ -80,7 +79,8 @@ impl<'a, T: Read + Seek> Object<'a, T>
     ///
     /// # Errors
     ///
-    /// Returns a [ReadError](crate::package::error::ReadError) if the object couldn't be unpacked.
+    /// Returns a [ReadError](crate::package::error::ReadError) if the section couldn't be loaded
+    /// or an IO error has occured.
     pub fn unpack<W: Write>(&mut self, out: W) -> Result<u64, ReadError>
     {
         unpack_object(self.container, self.header, out)
@@ -90,7 +90,8 @@ impl<'a, T: Read + Seek> Object<'a, T>
     ///
     /// # Errors
     ///
-    /// Returns a [ReadError](crate::package::error::ReadError) if the name couldn't be loaded.
+    /// If the name is not already loaded, returns a [ReadError](crate::package::error::ReadError)
+    /// if the section couldn't be loaded or the string couldn't be loaded.
     pub fn load_name(&mut self) -> Result<&str, ReadError>
     {
         load_string_section(self.container, self.strings)?;
