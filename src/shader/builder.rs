@@ -34,8 +34,13 @@ use crate::shader::{Target, Type};
 #[derive(Clone)]
 pub struct Settings
 {
+    /// The assembly hash of the shader package.
     pub assembly_hash: u64,
+
+    /// The target rendering API of the shader package.
     pub target: Target,
+
+    /// The type of the shader package (Assembly or Pipeline).
     pub ty: Type
 }
 
