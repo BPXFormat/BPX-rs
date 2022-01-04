@@ -64,6 +64,7 @@ use crate::{
 };
 use crate::shader::symbol::OwnedSymbol;
 
+/// Represents a symbol reference.
 pub struct SymbolRef<'a, T>
 {
     extended_data: &'a mut Option<Handle>,
@@ -84,6 +85,12 @@ impl<'a, T> Deref for SymbolRef<'a, T>
 
 impl<'a, T: Read + Seek> SymbolRef<'a, T>
 {
+    /// Loads the name of this symbol if it's not already loaded.
+    ///
+    /// # Errors
+    ///
+    /// If the name is not already loaded, returns a [ReadError](crate::shader::error::ReadError)
+    /// if the section couldn't be loaded or the string couldn't be loaded.
     pub fn load_name(&mut self) -> Result<&str, ReadError>
     {
         load_string_section(self.container, self.strings)?;
@@ -92,6 +99,13 @@ impl<'a, T: Read + Seek> SymbolRef<'a, T>
         Ok(str)
     }
 
+    /// Loads the extended data of this symbol if it's not already loaded.
+    ///
+    /// # Errors
+    ///
+    /// If the [Object](crate::sd::Object) is not already loaded, returns a
+    /// [ReadError](crate::shader::error::ReadError) if the section couldn't be loaded
+    /// or the [Object](crate::sd::Object) couldn't be decoded.
     pub fn load_extended_data(&mut self) -> Result<Object, ReadError>
     {
         if self.flags & FLAG_EXTENDED_DATA == 0 {
@@ -114,6 +128,7 @@ impl<'a, T: Read + Seek> SymbolRef<'a, T>
     }
 }
 
+/// An iterator over [SymbolRef](crate::shader::SymbolRef).
 pub struct SymbolIter<'a, T>
 {
     extended_data: &'a mut Option<Handle>,

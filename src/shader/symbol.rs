@@ -194,16 +194,29 @@ impl Item for Symbol
     }
 }
 
+/// The required settings to create a new symbol.
+///
+/// *This is intended to be generated with help of [Builder](crate::shader::symbol::Builder).*
 #[derive(Clone)]
 pub struct OwnedSymbol
 {
+    /// The name of the symbol.
     pub name: String,
+
+    /// The extended data [Object](crate::sd::Object) of the symbol.
     pub extended_data: Option<Object>,
+
+    /// The symbol type.
     pub ty: SymbolType,
+
+    /// The symbol flags.
     pub flags: u16,
+
+    /// The symbol register number.
     pub register: u8
 }
 
+/// Utility to simplify generation of [Settings](crate::shader::symbol::OwnedSymbol) required when creating a new BPXS.
 pub struct Builder
 {
     sym: OwnedSymbol
@@ -211,6 +224,7 @@ pub struct Builder
 
 impl Builder
 {
+    /// Creates a new symbol builder.
     pub fn new<S: Into<String>>(name: S) -> Builder
     {
         Builder {
@@ -224,12 +238,29 @@ impl Builder
         }
     }
 
+    /// Defines the type of this symbol.
+    ///
+    /// # Arguments
+    ///
+    /// * `ty`: the symbol type.
+    ///
+    /// returns: &mut Builder
     pub fn ty(&mut self, ty: SymbolType) -> &mut Self
     {
         self.sym.ty = ty;
         self
     }
 
+    /// Defines the extended data for this symbol.
+    ///
+    /// *This function automatically adds the
+    /// [FLAG_EXTENDED_DATA](crate::shader::symbol::FLAG_EXTENDED_DATA) flag.*
+    ///
+    /// # Arguments
+    ///
+    /// * `obj`: An [Object](crate::sd::Object) to store as extended data.
+    ///
+    /// returns: &mut Builder
     pub fn extended_data(&mut self, obj: Object) -> &mut Self
     {
         self.sym.extended_data = Some(obj);
@@ -237,6 +268,16 @@ impl Builder
         self
     }
 
+    /// Defines the register number of this symbol.
+    ///
+    /// *This function automatically adds the [FLAG_REGISTER](crate::shader::symbol::FLAG_REGISTER)
+    /// flag.*
+    ///
+    /// # Arguments
+    ///
+    /// * `register`: the register number of this symbol.
+    ///
+    /// returns: &mut Builder
     pub fn register(&mut self, register: u8) -> &mut Self
     {
         self.sym.register = register;
@@ -244,24 +285,43 @@ impl Builder
         self
     }
 
+    /// Marks this symbol as internal.
+    ///
+    /// *Adds the [FLAG_INTERNAL](crate::shader::symbol::FLAG_INTERNAL).*
     pub fn internal(&mut self) -> &mut Self
     {
         self.sym.flags |= FLAG_INTERNAL;
         self
     }
 
+    /// Marks this symbol as external.
+    ///
+    /// *Adds the [FLAG_EXTERNAL](crate::shader::symbol::FLAG_EXTERNAL).*
     pub fn external(&mut self) -> &mut Self
     {
         self.sym.flags |= FLAG_EXTERNAL;
         self
     }
 
+    /// Marks this symbol as being part of an assembly.
+    ///
+    /// *Adds the [FLAG_ASSEMBLY](crate::shader::symbol::FLAG_ASSEMBLY).*
     pub fn assembly(&mut self) -> &mut Self
     {
         self.sym.flags |= FLAG_ASSEMBLY;
         self
     }
 
+    /// Adds the stage flag identified by `stage` to this symbol.
+    ///
+    /// For more information please have a look at the FLAG_*_STAGE flags defined in the
+    /// [symbol](crate::shader::symbol) module.
+    ///
+    /// # Arguments
+    ///
+    /// * `stage`: the stage to add.
+    ///
+    /// returns: &mut Builder
     pub fn stage(&mut self, stage: Stage) -> &mut Self
     {
         match stage {
@@ -274,6 +334,7 @@ impl Builder
         self
     }
 
+    /// Returns the built settings.
     pub fn build(&self) -> OwnedSymbol
     {
         self.sym.clone()

@@ -28,6 +28,9 @@
 
 use crate::shader::{Target, Type};
 
+/// The required settings to create a new BPXS.
+///
+/// *This is intended to be generated with help of [Builder](crate::shader::Builder).*
 #[derive(Clone)]
 pub struct Settings
 {
@@ -36,7 +39,7 @@ pub struct Settings
     pub ty: Type
 }
 
-/// Build create info for a BPXS.
+/// Utility to simplify generation of [Settings](crate::shader::Settings) required when creating a new BPXS.
 pub struct Builder
 {
     settings: Settings
