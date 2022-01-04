@@ -313,6 +313,16 @@ pub struct Serializer
 
 impl Serializer
 {
+    /// Creates a new BPXSD serializer for use with `serde`.
+    ///
+    /// NOTE: Only available with the `serde` cargo feature.
+    ///
+    /// # Arguments
+    ///
+    /// * `enum_size`: The size of a Rust enum.
+    /// * `debug`: Whether to write debug information with BPXSD objects.
+    ///
+    /// returns: Serializer
     pub fn new(enum_size: EnumSize, debug: bool) -> Serializer
     {
         Serializer { enum_size, debug }

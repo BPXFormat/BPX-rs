@@ -227,6 +227,16 @@ pub struct Deserializer
 
 impl Deserializer
 {
+    /// Creates a new BPXSD deserializer for use with `serde`.
+    ///
+    /// NOTE: Only available with the `serde` cargo feature.
+    ///
+    /// # Arguments
+    ///
+    /// * `enum_size`: The size of a Rust enum.
+    /// * `val`: The BPXSD [Value](crate::sd::Value) to deserialize.
+    ///
+    /// returns: Deserializer
     pub fn new<T: Into<Value>>(enum_size: EnumSize, val: T) -> Deserializer
     {
         Deserializer {
