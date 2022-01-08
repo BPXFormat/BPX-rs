@@ -198,7 +198,7 @@ impl Item for Symbol
 ///
 /// *This is intended to be generated with help of [Builder](crate::shader::symbol::Builder).*
 #[derive(Clone)]
-pub struct OwnedSymbol
+pub struct Settings
 {
     /// The name of the symbol.
     pub name: String,
@@ -216,10 +216,10 @@ pub struct OwnedSymbol
     pub register: u8
 }
 
-/// Utility to simplify generation of [Settings](crate::shader::symbol::OwnedSymbol) required when creating a new BPXS.
+/// Utility to simplify generation of [Settings](crate::shader::symbol::Settings) required when creating a new BPXS.
 pub struct Builder
 {
-    sym: OwnedSymbol
+    sym: Settings
 }
 
 impl Builder
@@ -228,7 +228,7 @@ impl Builder
     pub fn new<S: Into<String>>(name: S) -> Builder
     {
         Builder {
-            sym: OwnedSymbol {
+            sym: Settings {
                 name: name.into(),
                 extended_data: None,
                 ty: Type::Constant,
@@ -335,13 +335,13 @@ impl Builder
     }
 
     /// Returns the built settings.
-    pub fn build(&self) -> OwnedSymbol
+    pub fn build(&self) -> Settings
     {
         self.sym.clone()
     }
 }
 
-impl From<&mut Builder> for OwnedSymbol
+impl From<&mut Builder> for Settings
 {
     fn from(builder: &mut Builder) -> Self
     {
@@ -349,7 +349,7 @@ impl From<&mut Builder> for OwnedSymbol
     }
 }
 
-impl From<Builder> for OwnedSymbol
+impl From<Builder> for Settings
 {
     fn from(builder: Builder) -> Self
     {

@@ -62,7 +62,7 @@ use crate::{
     utils::OptionExtension,
     Handle
 };
-use crate::shader::symbol::OwnedSymbol;
+use crate::shader::symbol::Settings as SymbolSettings;
 
 /// Represents a symbol reference.
 pub struct SymbolRef<'a, T>
@@ -325,7 +325,7 @@ impl<T: Write + Seek> ShaderPack<T>
     /// # Arguments
     ///
     /// * `name`: The name of the symbols.
-    /// * `sym`: An [OwnedSymbol](crate::shader::symbol::OwnedSymbol), see [Builder](crate::shader::symbol::Builder) for more information
+    /// * `sym`: An [Settings](crate::shader::symbol::Settings), see [Builder](crate::shader::symbol::Builder) for more information
     ///
     /// returns: Result<(), Error>
     ///
@@ -333,17 +333,17 @@ impl<T: Write + Seek> ShaderPack<T>
     ///
     /// A [WriteError](crate::shader::error::WriteError) is returned if the symbol could not be
     /// written.
-    pub fn add_symbol<S: Into<OwnedSymbol>>(&mut self, sym: S) -> Result<(), WriteError>
+    pub fn add_symbol<S: Into<SymbolSettings>>(&mut self, sym: S) -> Result<(), WriteError>
     {
-        let owned = sym.into();
-        let address = self.strings.put(&mut self.container, &owned.name)?;
-        let extended_data = self.write_extended_data(owned.extended_data)?;
+        let settings = sym.into();
+        let address = self.strings.put(&mut self.container, &settings.name)?;
+        let extended_data = self.write_extended_data(settings.extended_data)?;
         let buf = Symbol {
             name: address,
             extended_data,
-            flags: owned.flags,
-            ty: owned.ty,
-            register: owned.register
+            flags: settings.flags,
+            ty: settings.ty,
+            register: settings.register
         };
         self.symbols.push(buf);
         self.num_symbols += 1;
