@@ -73,7 +73,7 @@ pub const SIZE_SYMBOL_STRUCTURE: usize = 12;
 
 /// The type of a symbol.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum SymbolType
+pub enum Type
 {
     /// A texture symbol.
     Texture,
@@ -94,15 +94,15 @@ pub enum SymbolType
     Pipeline
 }
 
-fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType, ReadError>
+fn get_symbol_type_from_code(scode: u8) -> Result<Type, ReadError>
 {
     match scode {
-        0x0 => Ok(SymbolType::Texture),
-        0x1 => Ok(SymbolType::Sampler),
-        0x2 => Ok(SymbolType::ConstantBuffer),
-        0x3 => Ok(SymbolType::Constant),
-        0x4 => Ok(SymbolType::VertexFormat),
-        0x5 => Ok(SymbolType::Pipeline),
+        0x0 => Ok(Type::Texture),
+        0x1 => Ok(Type::Sampler),
+        0x2 => Ok(Type::ConstantBuffer),
+        0x3 => Ok(Type::Constant),
+        0x4 => Ok(Type::VertexFormat),
+        0x5 => Ok(Type::Pipeline),
         _ => Err(ReadError::InvalidCode(
             InvalidCodeContext::SymbolType,
             scode
@@ -124,7 +124,7 @@ pub struct Symbol
     pub flags: u16,
 
     /// The type of symbol.
-    pub ty: SymbolType,
+    pub ty: Type,
 
     /// The register number for this symbol.
     pub register: u8
@@ -141,7 +141,7 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
             name: 0,
             extended_data: 0xFFFFFF,
             flags: 0,
-            ty: SymbolType::Constant,
+            ty: Type::Constant,
             register: 0xFF
         }
     }
@@ -174,12 +174,12 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
         LittleEndian::write_u32(&mut buf[4..8], self.extended_data);
         LittleEndian::write_u16(&mut buf[8..10], self.flags);
         match self.ty {
-            SymbolType::Texture => buf[10] = 0x0,
-            SymbolType::Sampler => buf[10] = 0x1,
-            SymbolType::ConstantBuffer => buf[10] = 0x2,
-            SymbolType::Constant => buf[10] = 0x3,
-            SymbolType::VertexFormat => buf[10] = 0x4,
-            SymbolType::Pipeline => buf[10] = 0x5
+            Type::Texture => buf[10] = 0x0,
+            Type::Sampler => buf[10] = 0x1,
+            Type::ConstantBuffer => buf[10] = 0x2,
+            Type::Constant => buf[10] = 0x3,
+            Type::VertexFormat => buf[10] = 0x4,
+            Type::Pipeline => buf[10] = 0x5
         };
         buf[11] = self.register;
         buf
@@ -207,7 +207,7 @@ pub struct OwnedSymbol
     pub extended_data: Option<Object>,
 
     /// The symbol type.
-    pub ty: SymbolType,
+    pub ty: Type,
 
     /// The symbol flags.
     pub flags: u16,
@@ -231,7 +231,7 @@ impl Builder
             sym: OwnedSymbol {
                 name: name.into(),
                 extended_data: None,
-                ty: SymbolType::Constant,
+                ty: Type::Constant,
                 flags: 0,
                 register: 0xFF
             }
@@ -245,7 +245,7 @@ impl Builder
     /// * `ty`: the symbol type.
     ///
     /// returns: &mut Builder
-    pub fn ty(&mut self, ty: SymbolType) -> &mut Self
+    pub fn ty(&mut self, ty: Type) -> &mut Self
     {
         self.sym.ty = ty;
         self
