@@ -38,6 +38,7 @@ use crate::core::{
 const MEMORY_THRESHOLD: u32 = 100000000;
 const INIT_BUF_SIZE: usize = 512;
 
+#[allow(clippy::large_enum_variant)] // This is always used behind a Box
 enum DynSectionData
 {
     File(FileBasedSection),
@@ -50,7 +51,7 @@ enum DynSectionData
 /// when the size of the data exceeds 100Mb.*
 pub struct AutoSectionData
 {
-    inner: DynSectionData
+    inner: Box<DynSectionData>
 }
 
 impl Default for AutoSectionData
@@ -67,7 +68,7 @@ impl AutoSectionData
     pub fn new() -> AutoSectionData
     {
         AutoSectionData {
-            inner: DynSectionData::Memory(InMemorySection::new(512))
+            inner: Box::new(DynSectionData::Memory(InMemorySection::new(512)))
         }
     }
 
@@ -89,11 +90,11 @@ impl AutoSectionData
         if size >= MEMORY_THRESHOLD {
             let file = FileBasedSection::new(tempfile()?);
             Ok(AutoSectionData {
-                inner: DynSectionData::File(file)
+                inner: Box::new(DynSectionData::File(file))
             })
         } else {
             Ok(AutoSectionData {
-                inner: DynSectionData::Memory(InMemorySection::new(size as usize))
+                inner: Box::new(DynSectionData::Memory(InMemorySection::new(size as usize)))
             })
         }
     }
@@ -101,20 +102,20 @@ impl AutoSectionData
     unsafe fn move_to_file(&mut self) -> std::io::Result<()>
     {
         let mut file = FileBasedSection::new(tempfile()?);
-        match &mut self.inner {
+        match &mut *self.inner {
             DynSectionData::Memory(m) => std::io::copy(m, &mut file),
             //SAFETY: If the section is not an InMemorySection then move_to_file is not supposed to have been called,
             // and that is an unrecoverable internal BPX error
             DynSectionData::File(_) => std::hint::unreachable_unchecked()
         }?;
-        self.inner = DynSectionData::File(file);
+        self.inner = Box::new(DynSectionData::File(file));
         Ok(())
     }
 
     /// Clears this section data and resets to a default dynamically sized in-memory buffer.
     pub fn clear(&mut self)
     {
-        self.inner = DynSectionData::Memory(InMemorySection::new(INIT_BUF_SIZE))
+        self.inner = Box::new(DynSectionData::Memory(InMemorySection::new(INIT_BUF_SIZE)))
     }
 }
 
@@ -122,7 +123,7 @@ impl Read for AutoSectionData
 {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize>
     {
-        match &mut self.inner {
+        match &mut *self.inner {
             DynSectionData::File(f) => f.read(buf),
             DynSectionData::Memory(m) => m.read(buf)
         }
@@ -133,7 +134,7 @@ impl Write for AutoSectionData
 {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize>
     {
-        match &mut self.inner {
+        match &mut *self.inner {
             DynSectionData::File(f) => f.write(buf),
             DynSectionData::Memory(m) => {
                 let size = m.write(buf)?;
@@ -149,7 +150,7 @@ impl Write for AutoSectionData
 
     fn flush(&mut self) -> std::io::Result<()>
     {
-        match &mut self.inner {
+        match &mut *self.inner {
             DynSectionData::File(f) => f.flush(),
             DynSectionData::Memory(m) => m.flush()
         }
@@ -160,7 +161,7 @@ impl Seek for AutoSectionData
 {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64>
     {
-        match &mut self.inner {
+        match &mut *self.inner {
             DynSectionData::File(f) => f.seek(pos),
             DynSectionData::Memory(m) => m.seek(pos)
         }
@@ -171,7 +172,7 @@ impl SectionData for AutoSectionData
 {
     fn load_in_memory(&mut self) -> std::io::Result<Vec<u8>>
     {
-        match &mut self.inner {
+        match &mut *self.inner {
             DynSectionData::File(f) => f.load_in_memory(),
             DynSectionData::Memory(m) => m.load_in_memory()
         }
@@ -179,7 +180,7 @@ impl SectionData for AutoSectionData
 
     fn size(&self) -> usize
     {
-        match &self.inner {
+        match &*self.inner {
             DynSectionData::File(f) => f.size(),
             DynSectionData::Memory(m) => m.size()
         }

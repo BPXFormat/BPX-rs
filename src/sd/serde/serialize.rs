@@ -75,11 +75,8 @@ impl DebuggerOrObject
             DebuggerOrObject::Object(v) => v.set(key, value)
         }
     }
-}
 
-impl Into<crate::sd::Value> for DebuggerOrObject
-{
-    fn into(self) -> Value
+    pub fn into(self) -> crate::sd::Value
     {
         match self {
             DebuggerOrObject::Debugger(v) => v.detach().into(),

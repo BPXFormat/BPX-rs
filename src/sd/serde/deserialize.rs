@@ -209,7 +209,7 @@ impl<'de> EnumAccess<'de> for Enum
     {
         let variant_idx = match &mut self.val {
             Value::Array(arr) => arr.remove_at(0),
-            Value::Object(obj) => obj.get("__variant__").map(|v| v.clone()),
+            Value::Object(obj) => obj.get("__variant__").cloned(),
             _ => None
         }
         .ok_or(Error::InvalidEnum)?;
@@ -354,7 +354,7 @@ impl<'de> serde::Deserializer<'de> for Deserializer
         V: Visitor<'de>
     {
         let v: u32 = self.val.try_into()?;
-        let v = char::from_u32(v).ok_or_else(|| Error::InvalidUtf32(v))?;
+        let v = char::from_u32(v).ok_or(Error::InvalidUtf32(v))?;
         visitor.visit_char(v)
     }
 
