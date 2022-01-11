@@ -137,7 +137,7 @@ impl<'de> SeqAccess<'de> for Struct
         let val = self
             .obj
             .get(name)
-            .ok_or_else(|| Error::MissingStructKey(name))?
+            .ok_or(Error::MissingStructKey(name))?
             .clone();
         let val = seed.deserialize(Deserializer::new(self.enum_size, val))?;
         self.cur_field += 1;
