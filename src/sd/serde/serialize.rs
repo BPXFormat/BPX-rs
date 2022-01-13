@@ -41,7 +41,13 @@ use serde::{
     Serialize
 };
 
-use crate::sd::{serde::{EnumSize, Error}, Array, Object, Value, Debugger};
+use crate::sd::{
+    serde::{EnumSize, Error},
+    Array,
+    Debugger,
+    Object,
+    Value
+};
 
 enum DebuggerOrObject
 {
@@ -199,7 +205,10 @@ impl Map
     fn check_update(&mut self)
     {
         if self.cur_obj.get("__key__").is_some() && self.cur_obj.get("__value__").is_some() {
-            let val = std::mem::replace(&mut self.cur_obj, DebuggerOrObject::with_capacity(2, self.debug));
+            let val = std::mem::replace(
+                &mut self.cur_obj,
+                DebuggerOrObject::with_capacity(2, self.debug)
+            );
             self.arr.add(val.into());
         }
     }
@@ -214,8 +223,10 @@ impl SerializeMap for Map
     where
         T: Serialize
     {
-        self.cur_obj
-            .set("__key__", key.serialize(Serializer::new(self.enum_size, self.debug))?);
+        self.cur_obj.set(
+            "__key__",
+            key.serialize(Serializer::new(self.enum_size, self.debug))?
+        );
         self.check_update();
         Ok(())
     }
@@ -251,8 +262,10 @@ impl Struct
     where
         T: Serialize
     {
-        self.obj
-            .set(key, value.serialize(Serializer::new(self.enum_size, self.debug))?);
+        self.obj.set(
+            key,
+            value.serialize(Serializer::new(self.enum_size, self.debug))?
+        );
         Ok(())
     }
 }
@@ -583,8 +596,7 @@ impl serde::Serializer for Serializer
 #[cfg(test)]
 mod tests
 {
-    use serde::Deserialize;
-    use serde::Serialize;
+    use serde::{Deserialize, Serialize};
 
     use super::*;
     use crate::sd::serde::Deserializer;
@@ -599,9 +611,15 @@ mod tests
             Val1,
             Val2
         }
-        let e = MyEnum::Val.serialize(Serializer::new(EnumSize::U8, false)).unwrap();
-        let e1 = MyEnum::Val1.serialize(Serializer::new(EnumSize::U16, false)).unwrap();
-        let e2 = MyEnum::Val2.serialize(Serializer::new(EnumSize::U32, false)).unwrap();
+        let e = MyEnum::Val
+            .serialize(Serializer::new(EnumSize::U8, false))
+            .unwrap();
+        let e1 = MyEnum::Val1
+            .serialize(Serializer::new(EnumSize::U16, false))
+            .unwrap();
+        let e2 = MyEnum::Val2
+            .serialize(Serializer::new(EnumSize::U32, false))
+            .unwrap();
         assert_eq!(
             MyEnum::deserialize(Deserializer::new(EnumSize::U8, e)).unwrap(),
             MyEnum::Val
@@ -626,7 +644,9 @@ mod tests
             Val1,
             Val2(u8, u8)
         }
-        let e = MyEnum::Val2(0, 42).serialize(Serializer::new(EnumSize::U8, false)).unwrap();
+        let e = MyEnum::Val2(0, 42)
+            .serialize(Serializer::new(EnumSize::U8, false))
+            .unwrap();
         let e = MyEnum::deserialize(Deserializer::new(EnumSize::U8, e)).unwrap();
         assert_eq!(e, MyEnum::Val2(0, 42));
     }
@@ -647,7 +667,9 @@ mod tests
             val1: 84,
             val2: "test string".into(),
             val3: (1.0, 2.0, 3.0)
-        }.serialize(Serializer::new(EnumSize::U8, false)).unwrap();
+        }
+        .serialize(Serializer::new(EnumSize::U8, false))
+        .unwrap();
         let test = MyStruct::deserialize(Deserializer::new(EnumSize::U8, val)).unwrap();
         assert_eq!(test.val, 42);
         assert_eq!(test.val1, 84);
@@ -655,4 +677,3 @@ mod tests
         assert_eq!(test.val3, (1.0, 2.0, 3.0));
     }
 }
-

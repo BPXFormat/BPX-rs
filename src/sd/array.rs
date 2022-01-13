@@ -28,9 +28,9 @@
 
 use std::{
     ops::{Index, IndexMut},
+    slice::Iter,
     vec::Vec
 };
-use std::slice::Iter;
 
 use crate::sd::Value;
 

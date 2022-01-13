@@ -46,7 +46,7 @@ use crate::{
         decoder::{get_stage_from_code, get_target_type_from_code, read_symbol_table},
         encoder::get_type_ext,
         error::{EosContext, ReadError, Section, WriteError},
-        symbol::{Symbol, FLAG_EXTENDED_DATA},
+        symbol::{Settings as SymbolSettings, Symbol, FLAG_EXTENDED_DATA},
         Settings,
         Shader,
         Stage,
@@ -62,7 +62,6 @@ use crate::{
     utils::OptionExtension,
     Handle
 };
-use crate::shader::symbol::Settings as SymbolSettings;
 
 /// Represents a symbol reference.
 pub struct SymbolRef<'a, T>

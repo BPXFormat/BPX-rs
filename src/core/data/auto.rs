@@ -72,7 +72,6 @@ impl AutoSectionData
         }
     }
 
-
     /// Creates a new section data with a known size limit.
     ///
     /// # Arguments

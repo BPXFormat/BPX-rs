@@ -28,10 +28,7 @@
 
 //! BPXSD object definition
 
-use std::{
-    collections::HashMap,
-    ops::Index
-};
+use std::{collections::HashMap, ops::Index};
 
 use crate::{
     sd::{

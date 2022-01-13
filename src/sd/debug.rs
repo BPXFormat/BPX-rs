@@ -31,11 +31,9 @@
 use std::{collections::HashMap, convert::TryInto};
 
 use crate::{
-    sd::{Array, Object},
+    sd::{error::TypeError, Array, Object, Value},
     utils::hash
 };
-use crate::sd::error::TypeError;
-use crate::sd::Value;
 
 /// A BPXSD object debugger iterator.
 pub struct Iter<'a>

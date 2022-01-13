@@ -224,7 +224,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
     {
         MainHeader {
             signature: *b"BPX",                 //+0
-            ty: b'P',                        //+3
+            ty: b'P',                           //+3
             chksum: 0,                          //+4
             file_size: SIZE_MAIN_HEADER as u64, //+8
             section_num: 0,                     //+16
@@ -330,7 +330,7 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader
             csize: 0,   //+8
             size: 0,    //+12
             chksum: 0,  //+16
-            ty: 0,   //+20
+            ty: 0,      //+20
             flags: 0    //+21
         }
     }
