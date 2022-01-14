@@ -26,66 +26,69 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! Utilities to manipulate the content of sections.
+use std::io::{Cursor, Read, Result, Seek, SeekFrom, Write};
 
-mod auto;
-mod data;
+use crate::{core::SectionData, utils::new_byte_buf};
 
-use std::fmt::{Display, Formatter};
-
-use data::new_section_data;
-pub use data::SectionData;
-
-use crate::macros::impl_err_conversion;
-
-/// Represents a section error.
-#[derive(Debug)]
-pub enum Error
+pub struct InMemorySection
 {
-    /// The section is already open.
-    AlreadyOpen,
-
-    /// Describes an io error.
-    Io(std::io::Error)
+    byte_buf: Cursor<Vec<u8>>,
+    cur_size: usize
 }
 
-impl_err_conversion!(Error { std::io::Error => Io });
-
-impl Display for Error
+impl InMemorySection
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    pub fn new(initial: usize) -> InMemorySection
     {
-        match self {
-            Error::AlreadyOpen => f.write_str("section is already open"),
-            Error::Io(e) => write!(f, "io error ({})", e)
+        InMemorySection {
+            byte_buf: new_byte_buf(initial),
+            cur_size: 0
         }
     }
 }
 
-/// Trait to define basic functionality of a section content.
-pub trait Section
+impl Read for InMemorySection
 {
-    /// Returns the size of the section (without opening the section).
-    fn size(&self) -> usize;
-
-    /// Reallocates the section.
-    ///
-    /// # Arguments
-    ///
-    /// * `size`: new section size.
-    ///
-    /// returns: Result<Box<dyn SectionData, Global>, Error>
-    ///
-    /// # Errors
-    ///
-    /// Returns an [Error](crate::section::Error) if the section is already open or if
-    /// the temporary file creation has failed.
-    fn realloc(&self, size: u32) -> Result<Box<dyn SectionData>, Error>;
-
-    /// Returns the handle of this section.
-    fn handle(&self) -> Handle;
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize>
+    {
+        self.byte_buf.read(buf)
+    }
 }
 
-pub use auto::AutoSection;
+impl Write for InMemorySection
+{
+    fn write(&mut self, buf: &[u8]) -> Result<usize>
+    {
+        let len = self.byte_buf.write(buf)?;
+        if self.byte_buf.position() as usize >= self.cur_size {
+            self.cur_size = self.byte_buf.position() as usize;
+        }
+        Ok(len)
+    }
 
-use crate::Handle;
+    fn flush(&mut self) -> Result<()>
+    {
+        self.byte_buf.flush()
+    }
+}
+
+impl Seek for InMemorySection
+{
+    fn seek(&mut self, pos: SeekFrom) -> Result<u64>
+    {
+        self.byte_buf.seek(pos)
+    }
+}
+
+impl SectionData for InMemorySection
+{
+    fn load_in_memory(&mut self) -> Result<Vec<u8>>
+    {
+        return Ok(self.byte_buf.get_ref().clone());
+    }
+
+    fn size(&self) -> usize
+    {
+        self.cur_size
+    }
+}

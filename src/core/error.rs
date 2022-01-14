@@ -33,7 +33,7 @@ use std::{
     fmt::{Display, Formatter}
 };
 
-use crate::macros::impl_err_conversion;
+use crate::impl_err_conversion;
 
 /// Represents a generic decompression error.
 #[derive(Debug)]
@@ -181,15 +181,14 @@ pub enum WriteError
     /// Describes a compression error.
     Deflate(DeflateError),
 
-    /// A section error.
-    Section(crate::section::Error)
+    /// A section has not yet been loaded.
+    SectionNotLoaded
 }
 
 impl_err_conversion!(
     WriteError {
         std::io::Error => Io,
-        DeflateError => Deflate,
-        crate::section::Error => Section
+        DeflateError => Deflate
     }
 );
 
@@ -203,7 +202,7 @@ impl Display for WriteError
                 write!(f, "maximum section size exceeded ({} > 2^32)", size)
             },
             WriteError::Deflate(e) => write!(f, "deflate error: {}", e),
-            WriteError::Section(e) => write!(f, "section error: {}", e)
+            WriteError::SectionNotLoaded => f.write_str("section not loaded")
         }
     }
 }

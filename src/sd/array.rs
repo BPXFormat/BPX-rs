@@ -28,6 +28,7 @@
 
 use std::{
     ops::{Index, IndexMut},
+    slice::Iter,
     vec::Vec
 };
 
@@ -54,6 +55,14 @@ impl Array
     pub fn new() -> Array
     {
         Array { data: Vec::new() }
+    }
+
+    /// Allocates a new array with a specified initial capacity
+    pub fn with_capacity(capacity: usize) -> Array
+    {
+        Array {
+            data: Vec::with_capacity(capacity)
+        }
     }
 
     /// Adds a value at the end of the array.
@@ -98,9 +107,13 @@ impl Array
     /// arr.remove_at(0);
     /// assert_eq!(arr.len(), 0);
     /// ```
-    pub fn remove_at(&mut self, pos: usize)
+    pub fn remove_at(&mut self, pos: usize) -> Option<Value>
     {
-        self.data.remove(pos);
+        if pos > self.data.len() {
+            None
+        } else {
+            Some(self.data.remove(pos))
+        }
     }
 
     /// Removes a range of values from the array.
@@ -166,6 +179,23 @@ impl Array
     pub fn is_empty(&self) -> bool
     {
         self.len() == 0
+    }
+
+    /// Returns an iterator to this array.
+    pub fn iter(&self) -> Iter<Value>
+    {
+        self.data.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Array
+{
+    type Item = &'a Value;
+    type IntoIter = Iter<'a, Value>;
+
+    fn into_iter(self) -> Self::IntoIter
+    {
+        self.iter()
     }
 }
 

@@ -32,10 +32,12 @@ use std::io;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use super::garraylen::*;
 use crate::{
-    builder::{Checksum, CompressionMethod},
-    error::ReadError,
+    core::{
+        builder::{Checksum, CompressionMethod},
+        error::ReadError
+    },
+    garraylen::*,
     utils::ReadFill
 };
 
@@ -71,7 +73,7 @@ pub trait Struct<const S: usize>
     /// # Examples
     ///
     /// ```should_panic
-    /// use bpx::header::{MainHeader, SIZE_MAIN_HEADER, Struct};
+    /// use bpx::core::header::{MainHeader, SIZE_MAIN_HEADER, Struct};
     ///
     /// let mut corrupted: [u8; SIZE_MAIN_HEADER] = [0; SIZE_MAIN_HEADER];
     /// MainHeader::read(&mut corrupted.as_ref()).unwrap();
@@ -185,7 +187,7 @@ pub struct MainHeader
     /// Type byte.
     ///
     /// Offset: +3
-    pub btype: u8,
+    pub ty: u8,
 
     /// Weak checksum of all headers.
     ///
@@ -222,7 +224,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
     {
         MainHeader {
             signature: *b"BPX",                 //+0
-            btype: b'P',                        //+3
+            ty: b'P',                           //+3
             chksum: 0,                          //+4
             file_size: SIZE_MAIN_HEADER as u64, //+8
             section_num: 0,                     //+16
@@ -247,7 +249,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
         }
         let head = MainHeader {
             signature: extract_slice(&buffer, 0),
-            btype: buffer[3],
+            ty: buffer[3],
             chksum: LittleEndian::read_u32(&buffer[4..8]),
             file_size: LittleEndian::read_u64(&buffer[8..16]),
             section_num: LittleEndian::read_u32(&buffer[16..20]),
@@ -269,7 +271,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
         block[0] = self.signature[0];
         block[1] = self.signature[1];
         block[2] = self.signature[2];
-        block[3] = self.btype;
+        block[3] = self.ty;
         LittleEndian::write_u32(&mut block[4..8], self.chksum);
         LittleEndian::write_u64(&mut block[8..16], self.file_size);
         LittleEndian::write_u32(&mut block[16..20], self.section_num);
@@ -308,7 +310,7 @@ pub struct SectionHeader
     /// Type byte.
     ///
     /// Offset: +20
-    pub btype: u8,
+    pub ty: u8,
 
     /// Flags (see FLAG_* constants).
     ///
@@ -328,7 +330,7 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader
             csize: 0,   //+8
             size: 0,    //+12
             chksum: 0,  //+16
-            btype: 0,   //+20
+            ty: 0,      //+20
             flags: 0    //+21
         }
     }
@@ -352,7 +354,7 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader
                 csize: LittleEndian::read_u32(&buffer[8..12]),
                 size: LittleEndian::read_u32(&buffer[12..16]),
                 chksum: LittleEndian::read_u32(&buffer[16..20]),
-                btype: buffer[20],
+                ty: buffer[20],
                 flags: buffer[21]
             }
         ))
@@ -365,7 +367,7 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader
         LittleEndian::write_u32(&mut block[8..12], self.csize);
         LittleEndian::write_u32(&mut block[12..16], self.size);
         LittleEndian::write_u32(&mut block[16..20], self.chksum);
-        block[20] = self.btype;
+        block[20] = self.ty;
         block[21] = self.flags;
         block
     }

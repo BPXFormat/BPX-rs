@@ -39,12 +39,11 @@ pub enum WriteError
     /// Describes an io error.
     Io(std::io::Error),
 
-    /// Describes too many props or values attempted to be written as part of
-    /// an Object or Array (Structured Data) (ie exceeds 255).
+    /// Describes too large structured data Object or Array (ie exceeds 255).
     ///
     /// # Arguments
-    /// * actual count of props.
-    PropCountExceeded(usize)
+    /// * actual number of items.
+    CapacityExceeded(usize)
 }
 
 impl_err_conversion!(WriteError { std::io::Error => Io });
@@ -55,8 +54,8 @@ impl Display for WriteError
     {
         match self {
             WriteError::Io(e) => write!(f, "io error: {}", e),
-            WriteError::PropCountExceeded(count) => {
-                write!(f, "property count exceeded ({} > 255)", count)
+            WriteError::CapacityExceeded(count) => {
+                write!(f, "capacity exceeded ({} > 255)", count)
             }
         }
     }
@@ -100,30 +99,6 @@ impl Display for ReadError
             ReadError::Truncation(typename) => write!(f, "failed to read {}", typename),
             ReadError::BadTypeCode(code) => write!(f, "unknown value type code ({})", code),
             ReadError::Utf8 => f.write_str("utf8 error")
-        }
-    }
-}
-
-/// Represents a structured data debug error
-#[derive(Debug)]
-pub enum DebugError
-{
-    /// Indicates the object is missing a __debug__ property.
-    MissingProp,
-
-    /// Indicates the type of a value in the debugger is incorrect.
-    Type(TypeError)
-}
-
-impl_err_conversion!(DebugError { TypeError => Type });
-
-impl Display for DebugError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
-        match self {
-            DebugError::MissingProp => f.write_str("missing '__debug__' property"),
-            DebugError::Type(e) => write!(f, "type error: {}", e)
         }
     }
 }

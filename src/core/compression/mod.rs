@@ -26,69 +26,42 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{Cursor, Read, Result, Seek, SeekFrom, Write};
+use std::io::{Read, Write};
 
-use crate::{section::SectionData, utils::new_byte_buf};
+mod crc32chksum;
+mod weakchksum;
+mod xz;
+mod zlib;
 
-pub struct InMemorySection
+pub use crc32chksum::Crc32Checksum;
+pub use weakchksum::WeakChecksum;
+pub use xz::XzCompressionMethod;
+pub use zlib::ZlibCompressionMethod;
+
+use crate::core::error::{DeflateError, InflateError};
+
+pub trait Checksum
 {
-    byte_buf: Cursor<Vec<u8>>,
-    cur_size: usize
+    fn push(&mut self, buffer: &[u8]);
+    fn finish(self) -> u32;
 }
 
-impl InMemorySection
+pub trait Inflater
 {
-    pub fn new(initial: usize) -> InMemorySection
-    {
-        InMemorySection {
-            byte_buf: new_byte_buf(initial),
-            cur_size: 0
-        }
-    }
+    fn inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
+        input: TRead,
+        output: TWrite,
+        deflated_size: usize,
+        chksum: &mut TChecksum
+    ) -> Result<(), InflateError>;
 }
 
-impl Read for InMemorySection
+pub trait Deflater
 {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize>
-    {
-        self.byte_buf.read(buf)
-    }
-}
-
-impl Write for InMemorySection
-{
-    fn write(&mut self, buf: &[u8]) -> Result<usize>
-    {
-        let len = self.byte_buf.write(buf)?;
-        if self.byte_buf.position() as usize >= self.cur_size {
-            self.cur_size = self.byte_buf.position() as usize;
-        }
-        Ok(len)
-    }
-
-    fn flush(&mut self) -> Result<()>
-    {
-        self.byte_buf.flush()
-    }
-}
-
-impl Seek for InMemorySection
-{
-    fn seek(&mut self, pos: SeekFrom) -> Result<u64>
-    {
-        self.byte_buf.seek(pos)
-    }
-}
-
-impl SectionData for InMemorySection
-{
-    fn load_in_memory(&mut self) -> Result<Vec<u8>>
-    {
-        return Ok(self.byte_buf.get_ref().clone());
-    }
-
-    fn size(&self) -> usize
-    {
-        self.cur_size
-    }
+    fn deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
+        input: TRead,
+        output: TWrite,
+        inflated_size: usize,
+        chksum: &mut TChecksum
+    ) -> Result<usize, DeflateError>;
 }

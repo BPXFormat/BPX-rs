@@ -26,38 +26,86 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//! Provides support for debug symbols to BPXSD object.
+
 use std::{collections::HashMap, convert::TryInto};
 
 use crate::{
-    sd::{error::DebugError, Array, Object},
+    sd::{error::TypeError, Array, Object, Value},
     utils::hash
 };
 
-/// Provides support for debug symbols to BPXSD object.
-#[derive(Clone)]
-pub struct DebugSymbols
+/// A BPXSD object debugger iterator.
+pub struct Iter<'a>
 {
+    inner: crate::sd::object::Iter<'a>,
+    symbols_map: &'a HashMap<u64, String>
+}
+
+impl<'a> Iterator for Iter<'a>
+{
+    type Item = (Option<&'a str>, u64, &'a Value);
+
+    fn next(&mut self) -> Option<Self::Item>
+    {
+        let (mut k, mut v) = self.inner.next()?;
+        while k == hash("__debug__") {
+            let (k1, v1) = self.inner.next()?;
+            k = k1;
+            v = v1;
+        }
+        Some((self.symbols_map.get(&k).map(|v| &**v), k, v))
+    }
+}
+
+/// A wrapper to BPXSD object with debugging capabilities.
+#[derive(PartialEq, Clone)]
+pub struct Debugger
+{
+    inner: Object,
     symbols_map: HashMap<u64, String>,
     symbols_list: Vec<String>
 }
 
-impl Default for DebugSymbols
+impl Debugger
 {
-    fn default() -> Self
+    /// Attach a debugger to an object.
+    ///
+    /// # Arguments
+    ///
+    /// * `inner`: the object to attach the debugger to.
+    ///
+    /// returns: Result<Debugger, TypeError>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::Object;
+    /// use bpx::sd::Debugger;
+    ///
+    /// let mut obj = Debugger::attach(Object::new()).unwrap();
+    /// obj.set("Test", 12.into());
+    /// let inner = obj.detach();
+    /// assert_eq!(inner.len(), 2);
+    /// assert!(inner.get("__debug__").is_some());
+    /// assert!(inner.get("Test").is_some());
+    /// ```
+    pub fn attach(inner: Object) -> Result<Debugger, TypeError>
     {
-        Self::new()
-    }
-}
-
-impl DebugSymbols
-{
-    /// Creates a new DebugSymbols.
-    pub fn new() -> DebugSymbols
-    {
-        DebugSymbols {
-            symbols_list: Vec::new(),
-            symbols_map: HashMap::new()
+        let mut dbg = Debugger {
+            inner,
+            symbols_map: HashMap::new(),
+            symbols_list: Vec::new()
+        };
+        if let Some(val) = dbg.inner.get("__debug__") {
+            let val: &Array = val.try_into()?;
+            for i in 0..val.len() {
+                let sym: &str = (&val[i]).try_into()?;
+                dbg.symbols_map.insert(hash(sym), sym.into());
+                dbg.symbols_list.push(sym.into());
+            }
         }
+        Ok(dbg)
     }
 
     /// Performs a lookup for a given hash value in this symbol list.
@@ -72,11 +120,11 @@ impl DebugSymbols
     /// # Examples
     ///
     /// ```
-    /// use bpx::sd::DebugSymbols;
+    /// use bpx::sd::{Object, Debugger};
     /// use bpx::utils::hash;
     ///
-    /// let symbols = DebugSymbols::new();
-    /// assert!(symbols.lookup(hash("Test")).is_none());
+    /// let debugger = Debugger::attach(Object::new()).unwrap();
+    /// assert!(debugger.lookup(hash("Test")).is_none());
     /// ```
     pub fn lookup(&self, hash: u64) -> Option<&str>
     {
@@ -86,100 +134,94 @@ impl DebugSymbols
         None
     }
 
-    /// Pushes a new symbol in this symbol list.
+    /// Sets a property in the object.
     ///
     /// # Arguments
     ///
-    /// * `symbol`:  the name of the symbol to push.
+    /// * `name`: the property name.
+    /// * `value`: the [Value](crate::sd::Value) to set.
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::sd::DebugSymbols;
-    /// use bpx::utils::hash;
+    /// use bpx::sd::Object;
+    /// use bpx::sd::Debugger;
     ///
-    /// let mut symbols = DebugSymbols::new();
-    /// symbols.push("Test");
-    /// assert!(symbols.lookup(hash("Test")).is_some());
+    /// let mut obj = Debugger::attach(Object::new()).unwrap();
+    /// assert!(obj.is_empty());
+    /// obj.set("Test", 12.into());
+    /// assert_eq!(obj.len(), 1);
     /// ```
-    pub fn push(&mut self, symbol: &str)
+    pub fn set(&mut self, name: &str, value: Value)
     {
-        self.symbols_map.insert(hash(symbol), String::from(symbol));
-        self.symbols_list.push(String::from(symbol));
+        let hash = hash(name);
+        self.inner.raw_set(hash, value);
+        self.symbols_list.push(name.into());
+        self.symbols_map.insert(hash, name.into());
     }
 
-    /// Attach this symbol list to a BPXSD object.
+    /// Gets a property in the object.
+    /// Returns None if the property name does not exist.
     ///
     /// # Arguments
     ///
-    /// * `obj`: the object to attach debug information to.
+    /// * `name`: the property name.
+    ///
+    /// returns: Option<&Value>
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::sd::{DebugSymbols, Object};
-    /// use bpx::utils::hash;
+    /// use bpx::sd::{Debugger, Object};
+    /// use bpx::sd::Value;
     ///
-    /// let mut symbols = DebugSymbols::new();
-    /// symbols.push("Test");
-    /// assert!(symbols.lookup(hash("Test")).is_some());
-    /// let mut obj = Object::new();
-    /// symbols.write(&mut obj);
-    /// assert!(obj.get("__debug__").is_some());
+    /// let mut obj = Debugger::attach(Object::new()).unwrap();
+    /// obj.set("Test", 12.into());
+    /// assert!(obj.get("Test").is_some());
+    /// assert!(obj.get("Test1").is_none());
+    /// assert!(obj.get("Test").unwrap() == &Value::from(12));
     /// ```
-    pub fn write(&self, obj: &mut Object)
+    pub fn get(&self, name: &str) -> Option<&Value>
     {
-        obj.set("__debug__", self.symbols_list.clone().into());
+        self.inner.get(name)
     }
 
-    /// Attempts to read debug information from a BPXSD object.
-    ///
-    /// # Arguments
-    ///
-    /// * `obj`: the object to read debug information from.
-    ///
-    /// returns: Result<DebugSymbols, Error>
-    ///
-    /// # Errors
-    ///
-    /// A [DebugError](crate::sd::error::DebugError) is returned in case the object
-    /// does not provide debug information or if the debug information
-    /// could not be read.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::sd::{DebugSymbols, Object};
-    /// use bpx::utils::hash;
-    ///
-    /// let mut symbols = DebugSymbols::new();
-    /// symbols.push("Test");
-    /// let mut obj = Object::new();
-    /// symbols.write(&mut obj);
-    /// let symbols1 = DebugSymbols::read(&obj).unwrap();
-    /// assert!(symbols1.lookup(hash("Test")).is_some());
-    /// ```
-    ///
-    /// ```should_panic
-    /// use bpx::sd::{DebugSymbols, Object};
-    ///
-    /// let mut obj = Object::new();
-    /// DebugSymbols::read(&obj).unwrap();
-    /// ```
-    pub fn read(obj: &Object) -> Result<DebugSymbols, DebugError>
+    /// Returns the number of properties in the object.
+    pub fn len(&self) -> usize
     {
-        if let Some(val) = obj.get("__debug__") {
-            let mut symbols = HashMap::new();
-            let val: &Array = val.try_into()?;
-            for i in 0..val.len() {
-                let sym: &str = (&val[i]).try_into()?;
-                symbols.insert(hash(sym), String::from(sym));
-            }
-            return Ok(DebugSymbols {
-                symbols_list: Vec::new(),
-                symbols_map: symbols
-            });
+        self.inner.len()
+    }
+
+    /// Returns whether this object is empty
+    pub fn is_empty(&self) -> bool
+    {
+        self.inner.is_empty()
+    }
+
+    /// Iterate through the object keys, values and names.
+    pub fn iter(&self) -> Iter
+    {
+        Iter {
+            inner: self.inner.iter(),
+            symbols_map: &self.symbols_map
         }
-        Err(DebugError::MissingProp)
+    }
+
+    /// Detaches the debugger from the inner object and return the inner object
+    pub fn detach(mut self) -> Object
+    {
+        self.inner.set("__debug__", self.symbols_list.into());
+        self.inner
+    }
+}
+
+impl<'a> IntoIterator for &'a Debugger
+{
+    type Item = (Option<&'a str>, u64, &'a Value);
+    type IntoIter = Iter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter
+    {
+        self.iter()
     }
 }

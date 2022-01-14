@@ -97,7 +97,10 @@ variant_error!(
         Strings(crate::strings::WriteError),
 
         /// Describes a structured data error.
-        Sd(crate::sd::error::WriteError)
+        Sd(crate::sd::error::WriteError),
+
+        /// Indicates a section wasn't loaded.
+        SectionNotLoaded
     }
 );
 
@@ -123,7 +126,6 @@ impl Display for ReadError
             ReadError::Bpx(e) => write!(f, "BPX error: {}", e),
             ReadError::Io(e) => write!(f, "io error: {}", e),
             ReadError::Sd(e) => write!(f, "BPXSD error: {}", e),
-            ReadError::Section(e) => write!(f, "section error: {}", e),
             ReadError::Strings(e) => write!(f, "strings error: {}", e),
             ReadError::InvalidCode(ctx, code) => {
                 write!(f, "invalid {} code ({})", ctx.name(), code)
@@ -144,8 +146,8 @@ impl Display for WriteError
             WriteError::Bpx(e) => write!(f, "BPX error: {}", e),
             WriteError::Io(e) => write!(f, "io error: {}", e),
             WriteError::Strings(e) => write!(f, "strings error: {}", e),
-            WriteError::Section(e) => write!(f, "section error: {}", e),
-            WriteError::Sd(e) => write!(f, "BPXSD error: {}", e)
+            WriteError::Sd(e) => write!(f, "BPXSD error: {}", e),
+            WriteError::SectionNotLoaded => f.write_str("section not loaded")
         }
     }
 }

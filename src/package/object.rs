@@ -31,7 +31,7 @@
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
-    header::Struct,
+    core::header::Struct,
     package::error::{EosContext, ReadError},
     table::Item
 };

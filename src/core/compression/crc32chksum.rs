@@ -26,42 +26,52 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{Read, Write};
+use std::vec::Vec;
 
-mod crc32chksum;
-mod weakchksum;
-mod xz;
-mod zlib;
+use crate::core::compression::Checksum;
 
-pub use crc32chksum::Crc32Checksum;
-pub use weakchksum::WeakChecksum;
-pub use xz::XzCompressionMethod;
-pub use zlib::ZlibCompressionMethod;
+const POLYNOMIAL: u32 = 0xEDB88320;
 
-use crate::error::{DeflateError, InflateError};
-
-pub trait Checksum
+pub struct Crc32Checksum
 {
-    fn push(&mut self, buffer: &[u8]);
-    fn finish(self) -> u32;
+    table: Vec<u32>,
+    current: u32
 }
 
-pub trait Inflater
+impl Crc32Checksum
 {
-    fn inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
-        input: TRead,
-        output: TWrite,
-        deflated_size: usize,
-        chksum: &mut TChecksum
-    ) -> Result<(), InflateError>;
+    pub fn new() -> Crc32Checksum
+    {
+        let mut table = Vec::with_capacity(256);
+        for i in 0..256 {
+            let mut val = i as u32;
+            if (val & 0x1) != 0 {
+                val = (val >> 1) ^ POLYNOMIAL;
+            } else {
+                val >>= 1;
+            }
+            table.push(val);
+        }
+        Crc32Checksum {
+            table,
+            current: 0xFFFFFFFF
+        }
+    }
 }
 
-pub trait Deflater
+impl Checksum for Crc32Checksum
 {
-    fn deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
-        input: TRead,
-        output: TWrite,
-        inflated_size: usize,
-        chksum: &mut TChecksum
-    ) -> Result<usize, DeflateError>;
+    fn push(&mut self, buffer: &[u8])
+    {
+        for byte in buffer {
+            let index = (self.current ^ *byte as u32) & 0xFF;
+            self.current = (self.current >> 8) ^ self.table[index as usize];
+        }
+    }
+
+    fn finish(mut self) -> u32
+    {
+        self.current ^= 0xFFFFFFFF;
+        self.current
+    }
 }

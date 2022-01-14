@@ -26,36 +26,19 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::num::Wrapping;
+//! The core BPX container implementation.
 
-use crate::compression::Checksum;
+mod container;
 
-pub struct WeakChecksum
-{
-    current: Wrapping<u32>
-}
+pub mod builder;
+mod compression;
+mod data;
+mod decoder;
+mod encoder;
+pub mod error;
+pub mod header;
+mod section;
 
-impl Checksum for WeakChecksum
-{
-    fn push(&mut self, data: &[u8])
-    {
-        for byte in data {
-            self.current += Wrapping(*byte as u32);
-        }
-    }
-
-    fn finish(self) -> u32
-    {
-        self.current.0
-    }
-}
-
-impl WeakChecksum
-{
-    pub fn new() -> Self
-    {
-        WeakChecksum {
-            current: Wrapping(0)
-        }
-    }
-}
+pub use container::*;
+pub use data::{AutoSectionData, SectionData};
+pub use section::{Section, SectionMut};

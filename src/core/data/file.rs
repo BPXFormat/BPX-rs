@@ -31,7 +31,7 @@ use std::{
     io::{Read, Result, Seek, SeekFrom, Write}
 };
 
-use crate::section::SectionData;
+use crate::core::SectionData;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -112,13 +112,6 @@ impl Seek for FileBasedSection
 
 impl SectionData for FileBasedSection
 {
-    fn load_in_memory(&mut self) -> Result<Vec<u8>>
-    {
-        let mut data: Vec<u8> = Vec::new();
-        self.data.read_to_end(&mut data)?;
-        Ok(data)
-    }
-
     fn size(&self) -> usize
     {
         self.cur_size

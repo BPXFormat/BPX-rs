@@ -26,61 +26,59 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::{io::SeekFrom, rc::Rc};
-
-use byteorder::{ByteOrder, LittleEndian};
+use std::io::{Read, Seek};
 
 use crate::{
-    decoder::{Decoder, IoBackend},
-    header::{Struct, SECTION_TYPE_STRING},
-    sd::Object,
-    section::AutoSection,
+    core::{header::Struct, Container},
     shader::{
-        error::{EosContext, InvalidCodeContext, ReadError, Section},
-        symbol::{Symbol, FLAG_EXTENDED_DATA, SIZE_SYMBOL_STRUCTURE},
-        Shader,
+        error::{EosContext, InvalidCodeContext, ReadError},
+        symbol::{Symbol, SIZE_SYMBOL_STRUCTURE},
         Stage,
         Target,
-        Type,
-        SECTION_TYPE_EXTENDED_DATA,
-        SECTION_TYPE_SHADER,
-        SECTION_TYPE_SYMBOL_TABLE,
-        SUPPORTED_VERSION
+        Type
     },
-    strings::StringSection,
-    table::{ItemTable, NameTable},
-    utils::OptionExtension,
-    Handle,
-    Interface
+    table::ItemTable,
+    Handle
 };
 
-fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
+pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
 {
     let target;
-    let btype;
+    let ty;
 
     match acode {
         0x1 => target = Target::DX11,
         0x2 => target = Target::DX12,
         0x3 => target = Target::GL33,
         0x4 => target = Target::GL40,
-        0x5 => target = Target::VK10,
-        0x6 => target = Target::MT,
+        0x5 => target = Target::GL41,
+        0x6 => target = Target::GL42,
+        0x7 => target = Target::GL43,
+        0x8 => target = Target::GL44,
+        0x9 => target = Target::GL45,
+        0xA => target = Target::GL46,
+        0xB => target = Target::ES30,
+        0xC => target = Target::ES31,
+        0xD => target = Target::ES32,
+        0xE => target = Target::VK10,
+        0xF => target = Target::VK11,
+        0x10 => target = Target::VK12,
+        0x11 => target = Target::MT,
         0xFF => target = Target::Any,
         _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Target, acode))
     }
     if tcode == b'A' {
         //Rust refuses to parse match properly so use if/else-if blocks
-        btype = Type::Assembly;
+        ty = Type::Assembly;
     } else if tcode == b'P' {
-        btype = Type::Pipeline;
+        ty = Type::Pipeline;
     } else {
         return Err(ReadError::InvalidCode(InvalidCodeContext::Type, tcode));
     }
-    Ok((target, btype))
+    Ok((target, ty))
 }
 
-fn get_stage_from_code(code: u8) -> Result<Stage, ReadError>
+pub fn get_stage_from_code(code: u8) -> Result<Stage, ReadError>
 {
     match code {
         0x0 => Ok(Stage::Vertex),
@@ -92,187 +90,22 @@ fn get_stage_from_code(code: u8) -> Result<Stage, ReadError>
     }
 }
 
-/// Represents a BPX Shader Package decoder.
-pub struct ShaderPackDecoder<TBackend: IoBackend>
-{
-    decoder: Decoder<TBackend>,
-    assembly_hash: u64,
+pub fn read_symbol_table<T: Read + Seek>(
+    container: &mut Container<T>,
+    symbols: &mut Vec<Symbol>,
     num_symbols: u16,
-    target: Target,
-    btype: Type,
-    symbol_table: Rc<AutoSection>,
-    strings: Handle,
-    extended_data: Option<Rc<AutoSection>>
-}
-
-impl<TBackend: IoBackend> ShaderPackDecoder<TBackend>
+    symbol_table: Handle
+) -> Result<ItemTable<Symbol>, ReadError>
 {
-    /// Creates a new ShaderPackDecoder by reading from a BPX decoder.
-    ///
-    /// # Arguments
-    ///
-    /// * `backend`: the [IoBackend](crate::decoder::IoBackend) to use.
-    ///
-    /// returns: Result<ShaderPackDecoder<TBackend>, Error>
-    ///
-    /// # Errors
-    ///
-    /// A [ReadError](crate::variant::shader::error::ReadError) is returned if some sections/headers could not be loaded.
-    pub fn new(backend: TBackend) -> Result<ShaderPackDecoder<TBackend>, ReadError>
-    {
-        let mut decoder = Decoder::new(backend)?;
-        if decoder.get_main_header().btype != b'P' {
-            return Err(ReadError::BadType(decoder.get_main_header().btype));
-        }
-        if decoder.get_main_header().version != SUPPORTED_VERSION {
-            return Err(ReadError::BadVersion(decoder.get_main_header().version));
-        }
-        let hash = LittleEndian::read_u64(&decoder.get_main_header().type_ext[0..8]);
-        let num_symbols = LittleEndian::read_u16(&decoder.get_main_header().type_ext[8..10]);
-        let (target, btype) = get_target_type_from_code(
-            decoder.get_main_header().type_ext[10],
-            decoder.get_main_header().type_ext[11]
-        )?;
-        let strings = match decoder.find_section_by_type(SECTION_TYPE_STRING) {
-            Some(v) => v,
-            None => return Err(ReadError::MissingSection(Section::Strings))
-        };
-        let symbol_table = match decoder.find_section_by_type(SECTION_TYPE_SYMBOL_TABLE) {
-            Some(v) => v,
-            None => return Err(ReadError::MissingSection(Section::SymbolTable))
-        };
-        Ok(Self {
-            assembly_hash: hash,
-            num_symbols,
-            target,
-            btype,
-            symbol_table: decoder.load_section(symbol_table)?.clone(),
-            strings,
-            extended_data: None,
-            decoder
-        })
-    }
+    let mut section = container.get_mut(symbol_table);
+    let count = section.size as u32 / SIZE_SYMBOL_STRUCTURE as u32;
 
-    /// Lists all shaders contained in this shader package.
-    pub fn list_shaders(&self) -> Vec<Handle>
-    {
-        self.decoder.find_all_sections_of_type(SECTION_TYPE_SHADER)
+    if count != num_symbols as u32 {
+        return Err(ReadError::Eos(EosContext::SymbolTable));
     }
-
-    /// Loads a shader into memory.
-    ///
-    /// # Arguments
-    ///
-    /// * `handle`: a handle to the shader section.
-    ///
-    /// returns: Result<Shader, Error>
-    ///
-    /// # Errors
-    ///
-    /// An [ReadError](crate::variant::shader::error::ReadError) is returned if the shader could not be loaded.
-    pub fn load_shader(&mut self, handle: Handle) -> Result<Shader, ReadError>
-    {
-        let header = self.decoder.get_section_header(handle);
-        if header.size < 1 {
-            //We must at least find a stage byte
-            return Err(ReadError::Eos(EosContext::Shader));
-        }
-        let s = self.decoder.load_section(handle)?;
-        let mut section = s.open()?;
-        let mut buf = section.load_in_memory()?;
-        let stage = get_stage_from_code(buf.remove(0))?;
-        Ok(Shader { stage, data: buf })
+    for _ in 0..count {
+        let header = Symbol::read(section.load()?)?;
+        symbols.push(header);
     }
-
-    /// Returns the shader package type (Assembly or Pipeline).
-    pub fn get_type(&self) -> Type
-    {
-        self.btype
-    }
-
-    /// Returns the shader target rendering API.
-    pub fn get_target(&self) -> Target
-    {
-        self.target
-    }
-
-    /// Returns the number of symbols contained in that BPX.
-    pub fn get_symbol_count(&self) -> u16
-    {
-        self.num_symbols
-    }
-
-    /// Returns the hash of the shader assembly this pipeline is linked to.
-    pub fn get_assembly_hash(&self) -> u64
-    {
-        self.assembly_hash
-    }
-
-    /// Reads the symbol table of this BPXS.
-    ///
-    /// # Errors
-    ///
-    /// A [ReadError](crate::variant::shader::error::ReadError) is returned in case of corruption or system error.
-    pub fn read_symbol_table(&mut self)
-        -> Result<(ItemTable<Symbol>, NameTable<Symbol>), ReadError>
-    {
-        use crate::section::Section;
-        let mut v = Vec::new();
-        let count = self.symbol_table.size() as u32 / SIZE_SYMBOL_STRUCTURE as u32;
-        let mut symbol_table = self.symbol_table.open()?;
-
-        if count != self.num_symbols as u32 {
-            return Err(ReadError::Eos(EosContext::SymbolTable));
-        }
-        for _ in 0..count {
-            //TODO: Check
-            let sym = Symbol::read(symbol_table.as_mut())?;
-            v.push(sym);
-        }
-        let strings = self.decoder.load_section(self.strings)?;
-        Ok((
-            ItemTable::new(v),
-            NameTable::new(StringSection::new(strings.clone()))
-        ))
-    }
-
-    /// Reads the extended data object of a symbol.
-    ///
-    /// # Arguments
-    ///
-    /// * `sym`: the symbol to read extended data from.
-    ///
-    /// returns: Result<Object, Error>
-    ///
-    /// # Errors
-    ///
-    /// A [ReadError](crate::variant::shader::error::ReadError) is returned in case of corruption or system error.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the symbol extended data is undefined.
-    pub fn read_extended_data(&mut self, sym: &Symbol) -> Result<Object, ReadError>
-    {
-        if sym.flags & FLAG_EXTENDED_DATA == 0 {
-            panic!("The symbol extended data is undefined.");
-        }
-        let useless = &mut self.decoder;
-        let section = self.extended_data.get_or_insert_with_err(|| {
-            return match useless.find_section_by_type(SECTION_TYPE_EXTENDED_DATA) {
-                Some(v) => Ok(useless.load_section(v)?.clone()),
-                None => Err(ReadError::MissingSection(Section::ExtendedData))
-            };
-        })?;
-        let mut data = section.open()?;
-        data.seek(SeekFrom::Start(sym.extended_data as _))?;
-        //TODO: Check
-        let obj = Object::read(data.as_mut())?;
-        Ok(obj)
-    }
-
-    /// Consumes this BPXS decoder and returns the inner BPX decoder.
-    pub fn into_inner(self) -> Decoder<TBackend>
-    {
-        self.decoder
-    }
+    Ok(ItemTable::new(symbols.clone()))
 }

@@ -48,8 +48,10 @@ use libz_sys::{
 };
 
 use crate::{
-    compression::{Checksum, Deflater, Inflater},
-    error::{DeflateError, InflateError},
+    core::{
+        compression::{Checksum, Deflater, Inflater},
+        error::{DeflateError, InflateError}
+    },
     utils::ReadFill
 };
 

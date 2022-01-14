@@ -28,13 +28,16 @@
 
 //! An implementation of the BPX type S (Shader) specification.
 
+mod builder;
+mod core;
 mod decoder;
 mod encoder;
 pub mod error;
 pub mod symbol;
 
-pub use decoder::ShaderPackDecoder;
-pub use encoder::{ShaderPackBuilder, ShaderPackEncoder};
+pub use builder::*;
+
+pub use self::core::*;
 
 /// The supported BPX version for this shader variant decoder/encoder.
 pub const SUPPORTED_VERSION: u32 = 0x2;
@@ -75,8 +78,41 @@ pub enum Target
     /// OpenGL 4.0 (Core context)
     GL40,
 
+    /// OpenGL 4.1 (Core context)
+    GL41,
+
+    /// OpenGL 4.2 (Core context)
+    GL42,
+
+    /// OpenGL 4.3 (Core context)
+    GL43,
+
+    /// OpenGL 4.4 (Core context)
+    GL44,
+
+    /// OpenGL 4.5 (Core context)
+    GL45,
+
+    /// OpenGL 4.6 (Core context)
+    GL46,
+
+    /// OpenGL ES 3.0
+    ES30,
+
+    /// OpenGL ES 3.1
+    ES31,
+
+    /// OpenGL ES 3.2
+    ES32,
+
     /// Vulkan 1.0
     VK10,
+
+    /// Vulkan 1.1
+    VK11,
+
+    /// Vulkan 1.2
+    VK12,
 
     /// Apple Metal
     MT,

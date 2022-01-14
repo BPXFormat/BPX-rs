@@ -31,8 +31,12 @@
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
-    header::Struct,
-    shader::error::{EosContext, InvalidCodeContext, ReadError},
+    core::header::Struct,
+    sd::Object,
+    shader::{
+        error::{EosContext, InvalidCodeContext, ReadError},
+        Stage
+    },
     table::Item
 };
 
@@ -71,7 +75,7 @@ pub const SIZE_SYMBOL_STRUCTURE: usize = 12;
 
 /// The type of a symbol.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum SymbolType
+pub enum Type
 {
     /// A texture symbol.
     Texture,
@@ -92,15 +96,15 @@ pub enum SymbolType
     Pipeline
 }
 
-fn get_symbol_type_from_code(scode: u8) -> Result<SymbolType, ReadError>
+fn get_symbol_type_from_code(scode: u8) -> Result<Type, ReadError>
 {
     match scode {
-        0x0 => Ok(SymbolType::Texture),
-        0x1 => Ok(SymbolType::Sampler),
-        0x2 => Ok(SymbolType::ConstantBuffer),
-        0x3 => Ok(SymbolType::Constant),
-        0x4 => Ok(SymbolType::VertexFormat),
-        0x5 => Ok(SymbolType::Pipeline),
+        0x0 => Ok(Type::Texture),
+        0x1 => Ok(Type::Sampler),
+        0x2 => Ok(Type::ConstantBuffer),
+        0x3 => Ok(Type::Constant),
+        0x4 => Ok(Type::VertexFormat),
+        0x5 => Ok(Type::Pipeline),
         _ => Err(ReadError::InvalidCode(
             InvalidCodeContext::SymbolType,
             scode
@@ -118,11 +122,11 @@ pub struct Symbol
     /// The pointer to the BPXSD object attached to this symbol.
     pub extended_data: u32,
 
-    /// The symbol flags (see the FLAG_ constants in the [symbol](crate::variant::shader::symbol) module).
+    /// The symbol flags (see the FLAG_ constants in the [symbol](crate::shader::symbol) module).
     pub flags: u16,
 
     /// The type of symbol.
-    pub stype: SymbolType,
+    pub ty: Type,
 
     /// The register number for this symbol.
     pub register: u8
@@ -139,7 +143,7 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
             name: 0,
             extended_data: 0xFFFFFF,
             flags: 0,
-            stype: SymbolType::Constant,
+            ty: Type::Constant,
             register: 0xFF
         }
     }
@@ -154,13 +158,13 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
         let name = LittleEndian::read_u32(&buffer[0..4]);
         let extended_data = LittleEndian::read_u32(&buffer[4..8]);
         let flags = LittleEndian::read_u16(&buffer[8..10]);
-        let stype = get_symbol_type_from_code(buffer[10])?;
+        let ty = get_symbol_type_from_code(buffer[10])?;
         let register = buffer[11];
         Ok(Symbol {
             name,
             extended_data,
             flags,
-            stype,
+            ty,
             register
         })
     }
@@ -171,13 +175,13 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
         LittleEndian::write_u32(&mut buf[0..4], self.name);
         LittleEndian::write_u32(&mut buf[4..8], self.extended_data);
         LittleEndian::write_u16(&mut buf[8..10], self.flags);
-        match self.stype {
-            SymbolType::Texture => buf[10] = 0x0,
-            SymbolType::Sampler => buf[10] = 0x1,
-            SymbolType::ConstantBuffer => buf[10] = 0x2,
-            SymbolType::Constant => buf[10] = 0x3,
-            SymbolType::VertexFormat => buf[10] = 0x4,
-            SymbolType::Pipeline => buf[10] = 0x5
+        match self.ty {
+            Type::Texture => buf[10] = 0x0,
+            Type::Sampler => buf[10] = 0x1,
+            Type::ConstantBuffer => buf[10] = 0x2,
+            Type::Constant => buf[10] = 0x3,
+            Type::VertexFormat => buf[10] = 0x4,
+            Type::Pipeline => buf[10] = 0x5
         };
         buf[11] = self.register;
         buf
@@ -189,5 +193,168 @@ impl Item for Symbol
     fn get_name_address(&self) -> u32
     {
         self.name
+    }
+}
+
+/// The required settings to create a new symbol.
+///
+/// *This is intended to be generated with help of [Builder](crate::shader::symbol::Builder).*
+#[derive(Clone)]
+pub struct Settings
+{
+    /// The name of the symbol.
+    pub name: String,
+
+    /// The extended data [Object](crate::sd::Object) of the symbol.
+    pub extended_data: Option<Object>,
+
+    /// The symbol type.
+    pub ty: Type,
+
+    /// The symbol flags.
+    pub flags: u16,
+
+    /// The symbol register number.
+    pub register: u8
+}
+
+/// Utility to simplify generation of [Settings](crate::shader::symbol::Settings) required when creating a new BPXS.
+pub struct Builder
+{
+    sym: Settings
+}
+
+impl Builder
+{
+    /// Creates a new symbol builder.
+    pub fn new<S: Into<String>>(name: S) -> Builder
+    {
+        Builder {
+            sym: Settings {
+                name: name.into(),
+                extended_data: None,
+                ty: Type::Constant,
+                flags: 0,
+                register: 0xFF
+            }
+        }
+    }
+
+    /// Defines the type of this symbol.
+    ///
+    /// # Arguments
+    ///
+    /// * `ty`: the symbol type.
+    ///
+    /// returns: &mut Builder
+    pub fn ty(&mut self, ty: Type) -> &mut Self
+    {
+        self.sym.ty = ty;
+        self
+    }
+
+    /// Defines the extended data for this symbol.
+    ///
+    /// *This function automatically adds the
+    /// [FLAG_EXTENDED_DATA](crate::shader::symbol::FLAG_EXTENDED_DATA) flag.*
+    ///
+    /// # Arguments
+    ///
+    /// * `obj`: An [Object](crate::sd::Object) to store as extended data.
+    ///
+    /// returns: &mut Builder
+    pub fn extended_data(&mut self, obj: Object) -> &mut Self
+    {
+        self.sym.extended_data = Some(obj);
+        self.sym.flags |= FLAG_EXTENDED_DATA;
+        self
+    }
+
+    /// Defines the register number of this symbol.
+    ///
+    /// *This function automatically adds the [FLAG_REGISTER](crate::shader::symbol::FLAG_REGISTER)
+    /// flag.*
+    ///
+    /// # Arguments
+    ///
+    /// * `register`: the register number of this symbol.
+    ///
+    /// returns: &mut Builder
+    pub fn register(&mut self, register: u8) -> &mut Self
+    {
+        self.sym.register = register;
+        self.sym.flags |= FLAG_REGISTER;
+        self
+    }
+
+    /// Marks this symbol as internal.
+    ///
+    /// *Adds the [FLAG_INTERNAL](crate::shader::symbol::FLAG_INTERNAL).*
+    pub fn internal(&mut self) -> &mut Self
+    {
+        self.sym.flags |= FLAG_INTERNAL;
+        self
+    }
+
+    /// Marks this symbol as external.
+    ///
+    /// *Adds the [FLAG_EXTERNAL](crate::shader::symbol::FLAG_EXTERNAL).*
+    pub fn external(&mut self) -> &mut Self
+    {
+        self.sym.flags |= FLAG_EXTERNAL;
+        self
+    }
+
+    /// Marks this symbol as being part of an assembly.
+    ///
+    /// *Adds the [FLAG_ASSEMBLY](crate::shader::symbol::FLAG_ASSEMBLY).*
+    pub fn assembly(&mut self) -> &mut Self
+    {
+        self.sym.flags |= FLAG_ASSEMBLY;
+        self
+    }
+
+    /// Adds the stage flag identified by `stage` to this symbol.
+    ///
+    /// For more information please have a look at the FLAG_*_STAGE flags defined in the
+    /// [symbol](crate::shader::symbol) module.
+    ///
+    /// # Arguments
+    ///
+    /// * `stage`: the stage to add.
+    ///
+    /// returns: &mut Builder
+    pub fn stage(&mut self, stage: Stage) -> &mut Self
+    {
+        match stage {
+            Stage::Vertex => self.sym.flags |= FLAG_VERTEX_STAGE,
+            Stage::Hull => self.sym.flags |= FLAG_HULL_STAGE,
+            Stage::Domain => self.sym.flags |= FLAG_DOMAIN_STAGE,
+            Stage::Geometry => self.sym.flags |= FLAG_GEOMETRY_STAGE,
+            Stage::Pixel => self.sym.flags |= FLAG_PIXEL_STAGE
+        }
+        self
+    }
+
+    /// Returns the built settings.
+    pub fn build(&self) -> Settings
+    {
+        self.sym.clone()
+    }
+}
+
+impl From<&mut Builder> for Settings
+{
+    fn from(builder: &mut Builder) -> Self
+    {
+        builder.build()
+    }
+}
+
+impl From<Builder> for Settings
+{
+    fn from(builder: Builder) -> Self
+    {
+        builder.build()
     }
 }
