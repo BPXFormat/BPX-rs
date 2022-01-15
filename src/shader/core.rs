@@ -263,7 +263,7 @@ impl<T: Write + Seek> ShaderPack<T>
         let mut container = Container::create(
             backend,
             MainHeaderBuilder::new()
-                .ty(b'P')
+                .ty(b'S')
                 .type_ext(get_type_ext(&settings))
                 .version(SUPPORTED_VERSION)
         );
@@ -440,7 +440,7 @@ impl<T: Read + Seek> ShaderPack<T>
     pub fn open(backend: T) -> Result<ShaderPack<T>, ReadError>
     {
         let container = Container::open(backend)?;
-        if container.get_main_header().ty != b'P' {
+        if container.get_main_header().ty != b'S' {
             return Err(ReadError::BadType(container.get_main_header().ty));
         }
         if container.get_main_header().version != SUPPORTED_VERSION {
