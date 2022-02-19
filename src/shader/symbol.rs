@@ -93,7 +93,10 @@ pub enum Type
     VertexFormat,
 
     /// A pipeline symbol.
-    Pipeline
+    Pipeline,
+
+    /// A render target output symbol.
+    Output
 }
 
 fn get_symbol_type_from_code(scode: u8) -> Result<Type, ReadError>
@@ -105,6 +108,7 @@ fn get_symbol_type_from_code(scode: u8) -> Result<Type, ReadError>
         0x3 => Ok(Type::Constant),
         0x4 => Ok(Type::VertexFormat),
         0x5 => Ok(Type::Pipeline),
+        0x6 => Ok(Type::Output),
         _ => Err(ReadError::InvalidCode(
             InvalidCodeContext::SymbolType,
             scode
@@ -181,7 +185,8 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
             Type::ConstantBuffer => buf[10] = 0x2,
             Type::Constant => buf[10] = 0x3,
             Type::VertexFormat => buf[10] = 0x4,
-            Type::Pipeline => buf[10] = 0x5
+            Type::Pipeline => buf[10] = 0x5,
+            Type::Output => buf[10] = 0x6
         };
         buf[11] = self.register;
         buf
