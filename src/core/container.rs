@@ -47,44 +47,6 @@ use crate::{
 /// *Used as default compression threshold when a section is marked as compressible.*
 pub const DEFAULT_COMPRESSION_THRESHOLD: u32 = 65536;
 
-/*/// Mutable iterator over [SectionMut](crate::core::SectionMut) for a [Container](crate::core::Container).
-pub struct IterMut<'a, T>
-{
-    backend: &'a mut T,
-    sections: std::collections::btree_map::IterMut<'a, u32, SectionEntry>
-}
-
-impl<'a, T> Iterator for IterMut<'a, T>
-{
-    type Item = SectionMut<'a, T>;
-
-    fn next(&mut self) -> Option<Self::Item>
-    {
-        let (h, v) = self.sections.next()?;
-        unsafe {
-            let ptr = self.backend as *mut T;
-            Some(new_section_mut(&mut *ptr, v, Handle(*h)))
-        }
-    }
-}
-
-/// Iterator over [Section](crate::core::Section) for a [Container](crate::core::Container).
-pub struct Iter<'a>
-{
-    sections: std::collections::btree_map::Iter<'a, u32, SectionEntry>
-}
-
-impl<'a> Iterator for Iter<'a>
-{
-    type Item = Section<'a>;
-
-    fn next(&mut self) -> Option<Self::Item>
-    {
-        let (h, v) = self.sections.next()?;
-        Some(new_section(v, Handle(*h)))
-    }
-}*/
-
 /// The main BPX container implementation.
 pub struct Container<T>
 {
@@ -136,89 +98,6 @@ impl<T> Container<T>
         &self.main_header
     }
 
-    /*/// Obtains read-only access to a given section.
-    ///
-    /// # Arguments
-    ///
-    /// * `handle`: a handle to the wanted section.
-    ///
-    /// returns: Section
-    ///
-    /// # Panics
-    ///
-    /// Panics if the given section handle is invalid.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::core::builder::{MainHeaderBuilder, SectionHeaderBuilder};
-    /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
-    ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// let section = file.create_section(SectionHeaderBuilder::new());
-    /// let section = file.get(section);
-    /// // Default section type is 0x0.
-    /// assert_eq!(section.ty, 0x0);
-    /// ```
-    pub fn get(&self, handle: Handle) -> Section
-    {
-        self.sections
-            .get(&handle.0)
-            .map(|v| new_section(v, handle))
-            .expect("attempt to use invalid handle")
-    }*/
-
-    /*/// Obtains mutable access to a given section.
-    ///
-    /// # Arguments
-    ///
-    /// * `handle`: a handle to the wanted section.
-    ///
-    /// returns: SectionMut
-    ///
-    /// # Panics
-    ///
-    /// Panics if the given section handle is invalid.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::core::builder::{MainHeaderBuilder, SectionHeaderBuilder};
-    /// use bpx::core::{Container, SectionData};
-    /// use bpx::utils::new_byte_buf;
-    ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// let section = file.create_section(SectionHeaderBuilder::new());
-    /// let mut section = file.get_mut(section);
-    /// let buf = section.open().unwrap().load_in_memory().unwrap();
-    /// assert_eq!(buf.len(), 0);
-    /// ```
-    pub fn get_mut(&mut self, handle: Handle) -> SectionMut<T>
-    {
-        self.sections
-            .get_mut(&handle.0)
-            .map(|v| new_section_mut(&mut self.backend, v, handle))
-            .expect("attempt to use invalid handle")
-    }*/
-
-    /*/// Creates an immutable iterator over each [Section](crate::core::Section) in this container.
-    pub fn iter(&self) -> Iter
-    {
-        Iter {
-            sections: self.sections.iter()
-        }
-    }
-
-    /// Creates a mutable iterator over each [SectionMut](crate::core::SectionMut) in this container.
-    pub fn iter_mut(&mut self) -> IterMut<T>
-    {
-        IterMut {
-            backend: &mut self.backend,
-            sections: self.sections.iter_mut()
-        }
-    }*/
-
     /// Consumes this BPX container and returns the inner IO backend.
     pub fn into_inner(self) -> T
     {
@@ -235,28 +114,6 @@ impl<T> Container<T>
         &mut self.table
     }
 }
-
-/*impl<'a, T> IntoIterator for &'a Container<T>
-{
-    type Item = Section<'a>;
-    type IntoIter = Iter<'a>;
-
-    fn into_iter(self) -> Self::IntoIter
-    {
-        self.iter()
-    }
-}
-
-impl<'a, T> IntoIterator for &'a mut Container<T>
-{
-    type Item = SectionMut<'a, T>;
-    type IntoIter = IterMut<'a, T>;
-
-    fn into_iter(self) -> Self::IntoIter
-    {
-        self.iter_mut()
-    }
-}*/
 
 impl<T: io::Read + io::Seek> Container<T>
 {
