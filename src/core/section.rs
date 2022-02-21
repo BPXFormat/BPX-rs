@@ -112,6 +112,7 @@ pub struct SectionEntry
     pub(crate) modified: Cell<bool>
 }
 
+/// An iterator over section handles.
 pub struct Iter<'a>
 {
     iter: Keys<'a, u32, SectionEntry>
