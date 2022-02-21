@@ -1,6 +1,6 @@
 [package]
 name = "bpx"
-version = "4.0.0-beta-2"
+version = "4.0.0-beta-3"
 authors = ["Yuri Edward <yuri6037@outlook.com>"]
 edition = "2021"
 description = "BPX official rust implementation"
