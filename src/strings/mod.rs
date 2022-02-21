@@ -31,7 +31,6 @@
 mod error;
 
 use std::{
-    collections::{hash_map::Entry, HashMap},
     fs::DirEntry,
     io::{Read, Seek, SeekFrom},
     path::Path,
@@ -42,8 +41,10 @@ pub use error::{PathError, ReadError, WriteError};
 
 use crate::{
     core::{AutoSectionData, Container, SectionData},
-    Handle
 };
+use crate::core::Handle;
+
+use elsa::FrozenMap;
 
 /// Helper class to manage a BPX string section.
 ///
@@ -65,7 +66,7 @@ use crate::{
 pub struct StringSection
 {
     section: Handle,
-    cache: HashMap<u32, String>
+    cache: FrozenMap<u32, String>
 }
 
 impl StringSection
@@ -81,7 +82,7 @@ impl StringSection
     {
         StringSection {
             section,
-            cache: HashMap::new()
+            cache: FrozenMap::new()
         }
     }
 
@@ -98,21 +99,18 @@ impl StringSection
     ///
     /// Returns a [ReadError](crate::strings::ReadError) if the string could not be read or the
     /// section is corrupted/truncated.
-    pub fn get<T>(&mut self, container: &mut Container<T>, address: u32)
+    pub fn get<T>(&self, container: &Container<T>, address: u32)
         -> Result<&str, ReadError>
     {
-        let res = match self.cache.entry(address) {
-            Entry::Occupied(o) => o.into_mut(),
-            Entry::Vacant(o) => {
-                let mut section = container.get_mut(self.section);
-                let s = low_level_read_string(
-                    address,
-                    section.open().ok_or(ReadError::SectionNotLoaded)?
-                )?;
-                o.insert(s)
-            }
-        };
-        Ok(res)
+        if self.cache.get(&address).is_none() {
+            let mut section = container.sections().open(self.section)?;
+            let s = low_level_read_string(
+                address,
+                &mut *section
+            )?;
+            self.cache.insert(address, s);
+        }
+        Ok(unsafe { self.cache.get(&address).unwrap_unchecked() })
     }
 
     /// Writes a new string into the section.
@@ -127,11 +125,10 @@ impl StringSection
     /// # Errors
     ///
     /// Returns a [WriteError](crate::strings::WriteError) if the string could not be written.
-    pub fn put<T>(&mut self, container: &mut Container<T>, s: &str) -> Result<u32, WriteError>
+    pub fn put<T>(&self, container: &Container<T>, s: &str) -> Result<u32, WriteError>
     {
-        let mut section = container.get_mut(self.section);
-        let address =
-            low_level_write_string(s, section.open().ok_or(WriteError::SectionNotLoaded)?)?;
+        let mut section = container.sections().open(self.section)?;
+        let address = low_level_write_string(s, &mut *section)?;
         self.cache.insert(address, String::from(s));
         Ok(address)
     }
@@ -156,8 +153,7 @@ pub fn load_string_section<T: Read + Seek>(
     strings: &StringSection
 ) -> Result<(), crate::core::error::ReadError>
 {
-    let mut section = container.get_mut(strings.handle());
-    section.load()?;
+    container.sections().load(strings.handle())?;
     Ok(())
 }
 

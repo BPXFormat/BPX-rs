@@ -30,6 +30,11 @@
 
 //! This library is the official implementation for the [BPX](https://gitlab.com/bp3d/bpx/bpx/-/blob/rev2/BPX_Format.pdf) container format.
 
+//TODO: Merge back all instances of Read/Write Error into a single Error type as now this library
+// uses a single Container type to create and read BPX.
+
+//TODO: Call load function directly in StringSection as now lazy loading is an immutable operation.
+
 pub mod core;
 mod garraylen;
 pub mod macros;

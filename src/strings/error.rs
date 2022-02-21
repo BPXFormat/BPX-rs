@@ -27,6 +27,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::fmt::{Display, Formatter};
+use crate::core::error::OpenError;
 
 use crate::macros::impl_err_conversion;
 
@@ -43,13 +44,15 @@ pub enum ReadError
     /// Describes an io error.
     Io(std::io::Error),
 
-    /// Indicates the section is not loaded.
-    SectionNotLoaded
+    /// Indicates an [OpenError](crate::core::error::OpenError) has occurred when attempting
+    /// to open the section.
+    Open(OpenError)
 }
 
 impl_err_conversion!(
     ReadError {
-        std::io::Error => Io
+        std::io::Error => Io,
+        OpenError => Open
     }
 );
 
@@ -60,7 +63,7 @@ impl Display for ReadError
         match self {
             ReadError::Utf8 => f.write_str("utf8 error"),
             ReadError::Eos => f.write_str("EOS reached before end of string"),
-            ReadError::SectionNotLoaded => f.write_str("section not loaded"),
+            ReadError::Open(e) => write!(f, "open error ({})", e),
             ReadError::Io(e) => write!(f, "io error: {}", e)
         }
     }
@@ -73,13 +76,15 @@ pub enum WriteError
     /// Describes an io error.
     Io(std::io::Error),
 
-    /// Indicates the section is not loaded.
-    SectionNotLoaded
+    /// Indicates an [OpenError](crate::core::error::OpenError) has occurred when attempting
+    /// to open the section.
+    Open(OpenError)
 }
 
 impl_err_conversion!(
     WriteError {
-        std::io::Error => Io
+        std::io::Error => Io,
+        OpenError => Open
     }
 );
 
@@ -88,7 +93,7 @@ impl Display for WriteError
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         match self {
-            WriteError::SectionNotLoaded => f.write_str("section not loaded"),
+            WriteError::Open(e) => write!(f, "open error ({})", e),
             WriteError::Io(e) => write!(f, "io error: {}", e)
         }
     }
