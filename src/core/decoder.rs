@@ -33,6 +33,7 @@ use std::{
     io,
     io::{Read, Seek, Write}
 };
+use std::cell::{Cell, RefCell};
 
 use crate::{
     core::{
@@ -80,8 +81,8 @@ pub fn read_section_header_table<T: Read>(
             hdl,
             SectionEntry {
                 header,
-                data: None,
-                modified: false,
+                data: RefCell::new(None),
+                modified: Cell::new(false),
                 index: i,
                 entry1: SectionEntry1 {
                     flags: header.flags,

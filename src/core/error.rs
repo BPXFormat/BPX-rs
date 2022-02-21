@@ -134,7 +134,13 @@ pub enum ReadError
     BadSignature([u8; 3]),
 
     /// Describes a decompression error.
-    Inflate(InflateError)
+    Inflate(InflateError),
+
+    /// The requested section is already in use.
+    ///
+    /// This usually means the section is referencing itself, this error variant is intended
+    /// to prevent this case.
+    SectionInUse
 }
 
 impl_err_conversion!(
@@ -159,7 +165,8 @@ impl Display for ReadError
             ReadError::BadSignature(sig) => {
                 write!(f, "unknown file signature ({}{}{})", sig[0], sig[1], sig[2])
             },
-            ReadError::Inflate(e) => write!(f, "inflate error: {}", e)
+            ReadError::Inflate(e) => write!(f, "inflate error: {}", e),
+            ReadError::SectionInUse => f.write_str("section in use")
         }
     }
 }
@@ -203,6 +210,30 @@ impl Display for WriteError
             },
             WriteError::Deflate(e) => write!(f, "deflate error: {}", e),
             WriteError::SectionNotLoaded => f.write_str("section not loaded")
+        }
+    }
+}
+
+/// Represents possible errors when opening a section.
+#[derive(Debug)]
+pub enum OpenError
+{
+    /// The requested section is already in use.
+    ///
+    /// This usually means the section is referencing itself, this error variant is intended
+    /// to prevent this case.
+    SectionInUse,
+
+    /// The requested section has not been loaded.
+    SectionNotLoaded
+}
+
+impl Display for OpenError
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OpenError::SectionInUse => f.write_str("section in use"),
+            OpenError::SectionNotLoaded => f.write_str("section not loaded")
         }
     }
 }

@@ -41,4 +41,6 @@ mod section;
 
 pub use container::*;
 pub use data::{AutoSectionData, SectionData};
-pub use section::{Section, SectionMut};
+pub use section::SectionTable;
+pub use section::Handle;
+//pub use section::Iter;
