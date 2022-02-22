@@ -37,13 +37,13 @@ use crate::{
         Platform
     },
     table::ItemTable,
-    Handle
 };
+use crate::core::Handle;
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
 fn load_from_section<T: Read + Seek, W: Write>(
-    container: &mut Container<T>,
+    container: &Container<T>,
     handle: Handle,
     offset: u32,
     size: u32,
@@ -52,14 +52,13 @@ fn load_from_section<T: Read + Seek, W: Write>(
 {
     let mut len = 0;
     let mut buf: [u8; DATA_READ_BUFFER_SIZE] = [0; DATA_READ_BUFFER_SIZE];
-    let mut section = container.get_mut(handle);
-    let data = section.load()?;
+    let mut section = container.sections().load(handle)?;
 
-    data.seek(SeekFrom::Start(offset as u64))?;
+    section.seek(SeekFrom::Start(offset as u64))?;
     while len < size {
         let s = std::cmp::min(size - len, DATA_READ_BUFFER_SIZE as u32);
         // Read is enough as Sections are guaranteed to fill the buffer as much as possible
-        let val = data.read(&mut buf[0..s as usize])?;
+        let val = section.read(&mut buf[0..s as usize])?;
         len += val as u32;
         out.write_all(&buf[0..val])?;
     }
@@ -67,7 +66,7 @@ fn load_from_section<T: Read + Seek, W: Write>(
 }
 
 pub fn unpack_object<T: Read + Seek, W: Write>(
-    container: &mut Container<T>,
+    container: &Container<T>,
     obj: &ObjectHeader,
     mut out: W
 ) -> Result<u64, ReadError>
@@ -77,11 +76,11 @@ pub fn unpack_object<T: Read + Seek, W: Write>(
     let mut len = obj.size;
 
     while len > 0 {
-        let handle = match container.find_section_by_index(section_id) {
+        let handle = match container.sections().find_by_index(section_id) {
             Some(i) => i,
             None => break
         };
-        let section = container.get(handle);
+        let section = container.sections().header(handle);
         let remaining_section_size = section.size - offset;
         let val = load_from_section(
             container,
@@ -103,12 +102,13 @@ pub fn read_object_table<T: Read + Seek>(
     object_table: Handle
 ) -> Result<ItemTable<ObjectHeader>, ReadError>
 {
-    let mut section = container.get_mut(object_table);
-    let count = section.size / 20;
+    let sections = container.sections();
+    let count = sections.header(object_table).size / 20;
     let mut v = Vec::with_capacity(count as _);
+    let mut data = sections.load(object_table)?;
 
     for _ in 0..count {
-        let header = ObjectHeader::read(section.load()?)?;
+        let header = ObjectHeader::read(&mut *data)?;
         v.push(header);
     }
     *objects = v.clone();

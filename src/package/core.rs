@@ -51,9 +51,9 @@ use crate::{
     },
     strings::{load_string_section, StringSection},
     table::ItemTable,
-    utils::{OptionExtension, ReadFill},
-    Handle
+    utils::{OptionExtension, ReadFill}
 };
+use crate::core::Handle;
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
@@ -62,8 +62,8 @@ const MAX_DATA_SECTION_SIZE: usize = 200000000 - MIN_DATA_REMAINING_SIZE; //200M
 /// Represents an object reference.
 pub struct Object<'a, T>
 {
-    container: &'a mut Container<T>,
-    strings: &'a mut StringSection,
+    container: &'a Container<T>,
+    strings: &'a StringSection,
     header: &'a ObjectHeader
 }
 
@@ -81,7 +81,7 @@ impl<'a, T: Read + Seek> Object<'a, T>
     ///
     /// Returns a [ReadError](crate::package::error::ReadError) if the section couldn't be loaded
     /// or an IO error has occured.
-    pub fn unpack<W: Write>(&mut self, out: W) -> Result<u64, ReadError>
+    pub fn unpack<W: Write>(&self, out: W) -> Result<u64, ReadError>
     {
         unpack_object(self.container, self.header, out)
     }
@@ -92,7 +92,7 @@ impl<'a, T: Read + Seek> Object<'a, T>
     ///
     /// If the name is not already loaded, returns a [ReadError](crate::package::error::ReadError)
     /// if the section couldn't be loaded or the string couldn't be loaded.
-    pub fn load_name(&mut self) -> Result<&str, ReadError>
+    pub fn load_name(&self) -> Result<&str, ReadError>
     {
         load_string_section(self.container, self.strings)?;
         let name = self.strings.get(self.container, self.header.name)?;
@@ -237,13 +237,13 @@ impl<T: Write + Seek> Package<T>
                 .type_ext(get_type_ext(&settings))
                 .version(SUPPORTED_VERSION)
         );
-        let object_table = container.create_section(
+        let object_table = container.sections_mut().create(
             SectionHeaderBuilder::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
                 .ty(SECTION_TYPE_OBJECT_TABLE)
         );
-        let string_section = container.create_section(
+        let string_section = container.sections_mut().create(
             SectionHeaderBuilder::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
@@ -251,14 +251,14 @@ impl<T: Write + Seek> Package<T>
         );
         let strings = StringSection::new(string_section);
         if let Some(metadata) = &settings.metadata {
-            let metadata_section = container.create_section(
+            let metadata_section = container.sections_mut().create(
                 SectionHeaderBuilder::new()
                     .checksum(Checksum::Weak)
                     .compression(CompressionMethod::Zlib)
                     .ty(SECTION_TYPE_SD)
             );
-            let mut section = container.get_mut(metadata_section);
-            metadata.write(section.open().ok_or(WriteError::SectionNotLoaded)?)?;
+            let mut section = container.sections().open(metadata_section)?;
+            metadata.write(&mut *section)?;
         }
         Ok(Package {
             settings,
@@ -277,8 +277,8 @@ impl<T: Write + Seek> Package<T>
         data_id: Handle
     ) -> Result<(usize, bool), WriteError>
     {
-        let mut section = self.container.get_mut(data_id);
-        let data = section.open().ok_or(WriteError::SectionNotLoaded)?;
+        let sections = self.container.sections();
+        let mut data = sections.open(data_id)?;
         let mut buf: [u8; DATA_WRITE_BUFFER_SIZE] = [0; DATA_WRITE_BUFFER_SIZE];
         let mut res = source.read_fill(&mut buf)?;
         let mut count = res;
@@ -314,18 +314,18 @@ impl<T: Write + Seek> Package<T>
         let mut object_size = 0;
         let mut data_section = *self
             .last_data_section
-            .get_or_insert_with(|| self.container.create_section(create_data_section_header()));
-        let start = self.container.get(data_section).index();
+            .get_or_insert_with(|| self.container.sections_mut().create(create_data_section_header()));
+        let start = self.container.sections().index(data_section);
         let offset = {
-            let section = self.container.get(data_section);
-            section.open().ok_or(WriteError::SectionNotLoaded)?.size()
+            let section = self.container.sections().open(data_section)?;
+            section.size()
         } as u32;
 
         loop {
             let (count, need_section) = self.write_object(&mut source, data_section)?;
             object_size += count;
             if need_section {
-                data_section = self.container.create_section(create_data_section_header());
+                data_section = self.container.sections_mut().create(create_data_section_header());
             } else {
                 break;
             }
@@ -341,8 +341,8 @@ impl<T: Write + Seek> Package<T>
             self.objects.push(buf);
         }
         {
-            let section = self.container.get(data_section);
-            if section.open().ok_or(WriteError::SectionNotLoaded)?.size() > MAX_DATA_SECTION_SIZE {
+            let section = self.container.sections().open(data_section)?;
+            if section.size() > MAX_DATA_SECTION_SIZE {
                 self.last_data_section = None;
             } else {
                 self.last_data_section = Some(data_section);
@@ -360,11 +360,10 @@ impl<T: Write + Seek> Package<T>
     pub fn save(&mut self) -> Result<(), WriteError>
     {
         {
-            let mut section = self.container.get_mut(self.object_table);
-            let data = section.open().ok_or(WriteError::SectionNotLoaded)?;
-            data.seek(SeekFrom::Start(0))?;
+            let mut section = self.container.sections().open(self.object_table)?;
+            section.seek(SeekFrom::Start(0))?;
             for v in &self.objects {
-                v.write(data)?;
+                v.write(&mut *section)?;
             }
         }
         self.container.save()?;
@@ -415,11 +414,11 @@ impl<T: Read + Seek> Package<T>
             container.get_main_header().type_ext[1]
         )?;
         let strings =
-            StringSection::new(match container.find_section_by_type(SECTION_TYPE_STRING) {
+            StringSection::new(match container.sections().find_by_type(SECTION_TYPE_STRING) {
                 Some(v) => v,
                 None => return Err(ReadError::MissingSection(Section::Strings))
             });
-        let object_table = match container.find_section_by_type(SECTION_TYPE_OBJECT_TABLE) {
+        let object_table = match container.sections().find_by_type(SECTION_TYPE_OBJECT_TABLE) {
             Some(v) => v,
             None => return Err(ReadError::MissingSection(Section::ObjectTable))
         };
@@ -504,9 +503,9 @@ impl<T: Read + Seek> Package<T>
         if let Some(obj) = &self.settings.metadata {
             return Ok(Some(obj.clone()));
         }
-        if let Some(handle) = self.container.find_section_by_type(SECTION_TYPE_SD) {
-            let mut section = self.container.get_mut(handle);
-            let obj = crate::sd::Object::read(section.load()?)?;
+        if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_SD) {
+            let mut section = self.container.sections().load(handle)?;
+            let obj = crate::sd::Object::read(&mut *section)?;
             self.settings.metadata = Some(obj.clone());
             return Ok(Some(obj));
         }

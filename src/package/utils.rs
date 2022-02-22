@@ -126,7 +126,7 @@ pub fn pack_file<T: Write + Seek>(package: &mut Package<T>, source: &Path)
 /// An [ReadError](crate::package::error::ReadError) is returned if some objects could not be unpacked.
 pub fn unpack<T: Read + Seek>(package: &mut Package<T>, target: &Path) -> Result<(), ReadError>
 {
-    for mut v in package.objects()? {
+    for v in package.objects()? {
         let size = v.size();
         let path = v.load_name()?;
         if path.is_empty() {
