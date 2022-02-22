@@ -57,7 +57,7 @@ use elsa::FrozenMap;
 /// use bpx::utils::new_byte_buf;
 ///
 /// let mut file = Container::create(new_byte_buf(0), MainHeader::new());
-/// let section = file.create_section(SectionHeader::new());
+/// let section = file.sections_mut().create(SectionHeader::new());
 /// let mut strings = StringSection::new(section);
 /// let offset = strings.put(&mut file, "Test").unwrap();
 /// let str = strings.get(&mut file, offset).unwrap();
