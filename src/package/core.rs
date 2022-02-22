@@ -109,8 +109,8 @@ impl<'a, T: Read + Seek> Object<'a, T>
 /// An iterator over [Object](crate::package::Object).
 pub struct ObjectIter<'a, T>
 {
-    container: &'a mut Container<T>,
-    strings: &'a mut StringSection,
+    container: &'a Container<T>,
+    strings: &'a StringSection,
     iter: Iter<'a, ObjectHeader>
 }
 
@@ -121,15 +121,11 @@ impl<'a, T> Iterator for ObjectIter<'a, T>
     fn next(&mut self) -> Option<Self::Item>
     {
         let header = self.iter.next()?;
-        unsafe {
-            let ptr = self.container as *mut Container<T>;
-            let ptr1 = self.strings as *mut StringSection;
-            Some(Object {
-                header,
-                strings: &mut *ptr1,
-                container: &mut *ptr
-            })
-        }
+        Some(Object {
+            header,
+            strings: self.strings,
+            container: self.container
+        })
     }
 }
 
@@ -454,8 +450,8 @@ impl<T: Read + Seek> Package<T>
         })?;
         let iter = table.iter();
         Ok(ObjectIter {
-            container: &mut self.container,
-            strings: &mut self.strings,
+            container: &self.container,
+            strings: &self.strings,
             iter
         })
     }
