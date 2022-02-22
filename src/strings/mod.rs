@@ -149,7 +149,7 @@ impl StringSection
 ///
 /// returns: Result<(), ReadError>
 pub fn load_string_section<T: Read + Seek>(
-    container: &mut Container<T>,
+    container: &Container<T>,
     strings: &StringSection
 ) -> Result<(), crate::core::error::ReadError>
 {
