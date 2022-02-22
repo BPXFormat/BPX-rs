@@ -224,9 +224,9 @@ impl<T> SectionTable<T>
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// assert_eq!(file.get_main_header().section_num, 0);
-    /// file.create_section(SectionHeaderBuilder::new());
-    /// assert_eq!(file.get_main_header().section_num, 1);
+    /// assert_eq!(file.sections().len(), 0);
+    /// file.sections_mut().create(SectionHeaderBuilder::new());
+    /// assert_eq!(file.sections().len(), 1);
     /// ```
     pub fn create<H: Into<SectionHeader>>(&mut self, header: H) -> Handle
     {
@@ -268,10 +268,10 @@ impl<T> SectionTable<T>
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// let section = file.create_section(SectionHeaderBuilder::new());
+    /// let section = file.sections_mut().create(SectionHeaderBuilder::new());
     /// file.save();
     /// assert_eq!(file.get_main_header().section_num, 1);
-    /// file.remove_section(section);
+    /// file.sections_mut().remove(section);
     /// file.save();
     /// assert_eq!(file.get_main_header().section_num, 0);
     /// ```
@@ -338,7 +338,7 @@ impl<T> SectionTable<T>
     /// use bpx::utils::new_byte_buf;
     ///
     /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// assert!(file.find_section_by_type(0).is_none());
+    /// assert!(file.sections().find_by_type(0).is_none());
     /// ```
     pub fn find_by_type(&self, ty: u8) -> Option<Handle>
     {
@@ -367,7 +367,7 @@ impl<T> SectionTable<T>
     /// use bpx::utils::new_byte_buf;
     ///
     /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// assert!(file.find_section_by_index(0).is_none());
+    /// assert!(file.sections().find_by_index(0).is_none());
     /// ```
     pub fn find_by_index(&self, index: u32) -> Option<Handle>
     {

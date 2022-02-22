@@ -228,6 +228,7 @@ impl<T: io::Write + io::Seek> Container<T>
         let count = filter.by_ref().count();
         if self.table.modified || count > 1 {
             self.table.modified = false;
+            self.main_header.section_num = self.table.count;
             internal_save(self.table.backend.get_mut(), &mut self.table.sections, &mut self.main_header)
         } else if !self.table.modified && count == 1 {
             let (handle, _) = filter.last().unwrap();
@@ -243,6 +244,7 @@ impl<T: io::Write + io::Seek> Container<T>
                 //Unfortunately the modified section is not the last one so we can't safely
                 //expand/reduce the file size without corrupting other sections
                 self.table.modified = false;
+                self.main_header.section_num = self.table.count;
                 internal_save(self.table.backend.get_mut(), &mut self.table.sections, &mut self.main_header)
             }
         } else {
