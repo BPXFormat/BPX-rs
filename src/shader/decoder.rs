@@ -37,9 +37,9 @@ use crate::{
         Target,
         Type
     },
-    table::ItemTable,
-    Handle
+    table::ItemTable
 };
+use crate::core::Handle;
 
 pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
 {
@@ -91,20 +91,21 @@ pub fn get_stage_from_code(code: u8) -> Result<Stage, ReadError>
 }
 
 pub fn read_symbol_table<T: Read + Seek>(
-    container: &mut Container<T>,
+    container: &Container<T>,
     symbols: &mut Vec<Symbol>,
     num_symbols: u16,
     symbol_table: Handle
 ) -> Result<ItemTable<Symbol>, ReadError>
 {
-    let mut section = container.get_mut(symbol_table);
-    let count = section.size as u32 / SIZE_SYMBOL_STRUCTURE as u32;
+    let sections = container.sections();
+    let count = sections.header(symbol_table).size as u32 / SIZE_SYMBOL_STRUCTURE as u32;
 
     if count != num_symbols as u32 {
         return Err(ReadError::Eos(EosContext::SymbolTable));
     }
+    let mut data = sections.load(symbol_table)?;
     for _ in 0..count {
-        let header = Symbol::read(section.load()?)?;
+        let header = Symbol::read(&mut *data)?;
         symbols.push(header);
     }
     Ok(ItemTable::new(symbols.clone()))

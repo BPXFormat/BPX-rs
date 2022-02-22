@@ -99,8 +99,8 @@ variant_error!(
         /// Describes a structured data error.
         Sd(crate::sd::error::WriteError),
 
-        /// Indicates a section wasn't loaded.
-        SectionNotLoaded
+        /// Indicates a section couldn't open.
+        Open(crate::core::error::OpenError)
     }
 );
 
@@ -114,7 +114,8 @@ impl_err_conversion!(
 impl_err_conversion!(
     WriteError {
         crate::strings::WriteError => Strings,
-        crate::sd::error::WriteError => Sd
+        crate::sd::error::WriteError => Sd,
+        crate::core::error::OpenError => Open
     }
 );
 
@@ -147,7 +148,7 @@ impl Display for WriteError
             WriteError::Io(e) => write!(f, "io error: {}", e),
             WriteError::Strings(e) => write!(f, "strings error: {}", e),
             WriteError::Sd(e) => write!(f, "BPXSD error: {}", e),
-            WriteError::SectionNotLoaded => f.write_str("section not loaded")
+            WriteError::Open(e) => write!(f, "section open error ({})", e)
         }
     }
 }
