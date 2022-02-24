@@ -191,7 +191,7 @@ impl<'a, T: Read + Seek> ObjectTableRef<'a, T>
         self.table.load(self.container, header, out)
     }
 
-    /// Loads the name of this object if it's not already loaded.
+    /// Loads the name of an object if it's not already loaded.
     ///
     /// # Errors
     ///
@@ -202,6 +202,7 @@ impl<'a, T: Read + Seek> ObjectTableRef<'a, T>
     }
 
     /// Lookup an object by its name.
+    ///
     /// Returns None if the object does not exist.
     ///
     /// # Arguments
