@@ -197,6 +197,19 @@ impl<T> NamedItemTable<T>
         self.list.len()
     }
 
+    /// Gets an item by its index.
+    ///
+    /// Returns None if the index is out of bounds.
+    ///
+    /// # Arguments
+    ///
+    /// * `index`: the index to find.
+    ///
+    /// returns: Option<&T>
+    pub fn get(&self, index: usize) -> Option<&T> {
+        self.list.get(index)
+    }
+
     /// Removes an item from this table.
     ///
     /// # Arguments
