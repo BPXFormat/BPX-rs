@@ -30,6 +30,9 @@
 
 //! This library is the official implementation for the [BPX](https://gitlab.com/bp3d/bpx/bpx/-/blob/rev2/BPX_Format.pdf) container format.
 
+//TODO: Refactor Package and ShaderPack to expose a similar API to sections and sections_mut
+// to manage object table and symbol table.
+
 //TODO: Merge back all instances of Read/Write Error into a single Error type as now this library
 // uses a single Container type to create and read BPX.
 

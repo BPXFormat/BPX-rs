@@ -39,6 +39,7 @@ use crate::{
     table::ItemTable,
 };
 use crate::core::Handle;
+use crate::table::NamedItemTable;
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
 
@@ -97,10 +98,9 @@ pub fn unpack_object<T: Read + Seek, W: Write>(
 }
 
 pub fn read_object_table<T: Read + Seek>(
-    container: &mut Container<T>,
-    objects: &mut Vec<ObjectHeader>,
+    container: &Container<T>,
     object_table: Handle
-) -> Result<ItemTable<ObjectHeader>, ReadError>
+) -> Result<NamedItemTable<ObjectHeader>, ReadError>
 {
     let sections = container.sections();
     let count = sections.header(object_table).size / 20;
@@ -111,8 +111,7 @@ pub fn read_object_table<T: Read + Seek>(
         let header = ObjectHeader::read(&mut *data)?;
         v.push(header);
     }
-    *objects = v.clone();
-    Ok(ItemTable::new(v))
+    Ok(NamedItemTable::with_list(v))
 }
 
 pub fn get_arch_platform_from_code(

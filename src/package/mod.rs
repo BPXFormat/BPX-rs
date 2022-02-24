@@ -36,8 +36,11 @@ mod core;
 mod decoder;
 mod encoder;
 pub mod utils;
+mod table;
 
 pub use builder::*;
+pub use table::ObjectTableRef;
+pub use table::ObjectTableMut;
 
 pub use self::core::*;
 

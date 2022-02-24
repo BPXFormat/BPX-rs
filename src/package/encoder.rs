@@ -26,6 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use std::io::{Read, Write};
 use crate::{
     core::{
         builder::{Checksum, CompressionMethod, SectionHeaderBuilder},
@@ -33,6 +34,34 @@ use crate::{
     },
     package::{Architecture, Platform, Settings, SECTION_TYPE_DATA}
 };
+use crate::core::{Container, Handle, SectionData};
+use crate::package::error::WriteError;
+use crate::utils::ReadFill;
+
+const DATA_WRITE_BUFFER_SIZE: usize = 8192;
+const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
+pub const MAX_DATA_SECTION_SIZE: usize = 200000000 - MIN_DATA_REMAINING_SIZE; //200MB
+
+pub fn write_object<T, TRead: Read>(container: &Container<T>, source: &mut TRead, data_id: Handle) -> Result<(usize, bool), WriteError>
+{
+    let sections = container.sections();
+    let mut data = sections.open(data_id)?;
+    let mut buf: [u8; DATA_WRITE_BUFFER_SIZE] = [0; DATA_WRITE_BUFFER_SIZE];
+    let mut res = source.read_fill(&mut buf)?;
+    let mut count = res;
+
+    while res > 0 {
+        data.write_all(&buf[0..res])?;
+        if data.size() >= MAX_DATA_SECTION_SIZE
+        //Split sections (this is to avoid reaching the 4Gb max)
+        {
+            return Ok((count, true));
+        }
+        res = source.read_fill(&mut buf)?;
+        count += res;
+    }
+    Ok((count, false))
+}
 
 pub fn create_data_section_header() -> SectionHeader
 {
