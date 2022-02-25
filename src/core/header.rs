@@ -33,13 +33,11 @@ use std::io;
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
-    core::{
-        builder::{Checksum, CompressionMethod},
-        error::ReadError
-    },
+    core::builder::{Checksum, CompressionMethod},
     garraylen::*,
     utils::ReadFill
 };
+use crate::core::error::Error;
 
 /// Represents a serializable and deserializable byte structure in a BPX.
 pub trait Struct<const S: usize>
@@ -218,7 +216,7 @@ pub struct MainHeader
 impl Struct<SIZE_MAIN_HEADER> for MainHeader
 {
     type Output = (u32, MainHeader);
-    type Error = ReadError;
+    type Error = Error;
 
     fn new() -> Self
     {
@@ -257,10 +255,10 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader
             type_ext: extract_slice(&buffer, 24)
         };
         if &head.signature != b"BPX" {
-            return Err(ReadError::BadSignature(head.signature));
+            return Err(Error::BadSignature(head.signature));
         }
         if !KNOWN_VERSIONS.contains(&head.version) {
-            return Err(ReadError::BadVersion(head.version));
+            return Err(Error::BadVersion(head.version));
         }
         Ok((checksum, head))
     }

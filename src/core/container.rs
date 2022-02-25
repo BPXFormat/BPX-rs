@@ -36,9 +36,9 @@ use crate::{
     core::{
         decoder::read_section_header_table,
         encoder::{internal_save, internal_save_last},
-        error::{ReadError, WriteError},
         header::{MainHeader, Struct},
-        section::SectionTable
+        section::SectionTable,
+        Result
     }
 };
 
@@ -123,11 +123,11 @@ impl<T: io::Read + io::Seek> Container<T>
     ///
     /// * `backend`: A [Read](std::io::Read) + [Seek](std::io::Seek) backend to use for reading the BPX container.
     ///
-    /// returns: Result<Decoder<TBackend>, Error>
+    /// returns: Result<Decoder<TBackend>>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::core::error::ReadError) is returned if some headers
+    /// An [Error](crate::core::error::Error) is returned if some headers
     /// could not be read or if the header data is corrupted.
     ///
     /// # Examples
@@ -145,7 +145,7 @@ impl<T: io::Read + io::Seek> Container<T>
     /// //Default BPX variant/type is 'P'
     /// assert_eq!(file.get_main_header().ty, 'P' as u8);
     /// ```
-    pub fn open(mut backend: T) -> Result<Container<T>, ReadError>
+    pub fn open(mut backend: T) -> Result<Container<T>>
     {
         let (checksum, header) = MainHeader::read(&mut backend)?;
         let (next_handle, sections) = read_section_header_table(&mut backend, &header, checksum)?;
@@ -207,7 +207,7 @@ impl<T: io::Write + io::Seek> Container<T>
     ///
     /// # Errors
     ///
-    /// A [WriteError](crate::core::error::WriteError) is returned if some data could
+    /// An [Error](crate::core::error::Error) is returned if some data could
     /// not be written.
     ///
     /// # Examples
@@ -222,7 +222,7 @@ impl<T: io::Write + io::Seek> Container<T>
     /// let buf = file.into_inner();
     /// assert!(!buf.into_inner().is_empty());
     /// ```
-    pub fn save(&mut self) -> Result<(), WriteError>
+    pub fn save(&mut self) -> Result<()>
     {
         let mut filter = self.table.sections.iter().filter(|(_, entry)| entry.modified.get());
         let count = filter.by_ref().count();

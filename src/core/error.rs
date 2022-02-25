@@ -214,6 +214,76 @@ impl Display for WriteError
     }
 }
 
+/// Represents a BPX error.
+#[derive(Debug)]
+pub enum Error
+{
+    /// Describes a checksum error.
+    Checksum {
+        /// Actual checksum value.
+        actual: u32,
+
+        /// Expected checksum value.
+        expected: u32
+    },
+
+    /// Describes an io error.
+    Io(std::io::Error),
+
+    /// Describes a bad version error.
+    BadVersion(u32),
+
+    /// Describes a bad signature error.
+    BadSignature([u8; 3]),
+
+    /// Describes a decompression error.
+    Inflate(InflateError),
+
+    /// Describes a section that is too large to be written
+    /// (ie exceeds 2 pow 32 / 4Gb).
+    Capacity(usize),
+
+    /// Describes a compression error.
+    Deflate(DeflateError),
+
+    /// A section open error.
+    Open(OpenError)
+}
+
+impl_err_conversion!(
+    Error {
+        std::io::Error => Io,
+        DeflateError => Deflate,
+        InflateError => Inflate,
+        OpenError => Open
+    }
+);
+
+impl Display for Error
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            Error::Checksum { expected, actual} => write!(
+                f,
+                "checksum validation failed (expected {}, got {})",
+                expected, actual
+            ),
+            Error::Io(e) => write!(f, "io error: {}", e),
+            Error::BadVersion(v) => write!(f, "unknown file version ({})", v),
+            Error::BadSignature(sig) => {
+                write!(f, "unknown file signature ({}{}{})", sig[0], sig[1], sig[2])
+            },
+            Error::Inflate(e) => write!(f, "inflate error: {}", e),
+            Error::Open(e) => write!(f, "section open error ({})", e),
+            Error::Capacity(size) => {
+                write!(f, "maximum section size exceeded ({} > 2^32)", size)
+            },
+            Error::Deflate(e) => write!(f, "deflate error: {}", e)
+        }
+    }
+}
+
 /// Represents possible errors when opening a section.
 #[derive(Debug)]
 pub enum OpenError

@@ -39,6 +39,9 @@ pub mod error;
 pub mod header;
 mod section;
 
+/// Result type used in all [Container](crate::core::Container) operations.
+pub type Result<T> = std::result::Result<T, error::Error>;
+
 pub use container::*;
 pub use data::{AutoSectionData, SectionData};
 pub use section::SectionTable;

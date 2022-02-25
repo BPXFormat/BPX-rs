@@ -35,17 +35,17 @@ use crate::{
     core::{
         data::AutoSectionData,
         decoder::load_section1,
-        error::ReadError,
         header::{
             SectionHeader,
             FLAG_CHECK_CRC32,
             FLAG_CHECK_WEAK,
             FLAG_COMPRESS_XZ,
             FLAG_COMPRESS_ZLIB
-        }
+        },
+        Result
     }
 };
-use crate::core::error::OpenError;
+use crate::core::error::{Error, OpenError};
 
 /// Represents a pointer to a section.
 ///
@@ -147,12 +147,12 @@ impl<T: Read + Seek> SectionTable<T>
     ///
     /// # Errors
     ///
-    /// Returns a [ReadError](crate::core::error::ReadError) if the section is corrupted,
+    /// Returns an [Error](crate::core::error::Error) if the section is corrupted,
     /// truncated, if some data couldn't be read or if the section is already in use.
-    pub fn load(&self, handle: Handle) -> Result<RefMut<AutoSectionData>, ReadError>
+    pub fn load(&self, handle: Handle) -> Result<RefMut<AutoSectionData>>
     {
         let section = &self.sections[&handle.0];
-        let mut data = section.data.try_borrow_mut().map_err(|_| ReadError::SectionInUse)?;
+        let mut data = section.data.try_borrow_mut().map_err(|_| Error::Open(OpenError::SectionInUse))?;
         if data.is_none() {
             let mut backend = self.backend.borrow_mut();
             let loaded = load_section1(&mut *backend, &section.header)?;
@@ -181,7 +181,7 @@ impl<T> SectionTable<T>
     ///
     /// Returns an [OpenError](crate::core::error::OpenError) if the section is already in use
     /// or is not loaded. To ensure a section is loaded, call load.
-    pub fn open(&self, handle: Handle) -> Result<RefMut<AutoSectionData>, OpenError> {
+    pub fn open(&self, handle: Handle) -> std::result::Result<RefMut<AutoSectionData>, OpenError> {
         let section = &self.sections[&handle.0];
         let data = section.data.try_borrow_mut().map_err(|_| OpenError::SectionInUse)?;
         if data.is_none() {
