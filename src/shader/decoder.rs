@@ -36,8 +36,7 @@ use crate::{
         Stage,
         Target,
         Type
-    },
-    table::ItemTable
+    }
 };
 use crate::core::Handle;
 use crate::table::NamedItemTable;

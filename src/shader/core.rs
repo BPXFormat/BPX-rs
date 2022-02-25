@@ -48,16 +48,12 @@ use crate::{
         error::{ReadError, Section, WriteError},
         symbol::{Symbol, FLAG_EXTENDED_DATA},
         Settings,
-        Target,
-        Type,
         SECTION_TYPE_EXTENDED_DATA,
         SECTION_TYPE_SHADER,
         SECTION_TYPE_SYMBOL_TABLE,
         SUPPORTED_VERSION
     },
-    strings::{load_string_section, StringSection},
-    table::ItemTable,
-    utils::OptionExtension
+    strings::{load_string_section, StringSection}
 };
 use crate::core::Handle;
 use crate::shader::{ShaderTableMut, ShaderTableRef, SymbolTableMut, SymbolTableRef};
@@ -156,24 +152,30 @@ impl<'a, T> Iterator for SymbolIter<'a, T>
 /// use bpx::utils::new_byte_buf;
 ///
 /// let mut bpxs = ShaderPack::create(new_byte_buf(0), Builder::new());
-/// bpxs.add_symbol(symbol::Builder::new("test")).unwrap();
-/// bpxs.add_shader(Shader {
-///     stage: Stage::Pixel,
-///     data: Vec::new()
-/// }).unwrap();
+/// {
+///     let mut symbols = bpxs.symbols_mut().unwrap();
+///     symbols.create(symbol::Builder::new("test")).unwrap();
+/// }
+/// {
+///     let mut shaders = bpxs.shaders_mut();
+///     shaders.create(Shader {
+///         stage: Stage::Pixel,
+///         data: Vec::new()
+///     }).unwrap();
+/// }
 /// bpxs.save();
 /// //Reset our bytebuf pointer to start
 /// let mut bytebuf = bpxs.into_inner().into_inner();
 /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
 /// //Attempt decoding our in-memory BPXP
 /// let mut bpxs = ShaderPack::open(bytebuf).unwrap();
-/// let count = bpxs.symbols().unwrap().count();
-/// assert_eq!(count, 1);
-/// assert_eq!(bpxs.get_symbol_count(), 1);
-/// let mut sym = bpxs.symbols().unwrap().last().unwrap();
-/// assert_eq!(sym.load_name().unwrap(), "test");
-/// assert_eq!(sym.flags & FLAG_EXTENDED_DATA, 0);
-/// let shader = bpxs.load_shader(bpxs.list_shaders()[0]).unwrap();
+/// let symbols = bpxs.symbols().unwrap();
+/// let shaders = bpxs.shaders();
+/// assert_eq!(symbols.len(), 1);
+/// let last = symbols.iter().last().unwrap();
+/// assert_eq!(symbols.load_name(last).unwrap(), "test");
+/// assert_eq!(last.flags & FLAG_EXTENDED_DATA, 0);
+/// let shader = shaders.load(shaders.iter().last().unwrap()).unwrap();
 /// assert_eq!(shader.stage, Stage::Pixel);
 /// assert_eq!(shader.data.len(), 0);
 /// ```
@@ -257,13 +259,6 @@ impl<T: Write + Seek> ShaderPack<T>
         }
     }
 
-    fn patch_extended_data(&mut self, count: usize)
-    {
-        let mut header = *self.container.get_main_header();
-        LittleEndian::write_u16(&mut header.type_ext[8..10], count as u16);
-        self.container.set_main_header(header);
-    }
-
     /// Saves this shader package.
     ///
     /// # Errors
@@ -273,7 +268,9 @@ impl<T: Write + Seek> ShaderPack<T>
     pub fn save(&mut self) -> Result<(), WriteError>
     {
         if let Some(syms) = self.symbols.get() {
-            self.patch_extended_data(syms.len());
+            let mut header = *self.container.get_main_header();
+            LittleEndian::write_u16(&mut header.type_ext[8..10], syms.len() as u16);
+            self.container.set_main_header(header);
             let mut section = self.container.sections().open(self.symbol_table)?;
             section.seek(SeekFrom::Start(0))?;
             for v in syms {
@@ -312,7 +309,8 @@ impl<T: Read + Seek> ShaderPack<T>
     /// let mut buf = bpxs.into_inner().into_inner();
     /// buf.set_position(0);
     /// let mut bpxs = ShaderPack::open(buf).unwrap();
-    /// assert_eq!(bpxs.symbols().unwrap().count(), 0);
+    /// let symbols = bpxs.symbols().unwrap();
+    /// assert_eq!(symbols.len(), 0);
     /// ```
     pub fn open(backend: T) -> Result<ShaderPack<T>, ReadError>
     {
@@ -361,6 +359,14 @@ impl<T: Read + Seek> ShaderPack<T>
         ShaderTable::new(handles)
     }
 
+    /// Returns a guard for immutable access to the symbol table.
+    ///
+    /// This will load the symbol table if it's not already loaded.
+    ///
+    /// # Errors
+    ///
+    /// A [ReadError](crate::shader::error::ReadError) is returned if the symbol table could not be
+    /// loaded.
     pub fn symbols(&self) -> Result<SymbolTableRef<T>, ReadError> {
         let table = self.symbols.get_or_try_init(|| self.load_symbol_table())?;
         Ok(SymbolTableRef {
@@ -369,9 +375,18 @@ impl<T: Read + Seek> ShaderPack<T>
         })
     }
 
+    /// Returns a guard for mutable access to the symbol table.
+    ///
+    /// This will load the symbol table if it's not already loaded.
+    ///
+    /// # Errors
+    ///
+    /// A [ReadError](crate::shader::error::ReadError) is returned if the symbol table could not be
+    /// loaded.
     pub fn symbols_mut(&mut self) -> Result<SymbolTableMut<T>, ReadError> {
         if self.symbols.get_mut().is_none() {
-            self.symbols.set(self.load_symbol_table()?);
+            //SAFETY: This is safe because only ran if the cell is none.
+            unsafe { self.symbols.set(self.load_symbol_table()?).unwrap_unchecked() };
         }
         Ok(SymbolTableMut {
             table: unsafe { self.symbols.get_mut().unwrap_unchecked() },
@@ -379,6 +394,9 @@ impl<T: Read + Seek> ShaderPack<T>
         })
     }
 
+    /// Returns a guard for immutable access to the shader table.
+    ///
+    /// This will load the shader table if it's not already loaded.
     pub fn shaders(&self) -> ShaderTableRef<T> {
         let table = self.shaders.get_or_init(|| self.load_shader_table());
         ShaderTableRef {
@@ -387,9 +405,13 @@ impl<T: Read + Seek> ShaderPack<T>
         }
     }
 
+    /// Returns a guard for mutable access to the shader table.
+    ///
+    /// This will load the shader table if it's not already loaded.
     pub fn shaders_mut(&mut self) -> ShaderTableMut<T> {
         if self.shaders.get_mut().is_none() {
-            self.shaders.set(self.load_shader_table());
+            //SAFETY: This is safe because only ran if the cell is none.
+            unsafe { self.shaders.set(self.load_shader_table()).unwrap_unchecked() };
         }
         ShaderTableMut {
             container: &mut self.container,
