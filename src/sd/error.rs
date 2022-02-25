@@ -32,43 +32,11 @@ use std::fmt::{Display, Formatter};
 
 use crate::macros::impl_err_conversion;
 
-/// Represents a structured data write error
-#[derive(Debug)]
-pub enum WriteError
-{
-    /// Describes an io error.
-    Io(std::io::Error),
-
-    /// Describes too large structured data Object or Array (ie exceeds 255).
-    ///
-    /// # Arguments
-    /// * actual number of items.
-    CapacityExceeded(usize)
-}
-
-impl_err_conversion!(WriteError { std::io::Error => Io });
-
-impl Display for WriteError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
-        match self {
-            WriteError::Io(e) => write!(f, "io error: {}", e),
-            WriteError::CapacityExceeded(count) => {
-                write!(f, "capacity exceeded ({} > 255)", count)
-            }
-        }
-    }
-}
-
 /// Represents a structured data read error
 #[derive(Debug)]
-pub enum ReadError
+pub enum Error
 {
     /// Describes an io error.
-    ///
-    /// # Arguments
-    /// * the error that occured.
     Io(std::io::Error),
 
     /// Describes a data truncation error, this means a section or
@@ -79,26 +47,29 @@ pub enum ReadError
     Truncation(&'static str),
 
     /// Describes a bad type code for a value.
-    ///
-    /// # Arguments
-    /// * the incriminated type code.
     BadTypeCode(u8),
 
     /// Describes an utf8 decoding/encoding error.
-    Utf8
+    Utf8,
+
+    /// Describes too large structured data Object or Array (ie exceeds 255 entries).
+    CapacityExceeded(usize)
 }
 
-impl_err_conversion!(ReadError { std::io::Error => Io });
+impl_err_conversion!(Error { std::io::Error => Io });
 
-impl Display for ReadError
+impl Display for Error
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         match self {
-            ReadError::Io(e) => write!(f, "io error: {}", e),
-            ReadError::Truncation(typename) => write!(f, "failed to read {}", typename),
-            ReadError::BadTypeCode(code) => write!(f, "unknown value type code ({})", code),
-            ReadError::Utf8 => f.write_str("utf8 error")
+            Error::Io(e) => write!(f, "io error: {}", e),
+            Error::Truncation(typename) => write!(f, "failed to read {}", typename),
+            Error::BadTypeCode(code) => write!(f, "unknown value type code ({})", code),
+            Error::Utf8 => f.write_str("utf8 error"),
+            Error::CapacityExceeded(count) => {
+                write!(f, "capacity exceeded ({} > 255)", count)
+            }
         }
     }
 }

@@ -36,6 +36,9 @@ pub mod error;
 pub mod object;
 mod value;
 
+/// Result type of most read/write operations in BPXSD.
+pub type Result<T> = std::result::Result<T, error::Error>;
+
 pub use array::Array;
 pub use debug::Debugger;
 pub use object::Object;
