@@ -38,7 +38,8 @@ use crate::{
     package::{
         decoder::{get_arch_platform_from_code, read_object_table},
         encoder::get_type_ext,
-        error::{ReadError, Section, WriteError},
+        error::{Error, Section},
+        Result,
         Settings,
         SECTION_TYPE_OBJECT_TABLE,
         SUPPORTED_VERSION
@@ -119,7 +120,11 @@ impl<T: Write + Seek> Package<T>
     /// * `backend`: A [Write](std::io::Write) + [Seek](std::io::Seek) to use as backend.
     /// * `settings`: The package creation settings.
     ///
-    /// returns: Result<Package<T>, WriteError>
+    /// returns: Result<Package<T>>
+    ///
+    /// # Errors
+    ///
+    /// Returns an [Error](crate::package::error::Error) if the metadata couldn't be created.
     ///
     /// # Examples
     ///
@@ -132,7 +137,7 @@ impl<T: Write + Seek> Package<T>
     /// bpxp.save();
     /// assert!(!bpxp.into_inner().into_inner().into_inner().is_empty());
     /// ```
-    pub fn create<S: Into<Settings>>(backend: T, settings: S) -> Result<Package<T>, WriteError>
+    pub fn create<S: Into<Settings>>(backend: T, settings: S) -> Result<Package<T>>
     {
         let settings = settings.into();
         let mut container = Container::create(
@@ -180,7 +185,7 @@ impl<T: Write + Seek> Package<T>
     ///
     /// Returns a [WriteError](crate::package::error::WriteError) if some parts of this package
     /// couldn't be saved.
-    pub fn save(&mut self) -> Result<(), WriteError>
+    pub fn save(&mut self) -> Result<()>
     {
         {
             let mut section = self.container.sections().open(self.object_table)?;
@@ -204,7 +209,7 @@ impl<T: Read + Seek> Package<T>
     ///
     /// * `backend`: A [Read](std::io::Read) + [Seek](std::io::Seek) to use as backend.
     ///
-    /// returns: Result<PackageDecoder<TBackend>, Error>
+    /// returns: Result<PackageDecoder<TBackend>>
     ///
     /// # Errors
     ///
@@ -226,14 +231,20 @@ impl<T: Read + Seek> Package<T>
     /// let objects = bpxp.objects().unwrap();
     /// assert_eq!(objects.len(), 0);
     /// ```
-    pub fn open(backend: T) -> Result<Package<T>, ReadError>
+    pub fn open(backend: T) -> Result<Package<T>>
     {
         let container = Container::open(backend)?;
         if container.get_main_header().ty != b'P' {
-            return Err(ReadError::BadType(container.get_main_header().ty));
+            return Err(Error::BadType {
+                expected: b'P',
+                actual: container.get_main_header().ty
+            });
         }
         if container.get_main_header().version != SUPPORTED_VERSION {
-            return Err(ReadError::BadVersion(container.get_main_header().version));
+            return Err(Error::BadVersion{
+                supported: SUPPORTED_VERSION,
+                actual: container.get_main_header().version
+            });
         }
         let (a, p) = get_arch_platform_from_code(
             container.get_main_header().type_ext[0],
@@ -241,7 +252,7 @@ impl<T: Read + Seek> Package<T>
         )?;
         let object_table = match container.sections().find_by_type(SECTION_TYPE_OBJECT_TABLE) {
             Some(v) => v,
-            None => return Err(ReadError::MissingSection(Section::ObjectTable))
+            None => return Err(Error::MissingSection(Section::ObjectTable))
         };
         Ok(Self {
             settings: Settings {
@@ -260,8 +271,8 @@ impl<T: Read + Seek> Package<T>
         })
     }
 
-    fn load_object_table(&self) -> Result<ObjectTable, ReadError> {
-        let handle = self.container.sections().find_by_type(SECTION_TYPE_STRING).ok_or(ReadError::MissingSection(Section::Strings))?;
+    fn load_object_table(&self) -> Result<ObjectTable> {
+        let handle = self.container.sections().find_by_type(SECTION_TYPE_STRING).ok_or(Error::MissingSection(Section::Strings))?;
         let strings = StringSection::new(handle);
         let table = read_object_table(&self.container, self.object_table)?;
         Ok(ObjectTable::new(table, strings))
@@ -275,7 +286,7 @@ impl<T: Read + Seek> Package<T>
     ///
     /// A [ReadError](crate::shader::error::ReadError) is returned if the object table could not be
     /// loaded.
-    pub fn objects(&self) -> Result<ObjectTableRef<T>, ReadError> {
+    pub fn objects(&self) -> Result<ObjectTableRef<T>> {
         let table = self.table.get_or_try_init(|| self.load_object_table())?;
         Ok(ObjectTableRef {
             table,
@@ -291,7 +302,7 @@ impl<T: Read + Seek> Package<T>
     ///
     /// A [ReadError](crate::shader::error::ReadError) is returned if the object table could not be
     /// loaded.
-    pub fn objects_mut(&mut self) -> Result<ObjectTableMut<T>, ReadError> {
+    pub fn objects_mut(&mut self) -> Result<ObjectTableMut<T>> {
         if self.table.get_mut().is_none() {
             //SAFETY: This is safe because it runs only if the cell is none.
             unsafe { self.table.set(self.load_object_table()?).unwrap_unchecked(); }
@@ -308,7 +319,7 @@ impl<T: Read + Seek> Package<T>
     /// # Errors
     ///
     /// A [ReadError](crate::package::error::ReadError) is returned in case of corruption or system error.
-    pub fn load_metadata(&self) -> Result<Option<&crate::sd::Object>, ReadError> {
+    pub fn load_metadata(&self) -> Result<Option<&crate::sd::Object>> {
         if self.metadata.get().is_none() {
             let res = match self.container.sections().find_by_type(SECTION_TYPE_SD) {
                 Some(v) => {

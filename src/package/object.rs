@@ -32,7 +32,7 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
     core::header::Struct,
-    package::error::{EosContext, ReadError},
+    package::error::{EosContext, Error},
     table::Item
 };
 
@@ -59,7 +59,7 @@ pub struct ObjectHeader
 impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader
 {
     type Output = ObjectHeader;
-    type Error = ReadError;
+    type Error = Error;
 
     fn new() -> Self
     {
@@ -73,7 +73,7 @@ impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader
 
     fn error_buffer_size() -> Option<Self::Error>
     {
-        Some(ReadError::Eos(EosContext::ObjectTable))
+        Some(Error::Eos(EosContext::ObjectTable))
     }
 
     fn from_bytes(buffer: [u8; SIZE_OBJECT_HEADER]) -> Result<Self::Output, Self::Error>

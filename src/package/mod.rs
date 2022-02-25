@@ -38,6 +38,9 @@ mod encoder;
 pub mod utils;
 mod table;
 
+/// Result type for all Package operations.
+pub type Result<T> = std::result::Result<T, error::Error>;
+
 pub use builder::*;
 pub use table::ObjectTableRef;
 pub use table::ObjectTableMut;

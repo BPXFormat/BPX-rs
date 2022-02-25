@@ -32,17 +32,16 @@ use crate::{
         builder::{Checksum, CompressionMethod, SectionHeaderBuilder},
         header::SectionHeader
     },
-    package::{Architecture, Platform, Settings, SECTION_TYPE_DATA}
+    package::{Architecture, Platform, Settings, SECTION_TYPE_DATA, Result}
 };
 use crate::core::{Container, Handle, SectionData};
-use crate::package::error::WriteError;
 use crate::utils::ReadFill;
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
 const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
 pub const MAX_DATA_SECTION_SIZE: usize = 200000000 - MIN_DATA_REMAINING_SIZE; //200MB
 
-pub fn write_object<T, TRead: Read>(container: &Container<T>, source: &mut TRead, data_id: Handle) -> Result<(usize, bool), WriteError>
+pub fn write_object<T, TRead: Read>(container: &Container<T>, source: &mut TRead, data_id: Handle) -> Result<(usize, bool)>
 {
     let sections = container.sections();
     let mut data = sections.open(data_id)?;

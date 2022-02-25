@@ -36,7 +36,8 @@ use std::{
 
 use crate::{
     package::{
-        error::{EosContext, ReadError, WriteError},
+        error::{EosContext, Error},
+        Result,
         Package
     },
     strings::{get_name_from_dir_entry, get_name_from_path}
@@ -63,15 +64,14 @@ pub fn pack_file_vname<T: Read + Write + Seek>(
     package: &mut Package<T>,
     vname: &str,
     source: &Path
-) -> Result<(), WriteError>
+) -> Result<()>
 {
     let md = metadata(source)?;
     if md.is_file() {
         #[cfg(feature = "debug-log")]
         println!("Writing file {} with {} byte(s)", vname, md.len());
         let mut fle = File::open(source)?;
-        //TODO: Fix once we've returned to unified error types.
-        let mut objects = package.objects_mut().unwrap();
+        let mut objects = package.objects_mut()?;
         objects.create(vname, &mut fle)?;
     } else {
         let entries = read_dir(source)?;
@@ -104,7 +104,7 @@ pub fn pack_file_vname<T: Read + Write + Seek>(
 ///
 /// A [WriteError](crate::package::error::WriteError) is returned if some objects could not be packed.
 pub fn pack_file<T: Read + Write + Seek>(package: &mut Package<T>, source: &Path)
-    -> Result<(), WriteError>
+    -> Result<()>
 {
     let str = get_name_from_path(source)?;
     pack_file_vname(package, str, source)
@@ -126,14 +126,14 @@ pub fn pack_file<T: Read + Write + Seek>(package: &mut Package<T>, source: &Path
 /// # Errors
 ///
 /// An [ReadError](crate::package::error::ReadError) is returned if some objects could not be unpacked.
-pub fn unpack<T: Read + Seek>(package: &Package<T>, target: &Path) -> Result<(), ReadError>
+pub fn unpack<T: Read + Seek>(package: &Package<T>, target: &Path) -> Result<()>
 {
     let objects = package.objects()?;
     for v in &objects {
         let size = v.size;
         let path = objects.load_name(v)?;
         if path.is_empty() {
-            return Err(ReadError::BlankString);
+            return Err(Error::BlankString);
         }
         #[cfg(feature = "debug-log")]
         println!("Reading {} with {} byte(s)...", path, size);
@@ -146,7 +146,7 @@ pub fn unpack<T: Read + Seek>(package: &Package<T>, target: &Path) -> Result<(),
         let f = File::create(dest)?;
         let s = objects.load(v, f)?;
         if size != s {
-            return Err(ReadError::Eos(EosContext::Object));
+            return Err(Error::Eos(EosContext::Object));
         }
     }
     Ok(())

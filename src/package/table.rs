@@ -30,7 +30,7 @@ use std::io::{Read, Seek, Write};
 use crate::core::{Container, Handle, SectionData};
 use crate::package::decoder::unpack_object;
 use crate::package::encoder::{create_data_section_header, MAX_DATA_SECTION_SIZE, write_object};
-use crate::package::error::{ReadError, WriteError};
+use crate::package::Result;
 use crate::package::object::ObjectHeader;
 use crate::strings::{load_string_section, StringSection};
 use crate::table::NamedItemTable;
@@ -64,7 +64,7 @@ impl ObjectTable
         self.table.len()
     }
 
-    pub fn create<T, R: Read>(&mut self, container: &mut Container<T>, name: &str, mut source: R) -> Result<usize, WriteError>
+    pub fn create<T, R: Read>(&mut self, container: &mut Container<T>, name: &str, mut source: R) -> Result<usize>
     {
         let mut object_size = 0;
         let mut data_section = *self
@@ -111,17 +111,17 @@ impl ObjectTable
         self.table.remove(index);
     }
 
-    pub fn load<T: Read + Seek, O: Write>(&self, container: &Container<T>, header: &ObjectHeader, out: O) -> Result<u64, ReadError> {
+    pub fn load<T: Read + Seek, O: Write>(&self, container: &Container<T>, header: &ObjectHeader, out: O) -> Result<u64> {
         unpack_object(container, header, out)
     }
 
-    pub fn load_name<T: Read + Seek>(&self, container: &Container<T>, header: &ObjectHeader) -> Result<&str, ReadError> {
+    pub fn load_name<T: Read + Seek>(&self, container: &Container<T>, header: &ObjectHeader) -> Result<&str> {
         load_string_section(container, &self.strings)?;
         let name = self.table.load_name(container, &self.strings, header)?;
         Ok(name)
     }
 
-    pub fn find<T: Read + Seek>(&self, container: &Container<T>, name: &str) -> Result<Option<&ObjectHeader>, ReadError> {
+    pub fn find<T: Read + Seek>(&self, container: &Container<T>, name: &str) -> Result<Option<&ObjectHeader>> {
         load_string_section(container, &self.strings)?;
         let name = self.table.find_by_name(container, &self.strings, name)?;
         Ok(name)
@@ -187,7 +187,7 @@ impl<'a, T: Read + Seek> ObjectTableRef<'a, T>
     ///
     /// Returns a [ReadError](crate::package::error::ReadError) if the section couldn't be loaded
     /// or an IO error has occured.
-    pub fn load<O: Write>(&self, header: &ObjectHeader, out: O) -> Result<u64, ReadError> {
+    pub fn load<O: Write>(&self, header: &ObjectHeader, out: O) -> Result<u64> {
         self.table.load(self.container, header, out)
     }
 
@@ -197,7 +197,7 @@ impl<'a, T: Read + Seek> ObjectTableRef<'a, T>
     ///
     /// If the name is not already loaded, returns a [ReadError](crate::package::error::ReadError)
     /// if the section couldn't be loaded or the string couldn't be loaded.
-    pub fn load_name(&self, header: &ObjectHeader) -> Result<&str, ReadError> {
+    pub fn load_name(&self, header: &ObjectHeader) -> Result<&str> {
         self.table.load_name(self.container, header)
     }
 
@@ -215,7 +215,7 @@ impl<'a, T: Read + Seek> ObjectTableRef<'a, T>
     ///
     /// A [ReadError](crate::package::error::ReadError) is returned if the strings could not be
     /// loaded.
-    pub fn find(&self, name: &str) -> Result<Option<&ObjectHeader>, ReadError> {
+    pub fn find(&self, name: &str) -> Result<Option<&ObjectHeader>> {
         self.table.find(self.container, name)
     }
 }
@@ -244,7 +244,7 @@ impl<'a, T> ObjectTableMut<'a, T>
     ///
     /// Returns a [WriteError](crate::package::error::WriteError) if the object couldn't be saved
     /// in this package.
-    pub fn create<R: Read>(&mut self, name: &str, source: R) -> Result<usize, WriteError> {
+    pub fn create<R: Read>(&mut self, name: &str, source: R) -> Result<usize> {
         self.table.create(self.container, name, source)
     }
 

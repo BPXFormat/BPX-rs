@@ -31,7 +31,8 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use crate::{
     core::{header::Struct, Container},
     package::{
-        error::{InvalidCodeContext, ReadError},
+        error::{Error, InvalidCodeContext},
+        Result,
         object::ObjectHeader,
         Architecture,
         Platform
@@ -48,7 +49,7 @@ fn load_from_section<T: Read + Seek, W: Write>(
     offset: u32,
     size: u32,
     out: &mut W
-) -> Result<u32, ReadError>
+) -> Result<u32>
 {
     let mut len = 0;
     let mut buf: [u8; DATA_READ_BUFFER_SIZE] = [0; DATA_READ_BUFFER_SIZE];
@@ -69,7 +70,7 @@ pub fn unpack_object<T: Read + Seek, W: Write>(
     container: &Container<T>,
     obj: &ObjectHeader,
     mut out: W
-) -> Result<u64, ReadError>
+) -> Result<u64>
 {
     let mut section_id = obj.start;
     let mut offset = obj.offset;
@@ -99,7 +100,7 @@ pub fn unpack_object<T: Read + Seek, W: Write>(
 pub fn read_object_table<T: Read + Seek>(
     container: &Container<T>,
     object_table: Handle
-) -> Result<NamedItemTable<ObjectHeader>, ReadError>
+) -> Result<NamedItemTable<ObjectHeader>>
 {
     let sections = container.sections();
     let count = sections.header(object_table).size / 20;
@@ -116,7 +117,7 @@ pub fn read_object_table<T: Read + Seek>(
 pub fn get_arch_platform_from_code(
     acode: u8,
     pcode: u8
-) -> Result<(Architecture, Platform), ReadError>
+) -> Result<(Architecture, Platform)>
 {
     let arch;
     let platform;
@@ -127,7 +128,10 @@ pub fn get_arch_platform_from_code(
         0x2 => arch = Architecture::X86,
         0x3 => arch = Architecture::Armv7hl,
         0x4 => arch = Architecture::Any,
-        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Arch, acode))
+        _ => return Err(Error::InvalidCode {
+            context: InvalidCodeContext::Arch,
+            code: acode
+        })
     }
     match pcode {
         0x0 => platform = Platform::Linux,
@@ -135,7 +139,10 @@ pub fn get_arch_platform_from_code(
         0x2 => platform = Platform::Windows,
         0x3 => platform = Platform::Android,
         0x4 => platform = Platform::Any,
-        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Platform, pcode))
+        _ => return Err(Error::InvalidCode {
+            context: InvalidCodeContext::Platform,
+            code: pcode
+        })
     }
     Ok((arch, platform))
 }
