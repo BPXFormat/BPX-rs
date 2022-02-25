@@ -35,8 +35,7 @@ use crate::{
         object::ObjectHeader,
         Architecture,
         Platform
-    },
-    table::ItemTable,
+    }
 };
 use crate::core::Handle;
 use crate::table::NamedItemTable;

@@ -53,10 +53,6 @@ use crate::core::Handle;
 use crate::package::table::{ObjectTable, ObjectTableMut, ObjectTableRef};
 use crate::table::NamedItemTable;
 
-const DATA_WRITE_BUFFER_SIZE: usize = 8192;
-const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
-const MAX_DATA_SECTION_SIZE: usize = 200000000 - MIN_DATA_REMAINING_SIZE; //200MB
-
 /// Represents an object reference.
 pub struct Object<'a, T>
 {
@@ -137,26 +133,30 @@ impl<'a, T> Iterator for ObjectIter<'a, T>
 /// use bpx::package::{Builder, Package};
 ///
 /// let mut bpxp = Package::create(new_byte_buf(128), Builder::new()).unwrap();
-/// bpxp.pack("TestObject", "This is a test 你好".as_bytes());
+/// {
+///     let mut objects = bpxp.objects_mut().unwrap();
+///     objects.create("TestObject", "This is a test 你好".as_bytes()).unwrap();
+/// }
 /// bpxp.save().unwrap();
 /// //Reset our bytebuf pointer to start
 /// let mut bytebuf = bpxp.into_inner().into_inner();
 /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
 /// //Attempt decoding our in-memory BPXP
 /// let mut bpxp = Package::open(bytebuf).unwrap();
-/// let items = bpxp.objects().unwrap().count();
-/// assert_eq!(items, 1);
-/// let mut object = bpxp.objects().unwrap().last().unwrap();
-/// assert_eq!(object.load_name().unwrap(), "TestObject");
+/// let objects = bpxp.objects().unwrap();
+/// assert_eq!(objects.len(), 1);
+/// let last = objects.iter().last().unwrap();
+/// assert_eq!(objects.load_name(last).unwrap(), "TestObject");
 /// {
 ///     let mut data = Vec::new();
-///     object.unpack(&mut data);
+///     objects.load(last, &mut data).unwrap();
 ///     let s = std::str::from_utf8(&data).unwrap();
 ///     assert_eq!(s, "This is a test 你好")
 /// }
 /// {
+///     let wanted = objects.find("TestObject").unwrap().unwrap();
 ///     let mut data = Vec::new();
-///     bpxp.unpack("TestObject", &mut data).unwrap();
+///     objects.load(wanted, &mut data).unwrap();
 ///     let s = std::str::from_utf8(&data).unwrap();
 ///     assert_eq!(s, "This is a test 你好")
 /// }
@@ -240,11 +240,11 @@ impl<T: Write + Seek> Package<T>
             metadata.write(&mut *section)?;
         }
         Ok(Package {
+            metadata: OnceCell::from(settings.metadata.clone()),
             settings,
             container,
             object_table,
-            table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings)),
-            metadata: OnceCell::from(settings.metadata.clone())
+            table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings))
         })
     }
 
@@ -297,7 +297,8 @@ impl<T: Read + Seek> Package<T>
     /// let mut buf = bpxp.into_inner().into_inner();
     /// buf.set_position(0);
     /// let mut bpxp = Package::open(buf).unwrap();
-    /// assert_eq!(bpxp.objects().unwrap().count(), 0);
+    /// let objects = bpxp.objects().unwrap();
+    /// assert_eq!(objects.len(), 0);
     /// ```
     pub fn open(backend: T) -> Result<Package<T>, ReadError>
     {
@@ -340,6 +341,14 @@ impl<T: Read + Seek> Package<T>
         Ok(ObjectTable::new(table, strings))
     }
 
+    /// Returns a guard for immutable access to the object table.
+    ///
+    /// This will load the object table if it's not already loaded.
+    ///
+    /// # Errors
+    ///
+    /// A [ReadError](crate::shader::error::ReadError) is returned if the object table could not be
+    /// loaded.
     pub fn objects(&self) -> Result<ObjectTableRef<T>, ReadError> {
         let table = self.table.get_or_try_init(|| self.load_object_table())?;
         Ok(ObjectTableRef {
@@ -348,9 +357,18 @@ impl<T: Read + Seek> Package<T>
         })
     }
 
+    /// Returns a guard for mutable access to the object table.
+    ///
+    /// This will load the object table if it's not already loaded.
+    ///
+    /// # Errors
+    ///
+    /// A [ReadError](crate::shader::error::ReadError) is returned if the object table could not be
+    /// loaded.
     pub fn objects_mut(&mut self) -> Result<ObjectTableMut<T>, ReadError> {
         if self.table.get_mut().is_none() {
-            self.table.set(self.load_object_table()?);
+            //SAFETY: This is safe because it runs only if the cell is none.
+            unsafe { self.table.set(self.load_object_table()?).unwrap_unchecked(); }
         }
         Ok(ObjectTableMut {
             table: unsafe { self.table.get_mut().unwrap_unchecked() },
@@ -366,7 +384,7 @@ impl<T: Read + Seek> Package<T>
     /// A [ReadError](crate::package::error::ReadError) is returned in case of corruption or system error.
     pub fn load_metadata(&self) -> Result<Option<&crate::sd::Object>, ReadError> {
         if self.metadata.get().is_none() {
-            match self.container.sections().find_by_type(SECTION_TYPE_SD) {
+            let res = match self.container.sections().find_by_type(SECTION_TYPE_SD) {
                 Some(v) => {
                     let mut section = self.container.sections().load(v)?;
                     let obj = crate::sd::Object::read(&mut *section)?;
@@ -374,6 +392,8 @@ impl<T: Read + Seek> Package<T>
                 },
                 None => self.metadata.set(None)
             };
+            //SAFETY: This is safe because we're only running this if the cell is none.
+            unsafe { res.unwrap_unchecked(); }
         }
         //SAFETY: There's a check right before this line which inserts the value if it doesn't
         // exist.

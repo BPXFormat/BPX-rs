@@ -59,7 +59,7 @@ use crate::{
 /// # Errors
 ///
 /// A [WriteError](crate::package::error::WriteError) is returned if some objects could not be packed.
-pub fn pack_file_vname<T: Write + Seek>(
+pub fn pack_file_vname<T: Read + Write + Seek>(
     package: &mut Package<T>,
     vname: &str,
     source: &Path
@@ -70,7 +70,9 @@ pub fn pack_file_vname<T: Write + Seek>(
         #[cfg(feature = "debug-log")]
         println!("Writing file {} with {} byte(s)", vname, md.len());
         let mut fle = File::open(source)?;
-        package.pack(vname, &mut fle)?;
+        //TODO: Fix once we've returned to unified error types.
+        let mut objects = package.objects_mut().unwrap();
+        objects.create(vname, &mut fle)?;
     } else {
         let entries = read_dir(source)?;
         for rentry in entries {
@@ -101,7 +103,7 @@ pub fn pack_file_vname<T: Write + Seek>(
 /// # Errors
 ///
 /// A [WriteError](crate::package::error::WriteError) is returned if some objects could not be packed.
-pub fn pack_file<T: Write + Seek>(package: &mut Package<T>, source: &Path)
+pub fn pack_file<T: Read + Write + Seek>(package: &mut Package<T>, source: &Path)
     -> Result<(), WriteError>
 {
     let str = get_name_from_path(source)?;
@@ -124,11 +126,12 @@ pub fn pack_file<T: Write + Seek>(package: &mut Package<T>, source: &Path)
 /// # Errors
 ///
 /// An [ReadError](crate::package::error::ReadError) is returned if some objects could not be unpacked.
-pub fn unpack<T: Read + Seek>(package: &mut Package<T>, target: &Path) -> Result<(), ReadError>
+pub fn unpack<T: Read + Seek>(package: &Package<T>, target: &Path) -> Result<(), ReadError>
 {
-    for v in package.objects()? {
-        let size = v.size();
-        let path = v.load_name()?;
+    let objects = package.objects()?;
+    for v in &objects {
+        let size = v.size;
+        let path = objects.load_name(v)?;
         if path.is_empty() {
             return Err(ReadError::BlankString);
         }
@@ -141,7 +144,7 @@ pub fn unpack<T: Read + Seek>(package: &mut Package<T>, target: &Path) -> Result
             std::fs::create_dir_all(v)?;
         }
         let f = File::create(dest)?;
-        let s = v.unpack(f)?;
+        let s = objects.load(v, f)?;
         if size != s {
             return Err(ReadError::Eos(EosContext::Object));
         }
