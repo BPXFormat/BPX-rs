@@ -26,10 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::{
-    io::{Read, Seek, SeekFrom, Write},
-    slice::Iter
-};
+use std::io::{Read, Seek, SeekFrom, Write};
 use once_cell::unsync::OnceCell;
 
 use crate::{
@@ -39,89 +36,18 @@ use crate::{
         Container
     },
     package::{
-        decoder::{get_arch_platform_from_code, read_object_table, unpack_object},
+        decoder::{get_arch_platform_from_code, read_object_table},
         encoder::get_type_ext,
         error::{ReadError, Section, WriteError},
-        object::ObjectHeader,
         Settings,
         SECTION_TYPE_OBJECT_TABLE,
         SUPPORTED_VERSION
     },
-    strings::{load_string_section, StringSection}
+    strings::StringSection
 };
 use crate::core::Handle;
 use crate::package::table::{ObjectTable, ObjectTableMut, ObjectTableRef};
 use crate::table::NamedItemTable;
-
-/// Represents an object reference.
-pub struct Object<'a, T>
-{
-    container: &'a Container<T>,
-    strings: &'a StringSection,
-    header: &'a ObjectHeader
-}
-
-impl<'a, T: Read + Seek> Object<'a, T>
-{
-    /// Unpacks this object to the given `out` io backend.
-    ///
-    /// # Arguments
-    ///
-    /// * `out`: A [Write](std::io::Write) to unpack object data to.
-    ///
-    /// returns: Result<u64, ReadError>
-    ///
-    /// # Errors
-    ///
-    /// Returns a [ReadError](crate::package::error::ReadError) if the section couldn't be loaded
-    /// or an IO error has occured.
-    pub fn unpack<W: Write>(&self, out: W) -> Result<u64, ReadError>
-    {
-        unpack_object(self.container, self.header, out)
-    }
-
-    /// Loads the name of this object if it's not already loaded.
-    ///
-    /// # Errors
-    ///
-    /// If the name is not already loaded, returns a [ReadError](crate::package::error::ReadError)
-    /// if the section couldn't be loaded or the string couldn't be loaded.
-    pub fn load_name(&self) -> Result<&str, ReadError>
-    {
-        load_string_section(self.container, self.strings)?;
-        let name = self.strings.get(self.container, self.header.name)?;
-        Ok(name)
-    }
-
-    /// Returns the size in bytes of this object.
-    pub fn size(&self) -> u64
-    {
-        self.header.size
-    }
-}
-
-/// An iterator over [Object](crate::package::Object).
-pub struct ObjectIter<'a, T>
-{
-    container: &'a Container<T>,
-    strings: &'a StringSection,
-    iter: Iter<'a, ObjectHeader>
-}
-
-impl<'a, T> Iterator for ObjectIter<'a, T>
-{
-    type Item = Object<'a, T>;
-
-    fn next(&mut self) -> Option<Self::Item>
-    {
-        let header = self.iter.next()?;
-        Some(Object {
-            header,
-            strings: self.strings,
-            container: self.container
-        })
-    }
-}
 
 /// A BPXP (Package).
 ///

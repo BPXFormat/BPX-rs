@@ -26,12 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::{
-    io::{Read, Seek, SeekFrom, Write},
-    ops::Deref,
-    slice::Iter
-};
-
+use std::io::{Read, Seek, SeekFrom, Write};
 use byteorder::{ByteOrder, LittleEndian};
 use once_cell::unsync::OnceCell;
 
@@ -41,104 +36,22 @@ use crate::{
         header::{Struct, SECTION_TYPE_STRING},
         Container
     },
-    sd::Object,
     shader::{
         decoder::{get_target_type_from_code, read_symbol_table},
         encoder::get_type_ext,
         error::{ReadError, Section, WriteError},
-        symbol::{Symbol, FLAG_EXTENDED_DATA},
         Settings,
         SECTION_TYPE_EXTENDED_DATA,
         SECTION_TYPE_SHADER,
         SECTION_TYPE_SYMBOL_TABLE,
         SUPPORTED_VERSION
     },
-    strings::{load_string_section, StringSection}
+    strings::StringSection
 };
 use crate::core::Handle;
 use crate::shader::{ShaderTableMut, ShaderTableRef, SymbolTableMut, SymbolTableRef};
 use crate::shader::table::{ShaderTable, SymbolTable};
 use crate::table::NamedItemTable;
-
-/// Represents a symbol reference.
-pub struct SymbolRef<'a, T>
-{
-    extended_data: &'a Option<Handle>,
-    container: &'a Container<T>,
-    strings: &'a StringSection,
-    sym: &'a Symbol
-}
-
-impl<'a, T> Deref for SymbolRef<'a, T>
-{
-    type Target = Symbol;
-
-    fn deref(&self) -> &Self::Target
-    {
-        self.sym
-    }
-}
-
-impl<'a, T: Read + Seek> SymbolRef<'a, T>
-{
-    /// Loads the name of this symbol if it's not already loaded.
-    ///
-    /// # Errors
-    ///
-    /// If the name is not already loaded, returns a [ReadError](crate::shader::error::ReadError)
-    /// if the section couldn't be loaded or the string couldn't be loaded.
-    pub fn load_name(&self) -> Result<&str, ReadError>
-    {
-        load_string_section(self.container, self.strings)?;
-        let addr = self.name;
-        let str = self.strings.get(self.container, addr)?;
-        Ok(str)
-    }
-
-    /// Loads the extended data of this symbol if it's not already loaded.
-    ///
-    /// # Errors
-    ///
-    /// If the [Object](crate::sd::Object) is not already loaded, returns a
-    /// [ReadError](crate::shader::error::ReadError) if the section couldn't be loaded
-    /// or the [Object](crate::sd::Object) couldn't be decoded.
-    pub fn load_extended_data(&self) -> Result<Object, ReadError>
-    {
-        if self.flags & FLAG_EXTENDED_DATA == 0 {
-            panic!("The symbol extended data is undefined.");
-        }
-        let section = self.extended_data.ok_or(ReadError::MissingSection(Section::ExtendedData))?;
-        let mut section = self.container.sections().load(section)?;
-        section.seek(SeekFrom::Start(self.sym.extended_data as _))?;
-        let obj = Object::read(&mut *section)?;
-        Ok(obj)
-    }
-}
-
-/// An iterator over [SymbolRef](crate::shader::SymbolRef).
-pub struct SymbolIter<'a, T>
-{
-    extended_data: &'a Option<Handle>,
-    container: &'a Container<T>,
-    strings: &'a StringSection,
-    iter: Iter<'a, Symbol>
-}
-
-impl<'a, T> Iterator for SymbolIter<'a, T>
-{
-    type Item = SymbolRef<'a, T>;
-
-    fn next(&mut self) -> Option<Self::Item>
-    {
-        let sym = self.iter.next()?;
-        Some(SymbolRef {
-            extended_data: &self.extended_data,
-            strings: &self.strings,
-            container: &self.container,
-            sym
-        })
-    }
-}
 
 /// A BPXS (ShaderPack).
 ///
