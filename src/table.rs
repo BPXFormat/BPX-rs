@@ -265,14 +265,13 @@ impl<T: Item> NamedItemTable<T>
 
 impl<T: Item + Clone> NamedItemTable<T>
 {
-    fn build_lookup_table<T1>(&self, container: &Container<T1>, strings: &StringSection) -> Result<(), crate::strings::ReadError> {
+    fn build_lookup_table<T1>(&self, container: &Container<T1>, strings: &StringSection) -> Result<HashMap<String, T>, crate::strings::ReadError> {
         let mut map: HashMap<String, T> = HashMap::new();
         for v in &self.list {
             let name = strings.get(container, v.get_name_address())?.into();
             map.insert(name, v.clone());
         }
-        self.map.set(map).unwrap_err();
-        Ok(())
+        Ok(map)
     }
 
     /// Lookup an item by its name.
@@ -290,10 +289,7 @@ impl<T: Item + Clone> NamedItemTable<T>
     ///
     /// A [ReadError](crate::strings::ReadError) is returned if the strings could not be loaded.
     pub fn find_by_name<T1>(&self, container: &Container<T1>, strings: &StringSection, name: &str) -> Result<Option<&T>, crate::strings::ReadError> {
-        if self.map.get().is_none() {
-            self.build_lookup_table(container, strings)?;
-        }
-        let map = unsafe { self.map.get().unwrap_unchecked() };
+        let map = self.map.get_or_try_init(|| self.build_lookup_table(container, strings))?;
         Ok(map.get(name))
     }
 }
