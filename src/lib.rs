@@ -38,6 +38,8 @@
 
 //TODO: Call load function directly in StringSection as now lazy loading is an immutable operation.
 
+//TODO: bpx::sd::Object and bpx::sd::Array should be Deref targets to respectively HashMap and Vec.
+
 pub mod core;
 mod garraylen;
 pub mod macros;

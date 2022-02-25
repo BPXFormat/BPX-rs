@@ -40,6 +40,7 @@ use crate::{
     table::ItemTable
 };
 use crate::core::Handle;
+use crate::table::NamedItemTable;
 
 pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
 {
@@ -92,10 +93,9 @@ pub fn get_stage_from_code(code: u8) -> Result<Stage, ReadError>
 
 pub fn read_symbol_table<T: Read + Seek>(
     container: &Container<T>,
-    symbols: &mut Vec<Symbol>,
     num_symbols: u16,
     symbol_table: Handle
-) -> Result<ItemTable<Symbol>, ReadError>
+) -> Result<NamedItemTable<Symbol>, ReadError>
 {
     let sections = container.sections();
     let count = sections.header(symbol_table).size as u32 / SIZE_SYMBOL_STRUCTURE as u32;
@@ -103,10 +103,11 @@ pub fn read_symbol_table<T: Read + Seek>(
     if count != num_symbols as u32 {
         return Err(ReadError::Eos(EosContext::SymbolTable));
     }
+    let mut symbols = Vec::with_capacity(count as _);
     let mut data = sections.load(symbol_table)?;
     for _ in 0..count {
         let header = Symbol::read(&mut *data)?;
         symbols.push(header);
     }
-    Ok(ItemTable::new(symbols.clone()))
+    Ok(NamedItemTable::with_list(symbols))
 }

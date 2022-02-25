@@ -34,10 +34,16 @@ mod decoder;
 mod encoder;
 pub mod error;
 pub mod symbol;
+mod table;
 
 pub use builder::*;
 
 pub use self::core::*;
+
+pub use table::ShaderTableRef;
+pub use table::ShaderTableMut;
+pub use table::SymbolTableRef;
+pub use table::SymbolTableMut;
 
 /// The supported BPX version for this shader variant decoder/encoder.
 pub const SUPPORTED_VERSION: u32 = 0x2;
