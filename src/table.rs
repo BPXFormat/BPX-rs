@@ -141,7 +141,7 @@ impl<T: Item + Clone> ItemTable<T>
         &mut self,
         container: &mut Container<T1>,
         names: &mut StringSection
-    ) -> Result<(), crate::strings::ReadError>
+    ) -> Result<(), crate::strings::Error>
     {
         let mut map: HashMap<String, T> = HashMap::new();
         for v in &self.list {
@@ -258,14 +258,14 @@ impl<T: Item> NamedItemTable<T>
     /// # Errors
     ///
     /// A [ReadError](crate::strings::ReadError) is returned if the strings could not be loaded.
-    pub fn load_name<'a, T1>(&self, container: &Container<T1>, strings: &'a StringSection, item: &T) -> Result<&'a str, crate::strings::ReadError> {
+    pub fn load_name<'a, T1>(&self, container: &Container<T1>, strings: &'a StringSection, item: &T) -> Result<&'a str, crate::strings::Error> {
         strings.get(container, item.get_name_address())
     }
 }
 
 impl<T: Item + Clone> NamedItemTable<T>
 {
-    fn build_lookup_table<T1>(&self, container: &Container<T1>, strings: &StringSection) -> Result<HashMap<String, T>, crate::strings::ReadError> {
+    fn build_lookup_table<T1>(&self, container: &Container<T1>, strings: &StringSection) -> Result<HashMap<String, T>, crate::strings::Error> {
         let mut map: HashMap<String, T> = HashMap::new();
         for v in &self.list {
             let name = strings.get(container, v.get_name_address())?.into();
@@ -288,7 +288,7 @@ impl<T: Item + Clone> NamedItemTable<T>
     /// # Errors
     ///
     /// A [ReadError](crate::strings::ReadError) is returned if the strings could not be loaded.
-    pub fn find_by_name<T1>(&self, container: &Container<T1>, strings: &StringSection, name: &str) -> Result<Option<&T>, crate::strings::ReadError> {
+    pub fn find_by_name<T1>(&self, container: &Container<T1>, strings: &StringSection, name: &str) -> Result<Option<&T>, crate::strings::Error> {
         let map = self.map.get_or_try_init(|| self.build_lookup_table(container, strings))?;
         Ok(map.get(name))
     }
