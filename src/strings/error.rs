@@ -33,7 +33,7 @@ use crate::macros::impl_err_conversion;
 
 /// Represents a string section read error.
 #[derive(Debug)]
-pub enum ReadError
+pub enum Error
 {
     /// Describes an utf8 decoding/encoding error.
     Utf8,
@@ -50,51 +50,21 @@ pub enum ReadError
 }
 
 impl_err_conversion!(
-    ReadError {
+    Error {
         std::io::Error => Io,
         OpenError => Open
     }
 );
 
-impl Display for ReadError
+impl Display for Error
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         match self {
-            ReadError::Utf8 => f.write_str("utf8 error"),
-            ReadError::Eos => f.write_str("EOS reached before end of string"),
-            ReadError::Open(e) => write!(f, "open error ({})", e),
-            ReadError::Io(e) => write!(f, "io error: {}", e)
-        }
-    }
-}
-
-/// Represents a string section write error.
-#[derive(Debug)]
-pub enum WriteError
-{
-    /// Describes an io error.
-    Io(std::io::Error),
-
-    /// Indicates an [OpenError](crate::core::error::OpenError) has occurred when attempting
-    /// to open the section.
-    Open(OpenError)
-}
-
-impl_err_conversion!(
-    WriteError {
-        std::io::Error => Io,
-        OpenError => Open
-    }
-);
-
-impl Display for WriteError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
-        match self {
-            WriteError::Open(e) => write!(f, "open error ({})", e),
-            WriteError::Io(e) => write!(f, "io error: {}", e)
+            Error::Utf8 => f.write_str("utf8 error"),
+            Error::Eos => f.write_str("EOS reached before end of string"),
+            Error::Open(e) => write!(f, "open error ({})", e),
+            Error::Io(e) => write!(f, "io error: {}", e)
         }
     }
 }

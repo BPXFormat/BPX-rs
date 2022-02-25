@@ -37,7 +37,8 @@ use std::{
     string::String
 };
 
-pub use error::{PathError, ReadError, WriteError};
+pub use error::PathError;
+pub use error::Error;
 
 use crate::{
     core::{AutoSectionData, Container, SectionData},
@@ -100,7 +101,7 @@ impl StringSection
     /// Returns a [ReadError](crate::strings::ReadError) if the string could not be read or the
     /// section is corrupted/truncated.
     pub fn get<T>(&self, container: &Container<T>, address: u32)
-        -> Result<&str, ReadError>
+        -> Result<&str, Error>
     {
         if self.cache.get(&address).is_none() {
             let mut section = container.sections().open(self.section)?;
@@ -125,7 +126,7 @@ impl StringSection
     /// # Errors
     ///
     /// Returns a [WriteError](crate::strings::WriteError) if the string could not be written.
-    pub fn put<T>(&self, container: &Container<T>, s: &str) -> Result<u32, WriteError>
+    pub fn put<T>(&self, container: &Container<T>, s: &str) -> Result<u32, Error>
     {
         let mut section = container.sections().open(self.section)?;
         let address = low_level_write_string(s, &mut *section)?;
@@ -151,7 +152,7 @@ impl StringSection
 pub fn load_string_section<T: Read + Seek>(
     container: &Container<T>,
     strings: &StringSection
-) -> Result<(), crate::core::error::ReadError>
+) -> Result<(), crate::core::error::Error>
 {
     container.sections().load(strings.handle())?;
     Ok(())
@@ -160,7 +161,7 @@ pub fn load_string_section<T: Read + Seek>(
 fn low_level_read_string(
     ptr: u32,
     string_section: &mut AutoSectionData
-) -> Result<String, ReadError>
+) -> Result<String, Error>
 {
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
@@ -168,16 +169,16 @@ fn low_level_read_string(
     string_section.seek(SeekFrom::Start(ptr as u64))?;
     // Read is enough as Sections are guaranteed to fill the buffer as much as possible
     if string_section.read(&mut chr)? != 1 {
-        return Err(ReadError::Eos);
+        return Err(Error::Eos);
     }
     while chr[0] != 0x0 {
         curs.push(chr[0]);
         if string_section.read(&mut chr)? != 1 {
-            return Err(ReadError::Eos);
+            return Err(Error::Eos);
         }
     }
     match String::from_utf8(curs) {
-        Err(_) => Err(ReadError::Utf8),
+        Err(_) => Err(Error::Utf8),
         Ok(v) => Ok(v)
     }
 }
