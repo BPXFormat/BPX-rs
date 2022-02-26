@@ -59,7 +59,7 @@ use crate::{
 ///
 /// # Errors
 ///
-/// A [WriteError](crate::package::error::WriteError) is returned if some objects could not be packed.
+/// An [Error](crate::package::error::Error) is returned if some objects could not be packed.
 pub fn pack_file_vname<T: Read + Write + Seek>(
     package: &mut Package<T>,
     vname: &str,
@@ -98,11 +98,11 @@ pub fn pack_file_vname<T: Read + Write + Seek>(
 /// * `package`: the [Package](crate::package::Package) to use.
 /// * `source`: the source [Path](std::path::Path) to pack.
 ///
-/// returns: Result<(), Error>
+/// returns: Result<()>
 ///
 /// # Errors
 ///
-/// A [WriteError](crate::package::error::WriteError) is returned if some objects could not be packed.
+/// An [Error](crate::package::error::Error) is returned if some objects could not be packed.
 pub fn pack_file<T: Read + Write + Seek>(package: &mut Package<T>, source: &Path)
     -> Result<()>
 {
@@ -121,11 +121,11 @@ pub fn pack_file<T: Read + Write + Seek>(package: &mut Package<T>, source: &Path
 /// * `package`: the [Package](crate::package::Package) to use.
 /// * `target`: the target [Path](std::path::Path) to extract the content to.
 ///
-/// returns: Result<(), Error>
+/// returns: Result<()>
 ///
 /// # Errors
 ///
-/// An [ReadError](crate::package::error::ReadError) is returned if some objects could not be unpacked.
+/// An [Error](crate::package::error::Error) is returned if some objects could not be unpacked.
 pub fn unpack<T: Read + Seek>(package: &Package<T>, target: &Path) -> Result<()>
 {
     let objects = package.objects()?;

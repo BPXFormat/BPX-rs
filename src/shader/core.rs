@@ -177,7 +177,7 @@ impl<T: Write + Seek> ShaderPack<T>
     ///
     /// # Errors
     ///
-    /// Returns a [WriteError](crate::shader::error::WriteError) if some parts of this shader
+    /// Returns an [Error](crate::shader::error::Error) if some parts of this shader
     /// package couldn't be saved.
     pub fn save(&mut self) -> Result<()>
     {
@@ -208,7 +208,7 @@ impl<T: Read + Seek> ShaderPack<T>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::shader::error::ReadError) is returned if some
+    /// An [Error](crate::shader::error::Error) is returned if some
     /// sections/headers could not be loaded.
     ///
     /// # Examples
@@ -285,7 +285,7 @@ impl<T: Read + Seek> ShaderPack<T>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::shader::error::ReadError) is returned if the symbol table could not be
+    /// An [Error](crate::shader::error::Error) is returned if the symbol table could not be
     /// loaded.
     pub fn symbols(&self) -> Result<SymbolTableRef<T>> {
         let table = self.symbols.get_or_try_init(|| self.load_symbol_table())?;
@@ -301,7 +301,7 @@ impl<T: Read + Seek> ShaderPack<T>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::shader::error::ReadError) is returned if the symbol table could not be
+    /// An [Error](crate::shader::error::Error) is returned if the symbol table could not be
     /// loaded.
     pub fn symbols_mut(&mut self) -> Result<SymbolTableMut<T>> {
         if self.symbols.get_mut().is_none() {

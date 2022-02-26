@@ -197,7 +197,7 @@ impl<'a, T: Read + Seek> SymbolTableRef<'a, T>
     ///
     /// # Errors
     ///
-    /// If the name is not already loaded, returns a [ReadError](crate::package::error::ReadError)
+    /// If the name is not already loaded, returns an [Error](crate::package::error::Error)
     /// if the section couldn't be loaded or the string couldn't be loaded.
     pub fn load_name(&self, sym: &Symbol) -> Result<&str> {
         self.table.load_name(self.container, sym)
@@ -215,7 +215,7 @@ impl<'a, T: Read + Seek> SymbolTableRef<'a, T>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::package::error::ReadError) is returned if the strings could not be
+    /// An [Error](crate::package::error::Error) is returned if the strings could not be
     /// loaded.
     pub fn find(&self, name: &str) -> Result<Option<&Symbol>> {
         self.table.find_by_name(self.container, name)
@@ -229,8 +229,8 @@ impl<'a, T: Read + Seek> SymbolTableRef<'a, T>
     ///
     /// # Errors
     ///
-    /// If the [Object](crate::sd::Object) is not already loaded, returns a
-    /// [ReadError](crate::shader::error::ReadError) if the section couldn't be loaded
+    /// If the [Object](crate::sd::Object) is not already loaded, returns an
+    /// [Error](crate::shader::error::Error) if the section couldn't be loaded
     /// or the [Object](crate::sd::Object) couldn't be decoded.
     pub fn load_extended_data(&self, sym: &Symbol) -> Result<&crate::sd::Object> {
         self.table.load_extended_data(self.container, sym)
@@ -252,11 +252,11 @@ impl<'a, T> SymbolTableMut<'a, T>
     ///
     /// * `sym`: An [Settings](crate::shader::symbol::Settings), see [Builder](crate::shader::symbol::Builder) for more information.
     ///
-    /// returns: Result<(), Error>
+    /// returns: Result<()>
     ///
     /// # Errors
     ///
-    /// A [WriteError](crate::shader::error::WriteError) is returned if the symbol could not be
+    /// An [Error](crate::shader::error::Error) is returned if the symbol could not be
     /// written.
     pub fn create<S: Into<Settings>>(&mut self, sym: S) -> Result<usize> {
         self.table.create(self.container, sym)
@@ -400,11 +400,11 @@ impl<'a, T: Read + Seek> ShaderTableRef<'a, T>
     ///
     /// * `handle`: a handle to the shader section.
     ///
-    /// returns: Result<Shader, ReadError>
+    /// returns: Result<Shader>
     ///
     /// # Errors
     ///
-    /// An [ReadError](crate::shader::error::ReadError) is returned if the shader could not be loaded.
+    /// An [Error](crate::shader::error::Error) is returned if the shader could not be loaded.
     pub fn load(&self, handle: &Handle) -> Result<&Shader> {
         self.table.load(self.container, handle)
     }
@@ -429,7 +429,7 @@ impl<'a, T> ShaderTableMut<'a, T>
     ///
     /// # Errors
     ///
-    /// A [WriteError](crate::shader::error::WriteError) is returned if the shader could not be
+    /// An [Error](crate::shader::error::Error) is returned if the shader could not be
     /// written.
     pub fn create(&mut self, shader: Shader) -> Result<Handle> {
         self.table.create(self.container, shader)

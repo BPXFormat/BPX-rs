@@ -98,7 +98,7 @@ impl StringSection
     ///
     /// # Errors
     ///
-    /// Returns a [ReadError](crate::strings::ReadError) if the string could not be read or the
+    /// Returns an [Error](crate::strings::Error) if the string could not be read or the
     /// section is corrupted/truncated.
     pub fn get<T>(&self, container: &Container<T>, address: u32)
         -> Result<&str, Error>
@@ -121,11 +121,11 @@ impl StringSection
     /// * `container`: the BPX container.
     /// * `s`: the string to write.
     ///
-    /// returns: Result<u32, Error>
+    /// returns: Result<u32>
     ///
     /// # Errors
     ///
-    /// Returns a [WriteError](crate::strings::WriteError) if the string could not be written.
+    /// Returns an [Error](crate::strings::Error) if the string could not be written.
     pub fn put<T>(&self, container: &Container<T>, s: &str) -> Result<u32, Error>
     {
         let mut section = container.sections().open(self.section)?;
@@ -148,7 +148,11 @@ impl StringSection
 /// * `container`: the container which owns the string section.
 /// * `strings`: a reference to the string section.
 ///
-/// returns: Result<(), ReadError>
+/// returns: Result<(), Error>
+///
+/// # Errors
+///
+/// Returns an [Error](crate::core::error::Error) if the section couldn't be loaded.
 pub fn load_string_section<T: Read + Seek>(
     container: &Container<T>,
     strings: &StringSection

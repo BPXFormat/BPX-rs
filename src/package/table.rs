@@ -181,11 +181,11 @@ impl<'a, T: Read + Seek> ObjectTableRef<'a, T>
     ///
     /// * `out`: A [Write](std::io::Write) to unpack object data to.
     ///
-    /// returns: Result<u64, ReadError>
+    /// returns: Result<u64>
     ///
     /// # Errors
     ///
-    /// Returns a [ReadError](crate::package::error::ReadError) if the section couldn't be loaded
+    /// Returns an [Error](crate::package::error::Error) if the section couldn't be loaded
     /// or an IO error has occured.
     pub fn load<O: Write>(&self, header: &ObjectHeader, out: O) -> Result<u64> {
         self.table.load(self.container, header, out)
@@ -195,7 +195,7 @@ impl<'a, T: Read + Seek> ObjectTableRef<'a, T>
     ///
     /// # Errors
     ///
-    /// If the name is not already loaded, returns a [ReadError](crate::package::error::ReadError)
+    /// If the name is not already loaded, returns an [Error](crate::package::error::Error)
     /// if the section couldn't be loaded or the string couldn't be loaded.
     pub fn load_name(&self, header: &ObjectHeader) -> Result<&str> {
         self.table.load_name(self.container, header)
@@ -209,11 +209,11 @@ impl<'a, T: Read + Seek> ObjectTableRef<'a, T>
     ///
     /// * `name`: the name to search for.
     ///
-    /// returns: Result<Option<&ObjectHeader>, ReadError>
+    /// returns: Result<Option<&ObjectHeader>>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::package::error::ReadError) is returned if the strings could not be
+    /// An [Error](crate::package::error::Error) is returned if the strings could not be
     /// loaded.
     pub fn find(&self, name: &str) -> Result<Option<&ObjectHeader>> {
         self.table.find(self.container, name)
@@ -238,11 +238,11 @@ impl<'a, T> ObjectTableMut<'a, T>
     /// * `name`: The name of the object.
     /// * `source`: A [Read](std::io::Read) to read object data from.
     ///
-    /// returns: Result<(), WriteError>
+    /// returns: Result<()>
     ///
     /// # Errors
     ///
-    /// Returns a [WriteError](crate::package::error::WriteError) if the object couldn't be saved
+    /// Returns an [Error](crate::package::error::Error) if the object couldn't be saved
     /// in this package.
     pub fn create<R: Read>(&mut self, name: &str, source: R) -> Result<usize> {
         self.table.create(self.container, name, source)

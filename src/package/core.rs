@@ -183,7 +183,7 @@ impl<T: Write + Seek> Package<T>
     ///
     /// # Errors
     ///
-    /// Returns a [WriteError](crate::package::error::WriteError) if some parts of this package
+    /// Returns an [Error](crate::package::error::Error) if some parts of this package
     /// couldn't be saved.
     pub fn save(&mut self) -> Result<()>
     {
@@ -213,7 +213,7 @@ impl<T: Read + Seek> Package<T>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::package::error::ReadError) is returned if some
+    /// An [Error](crate::package::error::Error) is returned if some
     /// sections/headers could not be loaded.
     ///
     /// # Examples
@@ -284,7 +284,7 @@ impl<T: Read + Seek> Package<T>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::shader::error::ReadError) is returned if the object table could not be
+    /// An [Error](crate::shader::error::Error) is returned if the object table could not be
     /// loaded.
     pub fn objects(&self) -> Result<ObjectTableRef<T>> {
         let table = self.table.get_or_try_init(|| self.load_object_table())?;
@@ -300,7 +300,7 @@ impl<T: Read + Seek> Package<T>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::shader::error::ReadError) is returned if the object table could not be
+    /// An [Error](crate::shader::error::Error) is returned if the object table could not be
     /// loaded.
     pub fn objects_mut(&mut self) -> Result<ObjectTableMut<T>> {
         if self.table.get_mut().is_none() {
@@ -318,7 +318,7 @@ impl<T: Read + Seek> Package<T>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::package::error::ReadError) is returned in case of corruption or system error.
+    /// An [Error](crate::package::error::Error) is returned in case of corruption or system error.
     pub fn load_metadata(&self) -> Result<Option<&crate::sd::Object>> {
         if self.metadata.get().is_none() {
             let res = match self.container.sections().find_by_type(SECTION_TYPE_SD) {

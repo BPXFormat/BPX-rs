@@ -136,7 +136,7 @@ impl<T: Item + Clone> ItemTable<T>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::strings::ReadError) is returned if the strings could not be loaded.
+    /// An [Error](crate::strings::Error) is returned if the strings could not be loaded.
     pub fn build_lookup_table<T1>(
         &mut self,
         container: &mut Container<T1>,
@@ -253,11 +253,11 @@ impl<T: Item> NamedItemTable<T>
     /// * `strings`: the string section to use for loading the string.
     /// * `item`: the item to load the string of.
     ///
-    /// returns: Result<&str, ReadError>
+    /// returns: Result<&str, Error>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::strings::ReadError) is returned if the strings could not be loaded.
+    /// An [Error](crate::strings::Error) is returned if the strings could not be loaded.
     pub fn load_name<'a, T1>(&self, container: &Container<T1>, strings: &'a StringSection, item: &T) -> Result<&'a str, crate::strings::Error> {
         strings.get(container, item.get_name_address())
     }
@@ -283,11 +283,11 @@ impl<T: Item + Clone> NamedItemTable<T>
     /// * `strings`: the string section to use for loading strings if needed.
     /// * `name`: the name to search for.
     ///
-    /// returns: Result<Option<&T>, ReadError>
+    /// returns: Result<Option<&T>, Error>
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::strings::ReadError) is returned if the strings could not be loaded.
+    /// A [Error](crate::strings::Error) is returned if the strings could not be loaded.
     pub fn find_by_name<T1>(&self, container: &Container<T1>, strings: &StringSection, name: &str) -> Result<Option<&T>, crate::strings::Error> {
         let map = self.map.get_or_try_init(|| self.build_lookup_table(container, strings))?;
         Ok(map.get(name))
