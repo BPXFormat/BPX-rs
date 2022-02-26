@@ -67,6 +67,13 @@ pub struct Debugger
     symbols_list: Vec<String>
 }
 
+impl AsRef<Object> for Debugger
+{
+    fn as_ref(&self) -> &Object {
+        &self.inner
+    }
+}
+
 impl Debugger
 {
     /// Attach a debugger to an object.
