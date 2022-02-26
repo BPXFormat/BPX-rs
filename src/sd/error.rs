@@ -31,6 +31,7 @@
 use std::fmt::{Display, Formatter};
 
 use crate::macros::impl_err_conversion;
+use crate::sd::value::Type;
 
 /// Represents a structured data read error
 #[derive(Debug)]
@@ -39,12 +40,9 @@ pub enum Error
     /// Describes an io error.
     Io(std::io::Error),
 
-    /// Describes a data truncation error, this means a section or
+    /// Describes a data truncation error while reading a value type, this means a section or
     /// the file itself has been truncated.
-    ///
-    /// # Arguments
-    /// * failed operation name.
-    Truncation(&'static str),
+    Truncation(Type),
 
     /// Describes a bad type code for a value.
     BadTypeCode(u8),
@@ -64,7 +62,7 @@ impl Display for Error
     {
         match self {
             Error::Io(e) => write!(f, "io error: {}", e),
-            Error::Truncation(typename) => write!(f, "failed to read {}", typename),
+            Error::Truncation(ty) => write!(f, "failed to read {}", ty.name()),
             Error::BadTypeCode(code) => write!(f, "unknown value type code ({})", code),
             Error::Utf8 => f.write_str("utf8 error"),
             Error::CapacityExceeded(count) => {
@@ -78,11 +76,11 @@ impl Display for Error
 #[derive(Debug)]
 pub struct TypeError
 {
-    /// The expected type name
-    pub expected_type_name: &'static str,
+    /// The expected value type.
+    pub expected_type: Type,
 
-    /// The actual type name
-    pub actual_type_name: &'static str
+    /// The actual value type.
+    pub actual_type: Type
 }
 
 impl TypeError
@@ -91,15 +89,15 @@ impl TypeError
     ///
     /// # Arguments
     ///
-    /// * `expected`: the expected type name.
-    /// * `actual`: the actual type name.
+    /// * `expected`: the expected value type.
+    /// * `actual`: the actual value type.
     ///
     /// returns: TypeError
-    pub fn new(expected: &'static str, actual: &'static str) -> TypeError
+    pub fn new(expected: Type, actual: Type) -> TypeError
     {
         TypeError {
-            expected_type_name: expected,
-            actual_type_name: actual
+            expected_type: expected,
+            actual_type: actual
         }
     }
 }
@@ -111,7 +109,7 @@ impl Display for TypeError
         write!(
             f,
             "unsupported type conversion (expected {}, got {})",
-            self.expected_type_name, self.actual_type_name
+            self.expected_type.name(), self.actual_type.name()
         )
     }
 }

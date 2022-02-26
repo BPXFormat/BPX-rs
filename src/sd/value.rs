@@ -33,8 +33,60 @@ use std::{
 
 use crate::{
     macros::impl_err_conversion,
+    macros::named_enum,
     sd::{error::TypeError, Array, Object}
 };
+
+named_enum!(
+    /// Represents the value type.
+    #[derive(Copy, Clone)]
+    Type {
+        /// A null type.
+        Null: "null",
+
+        /// A bool type.
+        Bool: "bool",
+
+        /// An 8 bit unsigned integer type.
+        Uint8: "uint8",
+
+        /// A 16 bit unsigned integer type.
+        Uint16: "uint16",
+
+        /// A 32 bit unsigned integer type.
+        Uint32: "uint32",
+
+        /// An 64 bit unsigned integer type.
+        Uint64: "uint64",
+
+        /// An 8 bit integer type.
+        Int8: "int8",
+
+        /// A 16 bit integer type.
+        Int16: "int16",
+
+        /// A 32 bit integer type.
+        Int32: "int32",
+
+        /// A 64 bit integer type.
+        Int64: "int64",
+
+        /// A 32 bit float type.
+        Float: "float",
+
+        /// A 64 bit float type.
+        Double: "double",
+
+        /// A string type.
+        String: "string",
+
+        /// An array type.
+        Array: "array",
+
+        /// An object type.
+        Object: "object"
+    }
+);
 
 /// Represents a BPXSD value.
 #[derive(PartialEq, Clone)]
@@ -88,29 +140,24 @@ pub enum Value
 
 impl Value
 {
-    /// Gets the variant name of this Value
-    ///
-    /// # Returns
-    ///
-    /// * a static string reference to the variant name
-    pub fn get_type_name(&self) -> &'static str
-    {
+    /// Gets the type of this Value.
+    pub fn get_type(&self) -> Type {
         match self {
-            Value::Null => "null",
-            Value::Bool(_) => "bool",
-            Value::Uint8(_) => "uint8",
-            Value::Uint16(_) => "uint16",
-            Value::Uint32(_) => "uint32",
-            Value::Uint64(_) => "uint64",
-            Value::Int8(_) => "int8",
-            Value::Int16(_) => "int16",
-            Value::Int32(_) => "int32",
-            Value::Int64(_) => "int64",
-            Value::Float(_) => "float",
-            Value::Double(_) => "double",
-            Value::String(_) => "string",
-            Value::Array(_) => "array",
-            Value::Object(_) => "object"
+            Value::Null => Type::Null,
+            Value::Bool(_) => Type::Bool,
+            Value::Uint8(_) => Type::Uint8,
+            Value::Uint16(_) => Type::Uint16,
+            Value::Uint32(_) => Type::Uint32,
+            Value::Uint64(_) => Type::Uint64,
+            Value::Int8(_) => Type::Int8,
+            Value::Int16(_) => Type::Int16,
+            Value::Int32(_) => Type::Int32,
+            Value::Int64(_) => Type::Int64,
+            Value::Float(_) => Type::Float,
+            Value::Double(_) => Type::Double,
+            Value::String(_) => Type::String,
+            Value::Array(_) => Type::Array,
+            Value::Object(_) => Type::Object
         }
     }
 }
@@ -174,7 +221,7 @@ impl TryFrom<Value> for bool
         if let Value::Bool(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new("bool", v.get_type_name()));
+        return Err(TypeError::new(Type::Bool, v.get_type()));
     }
 }
 
@@ -187,7 +234,7 @@ impl TryFrom<Value> for u8
         if let Value::Uint8(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new("uint8", v.get_type_name()));
+        return Err(TypeError::new(Type::Uint8, v.get_type()));
     }
 }
 
@@ -200,7 +247,7 @@ impl TryFrom<Value> for u16
         return match v {
             Value::Uint16(v) => Ok(v),
             Value::Uint8(v) => Ok(v as u16),
-            _ => Err(TypeError::new("uint8 or uint16", v.get_type_name()))
+            _ => Err(TypeError::new(Type::Uint16, v.get_type()))
         };
     }
 }
@@ -215,7 +262,7 @@ impl TryFrom<Value> for u32
             Value::Uint32(v) => Ok(v),
             Value::Uint16(v) => Ok(v as u32),
             Value::Uint8(v) => Ok(v as u32),
-            _ => Err(TypeError::new("uint8, uint16 or uint32", v.get_type_name()))
+            _ => Err(TypeError::new(Type::Uint32, v.get_type()))
         };
     }
 }
@@ -231,10 +278,7 @@ impl TryFrom<Value> for u64
             Value::Uint32(v) => Ok(v as u64),
             Value::Uint16(v) => Ok(v as u64),
             Value::Uint8(v) => Ok(v as u64),
-            _ => Err(TypeError::new(
-                "uint8, uint16, uint32 or uint64",
-                v.get_type_name()
-            ))
+            _ => Err(TypeError::new(Type::Uint64, v.get_type()))
         };
     }
 }
@@ -248,7 +292,7 @@ impl TryFrom<Value> for i8
         if let Value::Int8(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new("int8", v.get_type_name()));
+        return Err(TypeError::new(Type::Int8, v.get_type()));
     }
 }
 
@@ -261,7 +305,7 @@ impl TryFrom<Value> for i16
         return match v {
             Value::Int16(v) => Ok(v),
             Value::Int8(v) => Ok(v as i16),
-            _ => Err(TypeError::new("int8 or int16", v.get_type_name()))
+            _ => Err(TypeError::new(Type::Int16, v.get_type()))
         };
     }
 }
@@ -276,7 +320,7 @@ impl TryFrom<Value> for i32
             Value::Int32(v) => Ok(v),
             Value::Int16(v) => Ok(v as i32),
             Value::Int8(v) => Ok(v as i32),
-            _ => Err(TypeError::new("int8, int16 or int32", v.get_type_name()))
+            _ => Err(TypeError::new(Type::Int32, v.get_type()))
         };
     }
 }
@@ -292,10 +336,7 @@ impl TryFrom<Value> for i64
             Value::Int32(v) => Ok(v as i64),
             Value::Int16(v) => Ok(v as i64),
             Value::Int8(v) => Ok(v as i64),
-            _ => Err(TypeError::new(
-                "int8, int16, int32 or int64",
-                v.get_type_name()
-            ))
+            _ => Err(TypeError::new(Type::Int64, v.get_type()))
         };
     }
 }
@@ -309,7 +350,7 @@ impl TryFrom<Value> for f32
         if let Value::Float(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new("float", v.get_type_name()));
+        return Err(TypeError::new(Type::Float, v.get_type()));
     }
 }
 
@@ -322,7 +363,7 @@ impl TryFrom<Value> for f64
         return match v {
             Value::Double(v) => Ok(v),
             Value::Float(v) => Ok(v as f64),
-            _ => Err(TypeError::new("float or double", v.get_type_name()))
+            _ => Err(TypeError::new(Type::Double, v.get_type()))
         };
     }
 }
@@ -336,7 +377,7 @@ impl TryFrom<Value> for String
         if let Value::String(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new("string", v.get_type_name()));
+        return Err(TypeError::new(Type::String, v.get_type()));
     }
 }
 
@@ -349,7 +390,7 @@ impl TryFrom<Value> for Array
         if let Value::Array(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new("array", v.get_type_name()));
+        return Err(TypeError::new(Type::Array, v.get_type()));
     }
 }
 
@@ -362,7 +403,7 @@ impl TryFrom<Value> for Object
         if let Value::Object(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new("object", v.get_type_name()));
+        return Err(TypeError::new(Type::Object, v.get_type()));
     }
 }
 
@@ -375,7 +416,7 @@ impl TryFrom<&Value> for bool
         if let Value::Bool(v) = v {
             return Ok(*v);
         }
-        return Err(TypeError::new("bool", v.get_type_name()));
+        return Err(TypeError::new(Type::Bool, v.get_type()));
     }
 }
 
@@ -388,7 +429,7 @@ impl TryFrom<&Value> for u8
         if let Value::Uint8(v) = v {
             return Ok(*v);
         }
-        return Err(TypeError::new("uint8", v.get_type_name()));
+        return Err(TypeError::new(Type::Uint8, v.get_type()));
     }
 }
 
@@ -401,7 +442,7 @@ impl TryFrom<&Value> for u16
         return match v {
             Value::Uint16(v) => Ok(*v),
             Value::Uint8(v) => Ok(*v as u16),
-            _ => Err(TypeError::new("uint8 or uint16", v.get_type_name()))
+            _ => Err(TypeError::new(Type::Uint16, v.get_type()))
         };
     }
 }
@@ -416,7 +457,7 @@ impl TryFrom<&Value> for u32
             Value::Uint32(v) => Ok(*v),
             Value::Uint16(v) => Ok(*v as u32),
             Value::Uint8(v) => Ok(*v as u32),
-            _ => Err(TypeError::new("uint8, uint16 or uint32", v.get_type_name()))
+            _ => Err(TypeError::new(Type::Uint32, v.get_type()))
         };
     }
 }
@@ -432,10 +473,7 @@ impl TryFrom<&Value> for u64
             Value::Uint32(v) => Ok(*v as u64),
             Value::Uint16(v) => Ok(*v as u64),
             Value::Uint8(v) => Ok(*v as u64),
-            _ => Err(TypeError::new(
-                "uint8, uint16, uint32 or uint64",
-                v.get_type_name()
-            ))
+            _ => Err(TypeError::new(Type::Uint64, v.get_type()))
         };
     }
 }
@@ -449,7 +487,7 @@ impl TryFrom<&Value> for i8
         if let Value::Int8(v) = v {
             return Ok(*v);
         }
-        return Err(TypeError::new("int8", v.get_type_name()));
+        return Err(TypeError::new(Type::Int8, v.get_type()));
     }
 }
 
@@ -462,7 +500,7 @@ impl TryFrom<&Value> for i16
         return match v {
             Value::Int16(v) => Ok(*v),
             Value::Int8(v) => Ok(*v as i16),
-            _ => Err(TypeError::new("int8 or int16", v.get_type_name()))
+            _ => Err(TypeError::new(Type::Int16, v.get_type()))
         };
     }
 }
@@ -477,7 +515,7 @@ impl TryFrom<&Value> for i32
             Value::Int32(v) => Ok(*v),
             Value::Int16(v) => Ok(*v as i32),
             Value::Int8(v) => Ok(*v as i32),
-            _ => Err(TypeError::new("int8, int16 or int32", v.get_type_name()))
+            _ => Err(TypeError::new(Type::Int32, v.get_type()))
         };
     }
 }
@@ -493,10 +531,7 @@ impl TryFrom<&Value> for i64
             Value::Int32(v) => Ok(*v as i64),
             Value::Int16(v) => Ok(*v as i64),
             Value::Int8(v) => Ok(*v as i64),
-            _ => Err(TypeError::new(
-                "int8, int16, int32 or int64",
-                v.get_type_name()
-            ))
+            _ => Err(TypeError::new(Type::Int64, v.get_type()))
         };
     }
 }
@@ -510,7 +545,7 @@ impl TryFrom<&Value> for f32
         if let Value::Float(v) = v {
             return Ok(*v);
         }
-        return Err(TypeError::new("float", v.get_type_name()));
+        return Err(TypeError::new(Type::Float, v.get_type()));
     }
 }
 
@@ -523,7 +558,7 @@ impl TryFrom<&Value> for f64
         return match v {
             Value::Double(v) => Ok(*v),
             Value::Float(v) => Ok(*v as f64),
-            _ => Err(TypeError::new("float or double", v.get_type_name()))
+            _ => Err(TypeError::new(Type::Double, v.get_type()))
         };
     }
 }
@@ -537,7 +572,7 @@ impl<'a> TryFrom<&'a Value> for &'a str
         if let Value::String(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new("string", v.get_type_name()));
+        return Err(TypeError::new(Type::String, v.get_type()));
     }
 }
 
@@ -550,7 +585,7 @@ impl<'a> TryFrom<&'a Value> for &'a Array
         if let Value::Array(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new("array", v.get_type_name()));
+        return Err(TypeError::new(Type::Array, v.get_type()));
     }
 }
 
@@ -563,7 +598,7 @@ impl<'a> TryFrom<&'a Value> for &'a Object
         if let Value::Object(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new("object", v.get_type_name()));
+        return Err(TypeError::new(Type::Object, v.get_type()));
     }
 }
 
