@@ -60,9 +60,9 @@ impl DebuggerOrObject
     pub fn with_capacity(capacity: usize, debug: bool) -> DebuggerOrObject
     {
         if debug {
-            DebuggerOrObject::Debugger(Debugger::attach(Object::with_capacity(capacity)).unwrap())
+            DebuggerOrObject::Debugger(Debugger::attach(Object::with_capacity(capacity as _)).unwrap())
         } else {
-            DebuggerOrObject::Object(Object::with_capacity(capacity))
+            DebuggerOrObject::Object(Object::with_capacity(capacity as _))
         }
     }
 

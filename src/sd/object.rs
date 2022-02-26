@@ -77,10 +77,10 @@ impl Object
     }
 
     /// Allocates a new object with a specified initial capacity
-    pub fn with_capacity(capacity: usize) -> Object
+    pub fn with_capacity(capacity: u8) -> Object
     {
         Object {
-            props: HashMap::with_capacity(capacity)
+            props: HashMap::with_capacity(capacity as _)
         }
     }
 
