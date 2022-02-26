@@ -36,6 +36,9 @@ pub mod error;
 pub mod symbol;
 mod table;
 
+/// Result type for all ShaderPack operations.
+pub type Result<T> = std::result::Result<T, error::Error>;
+
 pub use builder::*;
 
 pub use self::core::*;

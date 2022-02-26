@@ -34,7 +34,7 @@ use crate::{
     core::header::Struct,
     sd::Object,
     shader::{
-        error::{EosContext, InvalidCodeContext, ReadError},
+        error::{EosContext, InvalidCodeContext, Error},
         Stage
     },
     table::Item
@@ -99,7 +99,7 @@ pub enum Type
     Output
 }
 
-fn get_symbol_type_from_code(scode: u8) -> Result<Type, ReadError>
+fn get_symbol_type_from_code(scode: u8) -> Result<Type, Error>
 {
     match scode {
         0x0 => Ok(Type::Texture),
@@ -109,10 +109,10 @@ fn get_symbol_type_from_code(scode: u8) -> Result<Type, ReadError>
         0x4 => Ok(Type::VertexFormat),
         0x5 => Ok(Type::Pipeline),
         0x6 => Ok(Type::Output),
-        _ => Err(ReadError::InvalidCode(
-            InvalidCodeContext::SymbolType,
-            scode
-        ))
+        _ => Err(Error::InvalidCode {
+            context: InvalidCodeContext::SymbolType,
+            code: scode
+        })
     }
 }
 
@@ -139,7 +139,7 @@ pub struct Symbol
 impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
 {
     type Output = Symbol;
-    type Error = ReadError;
+    type Error = Error;
 
     fn new() -> Self
     {
@@ -154,7 +154,7 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol
 
     fn error_buffer_size() -> Option<Self::Error>
     {
-        Some(ReadError::Eos(EosContext::SymbolTable))
+        Some(Error::Eos(EosContext::SymbolTable))
     }
 
     fn from_bytes(buffer: [u8; SIZE_SYMBOL_STRUCTURE]) -> Result<Self::Output, Self::Error>

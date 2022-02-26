@@ -39,7 +39,8 @@ use crate::{
     shader::{
         decoder::{get_target_type_from_code, read_symbol_table},
         encoder::get_type_ext,
-        error::{ReadError, Section, WriteError},
+        error::{Error, Section},
+        Result,
         Settings,
         SECTION_TYPE_EXTENDED_DATA,
         SECTION_TYPE_SHADER,
@@ -178,7 +179,7 @@ impl<T: Write + Seek> ShaderPack<T>
     ///
     /// Returns a [WriteError](crate::shader::error::WriteError) if some parts of this shader
     /// package couldn't be saved.
-    pub fn save(&mut self) -> Result<(), WriteError>
+    pub fn save(&mut self) -> Result<()>
     {
         if let Some(syms) = self.symbols.get() {
             let mut header = *self.container.get_main_header();
@@ -203,7 +204,7 @@ impl<T: Read + Seek> ShaderPack<T>
     ///
     /// * `backend`: A [Read](std::io::Read) + [Seek](std::io::Seek) to use as backend.
     ///
-    /// returns: Result<ShaderPack<T>, ReadError>
+    /// returns: Result<ShaderPack<T>>
     ///
     /// # Errors
     ///
@@ -225,14 +226,20 @@ impl<T: Read + Seek> ShaderPack<T>
     /// let symbols = bpxs.symbols().unwrap();
     /// assert_eq!(symbols.len(), 0);
     /// ```
-    pub fn open(backend: T) -> Result<ShaderPack<T>, ReadError>
+    pub fn open(backend: T) -> Result<ShaderPack<T>>
     {
         let container = Container::open(backend)?;
         if container.get_main_header().ty != b'S' {
-            return Err(ReadError::BadType(container.get_main_header().ty));
+            return Err(Error::BadType {
+                expected: b'S',
+                actual: container.get_main_header().ty
+            });
         }
         if container.get_main_header().version != SUPPORTED_VERSION {
-            return Err(ReadError::BadVersion(container.get_main_header().version));
+            return Err(Error::BadVersion {
+                supported: SUPPORTED_VERSION,
+                actual: container.get_main_header().version
+            });
         }
         let assembly_hash = LittleEndian::read_u64(&container.get_main_header().type_ext[0..8]);
         let (target, ty) = get_target_type_from_code(
@@ -241,7 +248,7 @@ impl<T: Read + Seek> ShaderPack<T>
         )?;
         let symbol_table = match container.sections().find_by_type(SECTION_TYPE_SYMBOL_TABLE) {
             Some(v) => v,
-            None => return Err(ReadError::MissingSection(Section::SymbolTable))
+            None => return Err(Error::MissingSection(Section::SymbolTable))
         };
         Ok(Self {
             settings: Settings {
@@ -257,8 +264,8 @@ impl<T: Read + Seek> ShaderPack<T>
         })
     }
 
-    fn load_symbol_table(&self) -> Result<SymbolTable, ReadError> {
-        let handle = self.container.sections().find_by_type(SECTION_TYPE_STRING).ok_or(ReadError::MissingSection(Section::Strings))?;
+    fn load_symbol_table(&self) -> Result<SymbolTable> {
+        let handle = self.container.sections().find_by_type(SECTION_TYPE_STRING).ok_or(Error::MissingSection(Section::Strings))?;
         let strings = StringSection::new(handle);
         let num_symbols = LittleEndian::read_u16(&self.container.get_main_header().type_ext[8..10]);
         let table = read_symbol_table(&self.container, num_symbols, self.symbol_table)?;
@@ -280,7 +287,7 @@ impl<T: Read + Seek> ShaderPack<T>
     ///
     /// A [ReadError](crate::shader::error::ReadError) is returned if the symbol table could not be
     /// loaded.
-    pub fn symbols(&self) -> Result<SymbolTableRef<T>, ReadError> {
+    pub fn symbols(&self) -> Result<SymbolTableRef<T>> {
         let table = self.symbols.get_or_try_init(|| self.load_symbol_table())?;
         Ok(SymbolTableRef {
             table,
@@ -296,7 +303,7 @@ impl<T: Read + Seek> ShaderPack<T>
     ///
     /// A [ReadError](crate::shader::error::ReadError) is returned if the symbol table could not be
     /// loaded.
-    pub fn symbols_mut(&mut self) -> Result<SymbolTableMut<T>, ReadError> {
+    pub fn symbols_mut(&mut self) -> Result<SymbolTableMut<T>> {
         if self.symbols.get_mut().is_none() {
             //SAFETY: This is safe because only ran if the cell is none.
             unsafe { self.symbols.set(self.load_symbol_table()?).unwrap_unchecked() };

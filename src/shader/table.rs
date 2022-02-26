@@ -30,12 +30,13 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use elsa::FrozenMap;
 use crate::core::{Container, Handle, SectionData};
 use crate::core::builder::{Checksum, CompressionMethod, SectionHeaderBuilder};
-use crate::shader::error::{EosContext, ReadError, Section, WriteError};
+use crate::shader::error::{EosContext, Error, Section};
 use crate::shader::{SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SHADER, Shader, Stage};
 use crate::shader::decoder::get_stage_from_code;
 use crate::shader::symbol::{FLAG_EXTENDED_DATA, Settings, Symbol};
 use crate::strings::{load_string_section, StringSection};
 use crate::table::NamedItemTable;
+use crate::shader::Result;
 
 pub struct SymbolTable
 {
@@ -68,7 +69,7 @@ impl SymbolTable
         self.table.len()
     }
 
-    fn write_extended_data<T>(&mut self, container: &mut Container<T>, extended_data: Option<crate::sd::Object>) -> Result<u32, WriteError>
+    fn write_extended_data<T>(&mut self, container: &mut Container<T>, extended_data: Option<crate::sd::Object>) -> Result<u32>
     {
         if let Some(obj) = extended_data {
             let handle = *self.extended_data.get_or_insert_with(|| {
@@ -87,7 +88,7 @@ impl SymbolTable
         Ok(0xFFFFFF)
     }
 
-    pub fn create<T, S: Into<Settings>>(&mut self, container: &mut Container<T>, sym: S) -> Result<usize, WriteError>
+    pub fn create<T, S: Into<Settings>>(&mut self, container: &mut Container<T>, sym: S) -> Result<usize>
     {
         let settings = sym.into();
         let address = self.strings.put(container, &settings.name)?;
@@ -106,13 +107,13 @@ impl SymbolTable
         self.table.remove(index);
     }
 
-    pub fn load_name<T: Read + Seek>(&self, container: &Container<T>, sym: &Symbol) -> Result<&str, ReadError> {
+    pub fn load_name<T: Read + Seek>(&self, container: &Container<T>, sym: &Symbol) -> Result<&str> {
         load_string_section(container, &self.strings)?;
         let name = self.table.load_name(container, &self.strings, sym)?;
         Ok(name)
     }
 
-    pub fn find_by_name<T: Read + Seek>(&self, container: &Container<T>, name: &str) -> Result<Option<&Symbol>, ReadError> {
+    pub fn find_by_name<T: Read + Seek>(&self, container: &Container<T>, name: &str) -> Result<Option<&Symbol>> {
         load_string_section(container, &self.strings)?;
         let name = self.table.find_by_name(container, &self.strings, name)?;
         Ok(name)
@@ -122,12 +123,12 @@ impl SymbolTable
         self.table.get(index)
     }
 
-    pub fn load_extended_data<T: Read + Seek>(&self, container: &Container<T>, sym: &Symbol) -> Result<&crate::sd::Object, ReadError> {
+    pub fn load_extended_data<T: Read + Seek>(&self, container: &Container<T>, sym: &Symbol) -> Result<&crate::sd::Object> {
         if sym.flags & FLAG_EXTENDED_DATA == 0 {
             panic!("The symbol extended data is undefined.");
         }
         if self.extended_data_objs.get(&sym.extended_data).is_none() {
-            let section = self.extended_data.ok_or(ReadError::MissingSection(Section::ExtendedData))?;
+            let section = self.extended_data.ok_or(Error::MissingSection(Section::ExtendedData))?;
             let mut section = container.sections().load(section)?;
             section.seek(SeekFrom::Start(sym.extended_data as _))?;
             let obj = crate::sd::Object::read(&mut *section)?;
@@ -198,7 +199,7 @@ impl<'a, T: Read + Seek> SymbolTableRef<'a, T>
     ///
     /// If the name is not already loaded, returns a [ReadError](crate::package::error::ReadError)
     /// if the section couldn't be loaded or the string couldn't be loaded.
-    pub fn load_name(&self, sym: &Symbol) -> Result<&str, ReadError> {
+    pub fn load_name(&self, sym: &Symbol) -> Result<&str> {
         self.table.load_name(self.container, sym)
     }
 
@@ -210,13 +211,13 @@ impl<'a, T: Read + Seek> SymbolTableRef<'a, T>
     ///
     /// * `name`: the name to search for.
     ///
-    /// returns: Result<Option<&ObjectHeader>, ReadError>
+    /// returns: Result<Option<&ObjectHeader>>
     ///
     /// # Errors
     ///
     /// A [ReadError](crate::package::error::ReadError) is returned if the strings could not be
     /// loaded.
-    pub fn find(&self, name: &str) -> Result<Option<&Symbol>, ReadError> {
+    pub fn find(&self, name: &str) -> Result<Option<&Symbol>> {
         self.table.find_by_name(self.container, name)
     }
 
@@ -231,7 +232,7 @@ impl<'a, T: Read + Seek> SymbolTableRef<'a, T>
     /// If the [Object](crate::sd::Object) is not already loaded, returns a
     /// [ReadError](crate::shader::error::ReadError) if the section couldn't be loaded
     /// or the [Object](crate::sd::Object) couldn't be decoded.
-    pub fn load_extended_data(&self, sym: &Symbol) -> Result<&crate::sd::Object, ReadError> {
+    pub fn load_extended_data(&self, sym: &Symbol) -> Result<&crate::sd::Object> {
         self.table.load_extended_data(self.container, sym)
     }
 }
@@ -257,7 +258,7 @@ impl<'a, T> SymbolTableMut<'a, T>
     ///
     /// A [WriteError](crate::shader::error::WriteError) is returned if the symbol could not be
     /// written.
-    pub fn create<S: Into<Settings>>(&mut self, sym: S) -> Result<usize, WriteError> {
+    pub fn create<S: Into<Settings>>(&mut self, sym: S) -> Result<usize> {
         self.table.create(self.container, sym)
     }
 
@@ -304,7 +305,7 @@ impl ShaderTable
         }
     }
 
-    pub fn create<T>(&mut self, container: &mut Container<T>, shader: Shader) -> Result<Handle, WriteError> {
+    pub fn create<T>(&mut self, container: &mut Container<T>, shader: Shader) -> Result<Handle> {
         let handle = container.sections_mut().create(
             SectionHeaderBuilder::new()
                 .ty(SECTION_TYPE_SHADER)
@@ -327,14 +328,14 @@ impl ShaderTable
         Ok(handle)
     }
 
-    pub fn load<T: Read + Seek>(&self, container: &Container<T>, handle: &Handle) -> Result<&Shader, ReadError> {
+    pub fn load<T: Read + Seek>(&self, container: &Container<T>, handle: &Handle) -> Result<&Shader> {
         let h = handle.into_raw();
         if self.shaders.get(&h).is_none() {
             let sections = container.sections();
             //let mut section = self.container.sections().open(handle)?;
             if sections.header(*handle).size < 1 {
                 //We must at least find a stage byte
-                return Err(ReadError::Eos(EosContext::Shader));
+                return Err(Error::Eos(EosContext::Shader));
             }
             let mut buf = sections.load(*handle)?.load_in_memory()?;
             let stage = get_stage_from_code(buf.remove(0))?;
@@ -404,7 +405,7 @@ impl<'a, T: Read + Seek> ShaderTableRef<'a, T>
     /// # Errors
     ///
     /// An [ReadError](crate::shader::error::ReadError) is returned if the shader could not be loaded.
-    pub fn load(&self, handle: &Handle) -> Result<&Shader, ReadError> {
+    pub fn load(&self, handle: &Handle) -> Result<&Shader> {
         self.table.load(self.container, handle)
     }
 }
@@ -430,7 +431,7 @@ impl<'a, T> ShaderTableMut<'a, T>
     ///
     /// A [WriteError](crate::shader::error::WriteError) is returned if the shader could not be
     /// written.
-    pub fn create(&mut self, shader: Shader) -> Result<Handle, WriteError> {
+    pub fn create(&mut self, shader: Shader) -> Result<Handle> {
         self.table.create(self.container, shader)
     }
 
