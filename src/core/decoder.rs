@@ -111,7 +111,6 @@ pub fn load_section1<T: io::Read + io::Seek>(
     data.seek(io::SeekFrom::Start(0))?;
     if section.flags & FLAG_CHECK_WEAK != 0 {
         let mut chksum = WeakChecksum::new();
-        //TODO: Check
         load_section_checked(file, section, &mut data, &mut chksum)?;
         let v = chksum.finish();
         if v != section.chksum {
@@ -122,7 +121,6 @@ pub fn load_section1<T: io::Read + io::Seek>(
         }
     } else if section.flags & FLAG_CHECK_CRC32 != 0 {
         let mut chksum = Crc32Checksum::new();
-        //TODO: Check
         load_section_checked(file, section, &mut data, &mut chksum)?;
         let v = chksum.finish();
         if v != section.chksum {
@@ -133,7 +131,6 @@ pub fn load_section1<T: io::Read + io::Seek>(
         }
     } else {
         let mut chksum = WeakChecksum::new();
-        //TODO: Check
         load_section_checked(file, section, &mut data, &mut chksum)?;
     }
     data.seek(io::SeekFrom::Start(0))?;

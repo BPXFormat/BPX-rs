@@ -114,8 +114,7 @@ impl Seq
     where
         T: Serialize
     {
-        self.arr
-            .add(value.serialize(Serializer::new(self.enum_size, self.debug))?);
+        self.arr.as_mut().push(value.serialize(Serializer::new(self.enum_size, self.debug))?);
         Ok(())
     }
 }
@@ -209,7 +208,7 @@ impl Map
                 &mut self.cur_obj,
                 DebuggerOrObject::with_capacity(2, self.debug)
             );
-            self.arr.add(val.into());
+            self.arr.as_mut().push(val.into());
         }
     }
 }
@@ -480,11 +479,11 @@ impl serde::Serializer for Serializer
     {
         let mut arr = Array::with_capacity(2);
         match self.enum_size {
-            EnumSize::U8 => arr.add((variant_index as u8).into()),
-            EnumSize::U16 => arr.add((variant_index as u16).into()),
-            EnumSize::U32 => arr.add(variant_index.into())
+            EnumSize::U8 => arr.as_mut().push((variant_index as u8).into()),
+            EnumSize::U16 => arr.as_mut().push((variant_index as u16).into()),
+            EnumSize::U32 => arr.as_mut().push(variant_index.into())
         }
-        arr.add(value.serialize(self)?);
+        arr.as_mut().push(value.serialize(self)?);
         Ok(arr.into())
     }
 
@@ -492,7 +491,7 @@ impl serde::Serializer for Serializer
     {
         Ok(Seq {
             arr: if let Some(len) = len {
-                Array::with_capacity(len)
+                Array::with_capacity(len as _)
             } else {
                 Array::new()
             },
@@ -504,7 +503,7 @@ impl serde::Serializer for Serializer
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, Self::Error>
     {
         Ok(Seq {
-            arr: Array::with_capacity(len),
+            arr: Array::with_capacity(len as _),
             enum_size: self.enum_size,
             debug: self.debug
         })
@@ -517,7 +516,7 @@ impl serde::Serializer for Serializer
     ) -> Result<Self::SerializeTupleStruct, Self::Error>
     {
         Ok(Seq {
-            arr: Array::with_capacity(len),
+            arr: Array::with_capacity(len as _),
             enum_size: self.enum_size,
             debug: self.debug
         })
@@ -531,11 +530,11 @@ impl serde::Serializer for Serializer
         len: usize
     ) -> Result<Self::SerializeTupleVariant, Self::Error>
     {
-        let mut arr = Array::with_capacity(len + 1);
+        let mut arr = Array::with_capacity(len as u8 + 1);
         match self.enum_size {
-            EnumSize::U8 => arr.add((variant_index as u8).into()),
-            EnumSize::U16 => arr.add((variant_index as u16).into()),
-            EnumSize::U32 => arr.add(variant_index.into())
+            EnumSize::U8 => arr.as_mut().push((variant_index as u8).into()),
+            EnumSize::U16 => arr.as_mut().push((variant_index as u16).into()),
+            EnumSize::U32 => arr.as_mut().push(variant_index.into())
         }
         Ok(Seq {
             arr,
@@ -549,7 +548,7 @@ impl serde::Serializer for Serializer
         Ok(Map {
             cur_obj: DebuggerOrObject::with_capacity(2, self.debug),
             arr: if let Some(len) = len {
-                Array::with_capacity(len)
+                Array::with_capacity(len as _)
             } else {
                 Array::new()
             },

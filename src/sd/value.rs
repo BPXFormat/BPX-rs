@@ -206,7 +206,7 @@ impl<T: Into<Value>> From<Vec<T>> for Value
     {
         let mut arr = Array::new();
         for v1 in v {
-            arr.add(v1.into());
+            arr.as_mut().push(v1.into());
         }
         Value::Array(arr)
     }

@@ -195,7 +195,6 @@ fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object>
 
 fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array>
 {
-    let mut arr = Array::new();
     let mut count = {
         let mut buf: [u8; 1] = [0; 1];
         if stream.read_fill(&mut buf)? != 1 {
@@ -203,6 +202,7 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array>
         }
         buf[0]
     };
+    let mut arr = Array::with_capacity(count);
 
     while count > 0 {
         let mut type_code: [u8; 1] = [0; 1];
@@ -210,7 +210,7 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array>
             return Err(Error::Truncation(Type::Array));
         }
         match get_value_parser(type_code[0]) {
-            Some(func) => arr.add(func(stream)?),
+            Some(func) => arr.as_mut().push(func(stream)?),
             None => return Err(Error::BadTypeCode(type_code[0]))
         }
         count -= 1;

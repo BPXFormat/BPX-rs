@@ -69,7 +69,7 @@ impl<'de> SeqAccess<'de> for Seq
     where
         T: DeserializeSeed<'de>
     {
-        if let Some(val) = self.arr.remove_at(0) {
+        if let Some(val) = self.arr.remove(0) {
             seed.deserialize(Deserializer::new(self.enum_size, val))
                 .map(Some)
         } else {
@@ -93,7 +93,7 @@ impl<'de> MapAccess<'de> for Map
     where
         K: DeserializeSeed<'de>
     {
-        if let Some(obj) = self.arr.remove_at(0) {
+        if let Some(obj) = self.arr.remove(0) {
             let obj: Object = obj.try_into()?;
             let key = obj.get("__key__").ok_or(Error::MissingMapKey)?;
             self.value = Some(obj.clone());
@@ -165,7 +165,7 @@ impl<'de> VariantAccess<'de> for Enum
         T: DeserializeSeed<'de>
     {
         let mut v: Array = self.val.try_into()?;
-        let val = v.remove_at(0).ok_or(Error::MissingVariantData)?;
+        let val = v.remove(0).ok_or(Error::MissingVariantData)?;
         seed.deserialize(Deserializer::new(self.enum_size, val))
     }
 
@@ -208,7 +208,7 @@ impl<'de> EnumAccess<'de> for Enum
         V: DeserializeSeed<'de>
     {
         let variant_idx = match &mut self.val {
-            Value::Array(arr) => arr.remove_at(0),
+            Value::Array(arr) => arr.remove(0),
             Value::Object(obj) => obj.get("__variant__").cloned(),
             _ => None
         }
@@ -592,9 +592,9 @@ mod tests
             Val2(u8, u8)
         }
         let mut arr = Array::new();
-        arr.add(Value::Uint32(2));
-        arr.add(Value::Uint8(0));
-        arr.add(Value::Uint8(42));
+        arr.as_mut().push(Value::Uint32(2));
+        arr.as_mut().push(Value::Uint8(0));
+        arr.as_mut().push(Value::Uint8(42));
         let e = MyEnum::deserialize(Deserializer::new(EnumSize::U32, arr)).unwrap();
         assert_eq!(e, MyEnum::Val2(0, 42));
     }
