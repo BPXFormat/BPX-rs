@@ -84,7 +84,7 @@ impl<T> NamedItemTable<T>
         self.list.len()
     }
 
-    /// Gets an item by its index.
+    /// Gets immutable access to an item by its index.
     ///
     /// Returns None if the index is out of bounds.
     ///
@@ -95,6 +95,19 @@ impl<T> NamedItemTable<T>
     /// returns: Option<&T>
     pub fn get(&self, index: usize) -> Option<&T> {
         self.list.get(index)
+    }
+
+    /// Gets mutable access to an item by its index.
+    ///
+    /// Returns None if the index is out of bounds.
+    ///
+    /// # Arguments
+    ///
+    /// * `index`: the index to find.
+    ///
+    /// returns: Option<&mut T>
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+        self.list.get_mut(index)
     }
 
     /// Removes an item from this table.
