@@ -177,11 +177,15 @@ impl<'a, T> SymbolTableRef<'a, T>
         self.table.len()
     }
 
-    /// Finds a symbol by its index.
+    /// Gets immutable access to a symbol by its index.
     ///
-    /// Returns None if the symbol does not exist.
-    pub fn find_by_index(&self, index: usize) -> Option<&Symbol> {
-        self.table.find_by_index(index)
+    /// # Arguments
+    ///
+    /// * `index`: the index of the symbol.
+    ///
+    /// returns: Option<&Symbol>
+    pub fn get(&self, index: usize) -> Option<&Symbol> {
+        self.table.get(index)
     }
 }
 
@@ -238,17 +242,6 @@ impl<'a, T: Read + Seek> SymbolTableRef<'a, T>
     /// or the [Object](crate::sd::Object) couldn't be decoded.
     pub fn load_extended_data(&self, sym: &Symbol) -> Result<&crate::sd::Object> {
         self.table.load_extended_data(self.container, sym)
-    }
-
-    /// Gets immutable access to a symbol by its index.
-    ///
-    /// # Arguments
-    ///
-    /// * `index`: the index of the symbol.
-    ///
-    /// returns: Option<&Symbol>
-    pub fn get(&self, index: usize) -> Option<&Symbol> {
-        self.table.get(index)
     }
 }
 
