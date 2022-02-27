@@ -29,6 +29,48 @@
 //! Contains various utilities to be used by other modules.
 
 use std::{io::Cursor, num::Wrapping};
+use std::fmt::{Display, Formatter};
+
+/// Convenient utility to wrap object property name hashes.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct Name(u64);
+
+impl Display for Name {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl Name {
+    /// Returns the underlying hash code.
+    pub fn into_inner(self) -> u64 {
+        self.0
+    }
+}
+
+impl From<u64> for Name {
+    fn from(hash: u64) -> Self {
+        Self(hash)
+    }
+}
+
+impl<'a> From<&'a str> for Name {
+    fn from(s: &'a str) -> Self {
+        Self(hash(s.as_ref()))
+    }
+}
+
+impl<'a> From<&'a String> for Name {
+    fn from(s: &'a String) -> Self {
+        Self(hash(s.as_ref()))
+    }
+}
+
+impl From<String> for Name {
+    fn from(s: String) -> Self {
+        Self(hash(s.as_ref()))
+    }
+}
 
 /// Hash text using the hash function defined in the BPX specification for strings.
 ///

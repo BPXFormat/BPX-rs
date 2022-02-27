@@ -133,6 +133,23 @@ impl Array
             Some(self.0.remove(pos))
         }
     }
+
+    /// Returns the number of properties in the object.
+    pub fn len(&self) -> usize
+    {
+        self.0.len()
+    }
+
+    /// Returns whether this object is empty
+    pub fn is_empty(&self) -> bool
+    {
+        self.0.is_empty()
+    }
+
+    /// Iterate through the object keys, values and names.
+    pub fn iter(&self) -> Iter<Value> {
+        self.0.iter()
+    }
 }
 
 impl<'a> IntoIterator for &'a Array

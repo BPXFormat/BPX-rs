@@ -69,7 +69,7 @@ impl DebuggerOrObject
     pub fn get(&self, key: &str) -> Option<&crate::sd::Value>
     {
         match self {
-            DebuggerOrObject::Debugger(v) => v.get(key),
+            DebuggerOrObject::Debugger(v) => v.as_ref().get(key),
             DebuggerOrObject::Object(v) => v.get(key)
         }
     }

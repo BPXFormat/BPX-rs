@@ -29,13 +29,14 @@
 //! BPXSD object definition
 
 use std::{collections::HashMap, ops::Index};
+use std::collections::hash_map::Iter;
 
 use crate::{
-    sd::{Value, Result},
-    utils
+    sd::{Value, Result}
 };
+use crate::utils::Name;
 
-/// A BPXSD object iterator.
+/*/// A BPXSD object iterator.
 pub struct Iter<'a>
 {
     props: std::collections::hash_map::Iter<'a, u64, Value>
@@ -49,13 +50,16 @@ impl<'a> Iterator for Iter<'a>
     {
         self.props.next().map(|(k, v)| (*k, v))
     }
-}
+}*/
 
 /// Represents a BPX Structured Data Object.
 #[derive(PartialEq, Clone)]
-pub struct Object
-{
-    props: HashMap<u64, Value>
+pub struct Object(HashMap<Name, Value>);
+
+impl AsRef<HashMap<Name, Value>> for Object {
+    fn as_ref(&self) -> &HashMap<Name, Value> {
+        &self.0
+    }
 }
 
 impl Default for Object
@@ -71,20 +75,16 @@ impl Object
     /// Creates a new object.
     pub fn new() -> Object
     {
-        Object {
-            props: HashMap::new()
-        }
+        Object(HashMap::new())
     }
 
     /// Allocates a new object with a specified initial capacity
     pub fn with_capacity(capacity: u8) -> Object
     {
-        Object {
-            props: HashMap::with_capacity(capacity as _)
-        }
+        Object(HashMap::with_capacity(capacity as _))
     }
 
-    /// Sets a property in the object using a raw property hash.
+    /*/// Sets a property in the object using a raw property hash.
     ///
     /// # Arguments
     ///
@@ -103,8 +103,8 @@ impl Object
     /// ```
     pub fn raw_set(&mut self, hash: u64, value: Value)
     {
-        self.props.insert(hash, value);
-    }
+        self.0.insert(hash, value);
+    }*/
 
     /// Sets a property in the object.
     ///
@@ -123,12 +123,57 @@ impl Object
     /// obj.set("Test", 12.into());
     /// assert_eq!(obj.len(), 1);
     /// ```
-    pub fn set(&mut self, name: &str, value: Value)
+    pub fn set<T: Into<Name>>(&mut self, name: T, value: Value)
     {
-        self.raw_set(utils::hash(name), value);
+        self.0.insert(name.into(), value);
     }
 
-    /// Gets a property in the object by its hash.
+    /// Convenience function to quickly get a property by its name.
+    ///
+    /// Returns None if the property name does not exist.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: the property name.
+    ///
+    /// returns: Option<&Value>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::Object;
+    /// use bpx::sd::Value;
+    ///
+    /// let mut obj = Object::new();
+    /// obj.set("Test", 12.into());
+    /// assert!(obj.get("Test").is_some());
+    /// assert!(obj.get("Test1").is_none());
+    /// assert!(obj.get("Test").unwrap() == &Value::from(12));
+    /// ```
+    pub fn get<T: Into<Name>>(&self, name: T) -> Option<&Value>
+    {
+        self.0.get(&name.into())
+    }
+
+    /// Returns the number of properties in the object.
+    pub fn len(&self) -> usize
+    {
+        self.0.len()
+    }
+
+    /// Returns whether this object is empty
+    pub fn is_empty(&self) -> bool
+    {
+        self.0.is_empty()
+    }
+
+    /// Iterate through the object keys, values and names.
+    pub fn iter(&self) -> Iter<Name, Value>
+    {
+        self.0.iter()
+    }
+
+    /*/// Gets a property in the object by its hash.
     /// Returns None if the property hash does not exist.
     ///
     /// # Arguments
@@ -149,7 +194,7 @@ impl Object
     /// ```
     pub fn raw_get(&self, hash: u64) -> Option<&Value>
     {
-        self.props.get(&hash)
+        self.0.get(&hash)
     }
 
     /// Gets a property in the object.
@@ -176,9 +221,9 @@ impl Object
     pub fn get(&self, name: &str) -> Option<&Value>
     {
         self.raw_get(utils::hash(name))
-    }
+    }*/
 
-    /// Returns the number of properties in the object.
+    /*/// Returns the number of properties in the object.
     pub fn len(&self) -> usize
     {
         self.props.len()
@@ -196,7 +241,7 @@ impl Object
         Iter {
             props: self.props.iter()
         }
-    }
+    }*/
 
     /// Attempts to write the object to the given IO backend.
     ///
@@ -252,31 +297,21 @@ impl Object
 
 impl<'a> IntoIterator for &'a Object
 {
-    type Item = (u64, &'a Value);
-    type IntoIter = Iter<'a>;
+    type Item = (&'a Name, &'a Value);
+    type IntoIter = Iter<'a, Name, Value>;
 
     fn into_iter(self) -> Self::IntoIter
     {
-        self.iter()
+        self.as_ref().iter()
     }
 }
 
-impl Index<&str> for Object
+impl<T: Into<Name>> Index<T> for Object
 {
     type Output = Value;
 
-    fn index(&self, name: &str) -> &Value
+    fn index(&self, name: T) -> &Value
     {
-        self.props.index(&utils::hash(name))
-    }
-}
-
-impl Index<u64> for Object
-{
-    type Output = Value;
-
-    fn index(&self, hash: u64) -> &Value
-    {
-        self.props.index(&hash)
+        self.0.index(&name.into())
     }
 }

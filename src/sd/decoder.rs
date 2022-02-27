@@ -185,7 +185,7 @@ fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object>
         let hash = LittleEndian::read_u64(&prop[0..8]);
         let type_code = prop[8];
         match get_value_parser(type_code) {
-            Some(func) => obj.raw_set(hash, func(stream)?),
+            Some(func) => obj.set(hash, func(stream)?),
             None => return Err(Error::BadTypeCode(type_code))
         }
         count -= 1;

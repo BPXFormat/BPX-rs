@@ -127,7 +127,7 @@ impl<'a> Iterator for Iter<'a>
     }
 }
 
-/// Represents the table of all sections in a BPX [Container](crate::core::Container)
+/// Represents the table of all sections in a BPX [Container](crate::core::Container).
 pub struct SectionTable<T>
 {
     pub(crate) backend: RefCell<T>,

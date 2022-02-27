@@ -129,7 +129,7 @@ fn write_object(obj: &Object) -> Result<Vec<u8>>
     v.push(count as u8);
     for (hash, val) in obj {
         let mut head: [u8; 9] = [0; 9];
-        LittleEndian::write_u64(&mut head[0..8], hash);
+        LittleEndian::write_u64(&mut head[0..8], hash.into_inner());
         head[8] = get_value_type_code(val);
         v.extend_from_slice(&head);
         v.append(&mut write_value(val)?);
