@@ -113,13 +113,13 @@ impl SymbolTable
         Ok(name)
     }
 
-    pub fn find_by_name<T: Read + Seek>(&self, container: &Container<T>, name: &str) -> Result<Option<&Symbol>> {
+    pub fn find<T: Read + Seek>(&self, container: &Container<T>, name: &str) -> Result<Option<&Symbol>> {
         load_string_section(container, &self.strings)?;
         let name = self.table.find_by_name(container, &self.strings, name)?;
         Ok(name)
     }
 
-    pub fn find_by_index(&self, index: usize) -> Option<&Symbol> {
+    pub fn get(&self, index: usize) -> Option<&Symbol> {
         self.table.get(index)
     }
 
@@ -136,6 +136,10 @@ impl SymbolTable
         }
         //SAFETY: We already have an if block to ensure extended data is loaded.
         Ok(unsafe { self.extended_data_objs.get(&sym.extended_data).unwrap_unchecked() })
+    }
+
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut Symbol> {
+        self.table.get_mut(index)
     }
 }
 
@@ -218,7 +222,7 @@ impl<'a, T: Read + Seek> SymbolTableRef<'a, T>
     /// An [Error](crate::package::error::Error) is returned if the strings could not be
     /// loaded.
     pub fn find(&self, name: &str) -> Result<Option<&Symbol>> {
-        self.table.find_by_name(self.container, name)
+        self.table.find(self.container, name)
     }
 
     /// Loads the extended data of a symbol if it's not already loaded.
@@ -234,6 +238,17 @@ impl<'a, T: Read + Seek> SymbolTableRef<'a, T>
     /// or the [Object](crate::sd::Object) couldn't be decoded.
     pub fn load_extended_data(&self, sym: &Symbol) -> Result<&crate::sd::Object> {
         self.table.load_extended_data(self.container, sym)
+    }
+
+    /// Gets immutable access to a symbol by its index.
+    ///
+    /// # Arguments
+    ///
+    /// * `index`: the index of the symbol.
+    ///
+    /// returns: Option<&Symbol>
+    pub fn get(&self, index: usize) -> Option<&Symbol> {
+        self.table.get(index)
     }
 }
 
@@ -269,6 +284,32 @@ impl<'a, T> SymbolTableMut<'a, T>
     /// * `index`: the index of the symbol in the table to remove.
     pub fn remove(&mut self, index: usize) {
         self.table.remove(index)
+    }
+
+    /// Gets mutable access to a symbol by its index.
+    ///
+    /// # Safety
+    ///
+    /// This function may cause corrupted and/or non BPX compliant data to be written in the end
+    /// BPX Container if the following is not respected:
+    /// - When patching the extended data pointer or string pointer, it must still point to a valid
+    ///   offset in the corresponding section otherwise this implementation may panic or error
+    ///   when attempting to read back the container.
+    /// - When patching the register number, all shaders in the package referencing this symbol
+    ///   must all be re-built according to the new register number or UB may occur on some GPU
+    ///   driver implementation(s).
+    ///
+    /// The function doesn't directly cause any UB in main program memory (which doesn't qualify as
+    /// "unsafe"), however this function may indirectly cause UB on GPU shaders and/or on certain
+    /// GPU driver implementations.
+    ///
+    /// # Arguments
+    ///
+    /// * `index`: the index of the symbol.
+    ///
+    /// returns: Option<&mut Symbol>
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut Symbol> {
+        self.table.get_mut(index)
     }
 }
 
