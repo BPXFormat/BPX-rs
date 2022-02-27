@@ -58,47 +58,6 @@ pub fn hash(s: &str) -> u64
     val.0
 }
 
-/// Extension to include get_or_insert_with but with support for Result and errors.
-pub trait OptionExtension<T>
-{
-    /// Inserts the value returned by `f` if the Option is None then returns a mutable reference
-    /// to the value.
-    ///
-    /// # Arguments
-    ///
-    /// * `f`: the function to insert with.
-    ///
-    /// returns: Result<&mut T, TError>
-    ///
-    /// # Errors
-    ///
-    /// Whatever error type is `TError`.
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(
-        &mut self,
-        f: F
-    ) -> Result<&mut T, TError>;
-}
-
-impl<T> OptionExtension<T> for Option<T>
-{
-    fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(
-        &mut self,
-        f: F
-    ) -> Result<&mut T, TError>
-    {
-        if self.is_none() {
-            *self = Some(f()?);
-        }
-
-        match self {
-            Some(v) => Ok(v),
-            // SAFETY: a `None` variant for `self` would have been replaced by a `Some`
-            // variant in the code above.
-            None => unsafe { std::hint::unreachable_unchecked() }
-        }
-    }
-}
-
 /// Creates a new in-memory byte buffer which can be used
 /// to plug as IoBackend to a BPX encoder or decoder.
 ///
