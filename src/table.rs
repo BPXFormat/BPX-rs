@@ -44,7 +44,7 @@ pub trait Item
 pub struct NamedItemTable<T>
 {
     list: Vec<T>,
-    map: OnceCell<HashMap<String, T>>
+    map: OnceCell<HashMap<String, usize>>
 }
 
 impl<T> NamedItemTable<T>
@@ -119,27 +119,7 @@ impl<T> NamedItemTable<T>
     /// returns: ()
     pub fn remove(&mut self, index: usize) {
         self.list.remove(index);
-    }
-}
-
-impl<T: Clone> NamedItemTable<T>
-{
-    /// Adds a new item to this table.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: the name of the item to add.
-    /// * `item`: the item to add.
-    ///
-    /// returns: ()
-    pub fn push(&mut self, name: String, item: T) -> usize {
-        if let Some(map) = self.map.get_mut() {
-            self.list.push(item.clone());
-            map.insert(name, item);
-        } else {
-            self.list.push(item);
-        }
-        self.len() - 1
+        self.map = OnceCell::new();
     }
 }
 
@@ -161,15 +141,30 @@ impl<T: Item> NamedItemTable<T>
     pub fn load_name<'a, T1>(&self, container: &Container<T1>, strings: &'a StringSection, item: &T) -> Result<&'a str, crate::strings::Error> {
         strings.get(container, item.get_name_address())
     }
-}
 
-impl<T: Item + Clone> NamedItemTable<T>
-{
-    fn build_lookup_table<T1>(&self, container: &Container<T1>, strings: &StringSection) -> Result<HashMap<String, T>, crate::strings::Error> {
-        let mut map: HashMap<String, T> = HashMap::new();
-        for v in &self.list {
+    /// Adds a new item to this table.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: the name of the item to add.
+    /// * `item`: the item to add.
+    ///
+    /// returns: ()
+    pub fn push(&mut self, name: String, item: T) -> usize {
+        if let Some(map) = self.map.get_mut() {
+            self.list.push(item);
+            map.insert(name, self.list.len() - 1);
+        } else {
+            self.list.push(item);
+        }
+        self.len() - 1
+    }
+
+    fn build_lookup_table<T1>(&self, container: &Container<T1>, strings: &StringSection) -> Result<HashMap<String, usize>, crate::strings::Error> {
+        let mut map: HashMap<String, usize> = HashMap::new();
+        for (index, v) in self.list.iter().enumerate() {
             let name = strings.get(container, v.get_name_address())?.into();
-            map.insert(name, v.clone());
+            map.insert(name, index);
         }
         Ok(map)
     }
@@ -190,7 +185,10 @@ impl<T: Item + Clone> NamedItemTable<T>
     /// A [Error](crate::strings::Error) is returned if the strings could not be loaded.
     pub fn find_by_name<T1>(&self, container: &Container<T1>, strings: &StringSection, name: &str) -> Result<Option<&T>, crate::strings::Error> {
         let map = self.map.get_or_try_init(|| self.build_lookup_table(container, strings))?;
-        Ok(map.get(name))
+        Ok(match map.get(name) {
+            Some(index) => self.list.get(*index),
+            None => None
+        })
     }
 }
 
