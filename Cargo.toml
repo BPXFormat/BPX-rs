@@ -29,3 +29,6 @@ shader = ["sd", "table"]
 sd = []
 strings = ["elsa"]
 table = ["strings", "once_cell"]
+
+[package.metadata.docs.rs]
+all-features = true
