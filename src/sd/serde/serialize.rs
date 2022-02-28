@@ -44,14 +44,14 @@ use serde::{
 use crate::sd::{
     serde::{EnumSize, Error},
     Array,
-    Debugger,
     Object,
     Value
 };
+use crate::sd::debug::{Debugger, ODebugger};
 
 enum DebuggerOrObject
 {
-    Debugger(crate::sd::Debugger),
+    Debugger(ODebugger),
     Object(crate::sd::Object)
 }
 

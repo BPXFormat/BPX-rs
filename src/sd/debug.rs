@@ -29,6 +29,7 @@
 //! Provides support for debug symbols to BPXSD object.
 
 use std::{collections::HashMap, convert::TryInto};
+use std::borrow::Cow;
 
 use crate::{
     sd::{error::TypeError, Array, Object, Value}
@@ -58,23 +59,38 @@ impl<'a> Iterator for Iter<'a>
     }
 }
 
+/// An owned debugger.
+pub type ODebugger = Debugger<'static>;
+
 /// A wrapper to BPXSD object with debugging capabilities.
 #[derive(PartialEq, Clone)]
-pub struct Debugger
+pub struct Debugger<'a>
 {
-    inner: Object,
+    inner: Cow<'a, Object>,
     symbols_map: HashMap<Name, String>,
     symbols_list: Vec<String>
 }
 
-impl AsRef<Object> for Debugger
+impl<'a> AsRef<Object> for Debugger<'a>
 {
     fn as_ref(&self) -> &Object {
         &self.inner
     }
 }
 
-impl Debugger
+impl<'a> From<&'a Object> for Cow<'a, Object> {
+    fn from(v: &'a Object) -> Self {
+        Self::Borrowed(v)
+    }
+}
+
+impl<'a> From<Object> for Cow<'a, Object> {
+    fn from(v: Object) -> Self {
+        Self::Owned(v)
+    }
+}
+
+impl<'a> Debugger<'a>
 {
     /// Attach a debugger to an object.
     ///
@@ -88,7 +104,7 @@ impl Debugger
     ///
     /// ```
     /// use bpx::sd::Object;
-    /// use bpx::sd::Debugger;
+    /// use bpx::sd::debug::Debugger;
     ///
     /// let mut obj = Debugger::attach(Object::new()).unwrap();
     /// obj.set("Test", 12.into());
@@ -97,10 +113,10 @@ impl Debugger
     /// assert!(inner.get("__debug__").is_some());
     /// assert!(inner.get("Test").is_some());
     /// ```
-    pub fn attach(inner: Object) -> Result<Debugger, TypeError>
+    pub fn attach<T: Into<Cow<'a, Object>>>(inner: T) -> Result<Debugger<'a>, TypeError>
     {
         let mut dbg = Debugger {
-            inner,
+            inner: inner.into(),
             symbols_map: HashMap::new(),
             symbols_list: Vec::new()
         };
@@ -127,7 +143,7 @@ impl Debugger
     /// # Examples
     ///
     /// ```
-    /// use bpx::sd::{Object, Debugger};
+    /// use bpx::sd::{Object, debug::Debugger};
     /// use bpx::utils::hash;
     ///
     /// let debugger = Debugger::attach(Object::new()).unwrap();
@@ -152,7 +168,7 @@ impl Debugger
     ///
     /// ```
     /// use bpx::sd::Object;
-    /// use bpx::sd::Debugger;
+    /// use bpx::sd::debug::Debugger;
     ///
     /// let mut obj = Debugger::attach(Object::new()).unwrap();
     /// assert!(obj.as_ref().is_empty());
@@ -162,7 +178,7 @@ impl Debugger
     pub fn set(&mut self, name: &str, value: Value)
     {
         let hash = Name::from(name);
-        self.inner.set(hash, value);
+        self.inner.to_mut().set(hash, value);
         self.symbols_list.push(name.into());
         self.symbols_map.insert(hash, name.into());
     }
@@ -179,12 +195,12 @@ impl Debugger
     /// Detaches the debugger from the inner object and return the inner object
     pub fn detach(mut self) -> Object
     {
-        self.inner.set("__debug__", self.symbols_list.into());
-        self.inner
+        self.inner.to_mut().set("__debug__", self.symbols_list.into());
+        self.inner.into_owned()
     }
 }
 
-impl<'a> IntoIterator for &'a Debugger
+impl<'a, 'b> IntoIterator for &'a Debugger<'b>
 {
     type Item = (Option<&'a str>, Name, &'a Value);
     type IntoIter = Iter<'a>;

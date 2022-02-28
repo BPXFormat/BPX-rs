@@ -40,7 +40,6 @@ mod value;
 pub type Result<T> = std::result::Result<T, error::Error>;
 
 pub use array::Array;
-pub use debug::Debugger;
 pub use object::Object;
 pub use value::Value;
 
