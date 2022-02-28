@@ -42,6 +42,7 @@ use crate::{
     },
     strings::{get_name_from_dir_entry, get_name_from_path}
 };
+use crate::core::error::OpenError;
 
 /// Packs a file or folder in a BPXP with the given virtual name.
 ///
@@ -71,7 +72,7 @@ pub fn pack_file_vname<T: Read + Write + Seek>(
         #[cfg(feature = "debug-log")]
         println!("Writing file {} with {} byte(s)", vname, md.len());
         let mut fle = File::open(source)?;
-        let mut objects = package.objects_mut()?;
+        let mut objects = package.objects_mut().ok_or(Error::Open(OpenError::SectionNotLoaded))?;
         objects.create(vname, &mut fle)?;
     } else {
         let entries = read_dir(source)?;
