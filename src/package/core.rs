@@ -109,6 +109,17 @@ impl<T> Package<T>
     {
         self.container
     }
+
+    /// Returns a guard for mutable access to the object table.
+    ///
+    /// This returns None if the object table is not loaded. To load the object table, call
+    /// the objects() member function.
+    pub fn objects_mut(&mut self) -> Option<ObjectTableMut<T>> {
+        self.table.get_mut().map(|v| ObjectTableMut {
+            table: v,
+            container: &mut self.container
+        })
+    }
 }
 
 impl<T: Write + Seek> Package<T>
@@ -291,25 +302,6 @@ impl<T: Read + Seek> Package<T>
         Ok(ObjectTableRef {
             table,
             container: &self.container
-        })
-    }
-
-    /// Returns a guard for mutable access to the object table.
-    ///
-    /// This will load the object table if it's not already loaded.
-    ///
-    /// # Errors
-    ///
-    /// An [Error](crate::shader::error::Error) is returned if the object table could not be
-    /// loaded.
-    pub fn objects_mut(&mut self) -> Result<ObjectTableMut<T>> {
-        if self.table.get_mut().is_none() {
-            //SAFETY: This is safe because it runs only if the cell is none.
-            unsafe { self.table.set(self.load_object_table()?).unwrap_unchecked(); }
-        }
-        Ok(ObjectTableMut {
-            table: unsafe { self.table.get_mut().unwrap_unchecked() },
-            container: &mut self.container
         })
     }
 

@@ -116,6 +116,49 @@ impl<T> ShaderPack<T>
     {
         self.container
     }
+
+    /// Returns a guard for mutable access to the symbol table.
+    ///
+    /// This returns None if the symbol table is not loaded. To load the symbol table, call
+    /// the symbols() member function.
+    pub fn symbols_mut(&mut self) -> Option<SymbolTableMut<T>> {
+        self.symbols.get_mut().map(|v| SymbolTableMut {
+            table: v,
+            container: &mut self.container
+        })
+    }
+
+    fn load_shader_table(&self) -> ShaderTable {
+        let handles = self.container.sections().iter().filter(|v| {
+            self.container.sections().header(*v).ty == SECTION_TYPE_SHADER
+        }).collect();
+        ShaderTable::new(handles)
+    }
+
+    /// Returns a guard for immutable access to the shader table.
+    ///
+    /// This will load the shader table if it's not already loaded.
+    pub fn shaders(&self) -> ShaderTableRef<T> {
+        let table = self.shaders.get_or_init(|| self.load_shader_table());
+        ShaderTableRef {
+            container: &self.container,
+            table
+        }
+    }
+
+    /// Returns a guard for mutable access to the shader table.
+    ///
+    /// This will load the shader table if it's not already loaded.
+    pub fn shaders_mut(&mut self) -> ShaderTableMut<T> {
+        if self.shaders.get_mut().is_none() {
+            //SAFETY: This is safe because only ran if the cell is none.
+            unsafe { self.shaders.set(self.load_shader_table()).unwrap_unchecked() };
+        }
+        ShaderTableMut {
+            container: &mut self.container,
+            table: unsafe { self.shaders.get_mut().unwrap_unchecked() },
+        }
+    }
 }
 
 impl<T: Write + Seek> ShaderPack<T>
@@ -272,13 +315,6 @@ impl<T: Read + Seek> ShaderPack<T>
         Ok(SymbolTable::new(table, strings, self.extended_data))
     }
 
-    fn load_shader_table(&self) -> ShaderTable {
-        let handles = self.container.sections().iter().filter(|v| {
-            self.container.sections().header(*v).ty == SECTION_TYPE_SHADER
-        }).collect();
-        ShaderTable::new(handles)
-    }
-
     /// Returns a guard for immutable access to the symbol table.
     ///
     /// This will load the symbol table if it's not already loaded.
@@ -293,49 +329,5 @@ impl<T: Read + Seek> ShaderPack<T>
             table,
             container: &self.container
         })
-    }
-
-    /// Returns a guard for mutable access to the symbol table.
-    ///
-    /// This will load the symbol table if it's not already loaded.
-    ///
-    /// # Errors
-    ///
-    /// An [Error](crate::shader::error::Error) is returned if the symbol table could not be
-    /// loaded.
-    pub fn symbols_mut(&mut self) -> Result<SymbolTableMut<T>> {
-        if self.symbols.get_mut().is_none() {
-            //SAFETY: This is safe because only ran if the cell is none.
-            unsafe { self.symbols.set(self.load_symbol_table()?).unwrap_unchecked() };
-        }
-        Ok(SymbolTableMut {
-            table: unsafe { self.symbols.get_mut().unwrap_unchecked() },
-            container: &mut self.container
-        })
-    }
-
-    /// Returns a guard for immutable access to the shader table.
-    ///
-    /// This will load the shader table if it's not already loaded.
-    pub fn shaders(&self) -> ShaderTableRef<T> {
-        let table = self.shaders.get_or_init(|| self.load_shader_table());
-        ShaderTableRef {
-            container: &self.container,
-            table
-        }
-    }
-
-    /// Returns a guard for mutable access to the shader table.
-    ///
-    /// This will load the shader table if it's not already loaded.
-    pub fn shaders_mut(&mut self) -> ShaderTableMut<T> {
-        if self.shaders.get_mut().is_none() {
-            //SAFETY: This is safe because only ran if the cell is none.
-            unsafe { self.shaders.set(self.load_shader_table()).unwrap_unchecked() };
-        }
-        ShaderTableMut {
-            container: &mut self.container,
-            table: unsafe { self.shaders.get_mut().unwrap_unchecked() },
-        }
     }
 }
