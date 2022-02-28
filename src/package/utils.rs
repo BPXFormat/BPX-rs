@@ -61,7 +61,7 @@ use crate::core::error::OpenError;
 /// # Errors
 ///
 /// An [Error](crate::package::error::Error) is returned if some objects could not be packed.
-pub fn pack_file_vname<T: Read + Write + Seek>(
+pub fn pack_file_vname<T: Write + Seek>(
     package: &mut Package<T>,
     vname: &str,
     source: &Path
@@ -104,7 +104,7 @@ pub fn pack_file_vname<T: Read + Write + Seek>(
 /// # Errors
 ///
 /// An [Error](crate::package::error::Error) is returned if some objects could not be packed.
-pub fn pack_file<T: Read + Write + Seek>(package: &mut Package<T>, source: &Path)
+pub fn pack_file<T: Write + Seek>(package: &mut Package<T>, source: &Path)
     -> Result<()>
 {
     let str = get_name_from_path(source)?;
