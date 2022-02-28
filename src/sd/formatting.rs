@@ -46,7 +46,8 @@ pub enum IndentType
 struct FormatImpl
 {
     indent_type: IndentType,
-    indent_size: usize
+    indent_size: usize,
+    initial_indent_size: usize
 }
 
 impl FormatImpl
@@ -75,14 +76,16 @@ impl FormatImpl
             Value::Array(v) => {
                 let ff = FormatImpl {
                     indent_type: self.indent_type,
-                    indent_size: self.indent_size * 2
+                    indent_size: self.indent_size + self.initial_indent_size,
+                    initial_indent_size: self.initial_indent_size
                 };
                 ff.fmt_array(v, f)
             },
             Value::Object(v) => {
                 let ff = FormatImpl {
                     indent_type: self.indent_type,
-                    indent_size: self.indent_size * 2
+                    indent_size: self.indent_size + self.initial_indent_size,
+                    initial_indent_size: self.initial_indent_size
                 };
                 ff.fmt_object(v, f)
             }
@@ -103,8 +106,8 @@ impl FormatImpl
     }
 
     fn fmt_indent_half(&self, f: &mut Formatter) -> std::fmt::Result {
-        let size = self.indent_size / 2;
-        if size == 1 {
+        let size = self.indent_size - self.initial_indent_size;
+        if size == 0 {
             return Ok(());
         }
         for _ in 0..size {
@@ -166,7 +169,8 @@ impl<'a> Display for FormatContext<'a>
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let ff = FormatImpl {
             indent_type: self.indent_type,
-            indent_size: self.indent_size
+            indent_size: self.indent_size,
+            initial_indent_size: self.indent_size
         };
         ff.fmt_object(self.object, f)
     }
