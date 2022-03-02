@@ -51,7 +51,12 @@ pub enum Error
     Utf8,
 
     /// Describes too large structured data Object or Array (ie exceeds 255 entries).
-    CapacityExceeded(usize)
+    CapacityExceeded(usize),
+
+    /// Writing non object values into an io stream is currently not supported by BPXSD.
+    ///
+    /// This is however subject to change.
+    NotAnObject
 }
 
 impl_err_conversion!(Error { std::io::Error => Io });
@@ -67,7 +72,8 @@ impl Display for Error
             Error::Utf8 => f.write_str("utf8 error"),
             Error::CapacityExceeded(count) => {
                 write!(f, "capacity exceeded ({} > 255)", count)
-            }
+            },
+            Error::NotAnObject => f.write_str("not an object")
         }
     }
 }

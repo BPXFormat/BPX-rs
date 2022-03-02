@@ -48,6 +48,7 @@ use crate::{
 };
 use crate::core::Handle;
 use crate::package::table::{ObjectTable, ObjectTableMut, ObjectTableRef};
+use crate::sd::Value;
 use crate::table::NamedItemTable;
 
 /// A BPXP (Package).
@@ -94,7 +95,7 @@ pub struct Package<T>
     container: Container<T>,
     object_table: Handle,
     table: OnceCell<ObjectTable>,
-    metadata: OnceCell<Option<crate::sd::Object>>
+    metadata: OnceCell<Value>
 }
 
 impl<T> Package<T>
@@ -171,7 +172,7 @@ impl<T: Write + Seek> Package<T>
                 .ty(SECTION_TYPE_STRING)
         );
         let strings = StringSection::new(string_section);
-        if let Some(metadata) = &settings.metadata {
+        if !settings.metadata.is_null() {
             let metadata_section = container.sections_mut().create(
                 SectionHeaderBuilder::new()
                     .checksum(Checksum::Weak)
@@ -179,7 +180,7 @@ impl<T: Write + Seek> Package<T>
                     .ty(SECTION_TYPE_SD)
             );
             let mut section = container.sections().open(metadata_section)?;
-            metadata.write(&mut *section)?;
+            settings.metadata.write(&mut *section)?;
         }
         Ok(Package {
             metadata: OnceCell::from(settings.metadata.clone()),
@@ -267,7 +268,7 @@ impl<T: Read + Seek> Package<T>
         };
         Ok(Self {
             settings: Settings {
-                metadata: None,
+                metadata: Value::Null,
                 architecture: a,
                 platform: p,
                 type_code: [
@@ -311,21 +312,21 @@ impl<T: Read + Seek> Package<T>
     /// # Errors
     ///
     /// An [Error](crate::package::error::Error) is returned in case of corruption or system error.
-    pub fn load_metadata(&self) -> Result<Option<&crate::sd::Object>> {
+    pub fn load_metadata(&self) -> Result<&Value> {
         if self.metadata.get().is_none() {
             let res = match self.container.sections().find_by_type(SECTION_TYPE_SD) {
                 Some(v) => {
                     let mut section = self.container.sections().load(v)?;
-                    let obj = crate::sd::Object::read(&mut *section)?;
-                    self.metadata.set(Some(obj))
+                    let obj = Value::read(&mut *section)?;
+                    self.metadata.set(obj)
                 },
-                None => self.metadata.set(None)
+                None => self.metadata.set(Value::Null)
             };
             //SAFETY: This is safe because we're only running this if the cell is none.
             unsafe { res.unwrap_unchecked(); }
         }
         //SAFETY: There's a check right before this line which inserts the value if it doesn't
         // exist.
-        unsafe { Ok(self.metadata.get().unwrap_unchecked().as_ref()) }
+        unsafe { Ok(self.metadata.get().unwrap_unchecked()) }
     }
 }

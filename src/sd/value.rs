@@ -170,6 +170,59 @@ impl Value
     pub fn take(&mut self) -> Value {
         std::mem::replace(self, Value::Null)
     }
+
+    /// Attempts to write the object to the given IO backend.
+    ///
+    /// # Arguments
+    ///
+    /// * `dest`: the destination [Write](std::io::Write).
+    ///
+    /// returns: Result<(), Error>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::Object;
+    /// use bpx::sd::Value;
+    ///
+    /// let mut obj = Object::new();
+    /// obj.set("Test", 12.into());
+    /// let mut buf = Vec::<u8>::new();
+    /// Value::from(obj).write(&mut buf);
+    /// assert!(buf.len() > 0);
+    /// ```
+    pub fn write<TWrite: std::io::Write>(&self, dest: TWrite) -> super::Result<()> {
+        match self.as_object() {
+            Some(v) => super::encoder::write_structured_data(dest, v),
+            None => Err(super::error::Error::NotAnObject)
+        }
+    }
+
+    /// Attempts to read a BPXSD object from an IO backend.
+    ///
+    /// # Arguments
+    ///
+    /// * `source`: the source [Read](std::io::Read).
+    ///
+    /// returns: Result<Object, Error>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::sd::Object;
+    /// use bpx::sd::Value;
+    ///
+    /// let mut obj = Object::new();
+    /// obj.set("Test", 12.into());
+    /// let mut buf = Vec::<u8>::new();
+    /// Value::from(obj).write(&mut buf);
+    /// let obj1 = Value::read(&mut buf.as_slice()).unwrap();
+    /// assert!(obj1.as_object().unwrap().get("Test").is_some());
+    /// assert!(obj1.as_object().unwrap().get("Test").unwrap() == &Value::from(12));
+    /// ```
+    pub fn read<TRead: std::io::Read>(source: TRead) -> super::Result<Value> {
+        super::decoder::read_structured_data(source).map(|v| v.into())
+    }
 }
 
 macro_rules! auto_as_scalar {

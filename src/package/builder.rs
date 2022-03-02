@@ -28,7 +28,7 @@
 
 use crate::{
     package::{Architecture, Platform},
-    sd::Object
+    sd::Value
 };
 
 /// The required settings to create a new BPXP.
@@ -44,7 +44,7 @@ pub struct Settings
     pub platform: Platform,
 
     /// The package metadata (stored as a BPXSD [Object](crate::sd::Object)).
-    pub metadata: Option<Object>,
+    pub metadata: Value,
 
     /// The package type code.
     pub type_code: [u8; 2]
@@ -73,7 +73,7 @@ impl Builder
             settings: Settings {
                 architecture: Architecture::Any,
                 platform: Platform::Any,
-                metadata: None,
+                metadata: Value::Null,
                 type_code: [0x50, 0x48]
             }
         }
@@ -115,12 +115,12 @@ impl Builder
     ///
     /// # Arguments
     ///
-    /// * `obj`: the BPXSD metadata object.
+    /// * `val`: the BPXSD metadata value.
     ///
     /// returns: PackageBuilder
-    pub fn metadata(&mut self, obj: Object) -> &mut Self
+    pub fn metadata(&mut self, val: Value) -> &mut Self
     {
-        self.settings.metadata = Some(obj);
+        self.settings.metadata = val;
         self
     }
 

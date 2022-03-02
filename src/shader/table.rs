@@ -43,7 +43,7 @@ pub struct SymbolTable
     strings: StringSection,
     table: NamedItemTable<Symbol>,
     extended_data: Option<Handle>,
-    extended_data_objs: FrozenMap<u32, Box<crate::sd::Object>>
+    extended_data_objs: FrozenMap<u32, Box<crate::sd::Value>>
 }
 
 impl SymbolTable
@@ -69,9 +69,9 @@ impl SymbolTable
         self.table.len()
     }
 
-    fn write_extended_data<T>(&mut self, container: &mut Container<T>, extended_data: Option<crate::sd::Object>) -> Result<u32>
+    fn write_extended_data<T>(&mut self, container: &mut Container<T>, extended_data: crate::sd::Value) -> Result<u32>
     {
-        if let Some(obj) = extended_data {
+        if !extended_data.is_null() {
             let handle = *self.extended_data.get_or_insert_with(|| {
                 container.sections_mut().create(
                     SectionHeaderBuilder::new()
@@ -82,7 +82,7 @@ impl SymbolTable
             });
             let mut section = container.sections().open(handle)?;
             let offset = section.size();
-            obj.write(&mut *section)?;
+            extended_data.write(&mut *section)?;
             return Ok(offset as u32);
         }
         Ok(0xFFFFFF)
@@ -123,7 +123,7 @@ impl SymbolTable
         self.table.get(index)
     }
 
-    pub fn load_extended_data<T: Read + Seek>(&self, container: &Container<T>, sym: &Symbol) -> Result<&crate::sd::Object> {
+    pub fn load_extended_data<T: Read + Seek>(&self, container: &Container<T>, sym: &Symbol) -> Result<&crate::sd::Value> {
         if sym.flags & FLAG_EXTENDED_DATA == 0 {
             panic!("The symbol extended data is undefined.");
         }
@@ -131,7 +131,7 @@ impl SymbolTable
             let section = self.extended_data.ok_or(Error::MissingSection(Section::ExtendedData))?;
             let mut section = container.sections().load(section)?;
             section.seek(SeekFrom::Start(sym.extended_data as _))?;
-            let obj = crate::sd::Object::read(&mut *section)?;
+            let obj = crate::sd::Value::read(&mut *section)?;
             self.extended_data_objs.insert(sym.extended_data, Box::new(obj));
         }
         //SAFETY: We already have an if block to ensure extended data is loaded.
@@ -240,7 +240,7 @@ impl<'a, T: Read + Seek> SymbolTableRef<'a, T>
     /// If the [Object](crate::sd::Object) is not already loaded, returns an
     /// [Error](crate::shader::error::Error) if the section couldn't be loaded
     /// or the [Object](crate::sd::Object) couldn't be decoded.
-    pub fn load_extended_data(&self, sym: &Symbol) -> Result<&crate::sd::Object> {
+    pub fn load_extended_data(&self, sym: &Symbol) -> Result<&crate::sd::Value> {
         self.table.load_extended_data(self.container, sym)
     }
 }

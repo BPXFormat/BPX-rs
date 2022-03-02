@@ -31,9 +31,7 @@
 use std::{collections::HashMap, ops::Index};
 use std::collections::hash_map::Iter;
 
-use crate::{
-    sd::{Value, Result}
-};
+use crate::sd::Value;
 use crate::utils::Name;
 
 /// Represents a BPX Structured Data Object.
@@ -133,57 +131,6 @@ impl Object
     pub fn iter(&self) -> Iter<Name, Value>
     {
         self.0.iter()
-    }
-
-    /// Attempts to write the object to the given IO backend.
-    ///
-    /// # Arguments
-    ///
-    /// * `dest`: the destination [Write](std::io::Write).
-    ///
-    /// returns: Result<(), Error>
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::sd::Object;
-    ///
-    /// let mut obj = Object::new();
-    /// obj.set("Test", 12.into());
-    /// let mut buf = Vec::<u8>::new();
-    /// obj.write(&mut buf);
-    /// assert!(buf.len() > 0);
-    /// ```
-    pub fn write<TWrite: std::io::Write>(&self, dest: TWrite) -> Result<()>
-    {
-        super::encoder::write_structured_data(dest, self)
-    }
-
-    /// Attempts to read a BPXSD object from an IO backend.
-    ///
-    /// # Arguments
-    ///
-    /// * `source`: the source [Read](std::io::Read).
-    ///
-    /// returns: Result<Object, Error>
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::sd::Object;
-    /// use bpx::sd::Value;
-    ///
-    /// let mut obj = Object::new();
-    /// obj.set("Test", 12.into());
-    /// let mut buf = Vec::<u8>::new();
-    /// obj.write(&mut buf);
-    /// let obj1 = Object::read(&mut buf.as_slice()).unwrap();
-    /// assert!(obj1.get("Test").is_some());
-    /// assert!(obj1.get("Test").unwrap() == &Value::from(12));
-    /// ```
-    pub fn read<TRead: std::io::Read>(source: TRead) -> Result<Object>
-    {
-        super::decoder::read_structured_data(source)
     }
 }
 

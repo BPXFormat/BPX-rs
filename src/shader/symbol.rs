@@ -32,13 +32,13 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
     core::header::Struct,
-    sd::Object,
     shader::{
         error::{EosContext, InvalidCodeContext, Error},
         Stage
     },
     table::Item
 };
+use crate::sd::Value;
 
 /// Indicates this symbol is used on the vertex stage.
 pub const FLAG_VERTEX_STAGE: u16 = 0x1;
@@ -210,8 +210,8 @@ pub struct Settings
     /// The name of the symbol.
     pub name: String,
 
-    /// The extended data [Object](crate::sd::Object) of the symbol.
-    pub extended_data: Option<Object>,
+    /// The extended data [Value](crate::sd::Value) of the symbol.
+    pub extended_data: Value,
 
     /// The symbol type.
     pub ty: Type,
@@ -237,7 +237,7 @@ impl Builder
         Builder {
             sym: Settings {
                 name: name.into(),
-                extended_data: None,
+                extended_data: Value::Null,
                 ty: Type::Constant,
                 flags: 0,
                 register: 0xFF
@@ -265,12 +265,12 @@ impl Builder
     ///
     /// # Arguments
     ///
-    /// * `obj`: An [Object](crate::sd::Object) to store as extended data.
+    /// * `val`: A [Value](crate::sd::Value) to store as extended data.
     ///
     /// returns: &mut Builder
-    pub fn extended_data(&mut self, obj: Object) -> &mut Self
+    pub fn extended_data(&mut self, val: Value) -> &mut Self
     {
-        self.sym.extended_data = Some(obj);
+        self.sym.extended_data = val;
         self.sym.flags |= FLAG_EXTENDED_DATA;
         self
     }
