@@ -36,22 +36,6 @@ use crate::{
 };
 use crate::utils::Name;
 
-/*/// A BPXSD object iterator.
-pub struct Iter<'a>
-{
-    props: std::collections::hash_map::Iter<'a, u64, Value>
-}
-
-impl<'a> Iterator for Iter<'a>
-{
-    type Item = (u64, &'a Value);
-
-    fn next(&mut self) -> Option<Self::Item>
-    {
-        self.props.next().map(|(k, v)| (*k, v))
-    }
-}*/
-
 /// Represents a BPX Structured Data Object.
 #[derive(PartialEq, Clone)]
 pub struct Object(HashMap<Name, Value>);
@@ -83,28 +67,6 @@ impl Object
     {
         Object(HashMap::with_capacity(capacity as _))
     }
-
-    /*/// Sets a property in the object using a raw property hash.
-    ///
-    /// # Arguments
-    ///
-    /// * `hash`: the BPX hash of the property.
-    /// * `value`: the [Value](crate::sd::Value) to set.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::sd::Object;
-    ///
-    /// let mut obj = Object::new();
-    /// assert!(obj.is_empty());
-    /// obj.raw_set(0, 12.into());
-    /// assert_eq!(obj.len(), 1);
-    /// ```
-    pub fn raw_set(&mut self, hash: u64, value: Value)
-    {
-        self.0.insert(hash, value);
-    }*/
 
     /// Sets a property in the object.
     ///
@@ -172,76 +134,6 @@ impl Object
     {
         self.0.iter()
     }
-
-    /*/// Gets a property in the object by its hash.
-    /// Returns None if the property hash does not exist.
-    ///
-    /// # Arguments
-    ///
-    /// * `hash`: the BPX hash of the property.
-    ///
-    /// returns: Option<&Value>
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::sd::Object;
-    ///
-    /// let mut obj = Object::new();
-    /// obj.raw_set(0, 12.into());
-    /// assert!(obj.raw_get(0).is_some());
-    /// assert!(obj.raw_get(1).is_none());
-    /// ```
-    pub fn raw_get(&self, hash: u64) -> Option<&Value>
-    {
-        self.0.get(&hash)
-    }
-
-    /// Gets a property in the object.
-    /// Returns None if the property name does not exist.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: the property name.
-    ///
-    /// returns: Option<&Value>
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::sd::Object;
-    /// use bpx::sd::Value;
-    ///
-    /// let mut obj = Object::new();
-    /// obj.set("Test", 12.into());
-    /// assert!(obj.get("Test").is_some());
-    /// assert!(obj.get("Test1").is_none());
-    /// assert!(obj.get("Test").unwrap() == &Value::from(12));
-    /// ```
-    pub fn get(&self, name: &str) -> Option<&Value>
-    {
-        self.raw_get(utils::hash(name))
-    }*/
-
-    /*/// Returns the number of properties in the object.
-    pub fn len(&self) -> usize
-    {
-        self.props.len()
-    }
-
-    /// Returns whether this object is empty
-    pub fn is_empty(&self) -> bool
-    {
-        self.props.is_empty()
-    }
-
-    /// Iterate through the object keys and values.
-    pub fn iter(&self) -> Iter
-    {
-        Iter {
-            props: self.props.iter()
-        }
-    }*/
 
     /// Attempts to write the object to the given IO backend.
     ///
