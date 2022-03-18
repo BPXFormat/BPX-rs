@@ -169,7 +169,7 @@ impl<'a, 'de> VariantAccess<'de> for Enum<'a>
         T: DeserializeSeed<'de>
     {
         let v: &Array = self.val.try_into()?;
-        let val = v.get(0).ok_or(Error::MissingVariantData)?;
+        let val = v.get(1).ok_or(Error::MissingVariantData)?;
         seed.deserialize(Deserializer::new_borrowed(self.enum_size, val))
     }
 
@@ -622,6 +622,23 @@ mod tests
         arr.as_mut().push(Value::Uint8(42));
         let e = MyEnum::deserialize(Deserializer::new(EnumSize::U32, arr)).unwrap();
         assert_eq!(e, MyEnum::Val2(0, 42));
+    }
+
+    #[test]
+    fn tuple_enum2()
+    {
+        #[derive(Deserialize, Eq, PartialEq, Debug)]
+        enum MyEnum
+        {
+            Val(u16),
+            Val1,
+            Val2(u8, u8)
+        }
+        let mut arr = Array::new();
+        arr.as_mut().push(Value::Uint8(0));
+        arr.as_mut().push(Value::Uint16(42));
+        let e = MyEnum::deserialize(Deserializer::new(EnumSize::U8, arr)).unwrap();
+        assert_eq!(e, MyEnum::Val(42));
     }
 
     #[test]
