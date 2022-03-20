@@ -124,12 +124,12 @@ pub fn internal_save<T: Write + Seek>(
     Ok(())
 }
 
-fn write_last_section<T: Write + Seek>(
+fn write_section_single<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
-    last_handle: u32,
+    handle: u32,
 ) -> Result<(bool, i64)> {
-    let entry = sections.get_mut(&last_handle).unwrap();
+    let entry = sections.get_mut(&handle).unwrap();
     backend.seek(SeekFrom::Start(entry.header.pointer))?;
     let data = entry
         .data
@@ -138,6 +138,7 @@ fn write_last_section<T: Write + Seek>(
         .ok_or(Error::Open(OpenError::SectionNotLoaded))?;
     let last_section_ptr = data.stream_position()?;
     let flags = entry.entry1.get_flags(data.size() as u32);
+    data.seek(SeekFrom::Start(0))?;
     let (csize, chksum) = write_section(flags, data, &mut backend)?;
     data.seek(io::SeekFrom::Start(last_section_ptr))?;
     let old = entry.header;
@@ -146,30 +147,45 @@ fn write_last_section<T: Write + Seek>(
     entry.header.chksum = chksum;
     entry.header.flags = flags;
     let diff = entry.header.csize as i64 - old.csize as i64;
-    Ok((old == entry.header, diff))
+    Ok((old != entry.header, diff))
 }
 
-pub fn internal_save_last<T: Write + Seek>(
+pub fn recompute_header_checksum(main_header: &mut MainHeader, sections: &BTreeMap<u32, SectionEntry>) {
+    let mut chksum_sht: u32 = 0;
+    for entry in sections.values() {
+        chksum_sht += entry.header.get_checksum();
+    }
+    main_header.chksum = 0;
+    main_header.chksum = chksum_sht + main_header.get_checksum();
+}
+
+pub fn internal_save_single<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
     main_header: &mut MainHeader,
-    last_handle: u32,
-) -> Result<()> {
+    handle: u32,
+) -> Result<bool> {
     // This function saves only the last section.
-    let (update_sht, diff) = write_last_section(&mut backend, sections, last_handle)?;
+    let mut write_main_header = false;
+    let (update_sht, diff) = write_section_single(&mut backend, sections, handle)?;
     if update_sht {
+        let entry = &sections[&handle];
         let offset_section_header =
-            SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * (main_header.section_num - 1) as usize);
-        backend.seek(SeekFrom::Start(offset_section_header as _))?;
-        let entry = &sections[&last_handle];
+            SIZE_MAIN_HEADER as u64 + (SIZE_SECTION_HEADER as u64 * entry.index as u64);
+        backend.seek(SeekFrom::Start(offset_section_header))?;
         entry.header.write(&mut backend)?;
+        write_main_header = true;
     }
     if diff != 0 {
-        backend.seek(SeekFrom::Start(0))?;
         main_header.file_size = main_header.file_size.wrapping_add(diff as u64);
+        write_main_header = true;
+    }
+    if write_main_header {
+        recompute_header_checksum(main_header, sections);
+        backend.seek(SeekFrom::Start(0))?;
         main_header.write(&mut backend)?;
     }
-    Ok(())
+    Ok(write_main_header)
 }
 
 fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(
