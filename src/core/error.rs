@@ -71,6 +71,8 @@ impl Display for DeflateError
     }
 }
 
+impl std::error::Error for DeflateError {}
+
 /// Represents a generic compression error.
 #[derive(Debug)]
 pub enum InflateError
@@ -106,6 +108,8 @@ impl Display for InflateError
         }
     }
 }
+
+impl std::error::Error for InflateError {}
 
 /// Represents a BPX error.
 #[derive(Debug)]
@@ -177,6 +181,8 @@ impl Display for Error
     }
 }
 
+impl std::error::Error for Error {}
+
 /// Represents possible errors when opening a section.
 #[derive(Debug)]
 pub enum OpenError
@@ -200,3 +206,5 @@ impl Display for OpenError
         }
     }
 }
+
+impl std::error::Error for OpenError {}

@@ -78,6 +78,8 @@ impl Display for Error
     }
 }
 
+impl std::error::Error for Error {}
+
 /// Represents a structured data value conversion error
 #[derive(Debug)]
 pub struct TypeError
@@ -119,3 +121,5 @@ impl Display for TypeError
         )
     }
 }
+
+impl std::error::Error for TypeError {}

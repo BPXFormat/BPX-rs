@@ -69,6 +69,8 @@ impl Display for Error
     }
 }
 
+impl std::error::Error for Error {}
+
 /// Represents a path conversion error.
 #[derive(Debug)]
 pub enum PathError
@@ -90,3 +92,5 @@ impl Display for PathError
         }
     }
 }
+
+impl std::error::Error for PathError {}
