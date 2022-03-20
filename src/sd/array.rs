@@ -27,12 +27,11 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::{
-    ops::{Index, IndexMut},
+    borrow::{Borrow, BorrowMut},
+    ops::{Deref, DerefMut, Index, IndexMut},
     slice::Iter,
-    vec::Vec
+    vec::Vec,
 };
-use std::borrow::{Borrow, BorrowMut};
-use std::ops::{Deref, DerefMut};
 
 use crate::sd::Value;
 
@@ -40,16 +39,13 @@ use crate::sd::Value;
 #[derive(PartialEq, Clone)]
 pub struct Array(Vec<Value>);
 
-impl Default for Array
-{
-    fn default() -> Self
-    {
+impl Default for Array {
+    fn default() -> Self {
         Self::new()
     }
 }
 
-impl Deref for Array
-{
+impl Deref for Array {
     type Target = [Value];
 
     fn deref(&self) -> &Self::Target {
@@ -57,52 +53,44 @@ impl Deref for Array
     }
 }
 
-impl DerefMut for Array
-{
+impl DerefMut for Array {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl Borrow<Vec<Value>> for Array
-{
+impl Borrow<Vec<Value>> for Array {
     fn borrow(&self) -> &Vec<Value> {
         &self.0
     }
 }
 
-impl BorrowMut<Vec<Value>> for Array
-{
+impl BorrowMut<Vec<Value>> for Array {
     fn borrow_mut(&mut self) -> &mut Vec<Value> {
         &mut self.0
     }
 }
 
-impl AsRef<Vec<Value>> for Array
-{
+impl AsRef<Vec<Value>> for Array {
     fn as_ref(&self) -> &Vec<Value> {
         &self.0
     }
 }
 
-impl AsMut<Vec<Value>> for Array
-{
+impl AsMut<Vec<Value>> for Array {
     fn as_mut(&mut self) -> &mut Vec<Value> {
         &mut self.0
     }
 }
 
-impl Array
-{
+impl Array {
     /// Creates a new array.
-    pub fn new() -> Array
-    {
+    pub fn new() -> Array {
         Array(Vec::new())
     }
 
     /// Allocates a new array with a specified initial capacity
-    pub fn with_capacity(capacity: u8) -> Array
-    {
+    pub fn with_capacity(capacity: u8) -> Array {
         Array(Vec::with_capacity(capacity as _))
     }
 
@@ -125,8 +113,7 @@ impl Array
     /// arr.remove(0);
     /// assert_eq!(arr.len(), 0);
     /// ```
-    pub fn remove(&mut self, pos: usize) -> Option<Value>
-    {
+    pub fn remove(&mut self, pos: usize) -> Option<Value> {
         if pos > self.0.len() {
             None
         } else {
@@ -135,14 +122,12 @@ impl Array
     }
 
     /// Returns the number of properties in the object.
-    pub fn len(&self) -> usize
-    {
+    pub fn len(&self) -> usize {
         self.0.len()
     }
 
     /// Returns whether this object is empty
-    pub fn is_empty(&self) -> bool
-    {
+    pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
@@ -152,31 +137,25 @@ impl Array
     }
 }
 
-impl<'a> IntoIterator for &'a Array
-{
+impl<'a> IntoIterator for &'a Array {
     type Item = &'a Value;
     type IntoIter = Iter<'a, Value>;
 
-    fn into_iter(self) -> Self::IntoIter
-    {
+    fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl Index<usize> for Array
-{
+impl Index<usize> for Array {
     type Output = Value;
 
-    fn index(&self, i: usize) -> &Value
-    {
+    fn index(&self, i: usize) -> &Value {
         &self.0[i]
     }
 }
 
-impl IndexMut<usize> for Array
-{
-    fn index_mut(&mut self, i: usize) -> &mut Value
-    {
+impl IndexMut<usize> for Array {
+    fn index_mut(&mut self, i: usize) -> &mut Value {
         &mut self.0[i]
     }
 }

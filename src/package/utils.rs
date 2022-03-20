@@ -31,18 +31,17 @@
 use std::{
     fs::{metadata, read_dir, File},
     io::{Read, Seek, Write},
-    path::{Path, PathBuf}
+    path::{Path, PathBuf},
 };
 
 use crate::{
+    core::error::OpenError,
     package::{
         error::{EosContext, Error},
-        Result,
-        Package
+        Package, Result,
     },
-    strings::{get_name_from_dir_entry, get_name_from_path}
+    strings::{get_name_from_dir_entry, get_name_from_path},
 };
-use crate::core::error::OpenError;
 
 /// Packs a file or folder in a BPXP with the given virtual name.
 ///
@@ -64,15 +63,16 @@ use crate::core::error::OpenError;
 pub fn pack_file_vname<T: Write + Seek>(
     package: &mut Package<T>,
     vname: &str,
-    source: &Path
-) -> Result<()>
-{
+    source: &Path,
+) -> Result<()> {
     let md = metadata(source)?;
     if md.is_file() {
         #[cfg(feature = "debug-log")]
         println!("Writing file {} with {} byte(s)", vname, md.len());
         let mut fle = File::open(source)?;
-        let mut objects = package.objects_mut().ok_or(Error::Open(OpenError::SectionNotLoaded))?;
+        let mut objects = package
+            .objects_mut()
+            .ok_or(Error::Open(OpenError::SectionNotLoaded))?;
         objects.create(vname, &mut fle)?;
     } else {
         let entries = read_dir(source)?;
@@ -104,9 +104,7 @@ pub fn pack_file_vname<T: Write + Seek>(
 /// # Errors
 ///
 /// An [Error](crate::package::error::Error) is returned if some objects could not be packed.
-pub fn pack_file<T: Write + Seek>(package: &mut Package<T>, source: &Path)
-    -> Result<()>
-{
+pub fn pack_file<T: Write + Seek>(package: &mut Package<T>, source: &Path) -> Result<()> {
     let str = get_name_from_path(source)?;
     pack_file_vname(package, str, source)
 }
@@ -127,8 +125,7 @@ pub fn pack_file<T: Write + Seek>(package: &mut Package<T>, source: &Path)
 /// # Errors
 ///
 /// An [Error](crate::package::error::Error) is returned if some objects could not be unpacked.
-pub fn unpack<T: Read + Seek>(package: &Package<T>, target: &Path) -> Result<()>
-{
+pub fn unpack<T: Read + Seek>(package: &Package<T>, target: &Path) -> Result<()> {
     let objects = package.objects()?;
     for v in &objects {
         let size = v.size;

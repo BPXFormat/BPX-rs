@@ -27,29 +27,26 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::{Read, Seek, SeekFrom, Write};
+
 use once_cell::unsync::OnceCell;
 
 use crate::{
     core::{
         builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
         header::{Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
-        Container
+        Container, Handle,
     },
     package::{
         decoder::{get_arch_platform_from_code, read_object_table},
         encoder::get_type_ext,
         error::{Error, Section},
-        Result,
-        Settings,
-        SECTION_TYPE_OBJECT_TABLE,
-        SUPPORTED_VERSION
+        table::{ObjectTable, ObjectTableMut, ObjectTableRef},
+        Result, Settings, SECTION_TYPE_OBJECT_TABLE, SUPPORTED_VERSION,
     },
-    strings::StringSection
+    sd::Value,
+    strings::StringSection,
+    table::NamedItemTable,
 };
-use crate::core::Handle;
-use crate::package::table::{ObjectTable, ObjectTableMut, ObjectTableRef};
-use crate::sd::Value;
-use crate::table::NamedItemTable;
 
 /// A BPXP (Package).
 ///
@@ -89,25 +86,22 @@ use crate::table::NamedItemTable;
 ///     assert_eq!(s, "This is a test 你好")
 /// }
 /// ```
-pub struct Package<T>
-{
+pub struct Package<T> {
     settings: Settings,
     container: Container<T>,
     object_table: Handle,
     table: OnceCell<ObjectTable>,
-    metadata: OnceCell<Value>
+    metadata: OnceCell<Value>,
 }
 
-impl<T> Package<T>
-{
+impl<T> Package<T> {
     /// Gets the settings of this package.
     pub fn get_settings(&self) -> &Settings {
         &self.settings
     }
 
     /// Consumes this Package and returns the inner BPX container.
-    pub fn into_inner(self) -> Container<T>
-    {
+    pub fn into_inner(self) -> Container<T> {
         self.container
     }
 
@@ -118,13 +112,12 @@ impl<T> Package<T>
     pub fn objects_mut(&mut self) -> Option<ObjectTableMut<T>> {
         self.table.get_mut().map(|v| ObjectTableMut {
             table: v,
-            container: &mut self.container
+            container: &mut self.container,
         })
     }
 }
 
-impl<T: Write + Seek> Package<T>
-{
+impl<T: Write + Seek> Package<T> {
     /// Creates a new BPX type P.
     ///
     /// # Arguments
@@ -149,27 +142,26 @@ impl<T: Write + Seek> Package<T>
     /// bpxp.save();
     /// assert!(!bpxp.into_inner().into_inner().into_inner().is_empty());
     /// ```
-    pub fn create<S: Into<Settings>>(backend: T, settings: S) -> Result<Package<T>>
-    {
+    pub fn create<S: Into<Settings>>(backend: T, settings: S) -> Result<Package<T>> {
         let settings = settings.into();
         let mut container = Container::create(
             backend,
             MainHeaderBuilder::new()
                 .ty(b'P')
                 .type_ext(get_type_ext(&settings))
-                .version(SUPPORTED_VERSION)
+                .version(SUPPORTED_VERSION),
         );
         let object_table = container.sections_mut().create(
             SectionHeaderBuilder::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
-                .ty(SECTION_TYPE_OBJECT_TABLE)
+                .ty(SECTION_TYPE_OBJECT_TABLE),
         );
         let string_section = container.sections_mut().create(
             SectionHeaderBuilder::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
-                .ty(SECTION_TYPE_STRING)
+                .ty(SECTION_TYPE_STRING),
         );
         let strings = StringSection::new(string_section);
         if !settings.metadata.is_null() {
@@ -177,7 +169,7 @@ impl<T: Write + Seek> Package<T>
                 SectionHeaderBuilder::new()
                     .checksum(Checksum::Weak)
                     .compression(CompressionMethod::Zlib)
-                    .ty(SECTION_TYPE_SD)
+                    .ty(SECTION_TYPE_SD),
             );
             let mut section = container.sections().open(metadata_section)?;
             settings.metadata.write(&mut *section)?;
@@ -187,7 +179,7 @@ impl<T: Write + Seek> Package<T>
             settings,
             container,
             object_table,
-            table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings))
+            table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings)),
         })
     }
 
@@ -197,8 +189,7 @@ impl<T: Write + Seek> Package<T>
     ///
     /// Returns an [Error](crate::package::error::Error) if some parts of this package
     /// couldn't be saved.
-    pub fn save(&mut self) -> Result<()>
-    {
+    pub fn save(&mut self) -> Result<()> {
         {
             let mut section = self.container.sections().open(self.object_table)?;
             section.seek(SeekFrom::Start(0))?;
@@ -213,8 +204,7 @@ impl<T: Write + Seek> Package<T>
     }
 }
 
-impl<T: Read + Seek> Package<T>
-{
+impl<T: Read + Seek> Package<T> {
     /// Opens a BPX type P.
     ///
     /// # Arguments
@@ -243,28 +233,27 @@ impl<T: Read + Seek> Package<T>
     /// let objects = bpxp.objects().unwrap();
     /// assert_eq!(objects.len(), 0);
     /// ```
-    pub fn open(backend: T) -> Result<Package<T>>
-    {
+    pub fn open(backend: T) -> Result<Package<T>> {
         let container = Container::open(backend)?;
         if container.get_main_header().ty != b'P' {
             return Err(Error::BadType {
                 expected: b'P',
-                actual: container.get_main_header().ty
+                actual: container.get_main_header().ty,
             });
         }
         if container.get_main_header().version != SUPPORTED_VERSION {
-            return Err(Error::BadVersion{
+            return Err(Error::BadVersion {
                 supported: SUPPORTED_VERSION,
-                actual: container.get_main_header().version
+                actual: container.get_main_header().version,
             });
         }
         let (a, p) = get_arch_platform_from_code(
             container.get_main_header().type_ext[0],
-            container.get_main_header().type_ext[1]
+            container.get_main_header().type_ext[1],
         )?;
         let object_table = match container.sections().find_by_type(SECTION_TYPE_OBJECT_TABLE) {
             Some(v) => v,
-            None => return Err(Error::MissingSection(Section::ObjectTable))
+            None => return Err(Error::MissingSection(Section::ObjectTable)),
         };
         Ok(Self {
             settings: Settings {
@@ -273,18 +262,22 @@ impl<T: Read + Seek> Package<T>
                 platform: p,
                 type_code: [
                     container.get_main_header().type_ext[2],
-                    container.get_main_header().type_ext[3]
-                ]
+                    container.get_main_header().type_ext[3],
+                ],
             },
             object_table,
             container,
             table: OnceCell::new(),
-            metadata: OnceCell::new()
+            metadata: OnceCell::new(),
         })
     }
 
     fn load_object_table(&self) -> Result<ObjectTable> {
-        let handle = self.container.sections().find_by_type(SECTION_TYPE_STRING).ok_or(Error::MissingSection(Section::Strings))?;
+        let handle = self
+            .container
+            .sections()
+            .find_by_type(SECTION_TYPE_STRING)
+            .ok_or(Error::MissingSection(Section::Strings))?;
         let strings = StringSection::new(handle);
         let table = read_object_table(&self.container, self.object_table)?;
         Ok(ObjectTable::new(table, strings))
@@ -302,7 +295,7 @@ impl<T: Read + Seek> Package<T>
         let table = self.table.get_or_try_init(|| self.load_object_table())?;
         Ok(ObjectTableRef {
             table,
-            container: &self.container
+            container: &self.container,
         })
     }
 
@@ -320,10 +313,12 @@ impl<T: Read + Seek> Package<T>
                     let obj = Value::read(&mut *section)?;
                     self.metadata.set(obj)
                 },
-                None => self.metadata.set(Value::Null)
+                None => self.metadata.set(Value::Null),
             };
             //SAFETY: This is safe because we're only running this if the cell is none.
-            unsafe { res.unwrap_unchecked(); }
+            unsafe {
+                res.unwrap_unchecked();
+            }
         }
         //SAFETY: There's a check right before this line which inserts the value if it doesn't
         // exist.

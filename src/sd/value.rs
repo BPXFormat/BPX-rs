@@ -28,13 +28,12 @@
 
 use std::{
     convert::{From, TryFrom, TryInto},
-    string::String
+    string::String,
 };
 
 use crate::{
-    macros::impl_err_conversion,
-    macros::named_enum,
-    sd::{error::TypeError, Array, Object}
+    macros::{impl_err_conversion, named_enum},
+    sd::{error::TypeError, Array, Object},
 };
 
 named_enum!(
@@ -90,8 +89,7 @@ named_enum!(
 
 /// Represents a BPXSD value.
 #[derive(PartialEq, Clone)]
-pub enum Value
-{
+pub enum Value {
     /// NULL (0x0)
     Null,
 
@@ -135,11 +133,10 @@ pub enum Value
     Array(Array),
 
     /// [Object](crate::sd::Object) (0xE)
-    Object(Object)
+    Object(Object),
 }
 
-impl Value
-{
+impl Value {
     /// Gets the type of this Value.
     pub fn get_type(&self) -> Type {
         match self {
@@ -157,7 +154,7 @@ impl Value
             Value::Double(_) => Type::Double,
             Value::String(_) => Type::String,
             Value::Array(_) => Type::Array,
-            Value::Object(_) => Type::Object
+            Value::Object(_) => Type::Object,
         }
     }
 
@@ -194,7 +191,7 @@ impl Value
     pub fn write<TWrite: std::io::Write>(&self, dest: TWrite) -> super::Result<()> {
         match self.as_object() {
             Some(v) => super::encoder::write_structured_data(dest, v),
-            None => Err(super::error::Error::NotAnObject)
+            None => Err(super::error::Error::NotAnObject),
         }
     }
 
@@ -246,7 +243,7 @@ macro_rules! auto_as_scalar {
     };
 }
 
-auto_as_scalar!{
+auto_as_scalar! {
     (as_u8 u8) => (Uint8),
     (as_u16 u16) => (Uint8 Uint16),
     (as_u32 u32) => (Uint8 Uint16 Uint32),
@@ -267,7 +264,7 @@ impl Value {
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Value::String(v) => Some(v),
-            _ => None
+            _ => None,
         }
     }
 
@@ -277,7 +274,7 @@ impl Value {
     pub fn as_array(&self) -> Option<&Array> {
         match self {
             Value::Array(v) => Some(v),
-            _ => None
+            _ => None,
         }
     }
 
@@ -287,7 +284,7 @@ impl Value {
     pub fn as_object(&self) -> Option<&Object> {
         match self {
             Value::Object(v) => Some(v),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -311,18 +308,14 @@ impl_err_conversion!(
     }
 );
 
-impl From<&str> for Value
-{
-    fn from(v: &str) -> Self
-    {
+impl From<&str> for Value {
+    fn from(v: &str) -> Self {
         Value::String(String::from(v))
     }
 }
 
-impl<T: Into<Value>> From<Option<T>> for Value
-{
-    fn from(v: Option<T>) -> Self
-    {
+impl<T: Into<Value>> From<Option<T>> for Value {
+    fn from(v: Option<T>) -> Self {
         if let Some(v) = v {
             return v.into();
         }
@@ -330,10 +323,8 @@ impl<T: Into<Value>> From<Option<T>> for Value
     }
 }
 
-impl<T: Into<Value>> From<Vec<T>> for Value
-{
-    fn from(v: Vec<T>) -> Self
-    {
+impl<T: Into<Value>> From<Vec<T>> for Value {
+    fn from(v: Vec<T>) -> Self {
         let mut arr = Array::new();
         for v1 in v {
             arr.as_mut().push(v1.into());
@@ -370,7 +361,7 @@ macro_rules! impl_try_into_scalar {
     };
 }
 
-impl_try_into_scalar!{
+impl_try_into_scalar! {
     (Bool bool),
     (Uint8 u8),
     (Uint16 u16),
@@ -384,12 +375,10 @@ impl_try_into_scalar!{
     (Double f64)
 }
 
-impl TryFrom<Value> for String
-{
+impl TryFrom<Value> for String {
     type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self, TypeError>
-    {
+    fn try_from(v: Value) -> Result<Self, TypeError> {
         if let Value::String(v) = v {
             return Ok(v);
         }
@@ -397,12 +386,10 @@ impl TryFrom<Value> for String
     }
 }
 
-impl TryFrom<Value> for Array
-{
+impl TryFrom<Value> for Array {
     type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self, TypeError>
-    {
+    fn try_from(v: Value) -> Result<Self, TypeError> {
         if let Value::Array(v) = v {
             return Ok(v);
         }
@@ -410,12 +397,10 @@ impl TryFrom<Value> for Array
     }
 }
 
-impl TryFrom<Value> for Object
-{
+impl TryFrom<Value> for Object {
     type Error = TypeError;
 
-    fn try_from(v: Value) -> Result<Self, TypeError>
-    {
+    fn try_from(v: Value) -> Result<Self, TypeError> {
         if let Value::Object(v) = v {
             return Ok(v);
         }
@@ -423,12 +408,10 @@ impl TryFrom<Value> for Object
     }
 }
 
-impl<'a> TryFrom<&'a Value> for &'a str
-{
+impl<'a> TryFrom<&'a Value> for &'a str {
     type Error = TypeError;
 
-    fn try_from(v: &'a Value) -> Result<Self, TypeError>
-    {
+    fn try_from(v: &'a Value) -> Result<Self, TypeError> {
         if let Value::String(v) = v {
             return Ok(v);
         }
@@ -436,12 +419,10 @@ impl<'a> TryFrom<&'a Value> for &'a str
     }
 }
 
-impl<'a> TryFrom<&'a Value> for &'a Array
-{
+impl<'a> TryFrom<&'a Value> for &'a Array {
     type Error = TypeError;
 
-    fn try_from(v: &'a Value) -> Result<Self, TypeError>
-    {
+    fn try_from(v: &'a Value) -> Result<Self, TypeError> {
         if let Value::Array(v) = v {
             return Ok(v);
         }
@@ -449,12 +430,10 @@ impl<'a> TryFrom<&'a Value> for &'a Array
     }
 }
 
-impl<'a> TryFrom<&'a Value> for &'a Object
-{
+impl<'a> TryFrom<&'a Value> for &'a Object {
     type Error = TypeError;
 
-    fn try_from(v: &'a Value) -> Result<Self, TypeError>
-    {
+    fn try_from(v: &'a Value) -> Result<Self, TypeError> {
         if let Value::Object(v) = v {
             return Ok(v);
         }

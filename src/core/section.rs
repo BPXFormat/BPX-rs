@@ -26,26 +26,21 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{Read, Seek};
-use std::cell::{Cell, RefCell, RefMut};
-use std::collections::{Bound, BTreeMap};
-use std::collections::btree_map::Keys;
-
-use crate::{
-    core::{
-        data::AutoSectionData,
-        decoder::load_section1,
-        header::{
-            SectionHeader,
-            FLAG_CHECK_CRC32,
-            FLAG_CHECK_WEAK,
-            FLAG_COMPRESS_XZ,
-            FLAG_COMPRESS_ZLIB
-        },
-        Result
-    }
+use std::{
+    cell::{Cell, RefCell, RefMut},
+    collections::{btree_map::Keys, BTreeMap, Bound},
+    io::{Read, Seek},
 };
-use crate::core::error::{Error, OpenError};
+
+use crate::core::{
+    data::AutoSectionData,
+    decoder::load_section1,
+    error::{Error, OpenError},
+    header::{
+        SectionHeader, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB,
+    },
+    Result,
+};
 
 /// Represents a pointer to a section.
 ///
@@ -53,8 +48,7 @@ use crate::core::error::{Error, OpenError};
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Handle(u32);
 
-impl Handle
-{
+impl Handle {
     /// Constructs a Handle from a raw u32.
     ///
     /// # Arguments
@@ -66,28 +60,23 @@ impl Handle
     /// # Safety
     ///
     /// You must ensure the raw key is a valid key. Failure to do so could panic bpx::core::Container.
-    pub unsafe fn from_raw(raw: u32) -> Self
-    {
+    pub unsafe fn from_raw(raw: u32) -> Self {
         Self(raw)
     }
 
     /// Extracts the raw key from this Handle.
-    pub fn into_raw(self) -> u32
-    {
+    pub fn into_raw(self) -> u32 {
         self.0
     }
 }
 
-pub struct SectionEntry1
-{
+pub struct SectionEntry1 {
     pub threshold: u32,
-    pub flags: u8
+    pub flags: u8,
 }
 
-impl SectionEntry1
-{
-    pub fn get_flags(&self, size: u32) -> u8
-    {
+impl SectionEntry1 {
+    pub fn get_flags(&self, size: u32) -> u8 {
         let mut flags = 0;
         if self.flags & FLAG_CHECK_WEAK != 0 {
             flags |= FLAG_CHECK_WEAK;
@@ -103,23 +92,20 @@ impl SectionEntry1
     }
 }
 
-pub struct SectionEntry
-{
+pub struct SectionEntry {
     pub(crate) entry1: SectionEntry1,
     pub(crate) header: SectionHeader,
     pub(crate) data: RefCell<Option<AutoSectionData>>,
     pub(crate) index: u32,
-    pub(crate) modified: Cell<bool>
+    pub(crate) modified: Cell<bool>,
 }
 
 /// An iterator over section handles.
-pub struct Iter<'a>
-{
-    iter: Keys<'a, u32, SectionEntry>
+pub struct Iter<'a> {
+    iter: Keys<'a, u32, SectionEntry>,
 }
 
-impl<'a> Iterator for Iter<'a>
-{
+impl<'a> Iterator for Iter<'a> {
     type Item = Handle;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -128,17 +114,15 @@ impl<'a> Iterator for Iter<'a>
 }
 
 /// Represents the table of all sections in a BPX [Container](crate::core::Container).
-pub struct SectionTable<T>
-{
+pub struct SectionTable<T> {
     pub(crate) backend: RefCell<T>,
     pub(crate) sections: BTreeMap<u32, SectionEntry>,
     pub(crate) count: u32,
     pub(crate) modified: bool,
-    pub(crate) next_handle: u32
+    pub(crate) next_handle: u32,
 }
 
-impl<T: Read + Seek> SectionTable<T>
-{
+impl<T: Read + Seek> SectionTable<T> {
     /// Opens a section for reading and/or writing. Loads the section if needed.
     ///
     /// # Panics
@@ -149,22 +133,25 @@ impl<T: Read + Seek> SectionTable<T>
     ///
     /// Returns an [Error](crate::core::error::Error) if the section is corrupted,
     /// truncated, if some data couldn't be read or if the section is already in use.
-    pub fn load(&self, handle: Handle) -> Result<RefMut<AutoSectionData>>
-    {
+    pub fn load(&self, handle: Handle) -> Result<RefMut<AutoSectionData>> {
         let section = &self.sections[&handle.0];
-        let mut data = section.data.try_borrow_mut().map_err(|_| Error::Open(OpenError::SectionInUse))?;
+        let mut data = section
+            .data
+            .try_borrow_mut()
+            .map_err(|_| Error::Open(OpenError::SectionInUse))?;
         if data.is_none() {
             let mut backend = self.backend.borrow_mut();
             let loaded = load_section1(&mut *backend, &section.header)?;
             *data = Some(loaded);
         }
         section.modified.set(true);
-        Ok(RefMut::map(data, |v| unsafe { v.as_mut().unwrap_unchecked() }))
+        Ok(RefMut::map(data, |v| unsafe {
+            v.as_mut().unwrap_unchecked()
+        }))
     }
 }
 
-impl<T> SectionTable<T>
-{
+impl<T> SectionTable<T> {
     /// Opens a section for reading and/or writing.
     ///
     /// # Arguments
@@ -183,12 +170,17 @@ impl<T> SectionTable<T>
     /// or is not loaded. To ensure a section is loaded, call load.
     pub fn open(&self, handle: Handle) -> std::result::Result<RefMut<AutoSectionData>, OpenError> {
         let section = &self.sections[&handle.0];
-        let data = section.data.try_borrow_mut().map_err(|_| OpenError::SectionInUse)?;
+        let data = section
+            .data
+            .try_borrow_mut()
+            .map_err(|_| OpenError::SectionInUse)?;
         if data.is_none() {
             return Err(OpenError::SectionNotLoaded);
         }
         section.modified.set(true);
-        Ok(RefMut::map(data, |v| unsafe { v.as_mut().unwrap_unchecked() }))
+        Ok(RefMut::map(data, |v| unsafe {
+            v.as_mut().unwrap_unchecked()
+        }))
     }
 
     /// Returns true if this section table contains no section.
@@ -204,7 +196,7 @@ impl<T> SectionTable<T>
     /// Returns an iterator over all section handles in this table.
     pub fn iter(&self) -> Iter {
         Iter {
-            iter: self.sections.keys()
+            iter: self.sections.keys(),
         }
     }
 
@@ -228,8 +220,7 @@ impl<T> SectionTable<T>
     /// file.sections_mut().create(SectionHeaderBuilder::new());
     /// assert_eq!(file.sections().len(), 1);
     /// ```
-    pub fn create<H: Into<SectionHeader>>(&mut self, header: H) -> Handle
-    {
+    pub fn create<H: Into<SectionHeader>>(&mut self, header: H) -> Handle {
         self.modified = true;
         self.count += 1;
         let r = self.next_handle;
@@ -242,8 +233,8 @@ impl<T> SectionTable<T>
             index: self.count - 1,
             entry1: SectionEntry1 {
                 threshold: h.csize,
-                flags: h.flags
-            }
+                flags: h.flags,
+            },
         };
         self.sections.insert(r, entry);
         self.next_handle += 1;
@@ -275,8 +266,7 @@ impl<T> SectionTable<T>
     /// file.save();
     /// assert_eq!(file.get_main_header().section_num, 0);
     /// ```
-    pub fn remove(&mut self, handle: Handle)
-    {
+    pub fn remove(&mut self, handle: Handle) {
         self.sections.remove(&handle.0);
         self.count -= 1;
         self.modified = true;
@@ -299,8 +289,7 @@ impl<T> SectionTable<T>
     ///
     /// Panics if the given section handle is invalid.
     ///
-    pub fn header(&self, handle: Handle) -> &SectionHeader
-    {
+    pub fn header(&self, handle: Handle) -> &SectionHeader {
         &self.sections[&handle.0].header
     }
 
@@ -316,8 +305,7 @@ impl<T> SectionTable<T>
     ///
     /// Panics if the given section handle is invalid.
     ///
-    pub fn index(&self, handle: Handle) -> u32
-    {
+    pub fn index(&self, handle: Handle) -> u32 {
         self.sections[&handle.0].index
     }
 
@@ -340,8 +328,7 @@ impl<T> SectionTable<T>
     /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
     /// assert!(file.sections().find_by_type(0).is_none());
     /// ```
-    pub fn find_by_type(&self, ty: u8) -> Option<Handle>
-    {
+    pub fn find_by_type(&self, ty: u8) -> Option<Handle> {
         for (handle, entry) in &self.sections {
             if entry.header.ty == ty {
                 return Some(Handle(*handle));
@@ -369,8 +356,7 @@ impl<T> SectionTable<T>
     /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
     /// assert!(file.sections().find_by_index(0).is_none());
     /// ```
-    pub fn find_by_index(&self, index: u32) -> Option<Handle>
-    {
+    pub fn find_by_index(&self, index: u32) -> Option<Handle> {
         for (idx, handle) in self.sections.keys().enumerate() {
             if idx as u32 == index {
                 return Some(Handle(*handle));
@@ -380,8 +366,7 @@ impl<T> SectionTable<T>
     }
 }
 
-impl<'a, T> IntoIterator for &'a SectionTable<T>
-{
+impl<'a, T> IntoIterator for &'a SectionTable<T> {
     type Item = Handle;
     type IntoIter = Iter<'a>;
 

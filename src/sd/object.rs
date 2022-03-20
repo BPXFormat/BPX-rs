@@ -28,11 +28,12 @@
 
 //! BPXSD object definition
 
-use std::{collections::HashMap, ops::Index};
-use std::collections::hash_map::Iter;
+use std::{
+    collections::{hash_map::Iter, HashMap},
+    ops::Index,
+};
 
-use crate::sd::Value;
-use crate::utils::Name;
+use crate::{sd::Value, utils::Name};
 
 /// Represents a BPX Structured Data Object.
 #[derive(PartialEq, Clone)]
@@ -44,25 +45,20 @@ impl AsRef<HashMap<Name, Value>> for Object {
     }
 }
 
-impl Default for Object
-{
-    fn default() -> Self
-    {
+impl Default for Object {
+    fn default() -> Self {
         Self::new()
     }
 }
 
-impl Object
-{
+impl Object {
     /// Creates a new object.
-    pub fn new() -> Object
-    {
+    pub fn new() -> Object {
         Object(HashMap::new())
     }
 
     /// Allocates a new object with a specified initial capacity
-    pub fn with_capacity(capacity: u8) -> Object
-    {
+    pub fn with_capacity(capacity: u8) -> Object {
         Object(HashMap::with_capacity(capacity as _))
     }
 
@@ -83,8 +79,7 @@ impl Object
     /// obj.set("Test", 12.into());
     /// assert_eq!(obj.len(), 1);
     /// ```
-    pub fn set<T: Into<Name>>(&mut self, name: T, value: Value)
-    {
+    pub fn set<T: Into<Name>>(&mut self, name: T, value: Value) {
         self.0.insert(name.into(), value);
     }
 
@@ -110,47 +105,39 @@ impl Object
     /// assert!(obj.get("Test1").is_none());
     /// assert!(obj.get("Test").unwrap() == &Value::from(12));
     /// ```
-    pub fn get<T: Into<Name>>(&self, name: T) -> Option<&Value>
-    {
+    pub fn get<T: Into<Name>>(&self, name: T) -> Option<&Value> {
         self.0.get(&name.into())
     }
 
     /// Returns the number of properties in the object.
-    pub fn len(&self) -> usize
-    {
+    pub fn len(&self) -> usize {
         self.0.len()
     }
 
     /// Returns whether this object is empty
-    pub fn is_empty(&self) -> bool
-    {
+    pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
     /// Iterate through the object keys, values and names.
-    pub fn iter(&self) -> Iter<Name, Value>
-    {
+    pub fn iter(&self) -> Iter<Name, Value> {
         self.0.iter()
     }
 }
 
-impl<'a> IntoIterator for &'a Object
-{
+impl<'a> IntoIterator for &'a Object {
     type Item = (&'a Name, &'a Value);
     type IntoIter = Iter<'a, Name, Value>;
 
-    fn into_iter(self) -> Self::IntoIter
-    {
+    fn into_iter(self) -> Self::IntoIter {
         self.as_ref().iter()
     }
 }
 
-impl<T: Into<Name>> Index<T> for Object
-{
+impl<T: Into<Name>> Index<T> for Object {
     type Output = Value;
 
-    fn index(&self, name: T) -> &Value
-    {
+    fn index(&self, name: T) -> &Value {
         self.0.index(&name.into())
     }
 }

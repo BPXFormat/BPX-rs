@@ -30,10 +30,9 @@ use std::io::Write;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::sd::{error::Error, Array, Object, Value, Result};
+use crate::sd::{error::Error, Array, Object, Result, Value};
 
-fn get_value_type_code(val: &Value) -> u8
-{
+fn get_value_type_code(val: &Value) -> u8 {
     match val {
         Value::Null => 0x0,
         Value::Bool(_) => 0x1,
@@ -49,12 +48,11 @@ fn get_value_type_code(val: &Value) -> u8
         Value::Double(_) => 0xB,
         Value::String(_) => 0xC,
         Value::Array(_) => 0xD,
-        Value::Object(_) => 0xE
+        Value::Object(_) => 0xE,
     }
 }
 
-fn write_value(val: &Value) -> Result<Vec<u8>>
-{
+fn write_value(val: &Value) -> Result<Vec<u8>> {
     let mut buf = Vec::new();
 
     match val {
@@ -113,13 +111,12 @@ fn write_value(val: &Value) -> Result<Vec<u8>>
             buf.push(0x0); //Add null byte terminator
         },
         Value::Array(arr) => buf.append(&mut write_array(arr)?),
-        Value::Object(obj) => buf.append(&mut write_object(obj)?)
+        Value::Object(obj) => buf.append(&mut write_object(obj)?),
     }
     Ok(buf)
 }
 
-fn write_object(obj: &Object) -> Result<Vec<u8>>
-{
+fn write_object(obj: &Object) -> Result<Vec<u8>> {
     let mut v: Vec<u8> = Vec::new();
     let count = obj.len();
 
@@ -137,8 +134,7 @@ fn write_object(obj: &Object) -> Result<Vec<u8>>
     Ok(v)
 }
 
-fn write_array(arr: &Array) -> Result<Vec<u8>>
-{
+fn write_array(arr: &Array) -> Result<Vec<u8>> {
     let mut v: Vec<u8> = Vec::new();
     let count = arr.len();
 
@@ -154,11 +150,7 @@ fn write_array(arr: &Array) -> Result<Vec<u8>>
     Ok(v)
 }
 
-pub fn write_structured_data<TWrite: Write>(
-    mut dest: TWrite,
-    obj: &Object
-) -> Result<()>
-{
+pub fn write_structured_data<TWrite: Write>(mut dest: TWrite, obj: &Object) -> Result<()> {
     let bytes = write_object(obj)?;
     dest.write_all(&bytes)?;
     Ok(())

@@ -30,15 +30,14 @@
 
 use std::{
     convert::From,
-    fmt::{Display, Formatter}
+    fmt::{Display, Formatter},
 };
 
 use crate::impl_err_conversion;
 
 /// Represents a generic decompression error.
 #[derive(Debug)]
-pub enum DeflateError
-{
+pub enum DeflateError {
     /// Memory allocation failure.
     Memory,
 
@@ -52,21 +51,19 @@ pub enum DeflateError
     Unknown,
 
     /// Describes an io error.
-    Io(std::io::Error)
+    Io(std::io::Error),
 }
 
 impl_err_conversion!(DeflateError { std::io::Error => Io });
 
-impl Display for DeflateError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for DeflateError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             DeflateError::Memory => f.write_str("memory allocation failure"),
             DeflateError::Unsupported(e) => write!(f, "unsupported operation ({})", e),
             DeflateError::Data => f.write_str("data error"),
             DeflateError::Unknown => f.write_str("low-level unknown error"),
-            DeflateError::Io(e) => write!(f, "io error: {}", e)
+            DeflateError::Io(e) => write!(f, "io error: {}", e),
         }
     }
 }
@@ -75,8 +72,7 @@ impl std::error::Error for DeflateError {}
 
 /// Represents a generic compression error.
 #[derive(Debug)]
-pub enum InflateError
-{
+pub enum InflateError {
     /// Memory allocation failure.
     Memory,
 
@@ -90,21 +86,19 @@ pub enum InflateError
     Unknown,
 
     /// Describes an io error.
-    Io(std::io::Error)
+    Io(std::io::Error),
 }
 
 impl_err_conversion!(InflateError { std::io::Error => Io });
 
-impl Display for InflateError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for InflateError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             InflateError::Memory => f.write_str("memory allocation failure"),
             InflateError::Unsupported(e) => write!(f, "unsupported operation ({})", e),
             InflateError::Data => f.write_str("data error"),
             InflateError::Unknown => f.write_str("low-level unknown error"),
-            InflateError::Io(e) => write!(f, "io error: {}", e)
+            InflateError::Io(e) => write!(f, "io error: {}", e),
         }
     }
 }
@@ -113,15 +107,14 @@ impl std::error::Error for InflateError {}
 
 /// Represents a BPX error.
 #[derive(Debug)]
-pub enum Error
-{
+pub enum Error {
     /// Describes a checksum error.
     Checksum {
         /// Actual checksum value.
         actual: u32,
 
         /// Expected checksum value.
-        expected: u32
+        expected: u32,
     },
 
     /// Describes an io error.
@@ -144,7 +137,7 @@ pub enum Error
     Deflate(DeflateError),
 
     /// A section open error.
-    Open(OpenError)
+    Open(OpenError),
 }
 
 impl_err_conversion!(
@@ -156,12 +149,10 @@ impl_err_conversion!(
     }
 );
 
-impl Display for Error
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Checksum { expected, actual} => write!(
+            Error::Checksum { expected, actual } => write!(
                 f,
                 "checksum validation failed (expected {}, got {})",
                 expected, actual
@@ -176,7 +167,7 @@ impl Display for Error
             Error::Capacity(size) => {
                 write!(f, "maximum section size exceeded ({} > 2^32)", size)
             },
-            Error::Deflate(e) => write!(f, "deflate error: {}", e)
+            Error::Deflate(e) => write!(f, "deflate error: {}", e),
         }
     }
 }
@@ -185,8 +176,7 @@ impl std::error::Error for Error {}
 
 /// Represents possible errors when opening a section.
 #[derive(Debug)]
-pub enum OpenError
-{
+pub enum OpenError {
     /// The requested section is already in use.
     ///
     /// This usually means the section is referencing itself, this error variant is intended
@@ -194,15 +184,14 @@ pub enum OpenError
     SectionInUse,
 
     /// The requested section has not been loaded.
-    SectionNotLoaded
+    SectionNotLoaded,
 }
 
-impl Display for OpenError
-{
+impl Display for OpenError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             OpenError::SectionInUse => f.write_str("section in use"),
-            OpenError::SectionNotLoaded => f.write_str("section not loaded")
+            OpenError::SectionNotLoaded => f.write_str("section not loaded"),
         }
     }
 }

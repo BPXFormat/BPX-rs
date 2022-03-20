@@ -28,8 +28,11 @@
 
 //! Contains various utilities to be used by other modules.
 
-use std::{io::Cursor, num::Wrapping};
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    io::Cursor,
+    num::Wrapping,
+};
 
 /// Convenient utility to wrap object property name hashes.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -90,8 +93,7 @@ impl From<String> for Name {
 /// assert_eq!(hash(s), hash(s));
 /// assert_ne!(hash(s), hash("Wrong"));
 /// ```
-pub fn hash(s: &str) -> u64
-{
+pub fn hash(s: &str) -> u64 {
     let mut val: Wrapping<u64> = Wrapping(5381);
 
     for v in s.as_bytes() {
@@ -108,8 +110,7 @@ pub fn hash(s: &str) -> u64
 /// * `size`: the initial size of the buffer; if not known use 0.
 ///
 /// returns: Cursor<Vec<u8>>
-pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>>
-{
+pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>> {
     if size > 0 {
         return Cursor::new(Vec::with_capacity(size));
     }
@@ -119,8 +120,7 @@ pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>>
 /// Allows to read into a buffer as much as possible.
 ///
 /// *Allows the use BufReader with BPX*
-pub trait ReadFill
-{
+pub trait ReadFill {
     /// Reads into `buf` as much as possible.
     ///
     /// *Returns the number of bytes that could be read.*
@@ -137,10 +137,8 @@ pub trait ReadFill
     fn read_fill(&mut self, buf: &mut [u8]) -> std::io::Result<usize>;
 }
 
-impl<T: std::io::Read + ?Sized> ReadFill for T
-{
-    fn read_fill(&mut self, buf: &mut [u8]) -> std::io::Result<usize>
-    {
+impl<T: std::io::Read + ?Sized> ReadFill for T {
+    fn read_fill(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let mut bytes = 0;
         let mut len = self.read(buf)?;
         bytes += len;

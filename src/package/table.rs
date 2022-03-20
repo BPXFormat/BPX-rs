@@ -27,28 +27,31 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::{Read, Seek, Write};
-use crate::core::{Container, Handle, SectionData};
-use crate::package::decoder::unpack_object;
-use crate::package::encoder::{create_data_section_header, MAX_DATA_SECTION_SIZE, write_object};
-use crate::package::Result;
-use crate::package::object::ObjectHeader;
-use crate::strings::{load_string_section, StringSection};
-use crate::table::NamedItemTable;
 
-pub struct ObjectTable
-{
+use crate::{
+    core::{Container, Handle, SectionData},
+    package::{
+        decoder::unpack_object,
+        encoder::{create_data_section_header, write_object, MAX_DATA_SECTION_SIZE},
+        object::ObjectHeader,
+        Result,
+    },
+    strings::{load_string_section, StringSection},
+    table::NamedItemTable,
+};
+
+pub struct ObjectTable {
     strings: StringSection,
     table: NamedItemTable<ObjectHeader>,
-    last_data_section: Option<Handle>
+    last_data_section: Option<Handle>,
 }
 
-impl ObjectTable
-{
+impl ObjectTable {
     pub fn new(table: NamedItemTable<ObjectHeader>, strings: StringSection) -> ObjectTable {
         ObjectTable {
             strings,
             table,
-            last_data_section: None
+            last_data_section: None,
         }
     }
 
@@ -64,12 +67,18 @@ impl ObjectTable
         self.table.len()
     }
 
-    pub fn create<T, R: Read>(&mut self, container: &mut Container<T>, name: &str, mut source: R) -> Result<usize>
-    {
+    pub fn create<T, R: Read>(
+        &mut self,
+        container: &mut Container<T>,
+        name: &str,
+        mut source: R,
+    ) -> Result<usize> {
         let mut object_size = 0;
-        let mut data_section = *self
-            .last_data_section
-            .get_or_insert_with(|| container.sections_mut().create(create_data_section_header()));
+        let mut data_section = *self.last_data_section.get_or_insert_with(|| {
+            container
+                .sections_mut()
+                .create(create_data_section_header())
+        });
         let start = container.sections().index(data_section);
         let offset = {
             let section = container.sections().open(data_section)?;
@@ -80,7 +89,9 @@ impl ObjectTable
             let (count, need_section) = write_object(&container, &mut source, data_section)?;
             object_size += count;
             if need_section {
-                data_section = container.sections_mut().create(create_data_section_header());
+                data_section = container
+                    .sections_mut()
+                    .create(create_data_section_header());
             } else {
                 break;
             }
@@ -92,7 +103,7 @@ impl ObjectTable
                 size: object_size as u64,
                 name: self.strings.put(container, name)?,
                 start,
-                offset
+                offset,
             };
             index = self.table.push(name.into(), buf);
         }
@@ -111,25 +122,37 @@ impl ObjectTable
         self.table.remove(index);
     }
 
-    pub fn load<T: Read + Seek, O: Write>(&self, container: &Container<T>, header: &ObjectHeader, out: O) -> Result<u64> {
+    pub fn load<T: Read + Seek, O: Write>(
+        &self,
+        container: &Container<T>,
+        header: &ObjectHeader,
+        out: O,
+    ) -> Result<u64> {
         unpack_object(container, header, out)
     }
 
-    pub fn load_name<T: Read + Seek>(&self, container: &Container<T>, header: &ObjectHeader) -> Result<&str> {
+    pub fn load_name<T: Read + Seek>(
+        &self,
+        container: &Container<T>,
+        header: &ObjectHeader,
+    ) -> Result<&str> {
         load_string_section(container, &self.strings)?;
         let name = self.table.load_name(container, &self.strings, header)?;
         Ok(name)
     }
 
-    pub fn find<T: Read + Seek>(&self, container: &Container<T>, name: &str) -> Result<Option<&ObjectHeader>> {
+    pub fn find<T: Read + Seek>(
+        &self,
+        container: &Container<T>,
+        name: &str,
+    ) -> Result<Option<&ObjectHeader>> {
         load_string_section(container, &self.strings)?;
         let name = self.table.find_by_name(container, &self.strings, name)?;
         Ok(name)
     }
 }
 
-impl<'a> IntoIterator for &'a ObjectTable
-{
+impl<'a> IntoIterator for &'a ObjectTable {
     type Item = &'a ObjectHeader;
     type IntoIter = std::slice::Iter<'a, ObjectHeader>;
 
@@ -139,14 +162,12 @@ impl<'a> IntoIterator for &'a ObjectTable
 }
 
 /// Immutable guard to the table of all objects in a BPXP.
-pub struct ObjectTableRef<'a, T>
-{
+pub struct ObjectTableRef<'a, T> {
     pub(crate) container: &'a Container<T>,
-    pub(crate) table: &'a ObjectTable
+    pub(crate) table: &'a ObjectTable,
 }
 
-impl<'a, T> ObjectTableRef<'a, T>
-{
+impl<'a, T> ObjectTableRef<'a, T> {
     /// Gets all objects in this table.
     pub fn iter(&self) -> std::slice::Iter<ObjectHeader> {
         self.table.iter()
@@ -163,8 +184,7 @@ impl<'a, T> ObjectTableRef<'a, T>
     }
 }
 
-impl<'a, 'b, T> IntoIterator for &'a ObjectTableRef<'b, T>
-{
+impl<'a, 'b, T> IntoIterator for &'a ObjectTableRef<'b, T> {
     type Item = &'a ObjectHeader;
     type IntoIter = std::slice::Iter<'a, ObjectHeader>;
 
@@ -173,8 +193,7 @@ impl<'a, 'b, T> IntoIterator for &'a ObjectTableRef<'b, T>
     }
 }
 
-impl<'a, T: Read + Seek> ObjectTableRef<'a, T>
-{
+impl<'a, T: Read + Seek> ObjectTableRef<'a, T> {
     /// Loads an object to the given `out` io backend.
     ///
     /// # Arguments
@@ -221,14 +240,12 @@ impl<'a, T: Read + Seek> ObjectTableRef<'a, T>
 }
 
 /// Mutable guard to the table of all objects in a BPXP.
-pub struct ObjectTableMut<'a, T>
-{
+pub struct ObjectTableMut<'a, T> {
     pub(crate) container: &'a mut Container<T>,
-    pub(crate) table: &'a mut ObjectTable
+    pub(crate) table: &'a mut ObjectTable,
 }
 
-impl<'a, T> ObjectTableMut<'a, T>
-{
+impl<'a, T> ObjectTableMut<'a, T> {
     /// Creates a new object in this package.
     ///
     /// Returns the index of the newly created object.

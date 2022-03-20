@@ -34,19 +34,17 @@ mod memory;
 
 use std::{
     io::{Read, Result, Seek, Write},
-    vec::Vec
+    vec::Vec,
 };
 
 /// Opaque variant intended to manipulate section data in the form of standard IO operations.
-pub trait SectionData: Read + Write + Seek
-{
+pub trait SectionData: Read + Write + Seek {
     /// Loads this section into memory.
     ///
     /// # Errors
     ///
     /// An [Error](std::io::Error) is returned if the section could not be loaded.
-    fn load_in_memory(&mut self) -> Result<Vec<u8>>
-    {
+    fn load_in_memory(&mut self) -> Result<Vec<u8>> {
         let mut data: Vec<u8> = Vec::new();
         self.read_to_end(&mut data)?;
         Ok(data)

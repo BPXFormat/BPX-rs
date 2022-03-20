@@ -28,15 +28,14 @@
 
 use crate::{
     package::{Architecture, Platform},
-    sd::Value
+    sd::Value,
 };
 
 /// The required settings to create a new BPXP.
 ///
 /// *This is intended to be generated with help of [Builder](crate::package::Builder).*
 #[derive(Clone)]
-pub struct Settings
-{
+pub struct Settings {
     /// The package target architecture.
     pub architecture: Architecture,
 
@@ -47,35 +46,30 @@ pub struct Settings
     pub metadata: Value,
 
     /// The package type code.
-    pub type_code: [u8; 2]
+    pub type_code: [u8; 2],
 }
 
 /// Utility to simplify generation of [Settings](crate::package::Settings) required when creating a new BPXP.
-pub struct Builder
-{
-    settings: Settings
+pub struct Builder {
+    settings: Settings,
 }
 
-impl Default for Builder
-{
-    fn default() -> Self
-    {
+impl Default for Builder {
+    fn default() -> Self {
         Self::new()
     }
 }
 
-impl Builder
-{
+impl Builder {
     /// Creates a new BPX Package builder.
-    pub fn new() -> Builder
-    {
+    pub fn new() -> Builder {
         Builder {
             settings: Settings {
                 architecture: Architecture::Any,
                 platform: Platform::Any,
                 metadata: Value::Null,
-                type_code: [0x50, 0x48]
-            }
+                type_code: [0x50, 0x48],
+            },
         }
     }
 
@@ -88,8 +82,7 @@ impl Builder
     /// * `arch`: the CPU architecture this package is designed to work on.
     ///
     /// returns: PackageBuilder
-    pub fn architecture(&mut self, arch: Architecture) -> &mut Self
-    {
+    pub fn architecture(&mut self, arch: Architecture) -> &mut Self {
         self.settings.architecture = arch;
         self
     }
@@ -103,8 +96,7 @@ impl Builder
     /// * `platform`: the platform this package is designed to work on.
     ///
     /// returns: PackageBuilder
-    pub fn platform(&mut self, platform: Platform) -> &mut Self
-    {
+    pub fn platform(&mut self, platform: Platform) -> &mut Self {
         self.settings.platform = platform;
         self
     }
@@ -118,8 +110,7 @@ impl Builder
     /// * `val`: the BPXSD metadata value.
     ///
     /// returns: PackageBuilder
-    pub fn metadata(&mut self, val: Value) -> &mut Self
-    {
+    pub fn metadata(&mut self, val: Value) -> &mut Self {
         self.settings.metadata = val;
         self
     }
@@ -134,31 +125,25 @@ impl Builder
     /// * `type_code`: the type code of this package.
     ///
     /// returns: PackageBuilder
-    pub fn type_code(&mut self, type_code: [u8; 2]) -> &mut Self
-    {
+    pub fn type_code(&mut self, type_code: [u8; 2]) -> &mut Self {
         self.settings.type_code = type_code;
         self
     }
 
     /// Returns the built settings.
-    pub fn build(&self) -> Settings
-    {
+    pub fn build(&self) -> Settings {
         self.settings.clone()
     }
 }
 
-impl From<&mut Builder> for Settings
-{
-    fn from(builder: &mut Builder) -> Self
-    {
+impl From<&mut Builder> for Settings {
+    fn from(builder: &mut Builder) -> Self {
         builder.build()
     }
 }
 
-impl From<Builder> for Settings
-{
-    fn from(builder: Builder) -> Self
-    {
+impl From<Builder> for Settings {
+    fn from(builder: Builder) -> Self {
         builder.build()
     }
 }

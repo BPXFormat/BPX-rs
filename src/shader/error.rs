@@ -53,13 +53,13 @@ named_enum!(
     /// Enumerates possible missing sections.
     Section {
         /// Missing strings section.
-        Strings : "strings",
+        Strings: "strings",
 
         /// Missing symbol table section.
-        SymbolTable : "symbol table",
+        SymbolTable: "symbol table",
 
         /// Missing optional extended data section.
-        ExtendedData : "extended data"
+        ExtendedData: "extended data"
     }
 );
 
@@ -67,10 +67,10 @@ named_enum!(
     /// Represents the context of an EOS error.
     EosContext {
         /// Reached EOS while reading a shader.
-        Shader : "shader",
+        Shader: "shader",
 
         /// Reached EOS while reading the symbol table.
-        SymbolTable : "symbol table"
+        SymbolTable: "symbol table"
     }
 );
 
@@ -89,7 +89,7 @@ pub enum Error {
         actual: u32,
 
         /// Supported version number.
-        supported: u32
+        supported: u32,
     },
 
     /// Unsupported BPX type code.
@@ -98,16 +98,16 @@ pub enum Error {
         actual: u8,
 
         /// Expected type code.
-        expected: u8
+        expected: u8,
     },
 
     /// Invalid code.
-    InvalidCode{
+    InvalidCode {
         /// The error context.
         context: InvalidCodeContext,
 
         /// The invalid coding byte.
-        code: u8
+        code: u8,
     },
 
     /// Describes a missing required section.
@@ -123,7 +123,7 @@ pub enum Error {
     Sd(crate::sd::error::Error),
 
     /// Indicates a section couldn't open.
-    Open(crate::core::error::OpenError)
+    Open(crate::core::error::OpenError),
 }
 
 impl_err_conversion!(
@@ -141,8 +141,16 @@ impl Display for Error {
         match self {
             Error::Bpx(e) => write!(f, "BPX error: {}", e),
             Error::Io(e) => write!(f, "io error: {}", e),
-            Error::BadVersion { actual, supported } => write!(f, "unsupported version {} ({} supported)", actual, supported),
-            Error::BadType { actual, expected } => write!(f, "unknown BPX type code (expected {}, got {})", expected, actual),
+            Error::BadVersion { actual, supported } => write!(
+                f,
+                "unsupported version {} ({} supported)",
+                actual, supported
+            ),
+            Error::BadType { actual, expected } => write!(
+                f,
+                "unknown BPX type code (expected {}, got {})",
+                expected, actual
+            ),
             Error::InvalidCode { context, code } => {
                 write!(f, "invalid code {} for context '{}'", code, context.name())
             },
@@ -150,7 +158,7 @@ impl Display for Error {
             Error::Eos(ctx) => write!(f, "got EOS while reading {}", ctx.name()),
             Error::Sd(e) => write!(f, "BPXSD error: {}", e),
             Error::Strings(e) => write!(f, "strings error: {}", e),
-            Error::Open(e) => write!(f, "section open error ({})", e)
+            Error::Open(e) => write!(f, "section open error ({})", e),
         }
     }
 }

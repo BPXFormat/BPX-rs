@@ -28,27 +28,23 @@
 
 //! Provides support for debug symbols to BPXSD object.
 
-use std::{collections::HashMap, convert::TryInto};
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::HashMap, convert::TryInto};
 
 use crate::{
-    sd::{error::TypeError, Array, Object, Value}
+    sd::{error::TypeError, Array, Object, Value},
+    utils::Name,
 };
-use crate::utils::Name;
 
 /// A BPXSD object debugger iterator.
-pub struct Iter<'a>
-{
+pub struct Iter<'a> {
     inner: std::collections::hash_map::Iter<'a, Name, Value>,
-    symbols_map: &'a HashMap<Name, String>
+    symbols_map: &'a HashMap<Name, String>,
 }
 
-impl<'a> Iterator for Iter<'a>
-{
+impl<'a> Iterator for Iter<'a> {
     type Item = (Option<&'a str>, Name, &'a Value);
 
-    fn next(&mut self) -> Option<Self::Item>
-    {
+    fn next(&mut self) -> Option<Self::Item> {
         let (mut k, mut v) = self.inner.next()?;
         while k == &"__debug__".into() {
             let (k1, v1) = self.inner.next()?;
@@ -64,15 +60,13 @@ pub type ODebugger = Debugger<'static>;
 
 /// A wrapper to BPXSD object with debugging capabilities.
 #[derive(PartialEq, Clone)]
-pub struct Debugger<'a>
-{
+pub struct Debugger<'a> {
     inner: Cow<'a, Object>,
     symbols_map: HashMap<Name, String>,
-    symbols_list: Vec<String>
+    symbols_list: Vec<String>,
 }
 
-impl<'a> AsRef<Object> for Debugger<'a>
-{
+impl<'a> AsRef<Object> for Debugger<'a> {
     fn as_ref(&self) -> &Object {
         &self.inner
     }
@@ -90,8 +84,7 @@ impl<'a> From<Object> for Cow<'a, Object> {
     }
 }
 
-impl<'a> Debugger<'a>
-{
+impl<'a> Debugger<'a> {
     /// Attach a debugger to an object.
     ///
     /// # Arguments
@@ -113,12 +106,11 @@ impl<'a> Debugger<'a>
     /// assert!(inner.get("__debug__").is_some());
     /// assert!(inner.get("Test").is_some());
     /// ```
-    pub fn attach<T: Into<Cow<'a, Object>>>(inner: T) -> Result<Debugger<'a>, TypeError>
-    {
+    pub fn attach<T: Into<Cow<'a, Object>>>(inner: T) -> Result<Debugger<'a>, TypeError> {
         let mut dbg = Debugger {
             inner: inner.into(),
             symbols_map: HashMap::new(),
-            symbols_list: Vec::new()
+            symbols_list: Vec::new(),
         };
         if let Some(val) = dbg.inner.get("__debug__") {
             let val: &Array = val.try_into()?;
@@ -149,8 +141,7 @@ impl<'a> Debugger<'a>
     /// let debugger = Debugger::attach(Object::new()).unwrap();
     /// assert!(debugger.lookup("Test").is_none());
     /// ```
-    pub fn lookup<T: Into<Name>>(&self, name: T) -> Option<&str>
-    {
+    pub fn lookup<T: Into<Name>>(&self, name: T) -> Option<&str> {
         if let Some(v) = self.symbols_map.get(&name.into()) {
             return Some(v);
         }
@@ -175,8 +166,7 @@ impl<'a> Debugger<'a>
     /// obj.set("Test", 12.into());
     /// assert_eq!(obj.as_ref().len(), 1);
     /// ```
-    pub fn set(&mut self, name: &str, value: Value)
-    {
+    pub fn set(&mut self, name: &str, value: Value) {
         let hash = Name::from(name);
         self.inner.to_mut().set(hash, value);
         self.symbols_list.push(name.into());
@@ -184,29 +174,27 @@ impl<'a> Debugger<'a>
     }
 
     /// Iterate through the object keys, values and names.
-    pub fn iter(&self) -> Iter
-    {
+    pub fn iter(&self) -> Iter {
         Iter {
             inner: self.inner.as_ref().iter(),
-            symbols_map: &self.symbols_map
+            symbols_map: &self.symbols_map,
         }
     }
 
     /// Detaches the debugger from the inner object and return the inner object
-    pub fn detach(mut self) -> Object
-    {
-        self.inner.to_mut().set("__debug__", self.symbols_list.into());
+    pub fn detach(mut self) -> Object {
+        self.inner
+            .to_mut()
+            .set("__debug__", self.symbols_list.into());
         self.inner.into_owned()
     }
 }
 
-impl<'a, 'b> IntoIterator for &'a Debugger<'b>
-{
+impl<'a, 'b> IntoIterator for &'a Debugger<'b> {
     type Item = (Option<&'a str>, Name, &'a Value);
     type IntoIter = Iter<'a>;
 
-    fn into_iter(self) -> Self::IntoIter
-    {
+    fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }

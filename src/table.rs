@@ -29,26 +29,24 @@
 //! This module provides a lookup-table style implementation.
 
 use std::collections::HashMap;
+
 use once_cell::unsync::OnceCell;
 
 use crate::{core::Container, strings::StringSection};
 
 /// Represents an item to be stored in an ItemTable.
-pub trait Item
-{
+pub trait Item {
     /// Returns the address of the name of this item in its string section.
     fn get_name_address(&self) -> u32;
 }
 
 /// Helper class to work with named items stored as arrays in a BPX container.
-pub struct NamedItemTable<T>
-{
+pub struct NamedItemTable<T> {
     list: Vec<T>,
-    map: OnceCell<HashMap<String, usize>>
+    map: OnceCell<HashMap<String, usize>>,
 }
 
-impl<T> NamedItemTable<T>
-{
+impl<T> NamedItemTable<T> {
     /// Constructs a new NamedItemTable from a list of items.
     ///
     /// # Arguments
@@ -56,16 +54,18 @@ impl<T> NamedItemTable<T>
     /// * `list`: the list of items.
     ///
     /// returns: ItemTable<T>
-    pub fn with_list(list: Vec<T>) -> Self
-    {
-        Self { list, map: OnceCell::new() }
+    pub fn with_list(list: Vec<T>) -> Self {
+        Self {
+            list,
+            map: OnceCell::new(),
+        }
     }
 
     /// Constructs a new empty NamedItemTable.
     pub fn empty() -> Self {
         Self {
             list: Vec::new(),
-            map: OnceCell::from(HashMap::new())
+            map: OnceCell::from(HashMap::new()),
         }
     }
 
@@ -123,8 +123,7 @@ impl<T> NamedItemTable<T>
     }
 }
 
-impl<T: Item> NamedItemTable<T>
-{
+impl<T: Item> NamedItemTable<T> {
     /// Load the name of an item.
     ///
     /// # Arguments
@@ -138,7 +137,12 @@ impl<T: Item> NamedItemTable<T>
     /// # Errors
     ///
     /// An [Error](crate::strings::Error) is returned if the strings could not be loaded.
-    pub fn load_name<'a, T1>(&self, container: &Container<T1>, strings: &'a StringSection, item: &T) -> Result<&'a str, crate::strings::Error> {
+    pub fn load_name<'a, T1>(
+        &self,
+        container: &Container<T1>,
+        strings: &'a StringSection,
+        item: &T,
+    ) -> Result<&'a str, crate::strings::Error> {
         strings.get(container, item.get_name_address())
     }
 
@@ -160,7 +164,11 @@ impl<T: Item> NamedItemTable<T>
         self.len() - 1
     }
 
-    fn build_lookup_table<T1>(&self, container: &Container<T1>, strings: &StringSection) -> Result<HashMap<String, usize>, crate::strings::Error> {
+    fn build_lookup_table<T1>(
+        &self,
+        container: &Container<T1>,
+        strings: &StringSection,
+    ) -> Result<HashMap<String, usize>, crate::strings::Error> {
         let mut map: HashMap<String, usize> = HashMap::new();
         for (index, v) in self.list.iter().enumerate() {
             let name = strings.get(container, v.get_name_address())?.into();
@@ -183,17 +191,23 @@ impl<T: Item> NamedItemTable<T>
     /// # Errors
     ///
     /// A [Error](crate::strings::Error) is returned if the strings could not be loaded.
-    pub fn find_by_name<T1>(&self, container: &Container<T1>, strings: &StringSection, name: &str) -> Result<Option<&T>, crate::strings::Error> {
-        let map = self.map.get_or_try_init(|| self.build_lookup_table(container, strings))?;
+    pub fn find_by_name<T1>(
+        &self,
+        container: &Container<T1>,
+        strings: &StringSection,
+        name: &str,
+    ) -> Result<Option<&T>, crate::strings::Error> {
+        let map = self
+            .map
+            .get_or_try_init(|| self.build_lookup_table(container, strings))?;
         Ok(match map.get(name) {
             Some(index) => self.list.get(*index),
-            None => None
+            None => None,
         })
     }
 }
 
-impl<'a, T> IntoIterator for &'a NamedItemTable<T>
-{
+impl<'a, T> IntoIterator for &'a NamedItemTable<T> {
     type Item = &'a T;
     type IntoIter = std::slice::Iter<'a, T>;
 

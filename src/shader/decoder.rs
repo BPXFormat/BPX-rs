@@ -29,21 +29,16 @@
 use std::io::{Read, Seek};
 
 use crate::{
-    core::{header::Struct, Container},
+    core::{header::Struct, Container, Handle},
     shader::{
-        error::{EosContext, InvalidCodeContext, Error},
+        error::{EosContext, Error, InvalidCodeContext},
         symbol::{Symbol, SIZE_SYMBOL_STRUCTURE},
-        Result,
-        Stage,
-        Target,
-        Type
-    }
+        Result, Stage, Target, Type,
+    },
+    table::NamedItemTable,
 };
-use crate::core::Handle;
-use crate::table::NamedItemTable;
 
-pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
-{
+pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)> {
     let target;
     let ty;
 
@@ -66,10 +61,12 @@ pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
         0x10 => target = Target::VK12,
         0x11 => target = Target::MT,
         0xFF => target = Target::Any,
-        _ => return Err(Error::InvalidCode {
-            context: InvalidCodeContext::Target,
-            code: acode
-        })
+        _ => {
+            return Err(Error::InvalidCode {
+                context: InvalidCodeContext::Target,
+                code: acode,
+            })
+        },
     }
     if tcode == b'A' {
         //Rust refuses to parse match properly so use if/else-if blocks
@@ -77,16 +74,15 @@ pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
     } else if tcode == b'P' {
         ty = Type::Pipeline;
     } else {
-        return Err(Error::InvalidCode{
+        return Err(Error::InvalidCode {
             context: InvalidCodeContext::Type,
-            code: tcode
+            code: tcode,
         });
     }
     Ok((target, ty))
 }
 
-pub fn get_stage_from_code(code: u8) -> Result<Stage>
-{
+pub fn get_stage_from_code(code: u8) -> Result<Stage> {
     match code {
         0x0 => Ok(Stage::Vertex),
         0x1 => Ok(Stage::Hull),
@@ -95,17 +91,16 @@ pub fn get_stage_from_code(code: u8) -> Result<Stage>
         0x4 => Ok(Stage::Pixel),
         _ => Err(Error::InvalidCode {
             context: InvalidCodeContext::Stage,
-            code
-        })
+            code,
+        }),
     }
 }
 
 pub fn read_symbol_table<T: Read + Seek>(
     container: &Container<T>,
     num_symbols: u16,
-    symbol_table: Handle
-) -> Result<NamedItemTable<Symbol>>
-{
+    symbol_table: Handle,
+) -> Result<NamedItemTable<Symbol>> {
     let sections = container.sections();
     let count = sections.header(symbol_table).size as u32 / SIZE_SYMBOL_STRUCTURE as u32;
 

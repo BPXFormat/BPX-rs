@@ -30,13 +30,11 @@
 
 use std::fmt::{Display, Formatter};
 
-use crate::macros::impl_err_conversion;
-use crate::sd::value::Type;
+use crate::{macros::impl_err_conversion, sd::value::Type};
 
 /// Represents a structured data read error
 #[derive(Debug)]
-pub enum Error
-{
+pub enum Error {
     /// Describes an io error.
     Io(std::io::Error),
 
@@ -56,15 +54,13 @@ pub enum Error
     /// Writing non object values into an io stream is currently not supported by BPXSD.
     ///
     /// This is however subject to change.
-    NotAnObject
+    NotAnObject,
 }
 
 impl_err_conversion!(Error { std::io::Error => Io });
 
-impl Display for Error
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::Io(e) => write!(f, "io error: {}", e),
             Error::Truncation(ty) => write!(f, "failed to read {}", ty.name()),
@@ -73,7 +69,7 @@ impl Display for Error
             Error::CapacityExceeded(count) => {
                 write!(f, "capacity exceeded ({} > 255)", count)
             },
-            Error::NotAnObject => f.write_str("not an object")
+            Error::NotAnObject => f.write_str("not an object"),
         }
     }
 }
@@ -82,17 +78,15 @@ impl std::error::Error for Error {}
 
 /// Represents a structured data value conversion error
 #[derive(Debug)]
-pub struct TypeError
-{
+pub struct TypeError {
     /// The expected value type.
     pub expected_type: Type,
 
     /// The actual value type.
-    pub actual_type: Type
+    pub actual_type: Type,
 }
 
-impl TypeError
-{
+impl TypeError {
     /// Creates a new BPXSD value conversion type error (shorter method).
     ///
     /// # Arguments
@@ -101,23 +95,21 @@ impl TypeError
     /// * `actual`: the actual value type.
     ///
     /// returns: TypeError
-    pub fn new(expected: Type, actual: Type) -> TypeError
-    {
+    pub fn new(expected: Type, actual: Type) -> TypeError {
         TypeError {
             expected_type: expected,
-            actual_type: actual
+            actual_type: actual,
         }
     }
 }
 
-impl Display for TypeError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for TypeError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "unsupported type conversion (expected {}, got {})",
-            self.expected_type.name(), self.actual_type.name()
+            self.expected_type.name(),
+            self.actual_type.name()
         )
     }
 }

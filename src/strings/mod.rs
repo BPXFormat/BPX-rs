@@ -34,18 +34,13 @@ use std::{
     fs::DirEntry,
     io::{Read, Seek, SeekFrom},
     path::Path,
-    string::String
+    string::String,
 };
-
-pub use error::PathError;
-pub use error::Error;
-
-use crate::{
-    core::{AutoSectionData, Container, SectionData},
-};
-use crate::core::Handle;
 
 use elsa::FrozenMap;
+pub use error::{Error, PathError};
+
+use crate::core::{AutoSectionData, Container, Handle, SectionData};
 
 /// Helper class to manage a BPX string section.
 ///
@@ -64,14 +59,12 @@ use elsa::FrozenMap;
 /// let str = strings.get(&mut file, offset).unwrap();
 /// assert_eq!(str, "Test");
 /// ```
-pub struct StringSection
-{
+pub struct StringSection {
     section: Handle,
-    cache: FrozenMap<u32, String>
+    cache: FrozenMap<u32, String>,
 }
 
-impl StringSection
-{
+impl StringSection {
     /// Create a new string section from a handle.
     ///
     /// # Arguments
@@ -79,11 +72,10 @@ impl StringSection
     /// * `hdl`: handle to the string section.
     ///
     /// returns: StringSection
-    pub fn new(section: Handle) -> StringSection
-    {
+    pub fn new(section: Handle) -> StringSection {
         StringSection {
             section,
-            cache: FrozenMap::new()
+            cache: FrozenMap::new(),
         }
     }
 
@@ -100,15 +92,10 @@ impl StringSection
     ///
     /// Returns an [Error](crate::strings::Error) if the string could not be read or the
     /// section is corrupted/truncated.
-    pub fn get<T>(&self, container: &Container<T>, address: u32)
-        -> Result<&str, Error>
-    {
+    pub fn get<T>(&self, container: &Container<T>, address: u32) -> Result<&str, Error> {
         if self.cache.get(&address).is_none() {
             let mut section = container.sections().open(self.section)?;
-            let s = low_level_read_string(
-                address,
-                &mut *section
-            )?;
+            let s = low_level_read_string(address, &mut *section)?;
             self.cache.insert(address, s);
         }
         Ok(unsafe { self.cache.get(&address).unwrap_unchecked() })
@@ -126,8 +113,7 @@ impl StringSection
     /// # Errors
     ///
     /// Returns an [Error](crate::strings::Error) if the string could not be written.
-    pub fn put<T>(&self, container: &Container<T>, s: &str) -> Result<u32, Error>
-    {
+    pub fn put<T>(&self, container: &Container<T>, s: &str) -> Result<u32, Error> {
         let mut section = container.sections().open(self.section)?;
         let address = low_level_write_string(s, &mut *section)?;
         self.cache.insert(address, String::from(s));
@@ -135,8 +121,7 @@ impl StringSection
     }
 
     /// Returns the section handle.
-    pub fn handle(&self) -> Handle
-    {
+    pub fn handle(&self) -> Handle {
         self.section
     }
 }
@@ -155,18 +140,13 @@ impl StringSection
 /// Returns an [Error](crate::core::error::Error) if the section couldn't be loaded.
 pub fn load_string_section<T: Read + Seek>(
     container: &Container<T>,
-    strings: &StringSection
-) -> Result<(), crate::core::error::Error>
-{
+    strings: &StringSection,
+) -> Result<(), crate::core::error::Error> {
     container.sections().load(strings.handle())?;
     Ok(())
 }
 
-fn low_level_read_string(
-    ptr: u32,
-    string_section: &mut AutoSectionData
-) -> Result<String, Error>
-{
+fn low_level_read_string(ptr: u32, string_section: &mut AutoSectionData) -> Result<String, Error> {
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
 
@@ -183,15 +163,14 @@ fn low_level_read_string(
     }
     match String::from_utf8(curs) {
         Err(_) => Err(Error::Utf8),
-        Ok(v) => Ok(v)
+        Ok(v) => Ok(v),
     }
 }
 
 fn low_level_write_string(
     s: &str,
-    string_section: &mut dyn SectionData
-) -> Result<u32, std::io::Error>
-{
+    string_section: &mut dyn SectionData,
+) -> Result<u32, std::io::Error> {
     let ptr = string_section.size() as u32;
     string_section.write_all(s.as_bytes())?;
     string_section.write_all(&[0x0])?;
@@ -223,14 +202,13 @@ fn low_level_write_string(
 /// let str = get_name_from_path(Path::new("test/file.txt")).unwrap();
 /// assert_eq!(str, "file.txt");
 /// ```
-pub fn get_name_from_path(path: &Path) -> Result<&str, PathError>
-{
+pub fn get_name_from_path(path: &Path) -> Result<&str, PathError> {
     match path.file_name() {
         Some(v) => match v.to_str() {
             Some(v) => Ok(v),
-            None => Err(PathError::Utf8)
+            None => Err(PathError::Utf8),
         },
-        None => Err(PathError::Directory)
+        None => Err(PathError::Directory),
     }
 }
 
@@ -245,10 +223,9 @@ pub fn get_name_from_path(path: &Path) -> Result<&str, PathError>
 /// # Panics
 ///
 /// Panics in case `entry` is not unicode compatible (BPX only supports UTF-8).
-pub fn get_name_from_dir_entry(entry: &DirEntry) -> Result<String, PathError>
-{
+pub fn get_name_from_dir_entry(entry: &DirEntry) -> Result<String, PathError> {
     match entry.file_name().to_str() {
         Some(v) => Ok(v.into()),
-        None => Err(PathError::Utf8)
+        None => Err(PathError::Utf8),
     }
 }

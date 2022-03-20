@@ -29,29 +29,26 @@
 //! Provides formatting support for BPXSD Object.
 
 use std::fmt::{Display, Formatter};
-use crate::sd::debug::Debugger;
-use crate::sd::{Array, Object, Value};
+
+use crate::sd::{debug::Debugger, Array, Object, Value};
 
 /// Type of indentation.
 #[derive(Debug, Copy, Clone)]
-pub enum IndentType
-{
+pub enum IndentType {
     /// Indent with tabs.
     Tabs,
 
     /// Indent with spaces.
-    Spaces
+    Spaces,
 }
 
-struct FormatImpl
-{
+struct FormatImpl {
     indent_type: IndentType,
     indent_size: usize,
-    initial_indent_size: usize
+    initial_indent_size: usize,
 }
 
-impl FormatImpl
-{
+impl FormatImpl {
     fn fmt_value(&self, val: &Value, f: &mut Formatter) -> std::fmt::Result {
         match val {
             Value::Null => write!(f, "null"),
@@ -77,7 +74,7 @@ impl FormatImpl
                 let ff = FormatImpl {
                     indent_type: self.indent_type,
                     indent_size: self.indent_size + self.initial_indent_size,
-                    initial_indent_size: self.initial_indent_size
+                    initial_indent_size: self.initial_indent_size,
                 };
                 ff.fmt_array(v, f)
             },
@@ -85,10 +82,10 @@ impl FormatImpl
                 let ff = FormatImpl {
                     indent_type: self.indent_type,
                     indent_size: self.indent_size + self.initial_indent_size,
-                    initial_indent_size: self.initial_indent_size
+                    initial_indent_size: self.initial_indent_size,
                 };
                 ff.fmt_object(v, f)
-            }
+            },
         }
     }
 
@@ -99,7 +96,7 @@ impl FormatImpl
         for _ in 0..self.indent_size {
             match self.indent_type {
                 IndentType::Tabs => f.write_str("\t"),
-                IndentType::Spaces => f.write_str(" ")
+                IndentType::Spaces => f.write_str(" "),
             }?;
         }
         Ok(())
@@ -113,7 +110,7 @@ impl FormatImpl
         for _ in 0..size {
             match self.indent_type {
                 IndentType::Tabs => f.write_str("\t"),
-                IndentType::Spaces => f.write_str(" ")
+                IndentType::Spaces => f.write_str(" "),
             }?;
         }
         Ok(())
@@ -157,20 +154,18 @@ impl FormatImpl
 }
 
 /// Formatting context.
-pub struct FormatContext<'a>
-{
+pub struct FormatContext<'a> {
     indent_type: IndentType,
     indent_size: usize,
-    object: &'a Object
+    object: &'a Object,
 }
 
-impl<'a> Display for FormatContext<'a>
-{
+impl<'a> Display for FormatContext<'a> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let ff = FormatImpl {
             indent_type: self.indent_type,
             indent_size: self.indent_size,
-            initial_indent_size: self.indent_size
+            initial_indent_size: self.indent_size,
         };
         ff.fmt_object(self.object, f)
     }
@@ -178,7 +173,6 @@ impl<'a> Display for FormatContext<'a>
 
 /// Provides formatting support.
 pub trait Format {
-
     /// Returns a formatting context.
     ///
     /// # Arguments
@@ -195,17 +189,15 @@ impl Format for Object {
         FormatContext {
             indent_size,
             indent_type,
-            object: self
+            object: self,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::sd::debug::Debugger;
-    use crate::sd::formatting::IndentType;
-    use crate::sd::{Object, Value};
     use super::Format;
+    use crate::sd::{debug::Debugger, formatting::IndentType, Object, Value};
 
     static BASIC_TABS_1: &str = "{
 \tTest1: 42i32
@@ -284,7 +276,10 @@ mod tests {
     #[test]
     fn array() {
         let mut obj = Debugger::attach(Object::new()).unwrap();
-        obj.set("Test2", vec![Value::from("a string"), Value::from(42u32)].into());
+        obj.set(
+            "Test2",
+            vec![Value::from("a string"), Value::from(42u32)].into(),
+        );
         let str = obj.detach().format(IndentType::Spaces, 2).to_string();
         assert_eq!(str, ARRAY);
     }

@@ -26,20 +26,14 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::{
-    collections::{BTreeMap},
-    io
-};
-use std::cell::RefCell;
+use std::{cell::RefCell, collections::BTreeMap, io};
 
-use crate::{
-    core::{
-        decoder::read_section_header_table,
-        encoder::{internal_save, internal_save_last},
-        header::{MainHeader, Struct},
-        section::SectionTable,
-        Result
-    }
+use crate::core::{
+    decoder::read_section_header_table,
+    encoder::{internal_save, internal_save_last},
+    header::{MainHeader, Struct},
+    section::SectionTable,
+    Result,
 };
 
 /// The default maximum size of uncompressed sections.
@@ -48,14 +42,12 @@ use crate::{
 pub const DEFAULT_COMPRESSION_THRESHOLD: u32 = 65536;
 
 /// The main BPX container implementation.
-pub struct Container<T>
-{
+pub struct Container<T> {
     table: SectionTable<T>,
-    main_header: MainHeader
+    main_header: MainHeader,
 }
 
-impl<T> Container<T>
-{
+impl<T> Container<T> {
     /// Sets the BPX Main Header.
     ///
     /// # Arguments
@@ -73,8 +65,7 @@ impl<T> Container<T>
     /// file.set_main_header(MainHeaderBuilder::new().ty(1));
     /// assert_eq!(file.get_main_header().ty, 1);
     /// ```
-    pub fn set_main_header<H: Into<MainHeader>>(&mut self, main_header: H)
-    {
+    pub fn set_main_header<H: Into<MainHeader>>(&mut self, main_header: H) {
         self.main_header = main_header.into();
         self.table.modified = true;
     }
@@ -93,14 +84,12 @@ impl<T> Container<T>
     /// //Default BPX variant/type is 'P'
     /// assert_eq!(header.ty, 'P' as u8);
     /// ```
-    pub fn get_main_header(&self) -> &MainHeader
-    {
+    pub fn get_main_header(&self) -> &MainHeader {
         &self.main_header
     }
 
     /// Consumes this BPX container and returns the inner IO backend.
-    pub fn into_inner(self) -> T
-    {
+    pub fn into_inner(self) -> T {
         self.table.backend.into_inner()
     }
 
@@ -115,8 +104,7 @@ impl<T> Container<T>
     }
 }
 
-impl<T: io::Read + io::Seek> Container<T>
-{
+impl<T: io::Read + io::Seek> Container<T> {
     /// Loads a BPX container from the given `backend`.
     ///
     /// # Arguments
@@ -145,8 +133,7 @@ impl<T: io::Read + io::Seek> Container<T>
     /// //Default BPX variant/type is 'P'
     /// assert_eq!(file.get_main_header().ty, 'P' as u8);
     /// ```
-    pub fn open(mut backend: T) -> Result<Container<T>>
-    {
+    pub fn open(mut backend: T) -> Result<Container<T>> {
         let (checksum, header) = MainHeader::read(&mut backend)?;
         let (next_handle, sections) = read_section_header_table(&mut backend, &header, checksum)?;
         Ok(Container {
@@ -155,15 +142,14 @@ impl<T: io::Read + io::Seek> Container<T>
                 next_handle,
                 modified: false,
                 sections,
-                count: header.section_num
+                count: header.section_num,
             },
-            main_header: header
+            main_header: header,
         })
     }
 }
 
-impl<T: io::Write + io::Seek> Container<T>
-{
+impl<T: io::Write + io::Seek> Container<T> {
     /// Creates a new BPX container in the given `backend`.
     ///
     /// # Arguments
@@ -185,17 +171,16 @@ impl<T: io::Write + io::Seek> Container<T>
     /// //Default BPX variant/type is 'P'
     /// assert_eq!(file.get_main_header().ty, 'P' as u8);
     /// ```
-    pub fn create<H: Into<MainHeader>>(backend: T, header: H) -> Container<T>
-    {
+    pub fn create<H: Into<MainHeader>>(backend: T, header: H) -> Container<T> {
         Container {
             table: SectionTable {
                 next_handle: 0,
                 count: 0,
                 modified: true,
                 backend: RefCell::new(backend),
-                sections: BTreeMap::new()
+                sections: BTreeMap::new(),
             },
-            main_header: header.into()
+            main_header: header.into(),
         }
     }
 
@@ -222,14 +207,21 @@ impl<T: io::Write + io::Seek> Container<T>
     /// let buf = file.into_inner();
     /// assert!(!buf.into_inner().is_empty());
     /// ```
-    pub fn save(&mut self) -> Result<()>
-    {
-        let mut filter = self.table.sections.iter().filter(|(_, entry)| entry.modified.get());
+    pub fn save(&mut self) -> Result<()> {
+        let mut filter = self
+            .table
+            .sections
+            .iter()
+            .filter(|(_, entry)| entry.modified.get());
         let count = filter.by_ref().count();
         if self.table.modified || count > 1 {
             self.table.modified = false;
             self.main_header.section_num = self.table.count;
-            internal_save(self.table.backend.get_mut(), &mut self.table.sections, &mut self.main_header)
+            internal_save(
+                self.table.backend.get_mut(),
+                &mut self.table.sections,
+                &mut self.main_header,
+            )
         } else if !self.table.modified && count == 1 {
             let (handle, _) = filter.last().unwrap();
             if *handle == self.table.next_handle - 1 {
@@ -238,14 +230,18 @@ impl<T: io::Write + io::Seek> Container<T>
                     self.table.backend.get_mut(),
                     &mut self.table.sections,
                     &mut self.main_header,
-                    self.table.next_handle - 1
+                    self.table.next_handle - 1,
                 )
             } else {
                 //Unfortunately the modified section is not the last one so we can't safely
                 //expand/reduce the file size without corrupting other sections
                 self.table.modified = false;
                 self.main_header.section_num = self.table.count;
-                internal_save(self.table.backend.get_mut(), &mut self.table.sections, &mut self.main_header)
+                internal_save(
+                    self.table.backend.get_mut(),
+                    &mut self.table.sections,
+                    &mut self.main_header,
+                )
             }
         } else {
             Ok(())

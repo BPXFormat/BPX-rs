@@ -27,33 +27,42 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::{Read, Seek, SeekFrom, Write};
-use elsa::FrozenMap;
-use crate::core::{Container, Handle, SectionData};
-use crate::core::builder::{Checksum, CompressionMethod, SectionHeaderBuilder};
-use crate::shader::error::{EosContext, Error, Section};
-use crate::shader::{SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SHADER, Shader, Stage};
-use crate::shader::decoder::get_stage_from_code;
-use crate::shader::symbol::{FLAG_EXTENDED_DATA, Settings, Symbol};
-use crate::strings::{load_string_section, StringSection};
-use crate::table::NamedItemTable;
-use crate::shader::Result;
 
-pub struct SymbolTable
-{
+use elsa::FrozenMap;
+
+use crate::{
+    core::{
+        builder::{Checksum, CompressionMethod, SectionHeaderBuilder},
+        Container, Handle, SectionData,
+    },
+    shader::{
+        decoder::get_stage_from_code,
+        error::{EosContext, Error, Section},
+        symbol::{Settings, Symbol, FLAG_EXTENDED_DATA},
+        Result, Shader, Stage, SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SHADER,
+    },
+    strings::{load_string_section, StringSection},
+    table::NamedItemTable,
+};
+
+pub struct SymbolTable {
     strings: StringSection,
     table: NamedItemTable<Symbol>,
     extended_data: Option<Handle>,
-    extended_data_objs: FrozenMap<u32, Box<crate::sd::Value>>
+    extended_data_objs: FrozenMap<u32, Box<crate::sd::Value>>,
 }
 
-impl SymbolTable
-{
-    pub fn new(table: NamedItemTable<Symbol>, strings: StringSection, extended_data: Option<Handle>) -> SymbolTable {
+impl SymbolTable {
+    pub fn new(
+        table: NamedItemTable<Symbol>,
+        strings: StringSection,
+        extended_data: Option<Handle>,
+    ) -> SymbolTable {
         SymbolTable {
             strings,
             table,
             extended_data,
-            extended_data_objs: FrozenMap::new()
+            extended_data_objs: FrozenMap::new(),
         }
     }
 
@@ -69,15 +78,18 @@ impl SymbolTable
         self.table.len()
     }
 
-    fn write_extended_data<T>(&mut self, container: &mut Container<T>, extended_data: crate::sd::Value) -> Result<u32>
-    {
+    fn write_extended_data<T>(
+        &mut self,
+        container: &mut Container<T>,
+        extended_data: crate::sd::Value,
+    ) -> Result<u32> {
         if !extended_data.is_null() {
             let handle = *self.extended_data.get_or_insert_with(|| {
                 container.sections_mut().create(
                     SectionHeaderBuilder::new()
                         .ty(SECTION_TYPE_EXTENDED_DATA)
                         .checksum(Checksum::Crc32)
-                        .compression(CompressionMethod::Zlib)
+                        .compression(CompressionMethod::Zlib),
                 )
             });
             let mut section = container.sections().open(handle)?;
@@ -88,8 +100,11 @@ impl SymbolTable
         Ok(0xFFFFFF)
     }
 
-    pub fn create<T, S: Into<Settings>>(&mut self, container: &mut Container<T>, sym: S) -> Result<usize>
-    {
+    pub fn create<T, S: Into<Settings>>(
+        &mut self,
+        container: &mut Container<T>,
+        sym: S,
+    ) -> Result<usize> {
         let settings = sym.into();
         let address = self.strings.put(container, &settings.name)?;
         let extended_data = self.write_extended_data(container, settings.extended_data)?;
@@ -98,7 +113,7 @@ impl SymbolTable
             extended_data,
             flags: settings.flags,
             ty: settings.ty,
-            register: settings.register
+            register: settings.register,
         };
         Ok(self.table.push(settings.name, buf))
     }
@@ -107,13 +122,21 @@ impl SymbolTable
         self.table.remove(index);
     }
 
-    pub fn load_name<T: Read + Seek>(&self, container: &Container<T>, sym: &Symbol) -> Result<&str> {
+    pub fn load_name<T: Read + Seek>(
+        &self,
+        container: &Container<T>,
+        sym: &Symbol,
+    ) -> Result<&str> {
         load_string_section(container, &self.strings)?;
         let name = self.table.load_name(container, &self.strings, sym)?;
         Ok(name)
     }
 
-    pub fn find<T: Read + Seek>(&self, container: &Container<T>, name: &str) -> Result<Option<&Symbol>> {
+    pub fn find<T: Read + Seek>(
+        &self,
+        container: &Container<T>,
+        name: &str,
+    ) -> Result<Option<&Symbol>> {
         load_string_section(container, &self.strings)?;
         let name = self.table.find_by_name(container, &self.strings, name)?;
         Ok(name)
@@ -123,19 +146,30 @@ impl SymbolTable
         self.table.get(index)
     }
 
-    pub fn load_extended_data<T: Read + Seek>(&self, container: &Container<T>, sym: &Symbol) -> Result<&crate::sd::Value> {
+    pub fn load_extended_data<T: Read + Seek>(
+        &self,
+        container: &Container<T>,
+        sym: &Symbol,
+    ) -> Result<&crate::sd::Value> {
         if sym.flags & FLAG_EXTENDED_DATA == 0 {
             panic!("The symbol extended data is undefined.");
         }
         if self.extended_data_objs.get(&sym.extended_data).is_none() {
-            let section = self.extended_data.ok_or(Error::MissingSection(Section::ExtendedData))?;
+            let section = self
+                .extended_data
+                .ok_or(Error::MissingSection(Section::ExtendedData))?;
             let mut section = container.sections().load(section)?;
             section.seek(SeekFrom::Start(sym.extended_data as _))?;
             let obj = crate::sd::Value::read(&mut *section)?;
-            self.extended_data_objs.insert(sym.extended_data, Box::new(obj));
+            self.extended_data_objs
+                .insert(sym.extended_data, Box::new(obj));
         }
         //SAFETY: We already have an if block to ensure extended data is loaded.
-        Ok(unsafe { self.extended_data_objs.get(&sym.extended_data).unwrap_unchecked() })
+        Ok(unsafe {
+            self.extended_data_objs
+                .get(&sym.extended_data)
+                .unwrap_unchecked()
+        })
     }
 
     pub fn get_mut(&mut self, index: usize) -> Option<&mut Symbol> {
@@ -143,8 +177,7 @@ impl SymbolTable
     }
 }
 
-impl<'a> IntoIterator for &'a SymbolTable
-{
+impl<'a> IntoIterator for &'a SymbolTable {
     type Item = &'a Symbol;
     type IntoIter = std::slice::Iter<'a, Symbol>;
 
@@ -154,14 +187,12 @@ impl<'a> IntoIterator for &'a SymbolTable
 }
 
 /// Immutable guard to the table of all symbols in a BPXS.
-pub struct SymbolTableRef<'a, T>
-{
+pub struct SymbolTableRef<'a, T> {
     pub(crate) container: &'a Container<T>,
-    pub(crate) table: &'a SymbolTable
+    pub(crate) table: &'a SymbolTable,
 }
 
-impl<'a, T> SymbolTableRef<'a, T>
-{
+impl<'a, T> SymbolTableRef<'a, T> {
     /// Gets all symbols in this table.
     pub fn iter(&self) -> std::slice::Iter<Symbol> {
         self.table.iter()
@@ -189,8 +220,7 @@ impl<'a, T> SymbolTableRef<'a, T>
     }
 }
 
-impl<'a, 'b, T> IntoIterator for &'a SymbolTableRef<'b, T>
-{
+impl<'a, 'b, T> IntoIterator for &'a SymbolTableRef<'b, T> {
     type Item = &'a Symbol;
     type IntoIter = std::slice::Iter<'a, Symbol>;
 
@@ -199,8 +229,7 @@ impl<'a, 'b, T> IntoIterator for &'a SymbolTableRef<'b, T>
     }
 }
 
-impl<'a, T: Read + Seek> SymbolTableRef<'a, T>
-{
+impl<'a, T: Read + Seek> SymbolTableRef<'a, T> {
     /// Loads the name of a symbol if it's not already loaded.
     ///
     /// # Errors
@@ -246,14 +275,12 @@ impl<'a, T: Read + Seek> SymbolTableRef<'a, T>
 }
 
 /// Mutable guard to the table of all symbols in a BPXS.
-pub struct SymbolTableMut<'a, T>
-{
+pub struct SymbolTableMut<'a, T> {
     pub(crate) container: &'a mut Container<T>,
-    pub(crate) table: &'a mut SymbolTable
+    pub(crate) table: &'a mut SymbolTable,
 }
 
-impl<'a, T> SymbolTableMut<'a, T>
-{
+impl<'a, T> SymbolTableMut<'a, T> {
     /// Creates a symbol into this BPXS.
     ///
     /// # Arguments
@@ -306,18 +333,16 @@ impl<'a, T> SymbolTableMut<'a, T>
     }
 }
 
-pub struct ShaderTable
-{
+pub struct ShaderTable {
     handles: Vec<Handle>,
-    shaders: FrozenMap<u32, Box<Shader>>
+    shaders: FrozenMap<u32, Box<Shader>>,
 }
 
-impl ShaderTable
-{
+impl ShaderTable {
     pub fn new(handles: Vec<Handle>) -> ShaderTable {
         ShaderTable {
             handles,
-            shaders: FrozenMap::new()
+            shaders: FrozenMap::new(),
         }
     }
 
@@ -345,7 +370,7 @@ impl ShaderTable
                 .ty(SECTION_TYPE_SHADER)
                 .checksum(Checksum::Crc32)
                 .compression(CompressionMethod::Xz)
-                .size(shader.data.len() as u32 + 1)
+                .size(shader.data.len() as u32 + 1),
         );
         let mut section = container.sections().open(handle)?;
         let mut buf = shader.data.clone();
@@ -354,7 +379,7 @@ impl ShaderTable
             Stage::Hull => buf.insert(0, 0x1),
             Stage::Domain => buf.insert(0, 0x2),
             Stage::Geometry => buf.insert(0, 0x3),
-            Stage::Pixel => buf.insert(0, 0x4)
+            Stage::Pixel => buf.insert(0, 0x4),
         };
         section.write_all(&buf)?;
         self.shaders.insert(handle.into_raw(), Box::new(shader));
@@ -362,7 +387,11 @@ impl ShaderTable
         Ok(handle)
     }
 
-    pub fn load<T: Read + Seek>(&self, container: &Container<T>, handle: &Handle) -> Result<&Shader> {
+    pub fn load<T: Read + Seek>(
+        &self,
+        container: &Container<T>,
+        handle: &Handle,
+    ) -> Result<&Shader> {
         let h = handle.into_raw();
         if self.shaders.get(&h).is_none() {
             let sections = container.sections();
@@ -381,8 +410,7 @@ impl ShaderTable
     }
 }
 
-impl<'a> IntoIterator for &'a ShaderTable
-{
+impl<'a> IntoIterator for &'a ShaderTable {
     type Item = &'a Handle;
     type IntoIter = std::slice::Iter<'a, Handle>;
 
@@ -392,14 +420,12 @@ impl<'a> IntoIterator for &'a ShaderTable
 }
 
 /// Immutable guard to the table of all shaders in a BPXS.
-pub struct ShaderTableRef<'a, T>
-{
+pub struct ShaderTableRef<'a, T> {
     pub(crate) container: &'a Container<T>,
-    pub(crate) table: &'a ShaderTable
+    pub(crate) table: &'a ShaderTable,
 }
 
-impl<'a, T> ShaderTableRef<'a, T>
-{
+impl<'a, T> ShaderTableRef<'a, T> {
     /// Gets all shaders in this table.
     pub fn iter(&self) -> std::slice::Iter<Handle> {
         self.table.iter()
@@ -416,8 +442,7 @@ impl<'a, T> ShaderTableRef<'a, T>
     }
 }
 
-impl<'a, 'b, T> IntoIterator for &'a ShaderTableRef<'b, T>
-{
+impl<'a, 'b, T> IntoIterator for &'a ShaderTableRef<'b, T> {
     type Item = &'a Handle;
     type IntoIter = std::slice::Iter<'a, Handle>;
 
@@ -426,8 +451,7 @@ impl<'a, 'b, T> IntoIterator for &'a ShaderTableRef<'b, T>
     }
 }
 
-impl<'a, T: Read + Seek> ShaderTableRef<'a, T>
-{
+impl<'a, T: Read + Seek> ShaderTableRef<'a, T> {
     /// Loads a shader into memory.
     ///
     /// # Arguments
@@ -445,14 +469,12 @@ impl<'a, T: Read + Seek> ShaderTableRef<'a, T>
 }
 
 /// Mutable guard to the table of all shaders in a BPXS.
-pub struct ShaderTableMut<'a, T>
-{
+pub struct ShaderTableMut<'a, T> {
     pub(crate) container: &'a mut Container<T>,
-    pub(crate) table: &'a mut ShaderTable
+    pub(crate) table: &'a mut ShaderTable,
 }
 
-impl<'a, T> ShaderTableMut<'a, T>
-{
+impl<'a, T> ShaderTableMut<'a, T> {
     /// Creates a shader into this BPXS.
     ///
     /// # Arguments

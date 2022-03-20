@@ -27,14 +27,12 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::fmt::{Display, Formatter};
-use crate::core::error::OpenError;
 
-use crate::macros::impl_err_conversion;
+use crate::{core::error::OpenError, macros::impl_err_conversion};
 
 /// Represents a string section read error.
 #[derive(Debug)]
-pub enum Error
-{
+pub enum Error {
     /// Describes an utf8 decoding/encoding error.
     Utf8,
 
@@ -46,7 +44,7 @@ pub enum Error
 
     /// Indicates an [OpenError](crate::core::error::OpenError) has occurred when attempting
     /// to open the section.
-    Open(OpenError)
+    Open(OpenError),
 }
 
 impl_err_conversion!(
@@ -56,15 +54,13 @@ impl_err_conversion!(
     }
 );
 
-impl Display for Error
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::Utf8 => f.write_str("utf8 error"),
             Error::Eos => f.write_str("EOS reached before end of string"),
             Error::Open(e) => write!(f, "open error ({})", e),
-            Error::Io(e) => write!(f, "io error: {}", e)
+            Error::Io(e) => write!(f, "io error: {}", e),
         }
     }
 }
@@ -73,22 +69,19 @@ impl std::error::Error for Error {}
 
 /// Represents a path conversion error.
 #[derive(Debug)]
-pub enum PathError
-{
+pub enum PathError {
     /// Indicates the path is not convertible to UTF-8.
     Utf8,
 
     /// Indicates the path does not have a file name, ie the path points to a directory.
-    Directory
+    Directory,
 }
 
-impl Display for PathError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for PathError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             PathError::Utf8 => f.write_str("non unicode paths are not supported by BPX"),
-            PathError::Directory => f.write_str("path is not a file but a directory")
+            PathError::Directory => f.write_str("path is not a file but a directory"),
         }
     }
 }
