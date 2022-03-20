@@ -109,6 +109,14 @@ impl<T> ShaderPack<T> {
         self.container
     }
 
+    /// Sets the assembly hash of this shader package.
+    pub fn set_assembly(&mut self, hash: u64) {
+        self.settings.assembly_hash = hash;
+        let mut header = *self.container.get_main_header();
+        LittleEndian::write_u64(&mut header.type_ext[0..8], hash);
+        self.container.set_main_header(header);
+    }
+
     /// Returns a guard for mutable access to the symbol table.
     ///
     /// This returns None if the symbol table is not loaded. To load the symbol table, call
