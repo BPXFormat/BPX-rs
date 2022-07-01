@@ -77,6 +77,32 @@ pub trait SectionData: Read + Write + Seek {
         Ok(data)
     }
 
+    //fn set_write_mode(&mut self, mode: WriteMode);
+
+    /// Truncates this section of `size` bytes. The new section size is returned.
+    ///
+    /// Once the section is truncated, bytes to be read after the truncation point are ignored.
+    ///
+    /// # Arguments
+    ///
+    /// * `size`: the number of bytes to chop from the end of the section.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::io::{Read, Seek, SeekFrom, Write};
+    /// use bpx::core::{AutoSectionData, SectionData};
+    ///
+    /// let mut data = AutoSectionData::new();
+    /// data.write_all(b"test").unwrap();
+    /// data.truncate(2);
+    /// data.seek(SeekFrom::Start(0)).unwrap();
+    /// let mut buf = [0; 4];
+    /// data.read(&mut buf).unwrap();
+    /// assert_eq!(std::str::from_utf8(&buf).unwrap(), "te\0\0");
+    /// ```
+    fn truncate(&mut self, size: usize) -> Result<usize>;
+
     /// Shifts all bytes after cursor, in the section, to the left or to the right.
     ///
     /// If this operation fails the data in the section may appear partially shifted.

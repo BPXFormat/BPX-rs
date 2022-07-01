@@ -46,7 +46,12 @@ impl InMemorySection {
 
 impl Read for InMemorySection {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        self.byte_buf.read(buf)
+        let max = self.cur_size as u64 - self.byte_buf.position();
+        if buf.len() as u64 > max {
+            self.byte_buf.read(&mut buf[..max as usize])
+        } else {
+            self.byte_buf.read(buf)
+        }
     }
 }
 
@@ -75,7 +80,40 @@ impl SectionData for InMemorySection {
         return Ok(self.byte_buf.get_ref().clone());
     }
 
+    fn truncate(&mut self, size: usize) -> Result<usize> {
+        if size == 0 {
+            return Ok(0);
+        }
+        //CMP is here to ensure no panic is possible!
+        self.cur_size -= std::cmp::min(self.cur_size, size);
+        if self.byte_buf.position() > self.cur_size as u64 {
+            self.byte_buf.set_position(self.cur_size as u64);
+        }
+        Ok(self.cur_size)
+    }
+
     fn size(&self) -> usize {
         self.cur_size
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Seek, SeekFrom, Write};
+    use crate::core::data::memory::InMemorySection;
+    use crate::core::SectionData;
+    use crate::utils::ReadFill;
+
+    #[test]
+    fn basic_truncate() {
+        let mut data = InMemorySection::new(4);
+        data.write_all(b"test").unwrap();
+        let new_len = data.truncate(2).unwrap();
+        assert_eq!(new_len, 2);
+        let mut buf = [0; 4];
+        data.seek(SeekFrom::Start(0)).unwrap();
+        let len = data.read_fill(&mut buf).unwrap();
+        assert_eq!(len, 2);
+        assert_eq!(&buf, b"te\0\0");
     }
 }

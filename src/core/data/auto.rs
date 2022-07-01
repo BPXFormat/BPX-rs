@@ -34,6 +34,7 @@ use crate::core::{
     data::{file::FileBasedSection, memory::InMemorySection},
     SectionData,
 };
+use crate::core::data::Shift;
 
 const MEMORY_THRESHOLD: u32 = 100000000;
 const INIT_BUF_SIZE: usize = 512;
@@ -156,6 +157,20 @@ impl SectionData for AutoSectionData {
         match &mut *self.inner {
             DynSectionData::File(f) => f.load_in_memory(),
             DynSectionData::Memory(m) => m.load_in_memory(),
+        }
+    }
+
+    fn truncate(&mut self, size: usize) -> std::io::Result<usize> {
+        match &mut *self.inner {
+            DynSectionData::File(f) => f.truncate(size),
+            DynSectionData::Memory(f) => f.truncate(size)
+        }
+    }
+
+    fn shift(&mut self, shift: Shift) -> std::io::Result<()> {
+        match &mut *self.inner {
+            DynSectionData::File(f) => f.shift(shift),
+            DynSectionData::Memory(f) => f.shift(shift),
         }
     }
 
