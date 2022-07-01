@@ -92,6 +92,12 @@ impl AutoSectionData {
         }
     }
 
+    /// Moves this section from in-memory to file (used to avoid overloading RAM with the section
+    /// is getting too big.
+    ///
+    /// # Safety
+    ///
+    /// This function causes **undefined behavior** if the section is already a file.
     unsafe fn move_to_file(&mut self) -> std::io::Result<()> {
         let mut file = FileBasedSection::new(tempfile()?);
         match &mut *self.inner {
@@ -110,12 +116,25 @@ impl AutoSectionData {
     }
 }
 
+macro_rules! auto_section_delegate {
+    ($self: ident, $v: ident => $e: expr) => {
+        match &*$self.inner {
+            DynSectionData::File($v) => $e,
+            DynSectionData::Memory($v) => $e
+        }
+    };
+
+    (mut $self: ident, $v: ident => $e: expr) => {
+        match &mut *$self.inner {
+            DynSectionData::File($v) => $e,
+            DynSectionData::Memory($v) => $e
+        }
+    };
+}
+
 impl Read for AutoSectionData {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        match &mut *self.inner {
-            DynSectionData::File(f) => f.read(buf),
-            DynSectionData::Memory(m) => m.read(buf),
-        }
+        auto_section_delegate!(mut self, v => v.read(buf))
     }
 }
 
@@ -136,48 +155,34 @@ impl Write for AutoSectionData {
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        match &mut *self.inner {
-            DynSectionData::File(f) => f.flush(),
-            DynSectionData::Memory(m) => m.flush(),
-        }
+        auto_section_delegate!(mut self, v => v.flush())
     }
 }
 
 impl Seek for AutoSectionData {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        match &mut *self.inner {
-            DynSectionData::File(f) => f.seek(pos),
-            DynSectionData::Memory(m) => m.seek(pos),
-        }
+        auto_section_delegate!(mut self, v => v.seek(pos))
+    }
+
+    fn stream_position(&mut self) -> std::io::Result<u64> {
+        auto_section_delegate!(mut self, v => v.stream_position())
     }
 }
 
 impl SectionData for AutoSectionData {
     fn load_in_memory(&mut self) -> std::io::Result<Vec<u8>> {
-        match &mut *self.inner {
-            DynSectionData::File(f) => f.load_in_memory(),
-            DynSectionData::Memory(m) => m.load_in_memory(),
-        }
+        auto_section_delegate!(mut self, v => v.load_in_memory())
     }
 
     fn truncate(&mut self, size: usize) -> std::io::Result<usize> {
-        match &mut *self.inner {
-            DynSectionData::File(f) => f.truncate(size),
-            DynSectionData::Memory(f) => f.truncate(size)
-        }
+        auto_section_delegate!(mut self, v => v.truncate(size))
     }
 
     fn shift(&mut self, shift: Shift) -> std::io::Result<()> {
-        match &mut *self.inner {
-            DynSectionData::File(f) => f.shift(shift),
-            DynSectionData::Memory(f) => f.shift(shift),
-        }
+        auto_section_delegate!(mut self, v => v.shift(shift))
     }
 
     fn size(&self) -> usize {
-        match &*self.inner {
-            DynSectionData::File(f) => f.size(),
-            DynSectionData::Memory(m) => m.size(),
-        }
+        auto_section_delegate!(self, v => v.size())
     }
 }
