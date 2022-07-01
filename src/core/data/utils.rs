@@ -26,9 +26,13 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::Result;
+use std::io::{Read, Result, Seek, SeekFrom, Write};
 
 const READ_BLOCK_SIZE: usize = 8192;
+#[cfg(not(test))]
+const SHIFT_BUF_SIZE: usize = 8192;
+#[cfg(test)]
+const SHIFT_BUF_SIZE: usize = 4;
 
 pub struct IoReadBuffer {
     buffer: [u8; READ_BLOCK_SIZE],
@@ -70,8 +74,45 @@ impl IoReadBuffer {
     pub fn inverted_position(&self) -> u64 {
         self.length as u64 - self.cursor as u64
     }
+}
 
-    pub fn position(&self) -> u64 {
-        self.cursor as u64
+pub fn shift_left<T: Read + Write + Seek>(mut data: T, mut length: u32) -> Result<()> {
+    let cursor = data.stream_position()?;
+    let mut buf = [0; SHIFT_BUF_SIZE];
+    if length > cursor as u32 {
+        length = cursor as u32;
     }
+    let mut destination = cursor - length as u64;
+    let mut source = cursor;
+    loop {
+        data.seek(SeekFrom::Start(source))?;
+        //The reason why this is not a read_fill is because the section data buffer is designed to
+        // always read as much as possible into the input buffer.
+        let len = data.read(&mut buf)?;
+        if len == 0 {
+            break;
+        }
+        source += len as u64;
+        data.seek(SeekFrom::Start(destination))?;
+        data.write_all(&buf[..len])?;
+        destination += len as u64;
+    }
+    Ok(())
+}
+
+pub fn shift_right<T: Read + Write + Seek>(mut data: T, size: u64, length: u32) -> Result<()> {
+    let cursor = data.stream_position()?;
+    let mut buf = [0; SHIFT_BUF_SIZE];
+    let mut source = size;
+    let mut destination = source + length as u64;
+    while source > cursor {
+        let nextsize = std::cmp::min(SHIFT_BUF_SIZE as u64, source - cursor);
+        data.seek(SeekFrom::Start(source - nextsize))?;
+        data.read_exact(&mut buf[..nextsize as usize])?;
+        data.seek(SeekFrom::Start(destination - nextsize))?;
+        data.write_all(&buf[..nextsize as usize])?;
+        source -= nextsize;
+        destination -= nextsize;
+    }
+    Ok(())
 }

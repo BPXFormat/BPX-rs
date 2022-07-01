@@ -37,12 +37,6 @@ use std::{
     io::{Read, Result, Seek, Write},
     vec::Vec,
 };
-use std::io::SeekFrom;
-
-#[cfg(not(test))]
-const SHIFT_BUF_SIZE: usize = 8192;
-#[cfg(test)]
-const SHIFT_BUF_SIZE: usize = 4;
 
 /// Shift direction and amount for shifting section data.
 pub enum Shift {
@@ -118,43 +112,15 @@ pub trait SectionData: Read + Write + Seek {
     ///
     /// An [Error](std::io::Error) is returned if a read, write or seek operation has failed.
     fn shift(&mut self, shift: Shift) -> Result<()> {
-        let cursor = self.stream_position()?;
-        let mut buf = [0; SHIFT_BUF_SIZE];
         match shift {
-            Shift::Left(mut length) => {
-                if length > cursor as u32 {
-                    length = cursor as u32;
-                }
-                let mut destination = cursor - length as u64;
-                let mut source = cursor;
-                loop {
-                    self.seek(SeekFrom::Start(source))?;
-                    let len = self.read_fill(&mut buf)?;
-                    if len == 0 {
-                        break;
-                    }
-                    source += len as u64;
-                    self.seek(SeekFrom::Start(destination))?;
-                    self.write_all(&buf[..len])?;
-                    destination += len as u64;
-                }
+            Shift::Left(length) => {
+                utils::shift_left(self, length)
             },
             Shift::Right(length) => {
-                let size = self.size() as u64;
-                let mut source = size;
-                let mut destination = source + length as u64;
-                while source > cursor {
-                    let nextsize = std::cmp::min(SHIFT_BUF_SIZE as u64, source - cursor);
-                    self.seek(SeekFrom::Start(source - nextsize))?;
-                    self.read_exact(&mut buf[..nextsize as usize])?;
-                    self.seek(SeekFrom::Start(destination - nextsize))?;
-                    self.write_all(&buf[..nextsize as usize])?;
-                    source -= nextsize;
-                    destination -= nextsize;
-                }
+                let fuckingrust = self.size();
+                utils::shift_right(self, fuckingrust as u64, length)
             }
         }
-        Ok(())
     }
 
     /// Returns the current size of this section.
@@ -162,7 +128,6 @@ pub trait SectionData: Read + Write + Seek {
 }
 
 pub use auto::AutoSectionData;
-use crate::utils::ReadFill;
 
 #[cfg(test)]
 mod tests {
