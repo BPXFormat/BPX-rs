@@ -31,6 +31,7 @@
 mod auto;
 mod file;
 mod memory;
+mod utils;
 
 use std::{
     io::{Read, Result, Seek, Write},
