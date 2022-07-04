@@ -33,6 +33,7 @@ use std::{
 use crate::core::data::utils::IoReadBuffer;
 
 use crate::core::SectionData;
+use crate::traits::ReadToVec;
 
 pub struct FileBasedSection {
     data: File,
@@ -96,6 +97,8 @@ impl Seek for FileBasedSection {
     }
 }
 
+impl ReadToVec for FileBasedSection {}
+
 impl SectionData for FileBasedSection {
     fn truncate(&mut self, size: usize) -> Result<usize> {
         if size == 0 {
@@ -121,7 +124,7 @@ mod tests {
     use std::io::{Seek, SeekFrom, Write};
     use crate::core::data::file::FileBasedSection;
     use crate::core::SectionData;
-    use crate::utils::ReadFill;
+    use crate::traits::ReadFill;
 
     #[test]
     fn basic_read_write_seek() {

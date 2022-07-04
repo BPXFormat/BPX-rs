@@ -29,6 +29,7 @@
 use std::io::{Cursor, Read, Result, Seek, SeekFrom, Write};
 
 use crate::{core::SectionData, utils::new_byte_buf};
+use crate::traits::ReadToVec;
 
 pub struct InMemorySection {
     byte_buf: Cursor<Vec<u8>>,
@@ -75,11 +76,13 @@ impl Seek for InMemorySection {
     }
 }
 
-impl SectionData for InMemorySection {
-    fn load_in_memory(&mut self) -> Result<Vec<u8>> {
-        return Ok(self.byte_buf.get_ref().clone());
+impl ReadToVec for InMemorySection {
+    fn read_to_vec(&mut self) -> Result<Vec<u8>> {
+        Ok(self.byte_buf.get_ref().clone())
     }
+}
 
+impl SectionData for InMemorySection {
     fn truncate(&mut self, size: usize) -> Result<usize> {
         if size == 0 {
             return Ok(0);
@@ -102,7 +105,7 @@ mod tests {
     use std::io::{Seek, SeekFrom, Write};
     use crate::core::data::memory::InMemorySection;
     use crate::core::SectionData;
-    use crate::utils::ReadFill;
+    use crate::traits::ReadFill;
 
     #[test]
     fn basic_truncate() {

@@ -44,6 +44,7 @@ use crate::{
     strings::{load_string_section, StringSection},
     table::NamedItemTable,
 };
+use crate::traits::ReadToVec;
 
 pub struct SymbolTable {
     strings: StringSection,
@@ -400,7 +401,7 @@ impl ShaderTable {
                 //We must at least find a stage byte
                 return Err(Error::Eos(EosContext::Shader));
             }
-            let mut buf = sections.load(*handle)?.load_in_memory()?;
+            let mut buf = sections.load(*handle)?.read_to_vec()?;
             let stage = get_stage_from_code(buf.remove(0))?;
             let shader = Shader { stage, data: buf };
             self.shaders.insert(h, Box::new(shader));

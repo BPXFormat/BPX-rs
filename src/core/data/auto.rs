@@ -34,7 +34,7 @@ use crate::core::{
     data::{file::FileBasedSection, memory::InMemorySection},
     SectionData,
 };
-use crate::core::data::Shift;
+use crate::traits::ReadToVec;
 
 const MEMORY_THRESHOLD: u32 = 100000000;
 const INIT_BUF_SIZE: usize = 512;
@@ -103,7 +103,7 @@ impl AutoSectionData {
         match &mut *self.inner {
             DynSectionData::Memory(m) => std::io::copy(m, &mut file),
             //SAFETY: If the section is not an InMemorySection then move_to_file is not supposed to have been called,
-            // and that is an unrecoverable internal BPX error
+            // and that is an unrecoverable internal BPX error.
             DynSectionData::File(_) => std::hint::unreachable_unchecked(),
         }?;
         self.inner = Box::new(DynSectionData::File(file));
@@ -169,17 +169,15 @@ impl Seek for AutoSectionData {
     }
 }
 
-impl SectionData for AutoSectionData {
-    fn load_in_memory(&mut self) -> std::io::Result<Vec<u8>> {
-        auto_section_delegate!(mut self, v => v.load_in_memory())
+impl ReadToVec for AutoSectionData {
+    fn read_to_vec(&mut self) -> std::io::Result<Vec<u8>> {
+        auto_section_delegate!(mut self, v => v.read_to_vec())
     }
+}
 
+impl SectionData for AutoSectionData {
     fn truncate(&mut self, size: usize) -> std::io::Result<usize> {
         auto_section_delegate!(mut self, v => v.truncate(size))
-    }
-
-    fn shift(&mut self, shift: Shift) -> std::io::Result<()> {
-        auto_section_delegate!(mut self, v => v.shift(shift))
     }
 
     fn size(&self) -> usize {

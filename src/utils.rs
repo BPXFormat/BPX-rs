@@ -33,7 +33,6 @@ use std::{
     io::Cursor,
     num::Wrapping,
 };
-use std::io::Read;
 
 /// Convenient utility to wrap object property name hashes.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]

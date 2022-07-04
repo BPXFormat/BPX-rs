@@ -33,47 +33,12 @@ mod file;
 mod memory;
 mod utils;
 
-use std::{
-    io::{Read, Result, Seek, Write},
-    vec::Vec,
-};
+use std::io::{Read, Result, Seek, Write};
 
-/// Shift direction and amount for shifting section data.
-pub enum Shift {
-    /// Shift to the left.
-    Left(u32),
-
-    /// Shift to the right.
-    Right(u32)
-}
-
-/// Write mode for [SectionData](crate::core::data::SectionData).
-pub enum WriteMode {
-    /// Write data by appending bytes at the current cursor location.
-    Append,
-
-    /// Write data over existing data if any.
-    ///
-    /// This is the behavior commonly expected by most [Write](std::io::Write) implementations,
-    /// as such this is also the default for [SectionData](crate::core::data::SectionData).
-    Overwrite
-}
+use crate::traits::{ReadToVec, Shift, ShiftTo};
 
 /// Opaque variant intended to manipulate section data in the form of standard IO operations.
-pub trait SectionData: Read + Write + Seek {
-    /// Loads this section into memory.
-    ///
-    /// # Errors
-    ///
-    /// An [Error](std::io::Error) is returned if the section could not be loaded.
-    fn load_in_memory(&mut self) -> Result<Vec<u8>> {
-        let mut data: Vec<u8> = Vec::new();
-        self.read_to_end(&mut data)?;
-        Ok(data)
-    }
-
-    //fn set_write_mode(&mut self, mode: WriteMode);
-
+pub trait SectionData: Read + Write + Seek + ReadToVec {
     /// Truncates this section of `size` bytes. The new section size is returned.
     ///
     /// Once the section is truncated, bytes to be read after the truncation point are ignored.
@@ -98,33 +63,22 @@ pub trait SectionData: Read + Write + Seek {
     /// ```
     fn truncate(&mut self, size: usize) -> Result<usize>;
 
-    /// Shifts all bytes after cursor, in the section, to the left or to the right.
-    ///
-    /// If this operation fails the data in the section may appear partially shifted.
-    ///
-    /// # Arguments
-    ///
-    /// * `shift`: the shift direction and length.
-    ///
-    /// returns: Result<(), Error>
-    ///
-    /// # Errors
-    ///
-    /// An [Error](std::io::Error) is returned if a read, write or seek operation has failed.
-    fn shift(&mut self, shift: Shift) -> Result<()> {
-        match shift {
-            Shift::Left(length) => {
-                utils::shift_left(self, length)
+    /// Returns the current size of this section.
+    fn size(&self) -> usize;
+}
+
+impl<T: SectionData> Shift for T {
+    fn shift(&mut self, pos: ShiftTo) -> Result<()> {
+        match pos {
+            ShiftTo::Left(length) => {
+                utils::shift_left(self, length as u32)
             },
-            Shift::Right(length) => {
+            ShiftTo::Right(length) => {
                 let fuckingrust = self.size();
-                utils::shift_right(self, fuckingrust as u64, length)
+                utils::shift_right(self, fuckingrust as u64, length as u32)
             }
         }
     }
-
-    /// Returns the current size of this section.
-    fn size(&self) -> usize;
 }
 
 pub use auto::AutoSectionData;
@@ -132,8 +86,8 @@ pub use auto::AutoSectionData;
 #[cfg(test)]
 mod tests {
     use std::io::{Read, Seek, SeekFrom, Write};
-    use crate::core::{AutoSectionData, SectionData};
-    use crate::core::data::Shift;
+    use crate::core::AutoSectionData;
+    use crate::traits::{Shift, ShiftTo};
 
     const SEED: &str = "This is a test.";
 
@@ -142,7 +96,7 @@ mod tests {
         let mut data = AutoSectionData::new();
         data.write_all(SEED.as_bytes()).unwrap();
         data.seek(SeekFrom::End(-4)).unwrap();
-        data.shift(Shift::Left(2)).unwrap();
+        data.shift(ShiftTo::Left(2)).unwrap();
         data.seek(SeekFrom::Start(0)).unwrap();
         let mut buf = [0; SEED.len()];
         data.read(&mut buf).unwrap();
@@ -154,7 +108,7 @@ mod tests {
         let mut data = AutoSectionData::new();
         data.write_all(SEED.as_bytes()).unwrap();
         data.seek(SeekFrom::End(-4)).unwrap();
-        data.shift(Shift::Right(2)).unwrap();
+        data.shift(ShiftTo::Right(2)).unwrap();
         data.seek(SeekFrom::Start(0)).unwrap();
         let mut buf = [0; SEED.len() + 2];
         data.read(&mut buf).unwrap();
@@ -166,7 +120,7 @@ mod tests {
         let mut data = AutoSectionData::new();
         data.write_all(SEED.as_bytes()).unwrap();
         data.seek(SeekFrom::Start(4)).unwrap();
-        data.shift(Shift::Left(2)).unwrap();
+        data.shift(ShiftTo::Left(2)).unwrap();
         data.seek(SeekFrom::Start(0)).unwrap();
         let mut buf = [0; SEED.len()];
         data.read(&mut buf).unwrap();
@@ -178,7 +132,7 @@ mod tests {
         let mut data = AutoSectionData::new();
         data.write_all(SEED.as_bytes()).unwrap();
         data.seek(SeekFrom::Start(4)).unwrap();
-        data.shift(Shift::Right(2)).unwrap();
+        data.shift(ShiftTo::Right(2)).unwrap();
         data.seek(SeekFrom::Start(0)).unwrap();
         let mut buf = [0; SEED.len() + 2];
         data.read(&mut buf).unwrap();
@@ -190,7 +144,7 @@ mod tests {
         let mut data = AutoSectionData::new();
         data.write_all(SEED.as_bytes()).unwrap();
         data.seek(SeekFrom::Start(0)).unwrap();
-        data.shift(Shift::Left(2)).unwrap();
+        data.shift(ShiftTo::Left(2)).unwrap();
         data.seek(SeekFrom::Start(0)).unwrap();
         let mut buf = [0; SEED.len()];
         data.read(&mut buf).unwrap();
@@ -202,7 +156,7 @@ mod tests {
         let mut data = AutoSectionData::new();
         data.write_all(SEED.as_bytes()).unwrap();
         data.seek(SeekFrom::Start(0)).unwrap();
-        data.shift(Shift::Right(2)).unwrap();
+        data.shift(ShiftTo::Right(2)).unwrap();
         data.seek(SeekFrom::Start(0)).unwrap();
         let mut buf = [0; SEED.len() + 2];
         data.read(&mut buf).unwrap();
