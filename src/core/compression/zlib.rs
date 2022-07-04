@@ -39,7 +39,7 @@ use crate::{
         compression::{Checksum, Deflater, Inflater},
         error::{DeflateError, InflateError},
     },
-    utils::ReadFill,
+    traits::ReadFill,
 };
 
 const ENCODER_BUF_SIZE: usize = 8192;

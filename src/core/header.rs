@@ -38,7 +38,7 @@ use crate::{
         error::Error,
     },
     garraylen::*,
-    utils::ReadFill,
+    traits::ReadFill,
 };
 
 /// Represents a serializable and deserializable byte structure in a BPX.

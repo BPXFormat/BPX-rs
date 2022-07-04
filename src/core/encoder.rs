@@ -48,7 +48,7 @@ use crate::{
         section::SectionEntry,
         Result, SectionData,
     },
-    utils::ReadFill,
+    traits::ReadFill,
 };
 
 const READ_BLOCK_SIZE: usize = 8192;

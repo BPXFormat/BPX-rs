@@ -50,7 +50,7 @@ use crate::{
         section::{SectionEntry, SectionEntry1},
         Result, DEFAULT_COMPRESSION_THRESHOLD,
     },
-    utils::ReadFill,
+    traits::ReadFill,
 };
 
 const READ_BLOCK_SIZE: usize = 8192;

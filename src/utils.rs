@@ -33,6 +33,7 @@ use std::{
     io::Cursor,
     num::Wrapping,
 };
+use std::io::Read;
 
 /// Convenient utility to wrap object property name hashes.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -115,37 +116,4 @@ pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>> {
         return Cursor::new(Vec::with_capacity(size));
     }
     Cursor::new(Vec::new())
-}
-
-/// Allows to read into a buffer as much as possible.
-///
-/// *Allows the use BufReader with BPX*
-pub trait ReadFill {
-    /// Reads into `buf` as much as possible.
-    ///
-    /// *Returns the number of bytes that could be read.*
-    ///
-    /// # Arguments
-    ///
-    /// * `buf`: the buffer to read into.
-    ///
-    /// returns: Result<usize, Error>
-    ///
-    /// # Errors
-    ///
-    /// Returns an [Error](std::io::Error) when read has failed.
-    fn read_fill(&mut self, buf: &mut [u8]) -> std::io::Result<usize>;
-}
-
-impl<T: std::io::Read + ?Sized> ReadFill for T {
-    fn read_fill(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let mut bytes = 0;
-        let mut len = self.read(buf)?;
-        bytes += len;
-        while len > 0 && buf.len() - len > 0 {
-            len = self.read(&mut buf[len..])?;
-            bytes += len;
-        }
-        Ok(bytes)
-    }
 }

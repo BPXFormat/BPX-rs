@@ -32,7 +32,7 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{
     sd::{error::Error, value::Type, Array, Object, Result, Value},
-    utils::ReadFill,
+    traits::ReadFill,
 };
 
 fn read_bool<TRead: Read>(stream: &mut TRead) -> Result<Value> {

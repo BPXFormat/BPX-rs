@@ -35,7 +35,7 @@ use crate::{
         Container, Handle, SectionData,
     },
     package::{Architecture, Platform, Result, Settings, SECTION_TYPE_DATA},
-    utils::ReadFill,
+    traits::ReadFill,
 };
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
