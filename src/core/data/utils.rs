@@ -97,6 +97,7 @@ pub fn shift_left<T: Read + Write + Seek>(mut data: T, mut length: u32) -> Resul
         data.write_all(&buf[..len])?;
         destination += len as u64;
     }
+    data.seek(SeekFrom::Start(cursor))?;
     Ok(())
 }
 
@@ -114,5 +115,6 @@ pub fn shift_right<T: Read + Write + Seek>(mut data: T, size: u64, length: u32) 
         source -= nextsize;
         destination -= nextsize;
     }
+    data.seek(SeekFrom::Start(cursor))?;
     Ok(())
 }

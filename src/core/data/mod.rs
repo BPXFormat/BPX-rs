@@ -116,6 +116,24 @@ mod tests {
     }
 
     #[test]
+    fn shift_left_maintain_cursor() {
+        let mut data = AutoSectionData::new();
+        data.write_all(SEED.as_bytes()).unwrap();
+        let cursor = data.seek(SeekFrom::End(-4)).unwrap();
+        data.shift(ShiftTo::Left(2)).unwrap();
+        assert_eq!(cursor, data.stream_position().unwrap());
+    }
+
+    #[test]
+    fn shift_right_maintain_cursor() {
+        let mut data = AutoSectionData::new();
+        data.write_all(SEED.as_bytes()).unwrap();
+        let cursor = data.seek(SeekFrom::End(-4)).unwrap();
+        data.shift(ShiftTo::Right(2)).unwrap();
+        assert_eq!(cursor, data.stream_position().unwrap());
+    }
+
+    #[test]
     fn long_shift_left() {
         let mut data = AutoSectionData::new();
         data.write_all(SEED.as_bytes()).unwrap();
@@ -161,5 +179,17 @@ mod tests {
         let mut buf = [0; SEED.len() + 2];
         data.read(&mut buf).unwrap();
         assert_eq!(std::str::from_utf8(&buf).unwrap(), "ThThis is a test.");
+    }
+
+    #[test]
+    fn write_append() {
+        let mut data = AutoSectionData::new();
+        data.write_all("tt".as_bytes()).unwrap();
+        data.seek(SeekFrom::Start(1)).unwrap();
+        data.write_append(b"es").unwrap();
+        data.seek(SeekFrom::Start(0)).unwrap();
+        let mut buf = [0; 4];
+        data.read(&mut buf).unwrap();
+        assert_eq!(std::str::from_utf8(&buf).unwrap(), "test");
     }
 }
