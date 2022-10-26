@@ -34,8 +34,8 @@
 pub mod core;
 mod garraylen;
 pub mod macros;
-pub mod utils;
 pub mod traits;
+pub mod utils;
 
 #[cfg(feature = "table")]
 pub mod table;

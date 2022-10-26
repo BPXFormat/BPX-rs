@@ -30,6 +30,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 
 use elsa::FrozenMap;
 
+use crate::traits::ReadToVec;
 use crate::{
     core::{
         builder::{Checksum, CompressionMethod, SectionHeaderBuilder},
@@ -44,7 +45,6 @@ use crate::{
     strings::{load_string_section, StringSection},
     table::NamedItemTable,
 };
-use crate::traits::ReadToVec;
 
 pub struct SymbolTable {
     strings: StringSection,

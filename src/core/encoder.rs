@@ -150,7 +150,10 @@ fn write_section_single<T: Write + Seek>(
     Ok((old != entry.header, diff))
 }
 
-pub fn recompute_header_checksum(main_header: &mut MainHeader, sections: &BTreeMap<u32, SectionEntry>) {
+pub fn recompute_header_checksum(
+    main_header: &mut MainHeader,
+    sections: &BTreeMap<u32, SectionEntry>,
+) {
     let mut chksum_sht: u32 = 0;
     for entry in sections.values() {
         chksum_sht += entry.header.get_checksum();

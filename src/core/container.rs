@@ -26,11 +26,17 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::{cell::RefCell, collections::BTreeMap, io};
 use std::io::SeekFrom;
+use std::{cell::RefCell, collections::BTreeMap, io};
 
-use crate::core::{decoder::read_section_header_table, encoder::{internal_save, internal_save_single}, header::{MainHeader, Struct}, section::SectionTable, Result, SectionData};
 use crate::core::encoder::recompute_header_checksum;
+use crate::core::{
+    decoder::read_section_header_table,
+    encoder::{internal_save, internal_save_single},
+    header::{MainHeader, Struct},
+    section::SectionTable,
+    Result, SectionData,
+};
 
 /// The default maximum size of uncompressed sections.
 ///
@@ -41,7 +47,7 @@ pub const DEFAULT_COMPRESSION_THRESHOLD: u32 = 65536;
 pub struct Container<T> {
     table: SectionTable<T>,
     main_header: MainHeader,
-    main_header_modified: bool
+    main_header_modified: bool,
 }
 
 impl<T> Container<T> {
@@ -142,7 +148,7 @@ impl<T: io::Read + io::Seek> Container<T> {
                 count: header.section_num,
             },
             main_header: header,
-            main_header_modified: false
+            main_header_modified: false,
         })
     }
 }
@@ -179,12 +185,14 @@ impl<T: io::Write + io::Seek> Container<T> {
                 sections: BTreeMap::new(),
             },
             main_header: header.into(),
-            main_header_modified: true
+            main_header_modified: true,
         }
     }
 
-    fn get_modified_sections(&self) -> Vec<u32> { // Returns a list of modified sections.
-        self.table.sections
+    fn get_modified_sections(&self) -> Vec<u32> {
+        // Returns a list of modified sections.
+        self.table
+            .sections
             .iter()
             .filter(|(_, entry)| entry.modified.get())
             .map(|(handle, _)| *handle)
@@ -211,7 +219,12 @@ impl<T: io::Write + io::Seek> Container<T> {
     fn patch_modified_sections(&mut self) -> Result<bool> {
         let mut main_header = false;
         for section in self.get_modified_sections() {
-            if internal_save_single(self.table.backend.get_mut(), &mut self.table.sections, &mut self.main_header, section)? {
+            if internal_save_single(
+                self.table.backend.get_mut(),
+                &mut self.table.sections,
+                &mut self.main_header,
+                section,
+            )? {
                 main_header = true;
             }
         }
@@ -253,17 +266,24 @@ impl<T: io::Write + io::Seek> Container<T> {
                 &mut self.main_header,
             );
         }
-        let count = self.table.sections
+        let count = self
+            .table
+            .sections
             .values()
-            .filter(|entry| entry.modified.get()).count();
+            .filter(|entry| entry.modified.get())
+            .count();
         if count == 0 {
             // No sections have changed and the table didn't change; might have nothing to do.
             return self.patch_main_header_if_needed(false);
         }
-        let expanded_sections = self.table.sections
+        let expanded_sections = self
+            .table
+            .sections
             .values()
             .filter(|entry| entry.modified.get())
-            .filter(|entry| entry.data.borrow().as_ref().unwrap().size() != entry.header.size as usize)
+            .filter(|entry| {
+                entry.data.borrow().as_ref().unwrap().size() != entry.header.size as usize
+            })
             .count();
         if expanded_sections == 0 {
             let flag = if count > 1 {
@@ -271,20 +291,31 @@ impl<T: io::Write + io::Seek> Container<T> {
                 self.patch_modified_sections()
             } else {
                 // If 1 section changed but didn’t expand -> only write this section and patch section header table.
-                let section = self.table.sections
+                let section = self
+                    .table
+                    .sections
                     .iter()
                     .find(|(_, entry)| entry.modified.get())
                     .map(|(handle, _)| *handle)
                     .unwrap();
-                internal_save_single(self.table.backend.get_mut(), &mut self.table.sections, &mut self.main_header, section)
+                internal_save_single(
+                    self.table.backend.get_mut(),
+                    &mut self.table.sections,
+                    &mut self.main_header,
+                    section,
+                )
             };
             return self.patch_main_header_if_needed(flag?);
         }
         if expanded_sections == 1 {
-            let expanded_section = self.table.sections
+            let expanded_section = self
+                .table
+                .sections
                 .iter()
                 .filter(|(_, entry)| entry.modified.get())
-                .find(|(_, entry)| entry.data.borrow().as_ref().unwrap().size() != entry.header.size as usize)
+                .find(|(_, entry)| {
+                    entry.data.borrow().as_ref().unwrap().size() != entry.header.size as usize
+                })
                 .map(|(handle, _)| *handle)
                 .unwrap();
             if expanded_section == self.table.next_handle - 1 {
@@ -295,7 +326,12 @@ impl<T: io::Write + io::Seek> Container<T> {
                     self.patch_modified_sections()
                 } else {
                     //If last section expanded -> only write last section and update section header table.
-                    internal_save_single(self.table.backend.get_mut(), &mut self.table.sections, &mut self.main_header, expanded_section)
+                    internal_save_single(
+                        self.table.backend.get_mut(),
+                        &mut self.table.sections,
+                        &mut self.main_header,
+                        expanded_section,
+                    )
                 };
                 return self.patch_main_header_if_needed(flag?);
             }

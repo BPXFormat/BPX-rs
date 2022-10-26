@@ -26,11 +26,11 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use crate::core::data::utils::IoReadBuffer;
 use std::{
     fs::File,
     io::{Read, Result, Seek, SeekFrom, Write},
 };
-use crate::core::data::utils::IoReadBuffer;
 
 use crate::core::SectionData;
 use crate::traits::ReadToVec;
@@ -39,7 +39,7 @@ pub struct FileBasedSection {
     data: File,
     buffer: IoReadBuffer,
     stream_pos: u64,
-    cur_size: usize
+    cur_size: usize,
 }
 
 impl FileBasedSection {
@@ -48,7 +48,7 @@ impl FileBasedSection {
             data,
             buffer: IoReadBuffer::new(),
             stream_pos: 0,
-            cur_size: 0
+            cur_size: 0,
         }
     }
 }
@@ -57,9 +57,9 @@ impl Read for FileBasedSection {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         self.buffer.read(buf, |block| {
             let max = self.cur_size as u64 - self.stream_pos;
-            let len = match block.len() as u64 > max  {
+            let len = match block.len() as u64 > max {
                 true => self.data.read(&mut block[..max as usize]),
-                false => self.data.read(block)
+                false => self.data.read(block),
             }?;
             self.stream_pos += len as u64;
             Ok(len)
@@ -121,10 +121,10 @@ impl SectionData for FileBasedSection {
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Seek, SeekFrom, Write};
     use crate::core::data::file::FileBasedSection;
     use crate::core::SectionData;
     use crate::traits::ReadFill;
+    use std::io::{Seek, SeekFrom, Write};
 
     #[test]
     fn basic_read_write_seek() {

@@ -37,7 +37,7 @@ const SHIFT_BUF_SIZE: usize = 4;
 pub struct IoReadBuffer {
     buffer: [u8; READ_BLOCK_SIZE],
     length: usize,
-    cursor: usize
+    cursor: usize,
 }
 
 impl IoReadBuffer {
@@ -45,11 +45,15 @@ impl IoReadBuffer {
         IoReadBuffer {
             buffer: [0; READ_BLOCK_SIZE],
             length: 0,
-            cursor: 0
+            cursor: 0,
         }
     }
 
-    pub fn read<F: FnMut(&mut [u8]) -> Result<usize>>(&mut self, data: &mut [u8], mut read_block: F) -> Result<usize> {
+    pub fn read<F: FnMut(&mut [u8]) -> Result<usize>>(
+        &mut self,
+        data: &mut [u8],
+        mut read_block: F,
+    ) -> Result<usize> {
         let mut cnt: usize = 0;
 
         for byte in data {

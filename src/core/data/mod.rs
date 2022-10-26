@@ -70,13 +70,11 @@ pub trait SectionData: Read + Write + Seek + ReadToVec {
 impl<T: SectionData> Shift for T {
     fn shift(&mut self, pos: ShiftTo) -> Result<()> {
         match pos {
-            ShiftTo::Left(length) => {
-                utils::shift_left(self, length as u32)
-            },
+            ShiftTo::Left(length) => utils::shift_left(self, length as u32),
             ShiftTo::Right(length) => {
                 let fuckingrust = self.size();
                 utils::shift_right(self, fuckingrust as u64, length as u32)
-            }
+            },
         }
     }
 }
@@ -85,9 +83,9 @@ pub use auto::AutoSectionData;
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Read, Seek, SeekFrom, Write};
     use crate::core::AutoSectionData;
     use crate::traits::{Shift, ShiftTo};
+    use std::io::{Read, Seek, SeekFrom, Write};
 
     const SEED: &str = "This is a test.";
 

@@ -120,14 +120,14 @@ macro_rules! auto_section_delegate {
     ($self: ident, $v: ident => $e: expr) => {
         match &*$self.inner {
             DynSectionData::File($v) => $e,
-            DynSectionData::Memory($v) => $e
+            DynSectionData::Memory($v) => $e,
         }
     };
 
     (mut $self: ident, $v: ident => $e: expr) => {
         match &mut *$self.inner {
             DynSectionData::File($v) => $e,
-            DynSectionData::Memory($v) => $e
+            DynSectionData::Memory($v) => $e,
         }
     };
 }

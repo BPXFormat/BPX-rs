@@ -28,8 +28,8 @@
 
 //! Contains public IO traits to be used by other modules of BPX as well as external codes.
 
-use std::io::{Read, Write};
 use std::io::Result;
+use std::io::{Read, Write};
 
 /// Allows to read into a buffer as much as possible.
 ///
@@ -84,7 +84,7 @@ pub enum ShiftTo {
     Left(u64),
 
     /// Shift to the right.
-    Right(u64)
+    Right(u64),
 }
 
 /// Represents IO streams with support for byte shifting.
