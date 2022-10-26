@@ -116,10 +116,8 @@ impl_err_conversion!(
     }
 );
 
-impl Display for ReadError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for ReadError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ReadError::Bpx(e) => write!(f, "BPX error: {}", e),
             ReadError::Io(e) => write!(f, "io error: {}", e),
@@ -134,22 +132,20 @@ impl Display for ReadError
                 f.write_str("blank strings are not supported when unpacking to file system")
             },
             ReadError::Sd(e) => write!(f, "BPXSD error: {}", e),
-            ReadError::Strings(e) => write!(f, "strings error: {}", e)
+            ReadError::Strings(e) => write!(f, "strings error: {}", e),
         }
     }
 }
 
-impl Display for WriteError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for WriteError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             WriteError::Bpx(e) => write!(f, "BPX error: {}", e),
             WriteError::Io(e) => write!(f, "io error: {}", e),
             WriteError::Strings(e) => write!(f, "strings error: {}", e),
             WriteError::Sd(e) => write!(f, "BPXSD error: {}", e),
             WriteError::InvalidPath(e) => write!(f, "path error: {}", e),
-            WriteError::SectionNotLoaded => f.write_str("section not loaded")
+            WriteError::SectionNotLoaded => f.write_str("section not loaded"),
         }
     }
 }

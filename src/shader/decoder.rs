@@ -33,16 +33,13 @@ use crate::{
     shader::{
         error::{EosContext, InvalidCodeContext, ReadError},
         symbol::{Symbol, SIZE_SYMBOL_STRUCTURE},
-        Stage,
-        Target,
-        Type
+        Stage, Target, Type,
     },
     table::ItemTable,
-    Handle
+    Handle,
 };
 
-pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError>
-{
+pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type), ReadError> {
     let target;
     let ty;
 
@@ -65,7 +62,7 @@ pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type),
         0x10 => target = Target::VK12,
         0x11 => target = Target::MT,
         0xFF => target = Target::Any,
-        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Target, acode))
+        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Target, acode)),
     }
     if tcode == b'A' {
         //Rust refuses to parse match properly so use if/else-if blocks
@@ -78,15 +75,14 @@ pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type),
     Ok((target, ty))
 }
 
-pub fn get_stage_from_code(code: u8) -> Result<Stage, ReadError>
-{
+pub fn get_stage_from_code(code: u8) -> Result<Stage, ReadError> {
     match code {
         0x0 => Ok(Stage::Vertex),
         0x1 => Ok(Stage::Hull),
         0x2 => Ok(Stage::Domain),
         0x3 => Ok(Stage::Geometry),
         0x4 => Ok(Stage::Pixel),
-        _ => Err(ReadError::InvalidCode(InvalidCodeContext::Stage, code))
+        _ => Err(ReadError::InvalidCode(InvalidCodeContext::Stage, code)),
     }
 }
 
@@ -94,9 +90,8 @@ pub fn read_symbol_table<T: Read + Seek>(
     container: &mut Container<T>,
     symbols: &mut Vec<Symbol>,
     num_symbols: u16,
-    symbol_table: Handle
-) -> Result<ItemTable<Symbol>, ReadError>
-{
+    symbol_table: Handle,
+) -> Result<ItemTable<Symbol>, ReadError> {
     let mut section = container.get_mut(symbol_table);
     let count = section.size as u32 / SIZE_SYMBOL_STRUCTURE as u32;
 

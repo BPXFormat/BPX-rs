@@ -28,7 +28,7 @@
 
 use std::{
     io::{Read, Seek},
-    ops::Deref
+    ops::Deref,
 };
 
 use crate::{
@@ -37,27 +37,20 @@ use crate::{
         decoder::load_section1,
         error::ReadError,
         header::{
-            SectionHeader,
-            FLAG_CHECK_CRC32,
-            FLAG_CHECK_WEAK,
-            FLAG_COMPRESS_XZ,
-            FLAG_COMPRESS_ZLIB
-        }
+            SectionHeader, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ, FLAG_COMPRESS_ZLIB,
+        },
     },
     utils::OptionExtension,
-    Handle
+    Handle,
 };
 
-pub struct SectionEntry1
-{
+pub struct SectionEntry1 {
     pub threshold: u32,
-    pub flags: u8
+    pub flags: u8,
 }
 
-impl SectionEntry1
-{
-    pub fn get_flags(&self, size: u32) -> u8
-    {
+impl SectionEntry1 {
+    pub fn get_flags(&self, size: u32) -> u8 {
         let mut flags = 0;
         if self.flags & FLAG_CHECK_WEAK != 0 {
             flags |= FLAG_CHECK_WEAK;
@@ -73,25 +66,22 @@ impl SectionEntry1
     }
 }
 
-pub struct SectionEntry
-{
+pub struct SectionEntry {
     pub entry1: SectionEntry1,
     pub header: SectionHeader,
     pub data: Option<AutoSectionData>,
     pub index: u32,
-    pub modified: bool
+    pub modified: bool,
 }
 
 /// A mutable reference to a section.
-pub struct SectionMut<'a, T>
-{
+pub struct SectionMut<'a, T> {
     backend: &'a mut T,
     entry: &'a mut SectionEntry,
-    handle: Handle
+    handle: Handle,
 }
 
-impl<'a, T: Read + Seek> SectionMut<'a, T>
-{
+impl<'a, T: Read + Seek> SectionMut<'a, T> {
     /// Gets a mutable reference to the inner section data.
     /// Loads the section if needed.
     ///
@@ -99,8 +89,7 @@ impl<'a, T: Read + Seek> SectionMut<'a, T>
     ///
     /// Returns a [ReadError](crate::core::error::ReadError) if the section is corrupted,
     /// truncated or if some data couldn't be read.
-    pub fn load(&mut self) -> Result<&mut AutoSectionData, ReadError>
-    {
+    pub fn load(&mut self) -> Result<&mut AutoSectionData, ReadError> {
         let data = self
             .entry
             .data
@@ -110,35 +99,29 @@ impl<'a, T: Read + Seek> SectionMut<'a, T>
     }
 }
 
-impl<'a, T> SectionMut<'a, T>
-{
+impl<'a, T> SectionMut<'a, T> {
     /// Gets a mutable reference to the inner section data.
     /// Returns None if the section is not loaded.
-    pub fn open(&mut self) -> Option<&mut AutoSectionData>
-    {
+    pub fn open(&mut self) -> Option<&mut AutoSectionData> {
         self.entry.modified = true;
         self.entry.data.as_mut()
     }
 
     /// Gets the handle of this section.
-    pub fn handle(&self) -> Handle
-    {
+    pub fn handle(&self) -> Handle {
         self.handle
     }
 
     /// Gets the index of this section.
-    pub fn index(&self) -> u32
-    {
+    pub fn index(&self) -> u32 {
         self.entry.index
     }
 }
 
-impl<'a, T> Deref for SectionMut<'a, T>
-{
+impl<'a, T> Deref for SectionMut<'a, T> {
     type Target = SectionHeader;
 
-    fn deref(&self) -> &Self::Target
-    {
+    fn deref(&self) -> &Self::Target {
         &self.entry.header
     }
 }
@@ -146,56 +129,47 @@ impl<'a, T> Deref for SectionMut<'a, T>
 pub fn new_section_mut<'a, T>(
     backend: &'a mut T,
     entry: &'a mut SectionEntry,
-    handle: Handle
-) -> SectionMut<'a, T>
-{
+    handle: Handle,
+) -> SectionMut<'a, T> {
     SectionMut {
         backend,
         entry,
-        handle
+        handle,
     }
 }
 
 /// An immutable reference to a section.
-pub struct Section<'a>
-{
+pub struct Section<'a> {
     entry: &'a SectionEntry,
-    handle: Handle
+    handle: Handle,
 }
 
-impl<'a> Section<'a>
-{
+impl<'a> Section<'a> {
     /// Gets an immutable reference to the inner section data.
     /// Returns None if the section is not loaded.
-    pub fn open(&self) -> Option<&AutoSectionData>
-    {
+    pub fn open(&self) -> Option<&AutoSectionData> {
         self.entry.data.as_ref()
     }
 
     /// Gets the handle of this section.
-    pub fn handle(&self) -> Handle
-    {
+    pub fn handle(&self) -> Handle {
         self.handle
     }
 
     /// Gets the index of this section.
-    pub fn index(&self) -> u32
-    {
+    pub fn index(&self) -> u32 {
         self.entry.index
     }
 }
 
-impl<'a> Deref for Section<'a>
-{
+impl<'a> Deref for Section<'a> {
     type Target = SectionHeader;
 
-    fn deref(&self) -> &Self::Target
-    {
+    fn deref(&self) -> &Self::Target {
         &self.entry.header
     }
 }
 
-pub fn new_section(entry: &SectionEntry, handle: Handle) -> Section
-{
+pub fn new_section(entry: &SectionEntry, handle: Handle) -> Section {
     Section { entry, handle }
 }

@@ -29,13 +29,12 @@
 use crate::{
     core::{
         builder::{Checksum, CompressionMethod, SectionHeaderBuilder},
-        header::SectionHeader
+        header::SectionHeader,
     },
-    package::{Architecture, Platform, Settings, SECTION_TYPE_DATA}
+    package::{Architecture, Platform, Settings, SECTION_TYPE_DATA},
 };
 
-pub fn create_data_section_header() -> SectionHeader
-{
+pub fn create_data_section_header() -> SectionHeader {
     SectionHeaderBuilder::new()
         .ty(SECTION_TYPE_DATA)
         .compression(CompressionMethod::Xz)
@@ -43,22 +42,21 @@ pub fn create_data_section_header() -> SectionHeader
         .build()
 }
 
-pub fn get_type_ext(settings: &Settings) -> [u8; 16]
-{
+pub fn get_type_ext(settings: &Settings) -> [u8; 16] {
     let mut type_ext: [u8; 16] = [0; 16];
     match settings.architecture {
         Architecture::X86_64 => type_ext[0] = 0x0,
         Architecture::Aarch64 => type_ext[0] = 0x1,
         Architecture::X86 => type_ext[0] = 0x2,
         Architecture::Armv7hl => type_ext[0] = 0x3,
-        Architecture::Any => type_ext[0] = 0x4
+        Architecture::Any => type_ext[0] = 0x4,
     }
     match settings.platform {
         Platform::Linux => type_ext[1] = 0x0,
         Platform::Mac => type_ext[1] = 0x1,
         Platform::Windows => type_ext[1] = 0x2,
         Platform::Android => type_ext[1] = 0x3,
-        Platform::Any => type_ext[1] = 0x4
+        Platform::Any => type_ext[1] = 0x4,
     }
     type_ext[2] = settings.type_code[0];
     type_ext[3] = settings.type_code[1];

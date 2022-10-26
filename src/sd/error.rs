@@ -34,8 +34,7 @@ use crate::macros::impl_err_conversion;
 
 /// Represents a structured data write error
 #[derive(Debug)]
-pub enum WriteError
-{
+pub enum WriteError {
     /// Describes an io error.
     Io(std::io::Error),
 
@@ -43,28 +42,25 @@ pub enum WriteError
     ///
     /// # Arguments
     /// * actual number of items.
-    CapacityExceeded(usize)
+    CapacityExceeded(usize),
 }
 
 impl_err_conversion!(WriteError { std::io::Error => Io });
 
-impl Display for WriteError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for WriteError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             WriteError::Io(e) => write!(f, "io error: {}", e),
             WriteError::CapacityExceeded(count) => {
                 write!(f, "capacity exceeded ({} > 255)", count)
-            }
+            },
         }
     }
 }
 
 /// Represents a structured data read error
 #[derive(Debug)]
-pub enum ReadError
-{
+pub enum ReadError {
     /// Describes an io error.
     ///
     /// # Arguments
@@ -85,37 +81,33 @@ pub enum ReadError
     BadTypeCode(u8),
 
     /// Describes an utf8 decoding/encoding error.
-    Utf8
+    Utf8,
 }
 
 impl_err_conversion!(ReadError { std::io::Error => Io });
 
-impl Display for ReadError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for ReadError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ReadError::Io(e) => write!(f, "io error: {}", e),
             ReadError::Truncation(typename) => write!(f, "failed to read {}", typename),
             ReadError::BadTypeCode(code) => write!(f, "unknown value type code ({})", code),
-            ReadError::Utf8 => f.write_str("utf8 error")
+            ReadError::Utf8 => f.write_str("utf8 error"),
         }
     }
 }
 
 /// Represents a structured data value conversion error
 #[derive(Debug)]
-pub struct TypeError
-{
+pub struct TypeError {
     /// The expected type name
     pub expected_type_name: &'static str,
 
     /// The actual type name
-    pub actual_type_name: &'static str
+    pub actual_type_name: &'static str,
 }
 
-impl TypeError
-{
+impl TypeError {
     /// Creates a new BPXSD value conversion type error (shorter method).
     ///
     /// # Arguments
@@ -124,19 +116,16 @@ impl TypeError
     /// * `actual`: the actual type name.
     ///
     /// returns: TypeError
-    pub fn new(expected: &'static str, actual: &'static str) -> TypeError
-    {
+    pub fn new(expected: &'static str, actual: &'static str) -> TypeError {
         TypeError {
             expected_type_name: expected,
-            actual_type_name: actual
+            actual_type_name: actual,
         }
     }
 }
 
-impl Display for TypeError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for TypeError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "unsupported type conversion (expected {}, got {})",

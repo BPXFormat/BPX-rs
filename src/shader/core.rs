@@ -29,7 +29,7 @@
 use std::{
     io::{Read, Seek, SeekFrom, Write},
     ops::Deref,
-    slice::Iter
+    slice::Iter,
 };
 
 use byteorder::{ByteOrder, LittleEndian};
@@ -38,8 +38,7 @@ use crate::{
     core::{
         builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
         header::{Struct, SECTION_TYPE_STRING},
-        Container,
-        SectionData
+        Container, SectionData,
     },
     sd::Object,
     shader::{
@@ -47,51 +46,39 @@ use crate::{
         encoder::get_type_ext,
         error::{EosContext, ReadError, Section, WriteError},
         symbol::{Settings as SymbolSettings, Symbol, FLAG_EXTENDED_DATA},
-        Settings,
-        Shader,
-        Stage,
-        Target,
-        Type,
-        SECTION_TYPE_EXTENDED_DATA,
-        SECTION_TYPE_SHADER,
-        SECTION_TYPE_SYMBOL_TABLE,
-        SUPPORTED_VERSION
+        Settings, Shader, Stage, Target, Type, SECTION_TYPE_EXTENDED_DATA, SECTION_TYPE_SHADER,
+        SECTION_TYPE_SYMBOL_TABLE, SUPPORTED_VERSION,
     },
     strings::{load_string_section, StringSection},
     table::ItemTable,
     utils::OptionExtension,
-    Handle
+    Handle,
 };
 
 /// Represents a symbol reference.
-pub struct SymbolRef<'a, T>
-{
+pub struct SymbolRef<'a, T> {
     extended_data: &'a mut Option<Handle>,
     container: &'a mut Container<T>,
     strings: &'a mut StringSection,
-    sym: &'a Symbol
+    sym: &'a Symbol,
 }
 
-impl<'a, T> Deref for SymbolRef<'a, T>
-{
+impl<'a, T> Deref for SymbolRef<'a, T> {
     type Target = Symbol;
 
-    fn deref(&self) -> &Self::Target
-    {
+    fn deref(&self) -> &Self::Target {
         self.sym
     }
 }
 
-impl<'a, T: Read + Seek> SymbolRef<'a, T>
-{
+impl<'a, T: Read + Seek> SymbolRef<'a, T> {
     /// Loads the name of this symbol if it's not already loaded.
     ///
     /// # Errors
     ///
     /// If the name is not already loaded, returns a [ReadError](crate::shader::error::ReadError)
     /// if the section couldn't be loaded or the string couldn't be loaded.
-    pub fn load_name(&mut self) -> Result<&str, ReadError>
-    {
+    pub fn load_name(&mut self) -> Result<&str, ReadError> {
         load_string_section(self.container, self.strings)?;
         let addr = self.name;
         let str = self.strings.get(self.container, addr)?;
@@ -105,8 +92,7 @@ impl<'a, T: Read + Seek> SymbolRef<'a, T>
     /// If the [Object](crate::sd::Object) is not already loaded, returns a
     /// [ReadError](crate::shader::error::ReadError) if the section couldn't be loaded
     /// or the [Object](crate::sd::Object) couldn't be decoded.
-    pub fn load_extended_data(&mut self) -> Result<Object, ReadError>
-    {
+    pub fn load_extended_data(&mut self) -> Result<Object, ReadError> {
         if self.flags & FLAG_EXTENDED_DATA == 0 {
             panic!("The symbol extended data is undefined.");
         }
@@ -116,7 +102,7 @@ impl<'a, T: Read + Seek> SymbolRef<'a, T>
                 .find_section_by_type(SECTION_TYPE_EXTENDED_DATA)
             {
                 Some(v) => Ok(v),
-                None => Err(ReadError::MissingSection(Section::ExtendedData))
+                None => Err(ReadError::MissingSection(Section::ExtendedData)),
             }
         })?;
         let mut section = self.container.get_mut(section);
@@ -128,20 +114,17 @@ impl<'a, T: Read + Seek> SymbolRef<'a, T>
 }
 
 /// An iterator over [SymbolRef](crate::shader::SymbolRef).
-pub struct SymbolIter<'a, T>
-{
+pub struct SymbolIter<'a, T> {
     extended_data: &'a mut Option<Handle>,
     container: &'a mut Container<T>,
     strings: &'a mut StringSection,
-    iter: Iter<'a, Symbol>
+    iter: Iter<'a, Symbol>,
 }
 
-impl<'a, T> Iterator for SymbolIter<'a, T>
-{
+impl<'a, T> Iterator for SymbolIter<'a, T> {
     type Item = SymbolRef<'a, T>;
 
-    fn next(&mut self) -> Option<Self::Item>
-    {
+    fn next(&mut self) -> Option<Self::Item> {
         let sym = self.iter.next()?;
         unsafe {
             let ptr = self.container as *mut Container<T>;
@@ -151,7 +134,7 @@ impl<'a, T> Iterator for SymbolIter<'a, T>
                 extended_data: &mut *ptr2,
                 strings: &mut *ptr1,
                 container: &mut *ptr,
-                sym
+                sym,
             })
         }
     }
@@ -190,8 +173,7 @@ impl<'a, T> Iterator for SymbolIter<'a, T>
 /// assert_eq!(shader.stage, Stage::Pixel);
 /// assert_eq!(shader.data.len(), 0);
 /// ```
-pub struct ShaderPack<T>
-{
+pub struct ShaderPack<T> {
     settings: Settings,
     container: Container<T>,
     strings: StringSection,
@@ -199,44 +181,37 @@ pub struct ShaderPack<T>
     symbols: Vec<Symbol>,
     table: Option<ItemTable<Symbol>>,
     extended_data: Option<Handle>,
-    num_symbols: u16
+    num_symbols: u16,
 }
 
-impl<T> ShaderPack<T>
-{
+impl<T> ShaderPack<T> {
     /// Returns the shader package type (Assembly or Pipeline).
-    pub fn get_type(&self) -> Type
-    {
+    pub fn get_type(&self) -> Type {
         self.settings.ty
     }
 
     /// Returns the shader target rendering API.
-    pub fn get_target(&self) -> Target
-    {
+    pub fn get_target(&self) -> Target {
         self.settings.target
     }
 
     /// Returns the number of symbols contained in that BPX.
-    pub fn get_symbol_count(&self) -> u16
-    {
+    pub fn get_symbol_count(&self) -> u16 {
         self.num_symbols
     }
 
     /// Returns the hash of the shader assembly this pipeline is linked to.
-    pub fn get_assembly_hash(&self) -> u64
-    {
+    pub fn get_assembly_hash(&self) -> u64 {
         self.settings.assembly_hash
     }
 
     /// Consumes this ShaderPack and returns the BPX container.
-    pub fn into_inner(self) -> Container<T>
-    {
+    pub fn into_inner(self) -> Container<T> {
         self.container
     }
 }
 
-impl<T: Write + Seek> ShaderPack<T>
-{
+impl<T: Write + Seek> ShaderPack<T> {
     /// Creates a BPX type S.
     ///
     /// # Arguments
@@ -257,27 +232,26 @@ impl<T: Write + Seek> ShaderPack<T>
     /// bpxs.save();
     /// assert!(!bpxs.into_inner().into_inner().into_inner().is_empty());
     /// ```
-    pub fn create<S: Into<Settings>>(backend: T, settings: S) -> ShaderPack<T>
-    {
+    pub fn create<S: Into<Settings>>(backend: T, settings: S) -> ShaderPack<T> {
         let settings = settings.into();
         let mut container = Container::create(
             backend,
             MainHeaderBuilder::new()
                 .ty(b'S')
                 .type_ext(get_type_ext(&settings))
-                .version(SUPPORTED_VERSION)
+                .version(SUPPORTED_VERSION),
         );
         let string_section = container.create_section(
             SectionHeaderBuilder::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
-                .ty(SECTION_TYPE_STRING)
+                .ty(SECTION_TYPE_STRING),
         );
         let symbol_table = container.create_section(
             SectionHeaderBuilder::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
-                .ty(SECTION_TYPE_SYMBOL_TABLE)
+                .ty(SECTION_TYPE_SYMBOL_TABLE),
         );
         let strings = StringSection::new(string_section);
         ShaderPack {
@@ -288,19 +262,18 @@ impl<T: Write + Seek> ShaderPack<T>
             symbols: Vec::new(),
             table: None,
             extended_data: None,
-            num_symbols: 0
+            num_symbols: 0,
         }
     }
 
-    fn write_extended_data(&mut self, extended_data: Option<Object>) -> Result<u32, WriteError>
-    {
+    fn write_extended_data(&mut self, extended_data: Option<Object>) -> Result<u32, WriteError> {
         if let Some(obj) = extended_data {
             let handle = *self.extended_data.get_or_insert_with(|| {
                 self.container.create_section(
                     SectionHeaderBuilder::new()
                         .ty(SECTION_TYPE_EXTENDED_DATA)
                         .checksum(Checksum::Crc32)
-                        .compression(CompressionMethod::Zlib)
+                        .compression(CompressionMethod::Zlib),
                 )
             });
             let mut section = self.container.get_mut(handle);
@@ -312,8 +285,7 @@ impl<T: Write + Seek> ShaderPack<T>
         Ok(0xFFFFFF)
     }
 
-    fn patch_extended_data(&mut self)
-    {
+    fn patch_extended_data(&mut self) {
         let mut header = *self.container.get_main_header();
         LittleEndian::write_u16(&mut header.type_ext[8..10], self.num_symbols);
         self.container.set_main_header(header);
@@ -332,8 +304,7 @@ impl<T: Write + Seek> ShaderPack<T>
     ///
     /// A [WriteError](crate::shader::error::WriteError) is returned if the symbol could not be
     /// written.
-    pub fn add_symbol<S: Into<SymbolSettings>>(&mut self, sym: S) -> Result<(), WriteError>
-    {
+    pub fn add_symbol<S: Into<SymbolSettings>>(&mut self, sym: S) -> Result<(), WriteError> {
         let settings = sym.into();
         let address = self.strings.put(&mut self.container, &settings.name)?;
         let extended_data = self.write_extended_data(settings.extended_data)?;
@@ -342,7 +313,7 @@ impl<T: Write + Seek> ShaderPack<T>
             extended_data,
             flags: settings.flags,
             ty: settings.ty,
-            register: settings.register
+            register: settings.register,
         };
         self.symbols.push(buf);
         self.num_symbols += 1;
@@ -362,14 +333,13 @@ impl<T: Write + Seek> ShaderPack<T>
     ///
     /// A [WriteError](crate::shader::error::WriteError) is returned if the shader could not be
     /// written.
-    pub fn add_shader(&mut self, shader: Shader) -> Result<(), WriteError>
-    {
+    pub fn add_shader(&mut self, shader: Shader) -> Result<(), WriteError> {
         let section = self.container.create_section(
             SectionHeaderBuilder::new()
                 .ty(SECTION_TYPE_SHADER)
                 .checksum(Checksum::Crc32)
                 .compression(CompressionMethod::Xz)
-                .size(shader.data.len() as u32 + 1)
+                .size(shader.data.len() as u32 + 1),
         );
         let mut section = self.container.get_mut(section);
         let mut buf = shader.data;
@@ -378,7 +348,7 @@ impl<T: Write + Seek> ShaderPack<T>
             Stage::Hull => buf.insert(0, 0x1),
             Stage::Domain => buf.insert(0, 0x2),
             Stage::Geometry => buf.insert(0, 0x3),
-            Stage::Pixel => buf.insert(0, 0x4)
+            Stage::Pixel => buf.insert(0, 0x4),
         };
         section
             .open()
@@ -393,8 +363,7 @@ impl<T: Write + Seek> ShaderPack<T>
     ///
     /// Returns a [WriteError](crate::shader::error::WriteError) if some parts of this shader
     /// package couldn't be saved.
-    pub fn save(&mut self) -> Result<(), WriteError>
-    {
+    pub fn save(&mut self) -> Result<(), WriteError> {
         {
             let mut section = self.container.get_mut(self.symbol_table);
             let data = section.open().ok_or(WriteError::SectionNotLoaded)?;
@@ -408,8 +377,7 @@ impl<T: Write + Seek> ShaderPack<T>
     }
 }
 
-impl<T: Read + Seek> ShaderPack<T>
-{
+impl<T: Read + Seek> ShaderPack<T> {
     /// Opens a BPX type S.
     ///
     /// # Arguments
@@ -437,8 +405,7 @@ impl<T: Read + Seek> ShaderPack<T>
     /// let mut bpxs = ShaderPack::open(buf).unwrap();
     /// assert_eq!(bpxs.symbols().unwrap().count(), 0);
     /// ```
-    pub fn open(backend: T) -> Result<ShaderPack<T>, ReadError>
-    {
+    pub fn open(backend: T) -> Result<ShaderPack<T>, ReadError> {
         let container = Container::open(backend)?;
         if container.get_main_header().ty != b'S' {
             return Err(ReadError::BadType(container.get_main_header().ty));
@@ -450,22 +417,22 @@ impl<T: Read + Seek> ShaderPack<T>
         let num_symbols = LittleEndian::read_u16(&container.get_main_header().type_ext[8..10]);
         let (target, ty) = get_target_type_from_code(
             container.get_main_header().type_ext[10],
-            container.get_main_header().type_ext[11]
+            container.get_main_header().type_ext[11],
         )?;
         let string_section = match container.find_section_by_type(SECTION_TYPE_STRING) {
             Some(v) => v,
-            None => return Err(ReadError::MissingSection(Section::Strings))
+            None => return Err(ReadError::MissingSection(Section::Strings)),
         };
         let symbol_table = match container.find_section_by_type(SECTION_TYPE_SYMBOL_TABLE) {
             Some(v) => v,
-            None => return Err(ReadError::MissingSection(Section::SymbolTable))
+            None => return Err(ReadError::MissingSection(Section::SymbolTable)),
         };
         let strings = StringSection::new(string_section);
         Ok(Self {
             settings: Settings {
                 assembly_hash,
                 target,
-                ty
+                ty,
             },
             num_symbols,
             symbol_table,
@@ -473,7 +440,7 @@ impl<T: Read + Seek> ShaderPack<T>
             extended_data: None,
             container,
             symbols: Vec::with_capacity(num_symbols as _),
-            table: None
+            table: None,
         })
     }
 
@@ -483,14 +450,13 @@ impl<T: Read + Seek> ShaderPack<T>
     ///
     /// Returns a [ReadError](crate::shader::error::ReadError) if the section couldn't be loaded
     /// or if the symbol table is truncated.
-    pub fn symbols(&mut self) -> Result<SymbolIter<T>, ReadError>
-    {
+    pub fn symbols(&mut self) -> Result<SymbolIter<T>, ReadError> {
         let table = self.table.get_or_insert_with_err(|| {
             read_symbol_table(
                 &mut self.container,
                 &mut self.symbols,
                 self.num_symbols,
-                self.symbol_table
+                self.symbol_table,
             )
         })?;
         let iter = table.iter();
@@ -498,13 +464,12 @@ impl<T: Read + Seek> ShaderPack<T>
             extended_data: &mut self.extended_data,
             container: &mut self.container,
             strings: &mut self.strings,
-            iter
+            iter,
         })
     }
 
     /// Lists all shaders contained in this shader package.
-    pub fn list_shaders(&self) -> Vec<Handle>
-    {
+    pub fn list_shaders(&self) -> Vec<Handle> {
         self.container
             .iter()
             .filter_map(|v| {
@@ -528,8 +493,7 @@ impl<T: Read + Seek> ShaderPack<T>
     /// # Errors
     ///
     /// An [ReadError](crate::shader::error::ReadError) is returned if the shader could not be loaded.
-    pub fn load_shader(&mut self, handle: Handle) -> Result<Shader, ReadError>
-    {
+    pub fn load_shader(&mut self, handle: Handle) -> Result<Shader, ReadError> {
         let mut section = self.container.get_mut(handle);
         if section.size < 1 {
             //We must at least find a stage byte

@@ -33,57 +33,48 @@ use std::{collections::HashMap, ops::Index};
 use crate::{
     sd::{
         error::{ReadError, WriteError},
-        Value
+        Value,
     },
-    utils
+    utils,
 };
 
 /// A BPXSD object iterator.
-pub struct Iter<'a>
-{
-    props: std::collections::hash_map::Iter<'a, u64, Value>
+pub struct Iter<'a> {
+    props: std::collections::hash_map::Iter<'a, u64, Value>,
 }
 
-impl<'a> Iterator for Iter<'a>
-{
+impl<'a> Iterator for Iter<'a> {
     type Item = (u64, &'a Value);
 
-    fn next(&mut self) -> Option<Self::Item>
-    {
+    fn next(&mut self) -> Option<Self::Item> {
         self.props.next().map(|(k, v)| (*k, v))
     }
 }
 
 /// Represents a BPX Structured Data Object.
 #[derive(PartialEq, Clone)]
-pub struct Object
-{
-    props: HashMap<u64, Value>
+pub struct Object {
+    props: HashMap<u64, Value>,
 }
 
-impl Default for Object
-{
-    fn default() -> Self
-    {
+impl Default for Object {
+    fn default() -> Self {
         Self::new()
     }
 }
 
-impl Object
-{
+impl Object {
     /// Creates a new object.
-    pub fn new() -> Object
-    {
+    pub fn new() -> Object {
         Object {
-            props: HashMap::new()
+            props: HashMap::new(),
         }
     }
 
     /// Allocates a new object with a specified initial capacity
-    pub fn with_capacity(capacity: usize) -> Object
-    {
+    pub fn with_capacity(capacity: usize) -> Object {
         Object {
-            props: HashMap::with_capacity(capacity)
+            props: HashMap::with_capacity(capacity),
         }
     }
 
@@ -104,8 +95,7 @@ impl Object
     /// obj.raw_set(0, 12.into());
     /// assert_eq!(obj.len(), 1);
     /// ```
-    pub fn raw_set(&mut self, hash: u64, value: Value)
-    {
+    pub fn raw_set(&mut self, hash: u64, value: Value) {
         self.props.insert(hash, value);
     }
 
@@ -126,8 +116,7 @@ impl Object
     /// obj.set("Test", 12.into());
     /// assert_eq!(obj.len(), 1);
     /// ```
-    pub fn set(&mut self, name: &str, value: Value)
-    {
+    pub fn set(&mut self, name: &str, value: Value) {
         self.raw_set(utils::hash(name), value);
     }
 
@@ -150,8 +139,7 @@ impl Object
     /// assert!(obj.raw_get(0).is_some());
     /// assert!(obj.raw_get(1).is_none());
     /// ```
-    pub fn raw_get(&self, hash: u64) -> Option<&Value>
-    {
+    pub fn raw_get(&self, hash: u64) -> Option<&Value> {
         self.props.get(&hash)
     }
 
@@ -176,28 +164,24 @@ impl Object
     /// assert!(obj.get("Test1").is_none());
     /// assert!(obj.get("Test").unwrap() == &Value::from(12));
     /// ```
-    pub fn get(&self, name: &str) -> Option<&Value>
-    {
+    pub fn get(&self, name: &str) -> Option<&Value> {
         self.raw_get(utils::hash(name))
     }
 
     /// Returns the number of properties in the object.
-    pub fn len(&self) -> usize
-    {
+    pub fn len(&self) -> usize {
         self.props.len()
     }
 
     /// Returns whether this object is empty
-    pub fn is_empty(&self) -> bool
-    {
+    pub fn is_empty(&self) -> bool {
         self.props.is_empty()
     }
 
     /// Iterate through the object keys and values.
-    pub fn iter(&self) -> Iter
-    {
+    pub fn iter(&self) -> Iter {
         Iter {
-            props: self.props.iter()
+            props: self.props.iter(),
         }
     }
 
@@ -220,8 +204,7 @@ impl Object
     /// obj.write(&mut buf);
     /// assert!(buf.len() > 0);
     /// ```
-    pub fn write<TWrite: std::io::Write>(&self, dest: TWrite) -> Result<(), WriteError>
-    {
+    pub fn write<TWrite: std::io::Write>(&self, dest: TWrite) -> Result<(), WriteError> {
         super::encoder::write_structured_data(dest, self)
     }
 
@@ -247,39 +230,32 @@ impl Object
     /// assert!(obj1.get("Test").is_some());
     /// assert!(obj1.get("Test").unwrap() == &Value::from(12));
     /// ```
-    pub fn read<TRead: std::io::Read>(source: TRead) -> Result<Object, ReadError>
-    {
+    pub fn read<TRead: std::io::Read>(source: TRead) -> Result<Object, ReadError> {
         super::decoder::read_structured_data(source)
     }
 }
 
-impl<'a> IntoIterator for &'a Object
-{
+impl<'a> IntoIterator for &'a Object {
     type Item = (u64, &'a Value);
     type IntoIter = Iter<'a>;
 
-    fn into_iter(self) -> Self::IntoIter
-    {
+    fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl Index<&str> for Object
-{
+impl Index<&str> for Object {
     type Output = Value;
 
-    fn index(&self, name: &str) -> &Value
-    {
+    fn index(&self, name: &str) -> &Value {
         self.props.index(&utils::hash(name))
     }
 }
 
-impl Index<u64> for Object
-{
+impl Index<u64> for Object {
     type Output = Value;
 
-    fn index(&self, hash: u64) -> &Value
-    {
+    fn index(&self, hash: u64) -> &Value {
         self.props.index(&hash)
     }
 }

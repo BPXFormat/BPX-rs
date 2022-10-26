@@ -32,8 +32,7 @@ use crate::shader::{Target, Type};
 ///
 /// *This is intended to be generated with help of [Builder](crate::shader::Builder).*
 #[derive(Clone)]
-pub struct Settings
-{
+pub struct Settings {
     /// The assembly hash of the shader package.
     pub assembly_hash: u64,
 
@@ -41,34 +40,29 @@ pub struct Settings
     pub target: Target,
 
     /// The type of the shader package (Assembly or Pipeline).
-    pub ty: Type
+    pub ty: Type,
 }
 
 /// Utility to simplify generation of [Settings](crate::shader::Settings) required when creating a new BPXS.
-pub struct Builder
-{
-    settings: Settings
+pub struct Builder {
+    settings: Settings,
 }
 
-impl Default for Builder
-{
-    fn default() -> Self
-    {
+impl Default for Builder {
+    fn default() -> Self {
         Self::new()
     }
 }
 
-impl Builder
-{
+impl Builder {
     /// Creates a new BPX Shader Package builder.
-    pub fn new() -> Builder
-    {
+    pub fn new() -> Builder {
         Builder {
             settings: Settings {
                 assembly_hash: 0,
                 target: Target::Any,
-                ty: Type::Pipeline
-            }
+                ty: Type::Pipeline,
+            },
         }
     }
 
@@ -81,8 +75,7 @@ impl Builder
     /// * `hash`: the shader assembly hash.
     ///
     /// returns: ShaderPackBuilder
-    pub fn assembly(mut self, hash: u64) -> Self
-    {
+    pub fn assembly(mut self, hash: u64) -> Self {
         self.settings.assembly_hash = hash;
         self
     }
@@ -96,8 +89,7 @@ impl Builder
     /// * `target`: the shader target.
     ///
     /// returns: ShaderPackBuilder
-    pub fn target(mut self, target: Target) -> Self
-    {
+    pub fn target(mut self, target: Target) -> Self {
         self.settings.target = target;
         self
     }
@@ -111,31 +103,25 @@ impl Builder
     /// * `ty`: the shader package type (pipeline/program or assembly).
     ///
     /// returns: ShaderPackBuilder
-    pub fn ty(mut self, ty: Type) -> Self
-    {
+    pub fn ty(mut self, ty: Type) -> Self {
         self.settings.ty = ty;
         self
     }
 
     /// Returns the built settings.
-    pub fn build(&self) -> Settings
-    {
+    pub fn build(&self) -> Settings {
         self.settings.clone()
     }
 }
 
-impl From<&mut Builder> for Settings
-{
-    fn from(builder: &mut Builder) -> Self
-    {
+impl From<&mut Builder> for Settings {
+    fn from(builder: &mut Builder) -> Self {
         builder.build()
     }
 }
 
-impl From<Builder> for Settings
-{
-    fn from(builder: Builder) -> Self
-    {
+impl From<Builder> for Settings {
+    fn from(builder: Builder) -> Self {
         builder.build()
     }
 }

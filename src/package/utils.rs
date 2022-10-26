@@ -31,15 +31,15 @@
 use std::{
     fs::{metadata, read_dir, File},
     io::{Read, Seek, Write},
-    path::{Path, PathBuf}
+    path::{Path, PathBuf},
 };
 
 use crate::{
     package::{
         error::{EosContext, ReadError, WriteError},
-        Package
+        Package,
     },
-    strings::{get_name_from_dir_entry, get_name_from_path}
+    strings::{get_name_from_dir_entry, get_name_from_path},
 };
 
 /// Packs a file or folder in a BPXP with the given virtual name.
@@ -62,9 +62,8 @@ use crate::{
 pub fn pack_file_vname<T: Write + Seek>(
     package: &mut Package<T>,
     vname: &str,
-    source: &Path
-) -> Result<(), WriteError>
-{
+    source: &Path,
+) -> Result<(), WriteError> {
     let md = metadata(source)?;
     if md.is_file() {
         #[cfg(feature = "debug-log")]
@@ -101,9 +100,10 @@ pub fn pack_file_vname<T: Write + Seek>(
 /// # Errors
 ///
 /// A [WriteError](crate::package::error::WriteError) is returned if some objects could not be packed.
-pub fn pack_file<T: Write + Seek>(package: &mut Package<T>, source: &Path)
-    -> Result<(), WriteError>
-{
+pub fn pack_file<T: Write + Seek>(
+    package: &mut Package<T>,
+    source: &Path,
+) -> Result<(), WriteError> {
     let str = get_name_from_path(source)?;
     pack_file_vname(package, str, source)
 }
@@ -124,8 +124,7 @@ pub fn pack_file<T: Write + Seek>(package: &mut Package<T>, source: &Path)
 /// # Errors
 ///
 /// An [ReadError](crate::package::error::ReadError) is returned if some objects could not be unpacked.
-pub fn unpack<T: Read + Seek>(package: &mut Package<T>, target: &Path) -> Result<(), ReadError>
-{
+pub fn unpack<T: Read + Seek>(package: &mut Package<T>, target: &Path) -> Result<(), ReadError> {
     for mut v in package.objects()? {
         let size = v.size();
         let path = v.load_name()?;

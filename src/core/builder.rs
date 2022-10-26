@@ -29,21 +29,15 @@
 //! High-level utilities to generate low-level file headers.
 
 use crate::core::header::{
-    MainHeader,
-    SectionHeader,
-    Struct,
-    FLAG_CHECK_CRC32,
-    FLAG_CHECK_WEAK,
-    FLAG_COMPRESS_XZ,
-    FLAG_COMPRESS_ZLIB
+    MainHeader, SectionHeader, Struct, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ,
+    FLAG_COMPRESS_ZLIB,
 };
 
 const COMPRESSION_THRESHOLD: u32 = 65536;
 
 /// The compression method to use for a section.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum CompressionMethod
-{
+pub enum CompressionMethod {
     /// Use the xz compression algorithm with extreme preset.
     ///
     /// *Slow but usually provides better compression.*
@@ -52,13 +46,12 @@ pub enum CompressionMethod
     /// Use the zlib compression algorithm.
     ///
     /// *Faster but does not compress as much as the xz algorithm.*
-    Zlib
+    Zlib,
 }
 
 /// The checksum algorithm to use for a section
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum Checksum
-{
+pub enum Checksum {
     /// The weak checksum is a very fast algorithm which is computed
     /// by adding all bytes of data.
     ///
@@ -69,30 +62,25 @@ pub enum Checksum
     ///
     /// *This is the prefered method for all large or potentially
     /// large sections.*
-    Crc32
+    Crc32,
 }
 
 /// Utility to easily generate a [SectionHeader](crate::core::header::SectionHeader).
-pub struct SectionHeaderBuilder
-{
-    header: SectionHeader
+pub struct SectionHeaderBuilder {
+    header: SectionHeader,
 }
 
-impl Default for SectionHeaderBuilder
-{
-    fn default() -> Self
-    {
+impl Default for SectionHeaderBuilder {
+    fn default() -> Self {
         Self::new()
     }
 }
 
-impl SectionHeaderBuilder
-{
+impl SectionHeaderBuilder {
     /// Creates a new section header builder.
-    pub fn new() -> SectionHeaderBuilder
-    {
+    pub fn new() -> SectionHeaderBuilder {
         SectionHeaderBuilder {
-            header: SectionHeader::new()
+            header: SectionHeader::new(),
         }
     }
 
@@ -117,8 +105,7 @@ impl SectionHeaderBuilder
     ///     .build();
     /// assert_eq!(header.size, 128);
     /// ```
-    pub fn size(&mut self, size: u32) -> &mut Self
-    {
+    pub fn size(&mut self, size: u32) -> &mut Self {
         self.header.size = size;
         self
     }
@@ -143,8 +130,7 @@ impl SectionHeaderBuilder
     ///     .build();
     /// assert_eq!(header.ty, 1);
     /// ```
-    pub fn ty(&mut self, ty: u8) -> &mut Self
-    {
+    pub fn ty(&mut self, ty: u8) -> &mut Self {
         self.header.ty = ty;
         self
     }
@@ -170,11 +156,10 @@ impl SectionHeaderBuilder
     ///     .build();
     /// assert_ne!(header.flags & FLAG_COMPRESS_ZLIB, 0);
     /// ```
-    pub fn compression(&mut self, method: CompressionMethod) -> &mut Self
-    {
+    pub fn compression(&mut self, method: CompressionMethod) -> &mut Self {
         match method {
             CompressionMethod::Xz => self.header.flags |= FLAG_COMPRESS_XZ,
-            CompressionMethod::Zlib => self.header.flags |= FLAG_COMPRESS_ZLIB
+            CompressionMethod::Zlib => self.header.flags |= FLAG_COMPRESS_ZLIB,
         }
         self.header.csize = COMPRESSION_THRESHOLD;
         self
@@ -204,8 +189,7 @@ impl SectionHeaderBuilder
     /// // The compression threshold value is stored in csize
     /// assert_eq!(header.csize, 0);
     /// ```
-    pub fn threshold(&mut self, threshold: u32) -> &mut Self
-    {
+    pub fn threshold(&mut self, threshold: u32) -> &mut Self {
         self.header.csize = threshold;
         self
     }
@@ -233,11 +217,10 @@ impl SectionHeaderBuilder
     ///     .build();
     /// assert_ne!(header.flags & FLAG_CHECK_CRC32, 0);
     /// ```
-    pub fn checksum(&mut self, chksum: Checksum) -> &mut Self
-    {
+    pub fn checksum(&mut self, chksum: Checksum) -> &mut Self {
         match chksum {
             Checksum::Crc32 => self.header.flags |= FLAG_CHECK_CRC32,
-            Checksum::Weak => self.header.flags |= FLAG_CHECK_WEAK
+            Checksum::Weak => self.header.flags |= FLAG_CHECK_WEAK,
         }
         self
     }
@@ -263,33 +246,27 @@ impl SectionHeaderBuilder
     /// assert_eq!(header.csize, 0);
     /// assert_ne!(header.flags & FLAG_CHECK_CRC32, 0);
     /// ```
-    pub fn build(&self) -> SectionHeader
-    {
+    pub fn build(&self) -> SectionHeader {
         self.header
     }
 }
 
 /// Utility to easily generate a [MainHeader](crate::core::header::MainHeader).
-pub struct MainHeaderBuilder
-{
-    header: MainHeader
+pub struct MainHeaderBuilder {
+    header: MainHeader,
 }
 
-impl Default for MainHeaderBuilder
-{
-    fn default() -> Self
-    {
+impl Default for MainHeaderBuilder {
+    fn default() -> Self {
         Self::new()
     }
 }
 
-impl MainHeaderBuilder
-{
+impl MainHeaderBuilder {
     /// Creates a new main header builder.
-    pub fn new() -> MainHeaderBuilder
-    {
+    pub fn new() -> MainHeaderBuilder {
         MainHeaderBuilder {
-            header: MainHeader::new()
+            header: MainHeader::new(),
         }
     }
 
@@ -313,8 +290,7 @@ impl MainHeaderBuilder
     ///     .build();
     /// assert_eq!(header.ty, 'M' as u8);
     /// ```
-    pub fn ty(&mut self, ty: u8) -> &mut Self
-    {
+    pub fn ty(&mut self, ty: u8) -> &mut Self {
         self.header.ty = ty;
         self
     }
@@ -339,8 +315,7 @@ impl MainHeaderBuilder
     ///     .build();
     /// assert_eq!(header.type_ext, [1; 16]);
     /// ```
-    pub fn type_ext(&mut self, type_ext: [u8; 16]) -> &mut Self
-    {
+    pub fn type_ext(&mut self, type_ext: [u8; 16]) -> &mut Self {
         self.header.type_ext = type_ext;
         self
     }
@@ -370,8 +345,7 @@ impl MainHeaderBuilder
     ///     .build();
     /// assert_eq!(header.version, 1);
     /// ```
-    pub fn version(&mut self, version: u32) -> &mut Self
-    {
+    pub fn version(&mut self, version: u32) -> &mut Self {
         self.header.version = version;
         self
     }
@@ -392,40 +366,31 @@ impl MainHeaderBuilder
     /// assert_eq!(header.type_ext, [1; 16]);
     /// assert_eq!(header.version, 1);
     /// ```
-    pub fn build(&self) -> MainHeader
-    {
+    pub fn build(&self) -> MainHeader {
         self.header
     }
 }
 
-impl From<&mut MainHeaderBuilder> for MainHeader
-{
-    fn from(builder: &mut MainHeaderBuilder) -> Self
-    {
+impl From<&mut MainHeaderBuilder> for MainHeader {
+    fn from(builder: &mut MainHeaderBuilder) -> Self {
         builder.build()
     }
 }
 
-impl From<&mut SectionHeaderBuilder> for SectionHeader
-{
-    fn from(builder: &mut SectionHeaderBuilder) -> Self
-    {
+impl From<&mut SectionHeaderBuilder> for SectionHeader {
+    fn from(builder: &mut SectionHeaderBuilder) -> Self {
         builder.build()
     }
 }
 
-impl From<MainHeaderBuilder> for MainHeader
-{
-    fn from(builder: MainHeaderBuilder) -> Self
-    {
+impl From<MainHeaderBuilder> for MainHeader {
+    fn from(builder: MainHeaderBuilder) -> Self {
         builder.build()
     }
 }
 
-impl From<SectionHeaderBuilder> for SectionHeader
-{
-    fn from(builder: SectionHeaderBuilder) -> Self
-    {
+impl From<SectionHeaderBuilder> for SectionHeader {
+    fn from(builder: SectionHeaderBuilder) -> Self {
         builder.build()
     }
 }

@@ -29,30 +29,17 @@
 use std::io::{Read, Write};
 
 use libz_sys::{
-    deflate,
-    deflateEnd,
-    deflateInit_,
-    inflate,
-    inflateEnd,
-    inflateInit_,
-    z_stream,
-    Z_DATA_ERROR,
-    Z_DEFAULT_COMPRESSION,
-    Z_FINISH,
-    Z_MEM_ERROR,
-    Z_NEED_DICT,
-    Z_NO_FLUSH,
-    Z_OK,
-    Z_STREAM_ERROR,
-    Z_VERSION_ERROR
+    deflate, deflateEnd, deflateInit_, inflate, inflateEnd, inflateInit_, z_stream, Z_DATA_ERROR,
+    Z_DEFAULT_COMPRESSION, Z_FINISH, Z_MEM_ERROR, Z_NEED_DICT, Z_NO_FLUSH, Z_OK, Z_STREAM_ERROR,
+    Z_VERSION_ERROR,
 };
 
 use crate::{
     core::{
         compression::{Checksum, Deflater, Inflater},
-        error::{DeflateError, InflateError}
+        error::{DeflateError, InflateError},
     },
-    utils::ReadFill
+    utils::ReadFill,
 };
 
 const ENCODER_BUF_SIZE: usize = 8192;
@@ -62,21 +49,19 @@ const DECODER_BUF_SIZE: usize = ENCODER_BUF_SIZE * 2;
 // Because this z_stream struct is repr(C) rust must guarantee ABI compatibility with C.
 // That is must use pointers for function pointer. If it doesn't do this anymore, then this will cause UB in low-level C code.
 // Will obviously fail on platforms/architectures not using 0 to represent NULL pointers.
-unsafe fn zstream_zeroed() -> z_stream
-{
+unsafe fn zstream_zeroed() -> z_stream {
     let arr: [u8; std::mem::size_of::<z_stream>()] = [0; std::mem::size_of::<z_stream>()];
     std::mem::transmute(arr)
 }
 
-fn new_encoder() -> Result<z_stream, DeflateError>
-{
+fn new_encoder() -> Result<z_stream, DeflateError> {
     unsafe {
         let mut stream: z_stream = zstream_zeroed();
         let err = deflateInit_(
             &mut stream as _,
             Z_DEFAULT_COMPRESSION,
             "1.1.3".as_ptr() as _,
-            std::mem::size_of::<z_stream>() as _
+            std::mem::size_of::<z_stream>() as _,
         );
         if err == Z_OK {
             return Ok(stream);
@@ -85,19 +70,18 @@ fn new_encoder() -> Result<z_stream, DeflateError>
             Z_MEM_ERROR => Err(DeflateError::Memory),
             Z_STREAM_ERROR => Err(DeflateError::Unsupported("compression level")),
             Z_VERSION_ERROR => Err(DeflateError::Unsupported("version")),
-            _ => Err(DeflateError::Unknown)
+            _ => Err(DeflateError::Unknown),
         }
     }
 }
 
-fn new_decoder() -> Result<z_stream, InflateError>
-{
+fn new_decoder() -> Result<z_stream, InflateError> {
     unsafe {
         let mut stream: z_stream = zstream_zeroed();
         let err = inflateInit_(
             &mut stream as _,
             "1.1.3".as_ptr() as _,
-            std::mem::size_of::<z_stream>() as _
+            std::mem::size_of::<z_stream>() as _,
         );
         if err == Z_OK {
             return Ok(stream);
@@ -106,7 +90,7 @@ fn new_decoder() -> Result<z_stream, InflateError>
             Z_MEM_ERROR => Err(InflateError::Memory),
             Z_DATA_ERROR => Err(InflateError::Data),
             Z_VERSION_ERROR => Err(InflateError::Unsupported("version")),
-            _ => Err(InflateError::Unknown)
+            _ => Err(InflateError::Unknown),
         }
     }
 }
@@ -116,9 +100,8 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
     mut input: TRead,
     mut output: TWrite,
     inflated_size: usize,
-    chksum: &mut TChecksum
-) -> Result<usize, DeflateError>
-{
+    chksum: &mut TChecksum,
+) -> Result<usize, DeflateError> {
     let mut inbuf: [u8; ENCODER_BUF_SIZE] = [0; ENCODER_BUF_SIZE];
     let mut outbuf: [u8; ENCODER_BUF_SIZE] = [0; ENCODER_BUF_SIZE];
     let mut count: usize = 0;
@@ -147,7 +130,7 @@ fn do_deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
                         Z_MEM_ERROR => Err(DeflateError::Memory),
                         Z_STREAM_ERROR => Err(DeflateError::Unsupported("compression level")),
                         Z_VERSION_ERROR => Err(DeflateError::Unsupported("version")),
-                        _ => Err(DeflateError::Unknown)
+                        _ => Err(DeflateError::Unknown),
                     };
                 }
             }
@@ -170,9 +153,8 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
     mut input: TRead,
     mut output: TWrite,
     deflated_size: usize,
-    chksum: &mut TChecksum
-) -> Result<(), InflateError>
-{
+    chksum: &mut TChecksum,
+) -> Result<(), InflateError> {
     let mut inbuf: [u8; DECODER_BUF_SIZE] = [0; DECODER_BUF_SIZE];
     let mut outbuf: [u8; DECODER_BUF_SIZE] = [0; DECODER_BUF_SIZE];
     let mut remaining = deflated_size;
@@ -195,7 +177,7 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
                     Z_DATA_ERROR => return Err(InflateError::Data),
                     Z_NEED_DICT => return Err(InflateError::Data),
                     Z_VERSION_ERROR => return Err(InflateError::Unsupported("version")),
-                    _ => ()
+                    _ => (),
                 }
             }
             let len = DECODER_BUF_SIZE - stream.avail_out as usize;
@@ -211,15 +193,13 @@ fn do_inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
 
 pub struct ZlibCompressionMethod {}
 
-impl Deflater for ZlibCompressionMethod
-{
+impl Deflater for ZlibCompressionMethod {
     fn deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
         input: TRead,
         output: TWrite,
         inflated_size: usize,
-        chksum: &mut TChecksum
-    ) -> Result<usize, DeflateError>
-    {
+        chksum: &mut TChecksum,
+    ) -> Result<usize, DeflateError> {
         let mut encoder = new_encoder()?;
         let res = do_deflate(&mut encoder, input, output, inflated_size, chksum);
         unsafe {
@@ -229,15 +209,13 @@ impl Deflater for ZlibCompressionMethod
     }
 }
 
-impl Inflater for ZlibCompressionMethod
-{
+impl Inflater for ZlibCompressionMethod {
     fn inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
         input: TRead,
         output: TWrite,
         deflated_size: usize,
-        chksum: &mut TChecksum
-    ) -> Result<(), InflateError>
-    {
+        chksum: &mut TChecksum,
+    ) -> Result<(), InflateError> {
         let mut decoder = new_decoder()?;
         let res = do_inflate(&mut decoder, input, output, deflated_size, chksum);
         unsafe {

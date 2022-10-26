@@ -30,32 +30,26 @@ use std::num::Wrapping;
 
 use crate::core::compression::Checksum;
 
-pub struct WeakChecksum
-{
-    current: Wrapping<u32>
+pub struct WeakChecksum {
+    current: Wrapping<u32>,
 }
 
-impl Checksum for WeakChecksum
-{
-    fn push(&mut self, data: &[u8])
-    {
+impl Checksum for WeakChecksum {
+    fn push(&mut self, data: &[u8]) {
         for byte in data {
             self.current += Wrapping(*byte as u32);
         }
     }
 
-    fn finish(self) -> u32
-    {
+    fn finish(self) -> u32 {
         self.current.0
     }
 }
 
-impl WeakChecksum
-{
-    pub fn new() -> Self
-    {
+impl WeakChecksum {
+    pub fn new() -> Self {
         WeakChecksum {
-            current: Wrapping(0)
+            current: Wrapping(0),
         }
     }
 }

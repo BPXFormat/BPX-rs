@@ -30,15 +30,14 @@
 
 use std::{
     convert::From,
-    fmt::{Display, Formatter}
+    fmt::{Display, Formatter},
 };
 
 use crate::impl_err_conversion;
 
 /// Represents a generic decompression error.
 #[derive(Debug)]
-pub enum DeflateError
-{
+pub enum DeflateError {
     /// Memory allocation failure.
     Memory,
 
@@ -52,29 +51,26 @@ pub enum DeflateError
     Unknown,
 
     /// Describes an io error.
-    Io(std::io::Error)
+    Io(std::io::Error),
 }
 
 impl_err_conversion!(DeflateError { std::io::Error => Io });
 
-impl Display for DeflateError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for DeflateError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             DeflateError::Memory => f.write_str("memory allocation failure"),
             DeflateError::Unsupported(e) => write!(f, "unsupported operation ({})", e),
             DeflateError::Data => f.write_str("data error"),
             DeflateError::Unknown => f.write_str("low-level unknown error"),
-            DeflateError::Io(e) => write!(f, "io error: {}", e)
+            DeflateError::Io(e) => write!(f, "io error: {}", e),
         }
     }
 }
 
 /// Represents a generic compression error.
 #[derive(Debug)]
-pub enum InflateError
-{
+pub enum InflateError {
     /// Memory allocation failure.
     Memory,
 
@@ -88,29 +84,26 @@ pub enum InflateError
     Unknown,
 
     /// Describes an io error.
-    Io(std::io::Error)
+    Io(std::io::Error),
 }
 
 impl_err_conversion!(InflateError { std::io::Error => Io });
 
-impl Display for InflateError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for InflateError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             InflateError::Memory => f.write_str("memory allocation failure"),
             InflateError::Unsupported(e) => write!(f, "unsupported operation ({})", e),
             InflateError::Data => f.write_str("data error"),
             InflateError::Unknown => f.write_str("low-level unknown error"),
-            InflateError::Io(e) => write!(f, "io error: {}", e)
+            InflateError::Io(e) => write!(f, "io error: {}", e),
         }
     }
 }
 
 /// Represents a BPX read error.
 #[derive(Debug)]
-pub enum ReadError
-{
+pub enum ReadError {
     /// Describes a checksum error.
     ///
     /// # Arguments
@@ -134,7 +127,7 @@ pub enum ReadError
     BadSignature([u8; 3]),
 
     /// Describes a decompression error.
-    Inflate(InflateError)
+    Inflate(InflateError),
 }
 
 impl_err_conversion!(
@@ -144,10 +137,8 @@ impl_err_conversion!(
     }
 );
 
-impl Display for ReadError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for ReadError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ReadError::Checksum(expected, actual) => write!(
                 f,
@@ -159,15 +150,14 @@ impl Display for ReadError
             ReadError::BadSignature(sig) => {
                 write!(f, "unknown file signature ({}{}{})", sig[0], sig[1], sig[2])
             },
-            ReadError::Inflate(e) => write!(f, "inflate error: {}", e)
+            ReadError::Inflate(e) => write!(f, "inflate error: {}", e),
         }
     }
 }
 
 /// Represents a BPX write error.
 #[derive(Debug)]
-pub enum WriteError
-{
+pub enum WriteError {
     /// Describes an io error.
     Io(std::io::Error),
 
@@ -182,7 +172,7 @@ pub enum WriteError
     Deflate(DeflateError),
 
     /// A section has not yet been loaded.
-    SectionNotLoaded
+    SectionNotLoaded,
 }
 
 impl_err_conversion!(
@@ -192,17 +182,15 @@ impl_err_conversion!(
     }
 );
 
-impl Display for WriteError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for WriteError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             WriteError::Io(e) => write!(f, "io error: {}", e),
             WriteError::Capacity(size) => {
                 write!(f, "maximum section size exceeded ({} > 2^32)", size)
             },
             WriteError::Deflate(e) => write!(f, "deflate error: {}", e),
-            WriteError::SectionNotLoaded => f.write_str("section not loaded")
+            WriteError::SectionNotLoaded => f.write_str("section not loaded"),
         }
     }
 }

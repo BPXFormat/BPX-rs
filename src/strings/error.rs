@@ -32,8 +32,7 @@ use crate::macros::impl_err_conversion;
 
 /// Represents a string section read error.
 #[derive(Debug)]
-pub enum ReadError
-{
+pub enum ReadError {
     /// Describes an utf8 decoding/encoding error.
     Utf8,
 
@@ -44,7 +43,7 @@ pub enum ReadError
     Io(std::io::Error),
 
     /// Indicates the section is not loaded.
-    SectionNotLoaded
+    SectionNotLoaded,
 }
 
 impl_err_conversion!(
@@ -53,28 +52,25 @@ impl_err_conversion!(
     }
 );
 
-impl Display for ReadError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for ReadError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ReadError::Utf8 => f.write_str("utf8 error"),
             ReadError::Eos => f.write_str("EOS reached before end of string"),
             ReadError::SectionNotLoaded => f.write_str("section not loaded"),
-            ReadError::Io(e) => write!(f, "io error: {}", e)
+            ReadError::Io(e) => write!(f, "io error: {}", e),
         }
     }
 }
 
 /// Represents a string section write error.
 #[derive(Debug)]
-pub enum WriteError
-{
+pub enum WriteError {
     /// Describes an io error.
     Io(std::io::Error),
 
     /// Indicates the section is not loaded.
-    SectionNotLoaded
+    SectionNotLoaded,
 }
 
 impl_err_conversion!(
@@ -83,35 +79,30 @@ impl_err_conversion!(
     }
 );
 
-impl Display for WriteError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for WriteError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             WriteError::SectionNotLoaded => f.write_str("section not loaded"),
-            WriteError::Io(e) => write!(f, "io error: {}", e)
+            WriteError::Io(e) => write!(f, "io error: {}", e),
         }
     }
 }
 
 /// Represents a path conversion error.
 #[derive(Debug)]
-pub enum PathError
-{
+pub enum PathError {
     /// Indicates the path is not convertible to UTF-8.
     Utf8,
 
     /// Indicates the path does not have a file name, ie the path points to a directory.
-    Directory
+    Directory,
 }
 
-impl Display for PathError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for PathError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             PathError::Utf8 => f.write_str("non unicode paths are not supported by BPX"),
-            PathError::Directory => f.write_str("path is not a file but a directory")
+            PathError::Directory => f.write_str("path is not a file but a directory"),
         }
     }
 }

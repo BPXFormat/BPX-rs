@@ -33,7 +33,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use crate::{
     core::header::Struct,
     package::error::{EosContext, ReadError},
-    table::Item
+    table::Item,
 };
 
 /// Size in bytes of an object header.
@@ -41,8 +41,7 @@ pub const SIZE_OBJECT_HEADER: usize = 20;
 
 /// Represents an object header as read from the package.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub struct ObjectHeader
-{
+pub struct ObjectHeader {
     /// The size of the object.
     pub size: u64,
 
@@ -53,31 +52,27 @@ pub struct ObjectHeader
     pub start: u32,
 
     /// The offset to the content in the start section.
-    pub offset: u32
+    pub offset: u32,
 }
 
-impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader
-{
+impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader {
     type Output = ObjectHeader;
     type Error = ReadError;
 
-    fn new() -> Self
-    {
+    fn new() -> Self {
         ObjectHeader {
             size: 0,
             name: 0,
             start: 0,
-            offset: 0
+            offset: 0,
         }
     }
 
-    fn error_buffer_size() -> Option<Self::Error>
-    {
+    fn error_buffer_size() -> Option<Self::Error> {
         Some(ReadError::Eos(EosContext::ObjectTable))
     }
 
-    fn from_bytes(buffer: [u8; SIZE_OBJECT_HEADER]) -> Result<Self::Output, Self::Error>
-    {
+    fn from_bytes(buffer: [u8; SIZE_OBJECT_HEADER]) -> Result<Self::Output, Self::Error> {
         let size = LittleEndian::read_u64(&buffer[0..8]);
         let name_ptr = LittleEndian::read_u32(&buffer[8..12]);
         let start = LittleEndian::read_u32(&buffer[12..16]);
@@ -86,12 +81,11 @@ impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader
             size,
             name: name_ptr,
             start,
-            offset
+            offset,
         })
     }
 
-    fn to_bytes(&self) -> [u8; SIZE_OBJECT_HEADER]
-    {
+    fn to_bytes(&self) -> [u8; SIZE_OBJECT_HEADER] {
         let mut buf: [u8; SIZE_OBJECT_HEADER] = [0; SIZE_OBJECT_HEADER];
         LittleEndian::write_u64(&mut buf[0..8], self.size as u64);
         LittleEndian::write_u32(&mut buf[8..12], self.name);
@@ -101,10 +95,8 @@ impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader
     }
 }
 
-impl Item for ObjectHeader
-{
-    fn get_name_address(&self) -> u32
-    {
+impl Item for ObjectHeader {
+    fn get_name_address(&self) -> u32 {
         self.name
     }
 }

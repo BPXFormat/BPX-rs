@@ -40,28 +40,25 @@ pub use zlib::ZlibCompressionMethod;
 
 use crate::core::error::{DeflateError, InflateError};
 
-pub trait Checksum
-{
+pub trait Checksum {
     fn push(&mut self, buffer: &[u8]);
     fn finish(self) -> u32;
 }
 
-pub trait Inflater
-{
+pub trait Inflater {
     fn inflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
         input: TRead,
         output: TWrite,
         deflated_size: usize,
-        chksum: &mut TChecksum
+        chksum: &mut TChecksum,
     ) -> Result<(), InflateError>;
 }
 
-pub trait Deflater
-{
+pub trait Deflater {
     fn deflate<TRead: Read, TWrite: Write, TChecksum: Checksum>(
         input: TRead,
         output: TWrite,
         inflated_size: usize,
-        chksum: &mut TChecksum
+        chksum: &mut TChecksum,
     ) -> Result<usize, DeflateError>;
 }

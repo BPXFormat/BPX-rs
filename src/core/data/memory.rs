@@ -30,35 +30,28 @@ use std::io::{Cursor, Read, Result, Seek, SeekFrom, Write};
 
 use crate::{core::SectionData, utils::new_byte_buf};
 
-pub struct InMemorySection
-{
+pub struct InMemorySection {
     byte_buf: Cursor<Vec<u8>>,
-    cur_size: usize
+    cur_size: usize,
 }
 
-impl InMemorySection
-{
-    pub fn new(initial: usize) -> InMemorySection
-    {
+impl InMemorySection {
+    pub fn new(initial: usize) -> InMemorySection {
         InMemorySection {
             byte_buf: new_byte_buf(initial),
-            cur_size: 0
+            cur_size: 0,
         }
     }
 }
 
-impl Read for InMemorySection
-{
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize>
-    {
+impl Read for InMemorySection {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         self.byte_buf.read(buf)
     }
 }
 
-impl Write for InMemorySection
-{
-    fn write(&mut self, buf: &[u8]) -> Result<usize>
-    {
+impl Write for InMemorySection {
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
         let len = self.byte_buf.write(buf)?;
         if self.byte_buf.position() as usize >= self.cur_size {
             self.cur_size = self.byte_buf.position() as usize;
@@ -66,29 +59,23 @@ impl Write for InMemorySection
         Ok(len)
     }
 
-    fn flush(&mut self) -> Result<()>
-    {
+    fn flush(&mut self) -> Result<()> {
         self.byte_buf.flush()
     }
 }
 
-impl Seek for InMemorySection
-{
-    fn seek(&mut self, pos: SeekFrom) -> Result<u64>
-    {
+impl Seek for InMemorySection {
+    fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
         self.byte_buf.seek(pos)
     }
 }
 
-impl SectionData for InMemorySection
-{
-    fn load_in_memory(&mut self) -> Result<Vec<u8>>
-    {
+impl SectionData for InMemorySection {
+    fn load_in_memory(&mut self) -> Result<Vec<u8>> {
         return Ok(self.byte_buf.get_ref().clone());
     }
 
-    fn size(&self) -> usize
-    {
+    fn size(&self) -> usize {
         self.cur_size
     }
 }

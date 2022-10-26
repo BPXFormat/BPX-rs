@@ -28,8 +28,7 @@
 
 use std::mem::MaybeUninit;
 
-pub fn extract_slice<T: Sized + Copy, const D: usize>(large_buf: &[T], offset: usize) -> [T; D]
-{
+pub fn extract_slice<T: Sized + Copy, const D: usize>(large_buf: &[T], offset: usize) -> [T; D] {
     unsafe {
         let mut arr: [MaybeUninit<T>; D] = MaybeUninit::uninit().assume_init();
         for (i, val) in arr.iter_mut().enumerate() {

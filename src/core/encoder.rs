@@ -31,35 +31,24 @@
 use std::{
     collections::BTreeMap,
     io,
-    io::{Seek, SeekFrom, Write}
+    io::{Seek, SeekFrom, Write},
 };
 
 use crate::{
     core::{
         compression::{
-            Checksum,
-            Crc32Checksum,
-            Deflater,
-            WeakChecksum,
-            XzCompressionMethod,
-            ZlibCompressionMethod
+            Checksum, Crc32Checksum, Deflater, WeakChecksum, XzCompressionMethod,
+            ZlibCompressionMethod,
         },
         error::WriteError,
         header::{
-            GetChecksum,
-            MainHeader,
-            Struct,
-            FLAG_CHECK_CRC32,
-            FLAG_CHECK_WEAK,
-            FLAG_COMPRESS_XZ,
-            FLAG_COMPRESS_ZLIB,
-            SIZE_MAIN_HEADER,
-            SIZE_SECTION_HEADER
+            GetChecksum, MainHeader, Struct, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ,
+            FLAG_COMPRESS_ZLIB, SIZE_MAIN_HEADER, SIZE_SECTION_HEADER,
         },
         section::SectionEntry,
-        SectionData
+        SectionData,
     },
-    utils::ReadFill
+    utils::ReadFill,
 };
 
 const READ_BLOCK_SIZE: usize = 8192;
@@ -67,9 +56,8 @@ const READ_BLOCK_SIZE: usize = 8192;
 fn write_sections<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
-    file_start_offset: usize
-) -> Result<(u32, usize), WriteError>
-{
+    file_start_offset: usize,
+) -> Result<(u32, usize), WriteError> {
     let mut ptr: u64 = file_start_offset as _;
     let mut all_sections_size: usize = 0;
     let mut chksum_sht: u32 = 0;
@@ -114,9 +102,8 @@ fn write_sections<T: Write + Seek>(
 pub fn internal_save<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
-    main_header: &mut MainHeader
-) -> Result<(), WriteError>
-{
+    main_header: &mut MainHeader,
+) -> Result<(), WriteError> {
     let file_start_offset =
         SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * main_header.section_num as usize);
     //Seek to the start of the actual file content
@@ -136,9 +123,8 @@ pub fn internal_save<T: Write + Seek>(
 fn write_last_section<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
-    last_handle: u32
-) -> Result<(bool, i64), WriteError>
-{
+    last_handle: u32,
+) -> Result<(bool, i64), WriteError> {
     let entry = sections.get_mut(&last_handle).unwrap();
     backend.seek(SeekFrom::Start(entry.header.pointer))?;
     let data = entry.data.as_mut().ok_or(WriteError::SectionNotLoaded)?;
@@ -159,9 +145,8 @@ pub fn internal_save_last<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
     main_header: &mut MainHeader,
-    last_handle: u32
-) -> Result<(), WriteError>
-{
+    last_handle: u32,
+) -> Result<(), WriteError> {
     // This function saves only the last section.
     let (update_sht, diff) = write_last_section(&mut backend, sections, last_handle)?;
     if update_sht {
@@ -182,9 +167,8 @@ pub fn internal_save_last<T: Write + Seek>(
 fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(
     section: &mut dyn SectionData,
     out: &mut TWrite,
-    chksum: &mut TChecksum
-) -> Result<usize, WriteError>
-{
+    chksum: &mut TChecksum,
+) -> Result<usize, WriteError> {
     let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
     let mut count: usize = 0;
     while count < section.size() as usize {
@@ -200,9 +184,8 @@ fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(
 fn write_section_compressed<TMethod: Deflater, TWrite: Write, TChecksum: Checksum>(
     mut section: &mut dyn SectionData,
     out: &mut TWrite,
-    chksum: &mut TChecksum
-) -> Result<usize, WriteError>
-{
+    chksum: &mut TChecksum,
+) -> Result<usize, WriteError> {
     let size = section.size();
     let csize = TMethod::deflate(&mut section, out, size, chksum)?;
     Ok(csize)
@@ -212,9 +195,8 @@ fn write_section_checked<TWrite: Write, TChecksum: Checksum>(
     flags: u8,
     section: &mut dyn SectionData,
     out: &mut TWrite,
-    chksum: &mut TChecksum
-) -> Result<usize, WriteError>
-{
+    chksum: &mut TChecksum,
+) -> Result<usize, WriteError> {
     if flags & FLAG_COMPRESS_XZ != 0 {
         write_section_compressed::<XzCompressionMethod, _, _>(section, out, chksum)
     } else if flags & FLAG_COMPRESS_ZLIB != 0 {
@@ -227,9 +209,8 @@ fn write_section_checked<TWrite: Write, TChecksum: Checksum>(
 pub fn write_section<TWrite: Write>(
     flags: u8,
     section: &mut dyn SectionData,
-    out: &mut TWrite
-) -> Result<(usize, u32), WriteError>
-{
+    out: &mut TWrite,
+) -> Result<(usize, u32), WriteError> {
     if flags & FLAG_CHECK_CRC32 != 0 {
         let mut chksum = Crc32Checksum::new();
         let size = write_section_checked(flags, section, out, &mut chksum)?;

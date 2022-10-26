@@ -33,21 +33,18 @@ use std::{collections::HashMap, ops::Index, slice::Iter};
 use crate::{core::Container, strings::StringSection};
 
 /// Represents an item to be stored in an ItemTable.
-pub trait Item
-{
+pub trait Item {
     /// Returns the address of the name of this item in its string section.
     fn get_name_address(&self) -> u32;
 }
 
 /// Represents an item table with on demand lookup capability (the lookup function only works after you've built it).
-pub struct ItemTable<T: Item>
-{
+pub struct ItemTable<T: Item> {
     list: Vec<T>,
-    map: Option<HashMap<String, T>>
+    map: Option<HashMap<String, T>>,
 }
 
-impl<T: Item> ItemTable<T>
-{
+impl<T: Item> ItemTable<T> {
     /// Constructs a new ItemTable from a list of items.
     ///
     /// # Arguments
@@ -55,26 +52,22 @@ impl<T: Item> ItemTable<T>
     /// * `list`: the list of items.
     ///
     /// returns: ItemTable<T>
-    pub fn new(list: Vec<T>) -> Self
-    {
+    pub fn new(list: Vec<T>) -> Self {
         Self { list, map: None }
     }
 
     /// Gets all items in this table.
-    pub fn iter(&self) -> Iter<T>
-    {
+    pub fn iter(&self) -> Iter<T> {
         self.list.iter()
     }
 
     /// Returns the number of items in this table.
-    pub fn len(&self) -> usize
-    {
+    pub fn len(&self) -> usize {
         self.list.len()
     }
 
     /// Returns true if this table is empty.
-    pub fn is_empty(&self) -> bool
-    {
+    pub fn is_empty(&self) -> bool {
         self.list.is_empty()
     }
 
@@ -90,8 +83,7 @@ impl<T: Item> ItemTable<T>
     /// # Panics
     ///
     /// Panics if the lookup table is not yet built.
-    pub fn lookup(&self, name: &str) -> Option<&T>
-    {
+    pub fn lookup(&self, name: &str) -> Option<&T> {
         if let Some(map) = &self.map {
             map.get(name)
         } else {
@@ -100,29 +92,24 @@ impl<T: Item> ItemTable<T>
     }
 }
 
-impl<'a, T: Item> IntoIterator for &'a ItemTable<T>
-{
+impl<'a, T: Item> IntoIterator for &'a ItemTable<T> {
     type Item = &'a T;
     type IntoIter = <&'a Vec<T> as IntoIterator>::IntoIter;
 
-    fn into_iter(self) -> Self::IntoIter
-    {
+    fn into_iter(self) -> Self::IntoIter {
         self.list.iter()
     }
 }
 
-impl<T: Item> Index<usize> for ItemTable<T>
-{
+impl<T: Item> Index<usize> for ItemTable<T> {
     type Output = T;
 
-    fn index(&self, index: usize) -> &Self::Output
-    {
+    fn index(&self, index: usize) -> &Self::Output {
         &self.list[index]
     }
 }
 
-impl<T: Item + Clone> ItemTable<T>
-{
+impl<T: Item + Clone> ItemTable<T> {
     /// Builds the item map for easy and efficient lookup of items by name.
     ///
     /// **You must call this function before you can use lookup.**
@@ -139,9 +126,8 @@ impl<T: Item + Clone> ItemTable<T>
     pub fn build_lookup_table<T1>(
         &mut self,
         container: &mut Container<T1>,
-        names: &mut StringSection
-    ) -> Result<(), crate::strings::ReadError>
-    {
+        names: &mut StringSection,
+    ) -> Result<(), crate::strings::ReadError> {
         let mut map: HashMap<String, T> = HashMap::new();
         for v in &self.list {
             let name = names.get(container, v.get_name_address())?.into();

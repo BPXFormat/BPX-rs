@@ -31,34 +31,25 @@
 use std::{
     collections::BTreeMap,
     io,
-    io::{Read, Seek, Write}
+    io::{Read, Seek, Write},
 };
 
 use crate::{
     core::{
         compression::{
-            Checksum,
-            Crc32Checksum,
-            Inflater,
-            WeakChecksum,
-            XzCompressionMethod,
-            ZlibCompressionMethod
+            Checksum, Crc32Checksum, Inflater, WeakChecksum, XzCompressionMethod,
+            ZlibCompressionMethod,
         },
         data::AutoSectionData,
         error::ReadError,
         header::{
-            MainHeader,
-            SectionHeader,
-            Struct,
-            FLAG_CHECK_CRC32,
-            FLAG_CHECK_WEAK,
-            FLAG_COMPRESS_XZ,
-            FLAG_COMPRESS_ZLIB
+            MainHeader, SectionHeader, Struct, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ,
+            FLAG_COMPRESS_ZLIB,
         },
         section::{SectionEntry, SectionEntry1},
-        DEFAULT_COMPRESSION_THRESHOLD
+        DEFAULT_COMPRESSION_THRESHOLD,
     },
-    utils::ReadFill
+    utils::ReadFill,
 };
 
 const READ_BLOCK_SIZE: usize = 8192;
@@ -66,9 +57,8 @@ const READ_BLOCK_SIZE: usize = 8192;
 pub fn read_section_header_table<T: Read>(
     mut backend: &mut T,
     main_header: &MainHeader,
-    checksum: u32
-) -> Result<(u32, BTreeMap<u32, SectionEntry>), ReadError>
-{
+    checksum: u32,
+) -> Result<(u32, BTreeMap<u32, SectionEntry>), ReadError> {
     let mut sections = BTreeMap::new();
     let mut final_checksum = checksum;
     let mut hdl: u32 = 0;
@@ -85,9 +75,9 @@ pub fn read_section_header_table<T: Read>(
                 index: i,
                 entry1: SectionEntry1 {
                     flags: header.flags,
-                    threshold: DEFAULT_COMPRESSION_THRESHOLD
-                }
-            }
+                    threshold: DEFAULT_COMPRESSION_THRESHOLD,
+                },
+            },
         );
         hdl += 1;
     }
@@ -99,9 +89,8 @@ pub fn read_section_header_table<T: Read>(
 
 pub fn load_section1<T: io::Read + io::Seek>(
     file: &mut T,
-    section: &SectionHeader
-) -> Result<AutoSectionData, ReadError>
-{
+    section: &SectionHeader,
+) -> Result<AutoSectionData, ReadError> {
     let mut data = AutoSectionData::new_with_size(section.size)?;
     data.seek(io::SeekFrom::Start(0))?;
     if section.flags & FLAG_CHECK_WEAK != 0 {
@@ -133,9 +122,8 @@ fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum:
     file: &mut TBackend,
     section: &SectionHeader,
     out: TWrite,
-    chksum: &mut TChecksum
-) -> Result<(), ReadError>
-{
+    chksum: &mut TChecksum,
+) -> Result<(), ReadError> {
     if section.flags & FLAG_COMPRESS_XZ != 0 {
         load_section_compressed::<XzCompressionMethod, _, _, _>(file, section, out, chksum)?;
     } else if section.flags & FLAG_COMPRESS_ZLIB != 0 {
@@ -150,9 +138,8 @@ fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChec
     bpx: &mut TBackend,
     header: &SectionHeader,
     mut output: TWrite,
-    chksum: &mut TChecksum
-) -> io::Result<()>
-{
+    chksum: &mut TChecksum,
+) -> io::Result<()> {
     let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
     let mut count: usize = 0;
     let mut remaining: usize = header.size as usize;
@@ -172,14 +159,13 @@ fn load_section_compressed<
     TMethod: Inflater,
     TBackend: io::Read + io::Seek,
     TWrite: Write,
-    TChecksum: Checksum
+    TChecksum: Checksum,
 >(
     bpx: &mut TBackend,
     header: &SectionHeader,
     output: TWrite,
-    chksum: &mut TChecksum
-) -> Result<(), ReadError>
-{
+    chksum: &mut TChecksum,
+) -> Result<(), ReadError> {
     bpx.seek(io::SeekFrom::Start(header.pointer))?;
     XzCompressionMethod::inflate(bpx, output, header.csize as usize, chksum)?;
     Ok(())

@@ -29,39 +29,33 @@
 use std::{
     ops::{Index, IndexMut},
     slice::Iter,
-    vec::Vec
+    vec::Vec,
 };
 
 use crate::sd::Value;
 
 /// Represents a BPX Structured Data Array.
 #[derive(PartialEq, Clone)]
-pub struct Array
-{
-    data: Vec<Value>
+pub struct Array {
+    data: Vec<Value>,
 }
 
-impl Default for Array
-{
-    fn default() -> Self
-    {
+impl Default for Array {
+    fn default() -> Self {
         Self::new()
     }
 }
 
-impl Array
-{
+impl Array {
     /// Creates a new array.
-    pub fn new() -> Array
-    {
+    pub fn new() -> Array {
         Array { data: Vec::new() }
     }
 
     /// Allocates a new array with a specified initial capacity
-    pub fn with_capacity(capacity: usize) -> Array
-    {
+    pub fn with_capacity(capacity: usize) -> Array {
         Array {
-            data: Vec::with_capacity(capacity)
+            data: Vec::with_capacity(capacity),
         }
     }
 
@@ -81,8 +75,7 @@ impl Array
     /// arr.add("Test".into());
     /// assert_eq!(arr.len(), 1);
     /// ```
-    pub fn add(&mut self, v: Value)
-    {
+    pub fn add(&mut self, v: Value) {
         self.data.push(v);
     }
 
@@ -107,8 +100,7 @@ impl Array
     /// arr.remove_at(0);
     /// assert_eq!(arr.len(), 0);
     /// ```
-    pub fn remove_at(&mut self, pos: usize) -> Option<Value>
-    {
+    pub fn remove_at(&mut self, pos: usize) -> Option<Value> {
         if pos > self.data.len() {
             None
         } else {
@@ -133,8 +125,7 @@ impl Array
     /// arr.remove("Test".into());
     /// assert_eq!(arr.len(), 0);
     /// ```
-    pub fn remove(&mut self, item: Value)
-    {
+    pub fn remove(&mut self, item: Value) {
         for i in 0..self.data.len() {
             if self.data[i] == item {
                 self.data.remove(i);
@@ -164,55 +155,45 @@ impl Array
     /// assert!(arr.get(0).is_some());
     /// assert!(arr.get(0).unwrap() == &Value::from("Test"));
     /// ```
-    pub fn get(&self, pos: usize) -> Option<&Value>
-    {
+    pub fn get(&self, pos: usize) -> Option<&Value> {
         self.data.get(pos)
     }
 
     /// Returns the length of the array.
-    pub fn len(&self) -> usize
-    {
+    pub fn len(&self) -> usize {
         self.data.len()
     }
 
     /// Returns true if this array is empty.
-    pub fn is_empty(&self) -> bool
-    {
+    pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     /// Returns an iterator to this array.
-    pub fn iter(&self) -> Iter<Value>
-    {
+    pub fn iter(&self) -> Iter<Value> {
         self.data.iter()
     }
 }
 
-impl<'a> IntoIterator for &'a Array
-{
+impl<'a> IntoIterator for &'a Array {
     type Item = &'a Value;
     type IntoIter = Iter<'a, Value>;
 
-    fn into_iter(self) -> Self::IntoIter
-    {
+    fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl Index<usize> for Array
-{
+impl Index<usize> for Array {
     type Output = Value;
 
-    fn index(&self, i: usize) -> &Value
-    {
+    fn index(&self, i: usize) -> &Value {
         &self.data[i]
     }
 }
 
-impl IndexMut<usize> for Array
-{
-    fn index_mut(&mut self, i: usize) -> &mut Value
-    {
+impl IndexMut<usize> for Array {
+    fn index_mut(&mut self, i: usize) -> &mut Value {
         &mut self.data[i]
     }
 }

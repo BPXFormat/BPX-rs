@@ -52,8 +52,7 @@ pub const SUPPORTED_VERSION: u32 = 0x2;
 
 /// Enum of all supported processor architectures by BPXP.
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
-pub enum Architecture
-{
+pub enum Architecture {
     /// x86_64
     ///
     /// *x86 extension for 64 bits originally made by AMD.*
@@ -83,13 +82,12 @@ pub enum Architecture
     Armv7hl,
 
     /// The package does not have a target architecture and by extension can be loaded on any CPU.
-    Any
+    Any,
 }
 
 /// Enum of all supported platforms by BPXP.
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
-pub enum Platform
-{
+pub enum Platform {
     /// GNU / Linux
     ///
     /// *Matches any distribution with or without desktop environment.*
@@ -113,5 +111,5 @@ pub enum Platform
     Android,
 
     /// The package does not have a target platform and by extension can be loaded on any platform.
-    Any
+    Any,
 }

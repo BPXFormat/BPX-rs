@@ -33,11 +33,10 @@ use crate::{
     package::{
         error::{InvalidCodeContext, ReadError},
         object::ObjectHeader,
-        Architecture,
-        Platform
+        Architecture, Platform,
     },
     table::ItemTable,
-    Handle
+    Handle,
 };
 
 const DATA_READ_BUFFER_SIZE: usize = 8192;
@@ -47,9 +46,8 @@ fn load_from_section<T: Read + Seek, W: Write>(
     handle: Handle,
     offset: u32,
     size: u32,
-    out: &mut W
-) -> Result<u32, ReadError>
-{
+    out: &mut W,
+) -> Result<u32, ReadError> {
     let mut len = 0;
     let mut buf: [u8; DATA_READ_BUFFER_SIZE] = [0; DATA_READ_BUFFER_SIZE];
     let mut section = container.get_mut(handle);
@@ -69,9 +67,8 @@ fn load_from_section<T: Read + Seek, W: Write>(
 pub fn unpack_object<T: Read + Seek, W: Write>(
     container: &mut Container<T>,
     obj: &ObjectHeader,
-    mut out: W
-) -> Result<u64, ReadError>
-{
+    mut out: W,
+) -> Result<u64, ReadError> {
     let mut section_id = obj.start;
     let mut offset = obj.offset;
     let mut len = obj.size;
@@ -79,7 +76,7 @@ pub fn unpack_object<T: Read + Seek, W: Write>(
     while len > 0 {
         let handle = match container.find_section_by_index(section_id) {
             Some(i) => i,
-            None => break
+            None => break,
         };
         let section = container.get(handle);
         let remaining_section_size = section.size - offset;
@@ -88,7 +85,7 @@ pub fn unpack_object<T: Read + Seek, W: Write>(
             handle,
             offset,
             std::cmp::min(remaining_section_size as u64, len) as u32,
-            &mut out
+            &mut out,
         )?;
         len -= val as u64;
         offset = 0;
@@ -100,9 +97,8 @@ pub fn unpack_object<T: Read + Seek, W: Write>(
 pub fn read_object_table<T: Read + Seek>(
     container: &mut Container<T>,
     objects: &mut Vec<ObjectHeader>,
-    object_table: Handle
-) -> Result<ItemTable<ObjectHeader>, ReadError>
-{
+    object_table: Handle,
+) -> Result<ItemTable<ObjectHeader>, ReadError> {
     let mut section = container.get_mut(object_table);
     let count = section.size / 20;
     let mut v = Vec::with_capacity(count as _);
@@ -117,9 +113,8 @@ pub fn read_object_table<T: Read + Seek>(
 
 pub fn get_arch_platform_from_code(
     acode: u8,
-    pcode: u8
-) -> Result<(Architecture, Platform), ReadError>
-{
+    pcode: u8,
+) -> Result<(Architecture, Platform), ReadError> {
     let arch;
     let platform;
 
@@ -129,7 +124,7 @@ pub fn get_arch_platform_from_code(
         0x2 => arch = Architecture::X86,
         0x3 => arch = Architecture::Armv7hl,
         0x4 => arch = Architecture::Any,
-        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Arch, acode))
+        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Arch, acode)),
     }
     match pcode {
         0x0 => platform = Platform::Linux,
@@ -137,7 +132,7 @@ pub fn get_arch_platform_from_code(
         0x2 => platform = Platform::Windows,
         0x3 => platform = Platform::Android,
         0x4 => platform = Platform::Any,
-        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Platform, pcode))
+        _ => return Err(ReadError::InvalidCode(InvalidCodeContext::Platform, pcode)),
     }
     Ok((arch, platform))
 }

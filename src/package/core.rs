@@ -28,31 +28,26 @@
 
 use std::{
     io::{Read, Seek, SeekFrom, Write},
-    slice::Iter
+    slice::Iter,
 };
 
 use crate::{
     core::{
         builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
         header::{Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
-        Container,
-        SectionData
+        Container, SectionData,
     },
     package::{
         decoder::{get_arch_platform_from_code, read_object_table, unpack_object},
         encoder::{create_data_section_header, get_type_ext},
         error::{ReadError, Section, WriteError},
         object::ObjectHeader,
-        Architecture,
-        Platform,
-        Settings,
-        SECTION_TYPE_OBJECT_TABLE,
-        SUPPORTED_VERSION
+        Architecture, Platform, Settings, SECTION_TYPE_OBJECT_TABLE, SUPPORTED_VERSION,
     },
     strings::{load_string_section, StringSection},
     table::ItemTable,
     utils::{OptionExtension, ReadFill},
-    Handle
+    Handle,
 };
 
 const DATA_WRITE_BUFFER_SIZE: usize = 8192;
@@ -60,15 +55,13 @@ const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
 const MAX_DATA_SECTION_SIZE: usize = 200000000 - MIN_DATA_REMAINING_SIZE; //200MB
 
 /// Represents an object reference.
-pub struct Object<'a, T>
-{
+pub struct Object<'a, T> {
     container: &'a mut Container<T>,
     strings: &'a mut StringSection,
-    header: &'a ObjectHeader
+    header: &'a ObjectHeader,
 }
 
-impl<'a, T: Read + Seek> Object<'a, T>
-{
+impl<'a, T: Read + Seek> Object<'a, T> {
     /// Unpacks this object to the given `out` io backend.
     ///
     /// # Arguments
@@ -81,8 +74,7 @@ impl<'a, T: Read + Seek> Object<'a, T>
     ///
     /// Returns a [ReadError](crate::package::error::ReadError) if the section couldn't be loaded
     /// or an IO error has occured.
-    pub fn unpack<W: Write>(&mut self, out: W) -> Result<u64, ReadError>
-    {
+    pub fn unpack<W: Write>(&mut self, out: W) -> Result<u64, ReadError> {
         unpack_object(self.container, self.header, out)
     }
 
@@ -92,34 +84,29 @@ impl<'a, T: Read + Seek> Object<'a, T>
     ///
     /// If the name is not already loaded, returns a [ReadError](crate::package::error::ReadError)
     /// if the section couldn't be loaded or the string couldn't be loaded.
-    pub fn load_name(&mut self) -> Result<&str, ReadError>
-    {
+    pub fn load_name(&mut self) -> Result<&str, ReadError> {
         load_string_section(self.container, self.strings)?;
         let name = self.strings.get(self.container, self.header.name)?;
         Ok(name)
     }
 
     /// Returns the size in bytes of this object.
-    pub fn size(&self) -> u64
-    {
+    pub fn size(&self) -> u64 {
         self.header.size
     }
 }
 
 /// An iterator over [Object](crate::package::Object).
-pub struct ObjectIter<'a, T>
-{
+pub struct ObjectIter<'a, T> {
     container: &'a mut Container<T>,
     strings: &'a mut StringSection,
-    iter: Iter<'a, ObjectHeader>
+    iter: Iter<'a, ObjectHeader>,
 }
 
-impl<'a, T> Iterator for ObjectIter<'a, T>
-{
+impl<'a, T> Iterator for ObjectIter<'a, T> {
     type Item = Object<'a, T>;
 
-    fn next(&mut self) -> Option<Self::Item>
-    {
+    fn next(&mut self) -> Option<Self::Item> {
         let header = self.iter.next()?;
         unsafe {
             let ptr = self.container as *mut Container<T>;
@@ -127,7 +114,7 @@ impl<'a, T> Iterator for ObjectIter<'a, T>
             Some(Object {
                 header,
                 strings: &mut *ptr1,
-                container: &mut *ptr
+                container: &mut *ptr,
             })
         }
     }
@@ -167,46 +154,39 @@ impl<'a, T> Iterator for ObjectIter<'a, T>
 ///     assert_eq!(s, "This is a test 你好")
 /// }
 /// ```
-pub struct Package<T>
-{
+pub struct Package<T> {
     settings: Settings,
     container: Container<T>,
     object_table: Handle,
     strings: StringSection,
     objects: Vec<ObjectHeader>,
     table: Option<ItemTable<ObjectHeader>>,
-    last_data_section: Option<Handle>
+    last_data_section: Option<Handle>,
 }
 
-impl<T> Package<T>
-{
+impl<T> Package<T> {
     /// Gets the two bytes of BPXP type.
-    pub fn get_type_code(&self) -> [u8; 2]
-    {
+    pub fn get_type_code(&self) -> [u8; 2] {
         self.settings.type_code
     }
 
     /// Gets the target CPU [Architecture](crate::package::Architecture) for this BPXP.
-    pub fn get_architecture(&self) -> Architecture
-    {
+    pub fn get_architecture(&self) -> Architecture {
         self.settings.architecture
     }
 
     /// Gets the target [Platform](crate::package::Platform) for this BPXP.
-    pub fn get_platform(&self) -> Platform
-    {
+    pub fn get_platform(&self) -> Platform {
         self.settings.platform
     }
 
     /// Consumes this Package and returns the inner BPX container.
-    pub fn into_inner(self) -> Container<T>
-    {
+    pub fn into_inner(self) -> Container<T> {
         self.container
     }
 }
 
-impl<T: Write + Seek> Package<T>
-{
+impl<T: Write + Seek> Package<T> {
     /// Creates a new BPX type P.
     ///
     /// # Arguments
@@ -227,27 +207,26 @@ impl<T: Write + Seek> Package<T>
     /// bpxp.save();
     /// assert!(!bpxp.into_inner().into_inner().into_inner().is_empty());
     /// ```
-    pub fn create<S: Into<Settings>>(backend: T, settings: S) -> Result<Package<T>, WriteError>
-    {
+    pub fn create<S: Into<Settings>>(backend: T, settings: S) -> Result<Package<T>, WriteError> {
         let settings = settings.into();
         let mut container = Container::create(
             backend,
             MainHeaderBuilder::new()
                 .ty(b'P')
                 .type_ext(get_type_ext(&settings))
-                .version(SUPPORTED_VERSION)
+                .version(SUPPORTED_VERSION),
         );
         let object_table = container.create_section(
             SectionHeaderBuilder::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
-                .ty(SECTION_TYPE_OBJECT_TABLE)
+                .ty(SECTION_TYPE_OBJECT_TABLE),
         );
         let string_section = container.create_section(
             SectionHeaderBuilder::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
-                .ty(SECTION_TYPE_STRING)
+                .ty(SECTION_TYPE_STRING),
         );
         let strings = StringSection::new(string_section);
         if let Some(metadata) = &settings.metadata {
@@ -255,7 +234,7 @@ impl<T: Write + Seek> Package<T>
                 SectionHeaderBuilder::new()
                     .checksum(Checksum::Weak)
                     .compression(CompressionMethod::Zlib)
-                    .ty(SECTION_TYPE_SD)
+                    .ty(SECTION_TYPE_SD),
             );
             let mut section = container.get_mut(metadata_section);
             metadata.write(section.open().ok_or(WriteError::SectionNotLoaded)?)?;
@@ -267,16 +246,15 @@ impl<T: Write + Seek> Package<T>
             object_table,
             objects: Vec::new(),
             table: None,
-            last_data_section: None
+            last_data_section: None,
         })
     }
 
     fn write_object<TRead: Read>(
         &mut self,
         source: &mut TRead,
-        data_id: Handle
-    ) -> Result<(usize, bool), WriteError>
-    {
+        data_id: Handle,
+    ) -> Result<(usize, bool), WriteError> {
         let mut section = self.container.get_mut(data_id);
         let data = section.open().ok_or(WriteError::SectionNotLoaded)?;
         let mut buf: [u8; DATA_WRITE_BUFFER_SIZE] = [0; DATA_WRITE_BUFFER_SIZE];
@@ -309,8 +287,7 @@ impl<T: Write + Seek> Package<T>
     ///
     /// Returns a [WriteError](crate::package::error::WriteError) if the object couldn't be saved
     /// in this package.
-    pub fn pack<R: Read>(&mut self, name: &str, mut source: R) -> Result<(), WriteError>
-    {
+    pub fn pack<R: Read>(&mut self, name: &str, mut source: R) -> Result<(), WriteError> {
         let mut object_size = 0;
         let mut data_section = *self
             .last_data_section
@@ -336,7 +313,7 @@ impl<T: Write + Seek> Package<T>
                 size: object_size as u64,
                 name: self.strings.put(&mut self.container, name)?,
                 start,
-                offset
+                offset,
             };
             self.objects.push(buf);
         }
@@ -357,8 +334,7 @@ impl<T: Write + Seek> Package<T>
     ///
     /// Returns a [WriteError](crate::package::error::WriteError) if some parts of this package
     /// couldn't be saved.
-    pub fn save(&mut self) -> Result<(), WriteError>
-    {
+    pub fn save(&mut self) -> Result<(), WriteError> {
         {
             let mut section = self.container.get_mut(self.object_table);
             let data = section.open().ok_or(WriteError::SectionNotLoaded)?;
@@ -372,8 +348,7 @@ impl<T: Write + Seek> Package<T>
     }
 }
 
-impl<T: Read + Seek> Package<T>
-{
+impl<T: Read + Seek> Package<T> {
     /// Opens a BPX type P.
     ///
     /// # Arguments
@@ -401,8 +376,7 @@ impl<T: Read + Seek> Package<T>
     /// let mut bpxp = Package::open(buf).unwrap();
     /// assert_eq!(bpxp.objects().unwrap().count(), 0);
     /// ```
-    pub fn open(backend: T) -> Result<Package<T>, ReadError>
-    {
+    pub fn open(backend: T) -> Result<Package<T>, ReadError> {
         let container = Container::open(backend)?;
         if container.get_main_header().ty != b'P' {
             return Err(ReadError::BadType(container.get_main_header().ty));
@@ -412,16 +386,16 @@ impl<T: Read + Seek> Package<T>
         }
         let (a, p) = get_arch_platform_from_code(
             container.get_main_header().type_ext[0],
-            container.get_main_header().type_ext[1]
+            container.get_main_header().type_ext[1],
         )?;
         let strings =
             StringSection::new(match container.find_section_by_type(SECTION_TYPE_STRING) {
                 Some(v) => v,
-                None => return Err(ReadError::MissingSection(Section::Strings))
+                None => return Err(ReadError::MissingSection(Section::Strings)),
             });
         let object_table = match container.find_section_by_type(SECTION_TYPE_OBJECT_TABLE) {
             Some(v) => v,
-            None => return Err(ReadError::MissingSection(Section::ObjectTable))
+            None => return Err(ReadError::MissingSection(Section::ObjectTable)),
         };
         Ok(Self {
             settings: Settings {
@@ -430,15 +404,15 @@ impl<T: Read + Seek> Package<T>
                 platform: p,
                 type_code: [
                     container.get_main_header().type_ext[2],
-                    container.get_main_header().type_ext[3]
-                ]
+                    container.get_main_header().type_ext[3],
+                ],
             },
             strings,
             object_table,
             container,
             objects: Vec::new(),
             table: None,
-            last_data_section: None
+            last_data_section: None,
         })
     }
 
@@ -448,8 +422,7 @@ impl<T: Read + Seek> Package<T>
     ///
     /// Returns a [ReadError](crate::package::error::ReadError) if the section couldn't be loaded
     /// or if the object table is truncated.
-    pub fn objects(&mut self) -> Result<ObjectIter<T>, ReadError>
-    {
+    pub fn objects(&mut self) -> Result<ObjectIter<T>, ReadError> {
         let table = self.table.get_or_insert_with_err(|| {
             read_object_table(&mut self.container, &mut self.objects, self.object_table)
         })?;
@@ -457,7 +430,7 @@ impl<T: Read + Seek> Package<T>
         Ok(ObjectIter {
             container: &mut self.container,
             strings: &mut self.strings,
-            iter
+            iter,
         })
     }
 
@@ -475,8 +448,7 @@ impl<T: Read + Seek> Package<T>
     ///
     /// Returns a [ReadError](crate::package::error::ReadError) if some strings couldn't be loaded
     /// from the string section.
-    pub fn remove(&mut self, name: &str) -> Result<bool, ReadError>
-    {
+    pub fn remove(&mut self, name: &str) -> Result<bool, ReadError> {
         let mut idx = None;
         for (i, v) in self.objects.iter().enumerate() {
             let name1 = self.strings.get(&mut self.container, v.name)?;
@@ -499,8 +471,7 @@ impl<T: Read + Seek> Package<T>
     /// # Errors
     ///
     /// A [ReadError](crate::package::error::ReadError) is returned in case of corruption or system error.
-    pub fn read_metadata(&mut self) -> Result<Option<crate::sd::Object>, ReadError>
-    {
+    pub fn read_metadata(&mut self) -> Result<Option<crate::sd::Object>, ReadError> {
         if let Some(obj) = &self.settings.metadata {
             return Ok(Some(obj.clone()));
         }
@@ -521,8 +492,7 @@ impl<T: Read + Seek> Package<T>
     /// * `out`: the output Write.
     ///
     /// returns: Result<Option<u64>, ReadError>
-    pub fn unpack<W: Write>(&mut self, name: &str, out: W) -> Result<Option<u64>, ReadError>
-    {
+    pub fn unpack<W: Write>(&mut self, name: &str, out: W) -> Result<Option<u64>, ReadError> {
         let table = self.table.get_or_insert_with_err(|| {
             read_object_table(&mut self.container, &mut self.objects, self.object_table)
         })?;

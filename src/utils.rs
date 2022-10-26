@@ -48,8 +48,7 @@ use std::{io::Cursor, num::Wrapping};
 /// assert_eq!(hash(s), hash(s));
 /// assert_ne!(hash(s), hash("Wrong"));
 /// ```
-pub fn hash(s: &str) -> u64
-{
+pub fn hash(s: &str) -> u64 {
     let mut val: Wrapping<u64> = Wrapping(5381);
 
     for v in s.as_bytes() {
@@ -59,8 +58,7 @@ pub fn hash(s: &str) -> u64
 }
 
 /// Extension to include get_or_insert_with but with support for Result and errors.
-pub trait OptionExtension<T>
-{
+pub trait OptionExtension<T> {
     /// Inserts the value returned by `f` if the Option is None then returns a mutable reference
     /// to the value.
     ///
@@ -75,17 +73,15 @@ pub trait OptionExtension<T>
     /// Whatever error type is `TError`.
     fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(
         &mut self,
-        f: F
+        f: F,
     ) -> Result<&mut T, TError>;
 }
 
-impl<T> OptionExtension<T> for Option<T>
-{
+impl<T> OptionExtension<T> for Option<T> {
     fn get_or_insert_with_err<TError, F: FnOnce() -> Result<T, TError>>(
         &mut self,
-        f: F
-    ) -> Result<&mut T, TError>
-    {
+        f: F,
+    ) -> Result<&mut T, TError> {
         if self.is_none() {
             *self = Some(f()?);
         }
@@ -94,7 +90,7 @@ impl<T> OptionExtension<T> for Option<T>
             Some(v) => Ok(v),
             // SAFETY: a `None` variant for `self` would have been replaced by a `Some`
             // variant in the code above.
-            None => unsafe { std::hint::unreachable_unchecked() }
+            None => unsafe { std::hint::unreachable_unchecked() },
         }
     }
 }
@@ -107,8 +103,7 @@ impl<T> OptionExtension<T> for Option<T>
 /// * `size`: the initial size of the buffer; if not known use 0.
 ///
 /// returns: Cursor<Vec<u8>>
-pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>>
-{
+pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>> {
     if size > 0 {
         return Cursor::new(Vec::with_capacity(size));
     }
@@ -118,8 +113,7 @@ pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>>
 /// Allows to read into a buffer as much as possible.
 ///
 /// *Allows the use BufReader with BPX*
-pub trait ReadFill
-{
+pub trait ReadFill {
     /// Reads into `buf` as much as possible.
     ///
     /// *Returns the number of bytes that could be read.*
@@ -136,10 +130,8 @@ pub trait ReadFill
     fn read_fill(&mut self, buf: &mut [u8]) -> std::io::Result<usize>;
 }
 
-impl<T: std::io::Read + ?Sized> ReadFill for T
-{
-    fn read_fill(&mut self, buf: &mut [u8]) -> std::io::Result<usize>
-    {
+impl<T: std::io::Read + ?Sized> ReadFill for T {
+    fn read_fill(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let mut bytes = 0;
         let mut len = self.read(buf)?;
         bytes += len;

@@ -30,8 +30,7 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::shader::{Settings, Target, Type};
 
-pub fn get_type_ext(settings: &Settings) -> [u8; 16]
-{
+pub fn get_type_ext(settings: &Settings) -> [u8; 16] {
     let mut type_ext: [u8; 16] = [0; 16];
     match settings.target {
         Target::DX11 => type_ext[10] = 0x1,
@@ -51,11 +50,11 @@ pub fn get_type_ext(settings: &Settings) -> [u8; 16]
         Target::VK11 => type_ext[10] = 0xF,
         Target::VK12 => type_ext[10] = 0x10,
         Target::MT => type_ext[10] = 0x11,
-        Target::Any => type_ext[10] = 0xFF
+        Target::Any => type_ext[10] = 0xFF,
     };
     match settings.ty {
         Type::Assembly => type_ext[11] = b'A',
-        Type::Pipeline => type_ext[11] = b'P'
+        Type::Pipeline => type_ext[11] = b'P',
     };
     LittleEndian::write_u64(&mut type_ext[0..8], settings.assembly_hash);
     type_ext

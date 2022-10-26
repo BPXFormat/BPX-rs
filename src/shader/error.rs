@@ -118,10 +118,8 @@ impl_err_conversion!(
     }
 );
 
-impl Display for ReadError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for ReadError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ReadError::Bpx(e) => write!(f, "BPX error: {}", e),
             ReadError::Io(e) => write!(f, "io error: {}", e),
@@ -133,21 +131,19 @@ impl Display for ReadError
             ReadError::BadVersion(v) => write!(f, "unsupported version ({})", v),
             ReadError::BadType(t) => write!(f, "unknown BPX type code ({})", t),
             ReadError::MissingSection(s) => write!(f, "missing {} section", s.name()),
-            ReadError::Eos(ctx) => write!(f, "got EOS while reading {}", ctx.name())
+            ReadError::Eos(ctx) => write!(f, "got EOS while reading {}", ctx.name()),
         }
     }
 }
 
-impl Display for WriteError
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for WriteError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             WriteError::Bpx(e) => write!(f, "BPX error: {}", e),
             WriteError::Io(e) => write!(f, "io error: {}", e),
             WriteError::Strings(e) => write!(f, "strings error: {}", e),
             WriteError::Sd(e) => write!(f, "BPXSD error: {}", e),
-            WriteError::SectionNotLoaded => f.write_str("section not loaded")
+            WriteError::SectionNotLoaded => f.write_str("section not loaded"),
         }
     }
 }

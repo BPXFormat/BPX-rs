@@ -32,43 +32,37 @@ use tempfile::tempfile;
 
 use crate::core::{
     data::{file::FileBasedSection, memory::InMemorySection},
-    SectionData
+    SectionData,
 };
 
 const MEMORY_THRESHOLD: u32 = 100000000;
 const INIT_BUF_SIZE: usize = 512;
 
 #[allow(clippy::large_enum_variant)] // This is always used behind a Box
-enum DynSectionData
-{
+enum DynSectionData {
     File(FileBasedSection),
-    Memory(InMemorySection)
+    Memory(InMemorySection),
 }
 
 /// Automatic section data implementation.
 ///
 /// *This automatically switches an in-memory section data into a file backed section data
 /// when the size of the data exceeds 100Mb.*
-pub struct AutoSectionData
-{
-    inner: Box<DynSectionData>
+pub struct AutoSectionData {
+    inner: Box<DynSectionData>,
 }
 
-impl Default for AutoSectionData
-{
-    fn default() -> Self
-    {
+impl Default for AutoSectionData {
+    fn default() -> Self {
         Self::new()
     }
 }
 
-impl AutoSectionData
-{
+impl AutoSectionData {
     /// Creates a new section data backed by a dynamically sized in-memory buffer.
-    pub fn new() -> AutoSectionData
-    {
+    pub fn new() -> AutoSectionData {
         AutoSectionData {
-            inner: Box::new(DynSectionData::Memory(InMemorySection::new(512)))
+            inner: Box::new(DynSectionData::Memory(InMemorySection::new(512))),
         }
     }
 
@@ -84,55 +78,48 @@ impl AutoSectionData
     ///
     /// This function returns an [Error](std::io::Error) if a file backed section was needed,
     /// given the size constraint, but failed to initialize.
-    pub fn new_with_size(size: u32) -> std::io::Result<AutoSectionData>
-    {
+    pub fn new_with_size(size: u32) -> std::io::Result<AutoSectionData> {
         if size >= MEMORY_THRESHOLD {
             let file = FileBasedSection::new(tempfile()?);
             Ok(AutoSectionData {
-                inner: Box::new(DynSectionData::File(file))
+                inner: Box::new(DynSectionData::File(file)),
             })
         } else {
             Ok(AutoSectionData {
-                inner: Box::new(DynSectionData::Memory(InMemorySection::new(size as usize)))
+                inner: Box::new(DynSectionData::Memory(InMemorySection::new(size as usize))),
             })
         }
     }
 
-    unsafe fn move_to_file(&mut self) -> std::io::Result<()>
-    {
+    unsafe fn move_to_file(&mut self) -> std::io::Result<()> {
         let mut file = FileBasedSection::new(tempfile()?);
         match &mut *self.inner {
             DynSectionData::Memory(m) => std::io::copy(m, &mut file),
             //SAFETY: If the section is not an InMemorySection then move_to_file is not supposed to have been called,
             // and that is an unrecoverable internal BPX error
-            DynSectionData::File(_) => std::hint::unreachable_unchecked()
+            DynSectionData::File(_) => std::hint::unreachable_unchecked(),
         }?;
         self.inner = Box::new(DynSectionData::File(file));
         Ok(())
     }
 
     /// Clears this section data and resets to a default dynamically sized in-memory buffer.
-    pub fn clear(&mut self)
-    {
+    pub fn clear(&mut self) {
         self.inner = Box::new(DynSectionData::Memory(InMemorySection::new(INIT_BUF_SIZE)))
     }
 }
 
-impl Read for AutoSectionData
-{
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize>
-    {
+impl Read for AutoSectionData {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         match &mut *self.inner {
             DynSectionData::File(f) => f.read(buf),
-            DynSectionData::Memory(m) => m.read(buf)
+            DynSectionData::Memory(m) => m.read(buf),
         }
     }
 }
 
-impl Write for AutoSectionData
-{
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize>
-    {
+impl Write for AutoSectionData {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         match &mut *self.inner {
             DynSectionData::File(f) => f.write(buf),
             DynSectionData::Memory(m) => {
@@ -143,45 +130,39 @@ impl Write for AutoSectionData
                     }
                 }
                 Ok(size)
-            }
+            },
         }
     }
 
-    fn flush(&mut self) -> std::io::Result<()>
-    {
+    fn flush(&mut self) -> std::io::Result<()> {
         match &mut *self.inner {
             DynSectionData::File(f) => f.flush(),
-            DynSectionData::Memory(m) => m.flush()
+            DynSectionData::Memory(m) => m.flush(),
         }
     }
 }
 
-impl Seek for AutoSectionData
-{
-    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64>
-    {
+impl Seek for AutoSectionData {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
         match &mut *self.inner {
             DynSectionData::File(f) => f.seek(pos),
-            DynSectionData::Memory(m) => m.seek(pos)
+            DynSectionData::Memory(m) => m.seek(pos),
         }
     }
 }
 
-impl SectionData for AutoSectionData
-{
-    fn load_in_memory(&mut self) -> std::io::Result<Vec<u8>>
-    {
+impl SectionData for AutoSectionData {
+    fn load_in_memory(&mut self) -> std::io::Result<Vec<u8>> {
         match &mut *self.inner {
             DynSectionData::File(f) => f.load_in_memory(),
-            DynSectionData::Memory(m) => m.load_in_memory()
+            DynSectionData::Memory(m) => m.load_in_memory(),
         }
     }
 
-    fn size(&self) -> usize
-    {
+    fn size(&self) -> usize {
         match &*self.inner {
             DynSectionData::File(f) => f.size(),
-            DynSectionData::Memory(m) => m.size()
+            DynSectionData::Memory(m) => m.size(),
         }
     }
 }

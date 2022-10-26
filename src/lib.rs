@@ -56,8 +56,7 @@ pub mod shader;
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Handle(u32);
 
-impl Handle
-{
+impl Handle {
     /// Constructs a Handle from a raw u32.
     ///
     /// # Arguments
@@ -69,14 +68,12 @@ impl Handle
     /// # Safety
     ///
     /// You must ensure the raw key is a valid key. Failure to do so could panic bpx::core::Container.
-    pub unsafe fn from_raw(raw: u32) -> Self
-    {
+    pub unsafe fn from_raw(raw: u32) -> Self {
         Self(raw)
     }
 
     /// Extracts the raw key from this Handle.
-    pub fn into_raw(self) -> u32
-    {
+    pub fn into_raw(self) -> u32 {
         self.0
     }
 }

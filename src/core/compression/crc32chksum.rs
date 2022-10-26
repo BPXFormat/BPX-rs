@@ -32,16 +32,13 @@ use crate::core::compression::Checksum;
 
 const POLYNOMIAL: u32 = 0xEDB88320;
 
-pub struct Crc32Checksum
-{
+pub struct Crc32Checksum {
     table: Vec<u32>,
-    current: u32
+    current: u32,
 }
 
-impl Crc32Checksum
-{
-    pub fn new() -> Crc32Checksum
-    {
+impl Crc32Checksum {
+    pub fn new() -> Crc32Checksum {
         let mut table = Vec::with_capacity(256);
         for i in 0..256 {
             let mut val = i as u32;
@@ -54,23 +51,20 @@ impl Crc32Checksum
         }
         Crc32Checksum {
             table,
-            current: 0xFFFFFFFF
+            current: 0xFFFFFFFF,
         }
     }
 }
 
-impl Checksum for Crc32Checksum
-{
-    fn push(&mut self, buffer: &[u8])
-    {
+impl Checksum for Crc32Checksum {
+    fn push(&mut self, buffer: &[u8]) {
         for byte in buffer {
             let index = (self.current ^ *byte as u32) & 0xFF;
             self.current = (self.current >> 8) ^ self.table[index as usize];
         }
     }
 
-    fn finish(mut self) -> u32
-    {
+    fn finish(mut self) -> u32 {
         self.current ^= 0xFFFFFFFF;
         self.current
     }

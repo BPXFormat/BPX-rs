@@ -41,8 +41,7 @@ use crate::sd::error::TypeError;
 
 /// The size of an enum variant index when serializing/deserializing Rust enums.
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum EnumSize
-{
+pub enum EnumSize {
     /// Indicates all enum variant indices should be encoded with a single byte.
     ///
     /// *This is generally the preferred option.*
@@ -52,13 +51,12 @@ pub enum EnumSize
     U16,
 
     /// Indicates all enum variant indices should be encoded with 4 bytes.
-    U32
+    U32,
 }
 
 /// Represents a serializer/deserializer error.
 #[derive(Debug)]
-pub enum Error
-{
+pub enum Error {
     /// The type is unsupported by this implementation.
     UnsupportedType,
 
@@ -87,21 +85,17 @@ pub enum Error
     MissingVariantData,
 
     /// The specified property wasn't found in the BPXSD object.
-    MissingStructKey(&'static str)
+    MissingStructKey(&'static str),
 }
 
-impl From<TypeError> for Error
-{
-    fn from(e: TypeError) -> Self
-    {
+impl From<TypeError> for Error {
+    fn from(e: TypeError) -> Self {
         Self::TypeMismatch(e)
     }
 }
 
-impl Display for Error
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::UnsupportedType => f.write_str("unsupported type"),
             Error::TypeMismatch(e) => write!(f, "{}", e),
@@ -112,7 +106,7 @@ impl Display for Error
             Error::InvalidMapCall => f.write_str("invalid map call"),
             Error::InvalidEnum => f.write_str("invalid enum type"),
             Error::MissingVariantData => f.write_str("missing variant data"),
-            Error::MissingStructKey(name) => write!(f, "missing struct key '{}'", name)
+            Error::MissingStructKey(name) => write!(f, "missing struct key '{}'", name),
         }
     }
 }

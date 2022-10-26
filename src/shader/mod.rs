@@ -53,19 +53,17 @@ pub const SECTION_TYPE_EXTENDED_DATA: u8 = 0x3;
 
 /// Represents a shader in a BPXS.
 #[derive(Clone, Debug)]
-pub struct Shader
-{
+pub struct Shader {
     /// The shader stage.
     pub stage: Stage,
 
     /// The shader data.
-    pub data: Vec<u8>
+    pub data: Vec<u8>,
 }
 
 /// Enum of all supported shader targets by BPXS.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash, Ord, PartialOrd)]
-pub enum Target
-{
+pub enum Target {
     /// DirectX 11
     DX11,
 
@@ -118,24 +116,22 @@ pub enum Target
     MT,
 
     /// Any rendering API. Useful if this is a shader assembly.
-    Any
+    Any,
 }
 
 /// Enum of all types of BPXS.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash, Ord, PartialOrd)]
-pub enum Type
-{
+pub enum Type {
     /// A shader assembly.
     Assembly,
 
     /// A shader pipeline/program.
-    Pipeline
+    Pipeline,
 }
 
 /// Enum of all supported shader stages by BPXS.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash, Ord, PartialOrd)]
-pub enum Stage
-{
+pub enum Stage {
     /// Vertex shader stage.
     Vertex,
 
@@ -149,5 +145,5 @@ pub enum Stage
     Geometry,
 
     /// Pixel/fragment shader stage.
-    Pixel
+    Pixel,
 }

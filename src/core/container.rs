@@ -28,7 +28,7 @@
 
 use std::{
     collections::{BTreeMap, Bound},
-    io
+    io,
 };
 
 use crate::{
@@ -39,10 +39,9 @@ use crate::{
         error::{ReadError, WriteError},
         header::{MainHeader, SectionHeader, Struct},
         section::{new_section, new_section_mut, SectionEntry, SectionEntry1},
-        Section,
-        SectionMut
+        Section, SectionMut,
     },
-    Handle
+    Handle,
 };
 
 /// The default maximum size of uncompressed sections.
@@ -51,18 +50,15 @@ use crate::{
 pub const DEFAULT_COMPRESSION_THRESHOLD: u32 = 65536;
 
 /// Mutable iterator over [SectionMut](crate::core::SectionMut) for a [Container](crate::core::Container).
-pub struct IterMut<'a, T>
-{
+pub struct IterMut<'a, T> {
     backend: &'a mut T,
-    sections: std::collections::btree_map::IterMut<'a, u32, SectionEntry>
+    sections: std::collections::btree_map::IterMut<'a, u32, SectionEntry>,
 }
 
-impl<'a, T> Iterator for IterMut<'a, T>
-{
+impl<'a, T> Iterator for IterMut<'a, T> {
     type Item = SectionMut<'a, T>;
 
-    fn next(&mut self) -> Option<Self::Item>
-    {
+    fn next(&mut self) -> Option<Self::Item> {
         let (h, v) = self.sections.next()?;
         unsafe {
             let ptr = self.backend as *mut T;
@@ -72,34 +68,29 @@ impl<'a, T> Iterator for IterMut<'a, T>
 }
 
 /// Iterator over [Section](crate::core::Section) for a [Container](crate::core::Container).
-pub struct Iter<'a>
-{
-    sections: std::collections::btree_map::Iter<'a, u32, SectionEntry>
+pub struct Iter<'a> {
+    sections: std::collections::btree_map::Iter<'a, u32, SectionEntry>,
 }
 
-impl<'a> Iterator for Iter<'a>
-{
+impl<'a> Iterator for Iter<'a> {
     type Item = Section<'a>;
 
-    fn next(&mut self) -> Option<Self::Item>
-    {
+    fn next(&mut self) -> Option<Self::Item> {
         let (h, v) = self.sections.next()?;
         Some(new_section(v, Handle(*h)))
     }
 }
 
 /// The main BPX container implementation.
-pub struct Container<T>
-{
+pub struct Container<T> {
     backend: T,
     main_header: MainHeader,
     sections: BTreeMap<u32, SectionEntry>,
     next_handle: u32,
-    modified: bool
+    modified: bool,
 }
 
-impl<T> Container<T>
-{
+impl<T> Container<T> {
     /// Searches for the first section of a given type.
     /// Returns None if no section could be found.
     ///
@@ -119,8 +110,7 @@ impl<T> Container<T>
     /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
     /// assert!(file.find_section_by_type(0).is_none());
     /// ```
-    pub fn find_section_by_type(&self, ty: u8) -> Option<Handle>
-    {
+    pub fn find_section_by_type(&self, ty: u8) -> Option<Handle> {
         for (handle, entry) in &self.sections {
             if entry.header.ty == ty {
                 return Some(Handle(*handle));
@@ -148,8 +138,7 @@ impl<T> Container<T>
     /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
     /// assert!(file.find_section_by_index(0).is_none());
     /// ```
-    pub fn find_section_by_index(&self, index: u32) -> Option<Handle>
-    {
+    pub fn find_section_by_index(&self, index: u32) -> Option<Handle> {
         for (idx, handle) in self.sections.keys().enumerate() {
             if idx as u32 == index {
                 return Some(Handle(*handle));
@@ -175,8 +164,7 @@ impl<T> Container<T>
     /// file.set_main_header(MainHeaderBuilder::new().ty(1));
     /// assert_eq!(file.get_main_header().ty, 1);
     /// ```
-    pub fn set_main_header<H: Into<MainHeader>>(&mut self, main_header: H)
-    {
+    pub fn set_main_header<H: Into<MainHeader>>(&mut self, main_header: H) {
         self.main_header = main_header.into();
         self.modified = true;
     }
@@ -195,8 +183,7 @@ impl<T> Container<T>
     /// //Default BPX variant/type is 'P'
     /// assert_eq!(header.ty, 'P' as u8);
     /// ```
-    pub fn get_main_header(&self) -> &MainHeader
-    {
+    pub fn get_main_header(&self) -> &MainHeader {
         &self.main_header
     }
 
@@ -225,8 +212,7 @@ impl<T> Container<T>
     /// // Default section type is 0x0.
     /// assert_eq!(section.ty, 0x0);
     /// ```
-    pub fn get(&self, handle: Handle) -> Section
-    {
+    pub fn get(&self, handle: Handle) -> Section {
         self.sections
             .get(&handle.0)
             .map(|v| new_section(v, handle))
@@ -258,8 +244,7 @@ impl<T> Container<T>
     /// let buf = section.open().unwrap().load_in_memory().unwrap();
     /// assert_eq!(buf.len(), 0);
     /// ```
-    pub fn get_mut(&mut self, handle: Handle) -> SectionMut<T>
-    {
+    pub fn get_mut(&mut self, handle: Handle) -> SectionMut<T> {
         self.sections
             .get_mut(&handle.0)
             .map(|v| new_section_mut(&mut self.backend, v, handle))
@@ -286,8 +271,7 @@ impl<T> Container<T>
     /// file.create_section(SectionHeaderBuilder::new());
     /// assert_eq!(file.get_main_header().section_num, 1);
     /// ```
-    pub fn create_section<H: Into<SectionHeader>>(&mut self, header: H) -> Handle
-    {
+    pub fn create_section<H: Into<SectionHeader>>(&mut self, header: H) -> Handle {
         self.modified = true;
         self.main_header.section_num += 1;
         let r = self.next_handle;
@@ -300,8 +284,8 @@ impl<T> Container<T>
             index: self.main_header.section_num - 1,
             entry1: SectionEntry1 {
                 threshold: h.csize,
-                flags: h.flags
-            }
+                flags: h.flags,
+            },
         };
         self.sections.insert(r, entry);
         self.next_handle += 1;
@@ -333,8 +317,7 @@ impl<T> Container<T>
     /// file.save();
     /// assert_eq!(file.get_main_header().section_num, 0);
     /// ```
-    pub fn remove_section(&mut self, handle: Handle)
-    {
+    pub fn remove_section(&mut self, handle: Handle) {
         self.sections.remove(&handle.0);
         self.main_header.section_num -= 1;
         self.modified = true;
@@ -346,53 +329,45 @@ impl<T> Container<T>
     }
 
     /// Creates an immutable iterator over each [Section](crate::core::Section) in this container.
-    pub fn iter(&self) -> Iter
-    {
+    pub fn iter(&self) -> Iter {
         Iter {
-            sections: self.sections.iter()
+            sections: self.sections.iter(),
         }
     }
 
     /// Creates a mutable iterator over each [SectionMut](crate::core::SectionMut) in this container.
-    pub fn iter_mut(&mut self) -> IterMut<T>
-    {
+    pub fn iter_mut(&mut self) -> IterMut<T> {
         IterMut {
             backend: &mut self.backend,
-            sections: self.sections.iter_mut()
+            sections: self.sections.iter_mut(),
         }
     }
 
     /// Consumes this BPX container and returns the inner IO backend.
-    pub fn into_inner(self) -> T
-    {
+    pub fn into_inner(self) -> T {
         self.backend
     }
 }
 
-impl<'a, T> IntoIterator for &'a Container<T>
-{
+impl<'a, T> IntoIterator for &'a Container<T> {
     type Item = Section<'a>;
     type IntoIter = Iter<'a>;
 
-    fn into_iter(self) -> Self::IntoIter
-    {
+    fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl<'a, T> IntoIterator for &'a mut Container<T>
-{
+impl<'a, T> IntoIterator for &'a mut Container<T> {
     type Item = SectionMut<'a, T>;
     type IntoIter = IterMut<'a, T>;
 
-    fn into_iter(self) -> Self::IntoIter
-    {
+    fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
     }
 }
 
-impl<T: io::Read + io::Seek> Container<T>
-{
+impl<T: io::Read + io::Seek> Container<T> {
     /// Loads a BPX container from the given `backend`.
     ///
     /// # Arguments
@@ -421,8 +396,7 @@ impl<T: io::Read + io::Seek> Container<T>
     /// //Default BPX variant/type is 'P'
     /// assert_eq!(file.get_main_header().ty, 'P' as u8);
     /// ```
-    pub fn open(mut backend: T) -> Result<Container<T>, ReadError>
-    {
+    pub fn open(mut backend: T) -> Result<Container<T>, ReadError> {
         let (checksum, header) = MainHeader::read(&mut backend)?;
         let (next_handle, sections) = read_section_header_table(&mut backend, &header, checksum)?;
         Ok(Container {
@@ -430,13 +404,12 @@ impl<T: io::Read + io::Seek> Container<T>
             main_header: header,
             sections,
             next_handle,
-            modified: false
+            modified: false,
         })
     }
 }
 
-impl<T: io::Write + io::Seek> Container<T>
-{
+impl<T: io::Write + io::Seek> Container<T> {
     /// Creates a new BPX container in the given `backend`.
     ///
     /// # Arguments
@@ -458,14 +431,13 @@ impl<T: io::Write + io::Seek> Container<T>
     /// //Default BPX variant/type is 'P'
     /// assert_eq!(file.get_main_header().ty, 'P' as u8);
     /// ```
-    pub fn create<H: Into<MainHeader>>(backend: T, header: H) -> Container<T>
-    {
+    pub fn create<H: Into<MainHeader>>(backend: T, header: H) -> Container<T> {
         Container {
             backend,
             modified: true,
             main_header: header.into(),
             next_handle: 0,
-            sections: BTreeMap::new()
+            sections: BTreeMap::new(),
         }
     }
 
@@ -492,8 +464,7 @@ impl<T: io::Write + io::Seek> Container<T>
     /// let buf = file.into_inner();
     /// assert!(!buf.into_inner().is_empty());
     /// ```
-    pub fn save(&mut self) -> Result<(), WriteError>
-    {
+    pub fn save(&mut self) -> Result<(), WriteError> {
         let mut filter = self.sections.iter().filter(|(_, entry)| entry.modified);
         let count = filter.by_ref().count();
         if self.modified || count > 1 {
@@ -507,7 +478,7 @@ impl<T: io::Write + io::Seek> Container<T>
                     &mut self.backend,
                     &mut self.sections,
                     &mut self.main_header,
-                    self.next_handle - 1
+                    self.next_handle - 1,
                 )
             } else {
                 //Unfortunately the modified section is not the last one so we can't safely
