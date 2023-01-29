@@ -30,6 +30,8 @@ use std::io::{Read, Seek, SeekFrom, Write};
 
 use once_cell::unsync::OnceCell;
 
+use crate::package::{Architecture, Platform};
+use crate::shader::SECTION_TYPE_EXTENDED_DATA;
 use crate::{
     core::{
         builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
@@ -47,8 +49,6 @@ use crate::{
     strings::StringSection,
     table::NamedItemTable,
 };
-use crate::package::{Architecture, Platform};
-use crate::shader::SECTION_TYPE_EXTENDED_DATA;
 
 /// A BPXP (Package).
 ///
@@ -98,7 +98,7 @@ pub struct Package<T> {
 
 impl<T> Package<T> {
     /// Gets the settings of this package.
-    #[deprecated(note="use `settings` or `settings_mut`")]
+    #[deprecated(note = "use `settings` or `settings_mut`")]
     pub fn get_settings(&self) -> &Settings {
         &self.settings
     }
@@ -146,10 +146,11 @@ impl<T> TryFrom<Container<T>> for Package<T> {
                     container.main_header().type_ext[0],
                     container.main_header().type_ext[1],
                 )?;
-                let object_table = match container.sections().find_by_type(SECTION_TYPE_OBJECT_TABLE) {
-                    Some(v) => v,
-                    None => return Err(Error::MissingSection(Section::ObjectTable)),
-                };
+                let object_table =
+                    match container.sections().find_by_type(SECTION_TYPE_OBJECT_TABLE) {
+                        Some(v) => v,
+                        None => return Err(Error::MissingSection(Section::ObjectTable)),
+                    };
                 Ok(Self {
                     settings: Settings {
                         metadata: Value::Null,
@@ -185,7 +186,8 @@ impl<T> TryFrom<Container<T>> for Package<T> {
                 let (a, p) = get_arch_platform_from_code(
                     container.main_header().type_ext[0],
                     container.main_header().type_ext[1],
-                ).unwrap_or((Architecture::Any, Platform::Any));
+                )
+                .unwrap_or((Architecture::Any, Platform::Any));
                 Ok(Package {
                     metadata: OnceCell::new(),
                     settings: Settings {
@@ -201,7 +203,7 @@ impl<T> TryFrom<Container<T>> for Package<T> {
                     object_table,
                     table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings)),
                 })
-            }
+            },
         }
     }
 }
@@ -288,15 +290,26 @@ impl<T: Write + Seek> Package<T> {
         if let Some(metadata) = self.metadata.get() {
             if metadata != &self.settings.metadata {
                 if !self.settings.metadata.is_null() {
-                    let handle = self.container.sections().find_by_type(SECTION_TYPE_EXTENDED_DATA)
-                        .unwrap_or_else(|| self.container.sections_mut().create(SectionHeaderBuilder::new()
-                            .checksum(Checksum::Weak)
-                            .compression(CompressionMethod::Zlib)
-                            .ty(SECTION_TYPE_SD)));
+                    let handle = self
+                        .container
+                        .sections()
+                        .find_by_type(SECTION_TYPE_EXTENDED_DATA)
+                        .unwrap_or_else(|| {
+                            self.container.sections_mut().create(
+                                SectionHeaderBuilder::new()
+                                    .checksum(Checksum::Weak)
+                                    .compression(CompressionMethod::Zlib)
+                                    .ty(SECTION_TYPE_SD),
+                            )
+                        });
                     let mut section = self.container.sections().open(handle)?;
                     self.settings.metadata.write(&mut *section)?;
                 } else {
-                    if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_EXTENDED_DATA) {
+                    if let Some(handle) = self
+                        .container
+                        .sections()
+                        .find_by_type(SECTION_TYPE_EXTENDED_DATA)
+                    {
                         self.container.sections_mut().remove(handle);
                     }
                 }
