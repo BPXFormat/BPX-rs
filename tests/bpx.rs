@@ -5,8 +5,6 @@ use bpx::core::{
     Container,
 };
 
-/*use bpx::{decoder::Decoder, encoder::Encoder, header::BPX_CURRENT_VERSION, Interface};*/
-
 #[test]
 fn attempt_write_empty_bpxp() {
     {
