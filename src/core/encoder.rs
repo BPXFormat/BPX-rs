@@ -30,7 +30,6 @@
 
 use std::{
     collections::BTreeMap,
-    io,
     io::{Seek, SeekFrom, Write},
 };
 
@@ -73,10 +72,10 @@ fn write_sections<T: Write + Seek>(
             return Err(Error::Capacity(data.size()));
         }
         let last_section_ptr = data.stream_position()?;
-        data.seek(io::SeekFrom::Start(0))?;
+        data.seek(SeekFrom::Start(0))?;
         let flags = section.entry1.get_flags(data.size() as u32);
         let (csize, chksum) = write_section(flags, data, &mut backend)?;
-        data.seek(io::SeekFrom::Start(last_section_ptr))?;
+        data.seek(SeekFrom::Start(last_section_ptr))?;
         section.header.csize = csize as u32;
         section.header.size = data.size() as u32;
         section.header.chksum = chksum;
@@ -140,7 +139,7 @@ fn write_section_single<T: Write + Seek>(
     let flags = entry.entry1.get_flags(data.size() as u32);
     data.seek(SeekFrom::Start(0))?;
     let (csize, chksum) = write_section(flags, data, &mut backend)?;
-    data.seek(io::SeekFrom::Start(last_section_ptr))?;
+    data.seek(SeekFrom::Start(last_section_ptr))?;
     let old = entry.header;
     entry.header.csize = csize as u32;
     entry.header.size = data.size() as u32;

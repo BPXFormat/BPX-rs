@@ -51,15 +51,15 @@ use crate::{
 ///
 /// # Arguments
 ///
-/// * `package`: the [Package](crate::package::Package) to use.
+/// * `package`: the [Package](Package) to use.
 /// * `vname`: the virtual name for the root source path.
-/// * `source`: the source [Path](std::path::Path) to pack.
+/// * `source`: the source [Path](Path) to pack.
 ///
 /// returns: Result<(), Error>
 ///
 /// # Errors
 ///
-/// An [Error](crate::package::error::Error) is returned if some objects could not be packed.
+/// An [Error](Error) is returned if some objects could not be packed.
 pub fn pack_file_vname<T: Write + Seek>(
     package: &mut Package<T>,
     vname: &str,
@@ -76,8 +76,8 @@ pub fn pack_file_vname<T: Write + Seek>(
         objects.create(vname, &mut fle)?;
     } else {
         let entries = read_dir(source)?;
-        for rentry in entries {
-            let entry = rentry?;
+        for entry in entries {
+            let entry = entry?;
             let mut s = String::from(vname);
             s.push('/');
             s.push_str(&get_name_from_dir_entry(&entry)?);
@@ -96,14 +96,14 @@ pub fn pack_file_vname<T: Write + Seek>(
 ///
 /// # Arguments
 ///
-/// * `package`: the [Package](crate::package::Package) to use.
-/// * `source`: the source [Path](std::path::Path) to pack.
+/// * `package`: the [Package](Package) to use.
+/// * `source`: the source [Path](Path) to pack.
 ///
 /// returns: Result<()>
 ///
 /// # Errors
 ///
-/// An [Error](crate::package::error::Error) is returned if some objects could not be packed.
+/// An [Error](Error) is returned if some objects could not be packed.
 pub fn pack_file<T: Write + Seek>(package: &mut Package<T>, source: &Path) -> Result<()> {
     let str = get_name_from_path(source)?;
     pack_file_vname(package, str, source)
@@ -117,14 +117,14 @@ pub fn pack_file<T: Write + Seek>(package: &mut Package<T>, source: &Path) -> Re
 ///
 /// # Arguments
 ///
-/// * `package`: the [Package](crate::package::Package) to use.
-/// * `target`: the target [Path](std::path::Path) to extract the content to.
+/// * `package`: the [Package](Package) to use.
+/// * `target`: the target [Path](Path) to extract the content to.
 ///
 /// returns: Result<()>
 ///
 /// # Errors
 ///
-/// An [Error](crate::package::error::Error) is returned if some objects could not be unpacked.
+/// An [Error](Error) is returned if some objects could not be unpacked.
 pub fn unpack<T: Read + Seek>(package: &Package<T>, target: &Path) -> Result<()> {
     let objects = package.objects()?;
     for v in &objects {

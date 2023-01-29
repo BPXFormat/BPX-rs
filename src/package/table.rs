@@ -198,14 +198,14 @@ impl<'a, T: Read + Seek> ObjectTableRef<'a, T> {
     ///
     /// # Arguments
     ///
-    /// * `out`: A [Write](std::io::Write) to unpack object data to.
+    /// * `out`: A [Write](Write) to unpack object data to.
     ///
     /// returns: Result<u64>
     ///
     /// # Errors
     ///
     /// Returns an [Error](crate::package::error::Error) if the section couldn't be loaded
-    /// or an IO error has occured.
+    /// or an IO error has occurred.
     pub fn load<O: Write>(&self, header: &ObjectHeader, out: O) -> Result<u64> {
         self.table.load(self.container, header, out)
     }
@@ -253,7 +253,7 @@ impl<'a, T> ObjectTableMut<'a, T> {
     /// # Arguments
     ///
     /// * `name`: The name of the object.
-    /// * `source`: A [Read](std::io::Read) to read object data from.
+    /// * `source`: A [Read](Read) to read object data from.
     ///
     /// returns: Result<()>
     ///

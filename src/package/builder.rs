@@ -33,7 +33,7 @@ use crate::{
 
 /// The required settings to create a new BPXP.
 ///
-/// *This is intended to be generated with help of [Builder](crate::package::Builder).*
+/// *This is intended to be generated with help of [Builder](Builder).*
 #[derive(Clone)]
 pub struct Settings {
     /// The package target architecture.
@@ -49,7 +49,7 @@ pub struct Settings {
     pub type_code: [u8; 2],
 }
 
-/// Utility to simplify generation of [Settings](crate::package::Settings) required when creating a new BPXP.
+/// Utility to simplify generation of [Settings](Settings) required when creating a new BPXP.
 pub struct Builder {
     settings: Settings,
 }

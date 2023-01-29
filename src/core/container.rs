@@ -302,10 +302,10 @@ impl<T: io::Write + io::Seek> Container<T> {
             .count();
         if expanded_sections == 0 {
             let flag = if count > 1 {
-                // If n sections changed but didn’t expand -> only write these n sections and patch section header table.
+                // If n sections changed but did not expand -> only write these n sections and patch section header table.
                 self.patch_modified_sections()
             } else {
-                // If 1 section changed but didn’t expand -> only write this section and patch section header table.
+                // If 1 section changed but did not expand -> only write this section and patch section header table.
                 let section = self
                     .table
                     .sections
@@ -335,7 +335,7 @@ impl<T: io::Write + io::Seek> Container<T> {
                 .unwrap();
             if expanded_section == self.table.next_handle - 1 {
                 let flag = if count > 1 {
-                    // If n sections changed but didn’t expand and the last section has expanded
+                    // If n sections changed but did not expand and the last section has expanded
                     // -> write only these n sections, write the last section and patch section
                     // header table.
                     self.patch_modified_sections()

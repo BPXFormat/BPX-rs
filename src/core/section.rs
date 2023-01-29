@@ -131,7 +131,7 @@ impl<T: Read + Seek> SectionTable<T> {
     ///
     /// # Errors
     ///
-    /// Returns an [Error](crate::core::error::Error) if the section is corrupted,
+    /// Returns an [Error](Error) if the section is corrupted,
     /// truncated, if some data couldn't be read or if the section is already in use.
     pub fn load(&self, handle: Handle) -> Result<RefMut<AutoSectionData>> {
         let section = &self.sections[&handle.0];
@@ -166,7 +166,7 @@ impl<T> SectionTable<T> {
     ///
     /// # Errors
     ///
-    /// Returns an [OpenError](crate::core::error::OpenError) if the section is already in use
+    /// Returns an [OpenError](OpenError) if the section is already in use
     /// or is not loaded. To ensure a section is loaded, call load.
     pub fn open(&self, handle: Handle) -> std::result::Result<RefMut<AutoSectionData>, OpenError> {
         let section = &self.sections[&handle.0];
@@ -204,7 +204,7 @@ impl<T> SectionTable<T> {
     ///
     /// # Arguments
     ///
-    /// * `header`: the [SectionHeader](crate::core::header::SectionHeader) of the new section.
+    /// * `header`: the [SectionHeader](SectionHeader) of the new section.
     ///
     /// returns: Handle
     ///
@@ -260,10 +260,10 @@ impl<T> SectionTable<T> {
     ///
     /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
     /// let section = file.sections_mut().create(SectionHeaderBuilder::new());
-    /// file.save();
+    /// file.save().unwrap();
     /// assert_eq!(file.main_header().section_num, 1);
     /// file.sections_mut().remove(section);
-    /// file.save();
+    /// file.save().unwrap();
     /// assert_eq!(file.main_header().section_num, 0);
     /// ```
     pub fn remove(&mut self, handle: Handle) {
@@ -314,7 +314,7 @@ impl<T> SectionTable<T> {
     ///
     /// # Arguments
     ///
-    /// * `btype`: section type byte.
+    /// * `ty`: section type byte.
     ///
     /// returns: Option<Handle>
     ///

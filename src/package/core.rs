@@ -65,10 +65,10 @@ use crate::shader::SECTION_TYPE_EXTENDED_DATA;
 ///     objects.create("TestObject", "This is a test 你好".as_bytes()).unwrap();
 /// }
 /// bpxp.save().unwrap();
-/// //Reset our bytebuf pointer to start
+/// //Reset the byte buffer pointer to start.
 /// let mut bytebuf = bpxp.into_inner().into_inner();
 /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
-/// //Attempt decoding our in-memory BPXP
+/// //Attempt decoding the in-memory BPXP.
 /// let mut bpxp = Package::open(bytebuf).unwrap();
 /// let objects = bpxp.objects().unwrap();
 /// assert_eq!(objects.len(), 1);

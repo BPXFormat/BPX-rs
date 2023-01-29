@@ -42,7 +42,7 @@ pub enum Error {
     /// Describes an io error.
     Io(std::io::Error),
 
-    /// Indicates an [OpenError](crate::core::error::OpenError) has occurred when attempting
+    /// Indicates an [OpenError](OpenError) has occurred when attempting
     /// to open the section.
     Open(OpenError),
 }

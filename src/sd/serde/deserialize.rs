@@ -139,7 +139,8 @@ impl<'a, 'de> VariantAccess<'de> for Enum<'a> {
     type Error = Error;
 
     fn unit_variant(self) -> Result<(), Self::Error> {
-        Err(Error::InvalidEnum) //This case should have been catched prior to calling this, if not then BPXSD enum deserialization in serde cannot be achieved
+        Err(Error::InvalidEnum) //This case should have been caught prior to calling this, if not
+        // then BPXSD enum deserialization in serde cannot be achieved.
     }
 
     fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
@@ -200,7 +201,7 @@ impl<'a, 'de> EnumAccess<'de> for Enum<'a> {
     }
 }
 
-/// An implementation of a `serde` deserializer for BPXSD [Value](crate::sd::Value).
+/// An implementation of a `serde` deserializer for BPXSD [Value](Value).
 pub struct Deserializer<'a> {
     enum_size: EnumSize,
     val: Cow<'a, Value>,
@@ -214,7 +215,7 @@ impl<'a> Deserializer<'a> {
     /// # Arguments
     ///
     /// * `enum_size`: The size of a Rust enum.
-    /// * `val`: The BPXSD [Value](crate::sd::Value) to deserialize.
+    /// * `val`: The BPXSD [Value](Value) to deserialize.
     ///
     /// returns: Deserializer
     pub fn new_borrowed(enum_size: EnumSize, val: &'a Value) -> Deserializer<'a> {
@@ -231,7 +232,7 @@ impl<'a> Deserializer<'a> {
     /// # Arguments
     ///
     /// * `enum_size`: The size of a Rust enum.
-    /// * `val`: The BPXSD [Value](crate::sd::Value) to deserialize.
+    /// * `val`: The BPXSD [Value](Value) to deserialize.
     ///
     /// returns: Deserializer
     pub fn new<T: Into<Value>>(enum_size: EnumSize, val: T) -> Deserializer<'a> {

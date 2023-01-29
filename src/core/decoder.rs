@@ -91,7 +91,7 @@ pub fn read_section_header_table<T: Read>(
     Ok((hdl, sections))
 }
 
-pub fn load_section1<T: io::Read + io::Seek>(
+pub fn load_section1<T: Read + Seek>(
     file: &mut T,
     section: &SectionHeader,
 ) -> Result<AutoSectionData> {
@@ -125,7 +125,7 @@ pub fn load_section1<T: io::Read + io::Seek>(
     Ok(data)
 }
 
-fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
+fn load_section_checked<TBackend: Read + Seek, TWrite: Write, TChecksum: Checksum>(
     file: &mut TBackend,
     section: &SectionHeader,
     out: TWrite,
@@ -141,7 +141,7 @@ fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum:
     Ok(())
 }
 
-fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
+fn load_section_uncompressed<TBackend: Read + Seek, TWrite: Write, TChecksum: Checksum>(
     bpx: &mut TBackend,
     header: &SectionHeader,
     mut output: TWrite,
@@ -164,7 +164,7 @@ fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChec
 
 fn load_section_compressed<
     TMethod: Inflater,
-    TBackend: io::Read + io::Seek,
+    TBackend: Read + Seek,
     TWrite: Write,
     TChecksum: Checksum,
 >(

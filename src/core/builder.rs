@@ -58,14 +58,14 @@ pub enum Checksum {
     /// *Not recommended for large or potentially large sections.*
     Weak,
 
-    /// Use a CRC32 algorithn to compute the checksum.
+    /// Use a CRC32 algorithm to compute the checksum.
     ///
-    /// *This is the prefered method for all large or potentially
+    /// *This is the preferred method for all large or potentially
     /// large sections.*
     Crc32,
 }
 
-/// Utility to easily generate a [SectionHeader](crate::core::header::SectionHeader).
+/// Utility to easily generate a [SectionHeader](SectionHeader).
 pub struct SectionHeaderBuilder {
     header: SectionHeader,
 }
@@ -141,7 +141,7 @@ impl SectionHeaderBuilder {
     ///
     /// # Arguments
     ///
-    /// * `method`: the [CompressionMethod](self::CompressionMethod) to use for saving this section.
+    /// * `method`: the [CompressionMethod](CompressionMethod) to use for saving this section.
     ///
     /// returns: SectionHeaderBuilder
     ///
@@ -186,7 +186,7 @@ impl SectionHeaderBuilder {
     ///     .compression(CompressionMethod::Zlib)
     ///     .threshold(0)
     ///     .build();
-    /// // The compression threshold value is stored in csize
+    /// // The compression threshold value is stored in csize.
     /// assert_eq!(header.csize, 0);
     /// ```
     pub fn threshold(&mut self, threshold: u32) -> &mut Self {
@@ -202,7 +202,7 @@ impl SectionHeaderBuilder {
     ///
     /// # Arguments
     ///
-    /// * `chksum`: the new [Checksum](self::Checksum) algorithm to use for data verification.
+    /// * `chksum`: the new [Checksum](Checksum) algorithm to use for data verification.
     ///
     /// returns: SectionHeaderBuilder
     ///
@@ -225,7 +225,7 @@ impl SectionHeaderBuilder {
         self
     }
 
-    /// Returns the generated [SectionHeader](crate::core::header::SectionHeader).
+    /// Returns the generated [SectionHeader](SectionHeader).
     ///
     /// # Examples
     ///
@@ -251,7 +251,7 @@ impl SectionHeaderBuilder {
     }
 }
 
-/// Utility to easily generate a [MainHeader](crate::core::header::MainHeader).
+/// Utility to easily generate a [MainHeader](MainHeader).
 pub struct MainHeaderBuilder {
     header: MainHeader,
 }
@@ -350,7 +350,7 @@ impl MainHeaderBuilder {
         self
     }
 
-    /// Returns the generated [MainHeader](crate::core::header::MainHeader).
+    /// Returns the generated [MainHeader](MainHeader).
     ///
     /// # Examples
     ///

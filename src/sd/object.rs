@@ -67,7 +67,7 @@ impl Object {
     /// # Arguments
     ///
     /// * `name`: the property name.
-    /// * `value`: the [Value](crate::sd::Value) to set.
+    /// * `value`: the [Value](Value) to set.
     ///
     /// # Examples
     ///

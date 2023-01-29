@@ -75,10 +75,10 @@ use crate::shader::{Target, Type};
 ///     }).unwrap();
 /// }
 /// bpxs.save().unwrap();
-/// //Reset our bytebuf pointer to start
+/// //Reset the byte buffer pointer to start.
 /// let mut bytebuf = bpxs.into_inner().into_inner();
 /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
-/// //Attempt decoding our in-memory BPXP
+/// //Attempt decoding the in-memory BPXS.
 /// let mut bpxs = ShaderPack::open(bytebuf).unwrap();
 /// let symbols = bpxs.symbols().unwrap();
 /// let shaders = bpxs.shaders();

@@ -268,7 +268,7 @@ impl<'a, T: Read + Seek> SymbolTableRef<'a, T> {
     /// # Errors
     ///
     /// If the [Object](crate::sd::Object) is not already loaded, returns an
-    /// [Error](crate::shader::error::Error) if the section couldn't be loaded
+    /// [Error](Error) if the section couldn't be loaded
     /// or the [Object](crate::sd::Object) couldn't be decoded.
     pub fn load_extended_data(&self, sym: &Symbol) -> Result<&crate::sd::Value> {
         self.table.load_extended_data(self.container, sym)
@@ -286,13 +286,13 @@ impl<'a, T> SymbolTableMut<'a, T> {
     ///
     /// # Arguments
     ///
-    /// * `sym`: An [Settings](crate::shader::symbol::Settings), see [Builder](crate::shader::symbol::Builder) for more information.
+    /// * `sym`: An [Settings](Settings), see [Builder](crate::shader::symbol::Builder) for more information.
     ///
     /// returns: Result<()>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::shader::error::Error) is returned if the symbol could not be
+    /// An [Error](Error) is returned if the symbol could not be
     /// written.
     pub fn create<S: Into<Settings>>(&mut self, sym: S) -> Result<usize> {
         self.table.create(self.container, sym)
@@ -463,7 +463,7 @@ impl<'a, T: Read + Seek> ShaderTableRef<'a, T> {
     ///
     /// # Errors
     ///
-    /// An [Error](crate::shader::error::Error) is returned if the shader could not be loaded.
+    /// An [Error](Error) is returned if the shader could not be loaded.
     pub fn load(&self, handle: &Handle) -> Result<&Shader> {
         self.table.load(self.container, handle)
     }
@@ -480,14 +480,13 @@ impl<'a, T> ShaderTableMut<'a, T> {
     ///
     /// # Arguments
     ///
-    /// * `shader`: the [Shader](crate::shader::Shader) to write.
+    /// * `shader`: the [Shader](Shader) to write.
     ///
     /// returns: Result<Handle, Error>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::shader::error::Error) is returned if the shader could not be
-    /// written.
+    /// An [Error](Error) is returned if the shader could not be written.
     pub fn create(&mut self, shader: Shader) -> Result<Handle> {
         self.table.create(self.container, shader)
     }

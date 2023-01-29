@@ -126,13 +126,13 @@ pub enum Value {
     /// f64 (0xB)
     Double(f64),
 
-    /// [String](std::string::String) (0xC)
+    /// [String](String) (0xC)
     String(String),
 
-    /// [Array](crate::sd::Array) (0xD)
+    /// [Array](Array) (0xD)
     Array(Array),
 
-    /// [Object](crate::sd::Object) (0xE)
+    /// [Object](Object) (0xE)
     Object(Object),
 }
 
@@ -185,7 +185,7 @@ impl Value {
     /// let mut obj = Object::new();
     /// obj.set("Test", 12.into());
     /// let mut buf = Vec::<u8>::new();
-    /// Value::from(obj).write(&mut buf);
+    /// Value::from(obj).write(&mut buf).unwrap();
     /// assert!(buf.len() > 0);
     /// ```
     pub fn write<TWrite: std::io::Write>(&self, dest: TWrite) -> super::Result<()> {
@@ -212,7 +212,7 @@ impl Value {
     /// let mut obj = Object::new();
     /// obj.set("Test", 12.into());
     /// let mut buf = Vec::<u8>::new();
-    /// Value::from(obj).write(&mut buf);
+    /// Value::from(obj).write(&mut buf).unwrap();
     /// let obj1 = Value::read(&mut buf.as_slice()).unwrap();
     /// assert!(obj1.as_object().unwrap().get("Test").is_some());
     /// assert!(obj1.as_object().unwrap().get("Test").unwrap() == &Value::from(12));

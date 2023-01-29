@@ -44,7 +44,7 @@ use crate::sd::{
 
 enum DebuggerOrObject {
     Debugger(ODebugger),
-    Object(crate::sd::Object),
+    Object(Object),
 }
 
 impl DebuggerOrObject {
@@ -58,21 +58,21 @@ impl DebuggerOrObject {
         }
     }
 
-    pub fn get(&self, key: &str) -> Option<&crate::sd::Value> {
+    pub fn get(&self, key: &str) -> Option<&Value> {
         match self {
             DebuggerOrObject::Debugger(v) => v.as_ref().get(key),
             DebuggerOrObject::Object(v) => v.get(key),
         }
     }
 
-    pub fn set(&mut self, key: &str, value: crate::sd::Value) {
+    pub fn set(&mut self, key: &str, value: Value) {
         match self {
             DebuggerOrObject::Debugger(v) => v.set(key, value),
             DebuggerOrObject::Object(v) => v.set(key, value),
         }
     }
 
-    pub fn into(self) -> crate::sd::Value {
+    pub fn into(self) -> Value {
         match self {
             DebuggerOrObject::Debugger(v) => v.detach().into(),
             DebuggerOrObject::Object(v) => v.into(),
@@ -282,7 +282,7 @@ impl SerializeStructVariant for Struct {
     }
 }
 
-/// An implementation of a `serde` serializer for BPXSD [Value](crate::sd::Value).
+/// An implementation of a `serde` serializer for BPXSD [Value](Value).
 pub struct Serializer {
     enum_size: EnumSize,
     debug: bool,

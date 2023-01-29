@@ -115,7 +115,7 @@ pub trait Struct<const S: usize> {
     ///
     /// # Errors
     ///
-    /// Returns an [Error](std::io::Error) if the data could not be
+    /// Returns an [Error](io::Error) if the data could not be
     /// written to the IO backend.
     fn write<TWriter: io::Write>(&self, writer: &mut TWriter) -> io::Result<()> {
         let buf = self.to_bytes();

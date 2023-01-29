@@ -55,7 +55,7 @@ pub trait SectionData: Read + Write + Seek + ReadToVec {
     ///
     /// let mut data = AutoSectionData::new();
     /// data.write_all(b"test").unwrap();
-    /// data.truncate(2);
+    /// data.truncate(2).unwrap();
     /// data.seek(SeekFrom::Start(0)).unwrap();
     /// let mut buf = [0; 4];
     /// data.read(&mut buf).unwrap();

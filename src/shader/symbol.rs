@@ -193,13 +193,13 @@ impl Item for Symbol {
 
 /// The required settings to create a new symbol.
 ///
-/// *This is intended to be generated with help of [Builder](crate::shader::symbol::Builder).*
+/// *This is intended to be generated with help of [Builder](Builder).*
 #[derive(Clone)]
 pub struct Settings {
     /// The name of the symbol.
     pub name: String,
 
-    /// The extended data [Value](crate::sd::Value) of the symbol.
+    /// The extended data [Value](Value) of the symbol.
     pub extended_data: Value,
 
     /// The symbol type.
@@ -212,7 +212,7 @@ pub struct Settings {
     pub register: u8,
 }
 
-/// Utility to simplify generation of [Settings](crate::shader::symbol::Settings) required when creating a new BPXS.
+/// Utility to simplify generation of [Settings](Settings) required when creating a new BPXS.
 pub struct Builder {
     sym: Settings,
 }
@@ -246,11 +246,11 @@ impl Builder {
     /// Defines the extended data for this symbol.
     ///
     /// *This function automatically adds the
-    /// [FLAG_EXTENDED_DATA](crate::shader::symbol::FLAG_EXTENDED_DATA) flag.*
+    /// [FLAG_EXTENDED_DATA](FLAG_EXTENDED_DATA) flag.*
     ///
     /// # Arguments
     ///
-    /// * `val`: A [Value](crate::sd::Value) to store as extended data.
+    /// * `val`: A [Value](Value) to store as extended data.
     ///
     /// returns: &mut Builder
     pub fn extended_data(&mut self, val: Value) -> &mut Self {
@@ -261,7 +261,7 @@ impl Builder {
 
     /// Defines the register number of this symbol.
     ///
-    /// *This function automatically adds the [FLAG_REGISTER](crate::shader::symbol::FLAG_REGISTER)
+    /// *This function automatically adds the [FLAG_REGISTER](FLAG_REGISTER)
     /// flag.*
     ///
     /// # Arguments
@@ -277,7 +277,7 @@ impl Builder {
 
     /// Marks this symbol as internal.
     ///
-    /// *Adds the [FLAG_INTERNAL](crate::shader::symbol::FLAG_INTERNAL).*
+    /// *Adds the [FLAG_INTERNAL](FLAG_INTERNAL).*
     pub fn internal(&mut self) -> &mut Self {
         self.sym.flags |= FLAG_INTERNAL;
         self
@@ -285,7 +285,7 @@ impl Builder {
 
     /// Marks this symbol as external.
     ///
-    /// *Adds the [FLAG_EXTERNAL](crate::shader::symbol::FLAG_EXTERNAL).*
+    /// *Adds the [FLAG_EXTERNAL](FLAG_EXTERNAL).*
     pub fn external(&mut self) -> &mut Self {
         self.sym.flags |= FLAG_EXTERNAL;
         self
@@ -293,7 +293,7 @@ impl Builder {
 
     /// Marks this symbol as being part of an assembly.
     ///
-    /// *Adds the [FLAG_ASSEMBLY](crate::shader::symbol::FLAG_ASSEMBLY).*
+    /// *Adds the [FLAG_ASSEMBLY](FLAG_ASSEMBLY).*
     pub fn assembly(&mut self) -> &mut Self {
         self.sym.flags |= FLAG_ASSEMBLY;
         self
