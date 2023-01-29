@@ -17,9 +17,9 @@ fn attempt_write_empty_bpxp() {
     {
         let file = File::open(Path::new("./the_very_first_bpx.bpx")).unwrap();
         let container = Container::open(file).unwrap();
-        assert_eq!(container.get_main_header().section_num, 0);
-        assert_eq!(container.get_main_header().version, BPX_CURRENT_VERSION);
-        assert_eq!(container.get_main_header().file_size, 40);
+        assert_eq!(container.main_header().section_num, 0);
+        assert_eq!(container.main_header().version, BPX_CURRENT_VERSION);
+        assert_eq!(container.main_header().file_size, 40);
     }
 }
 

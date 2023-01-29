@@ -261,10 +261,10 @@ impl<T> SectionTable<T> {
     /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
     /// let section = file.sections_mut().create(SectionHeaderBuilder::new());
     /// file.save();
-    /// assert_eq!(file.get_main_header().section_num, 1);
+    /// assert_eq!(file.main_header().section_num, 1);
     /// file.sections_mut().remove(section);
     /// file.save();
-    /// assert_eq!(file.get_main_header().section_num, 0);
+    /// assert_eq!(file.main_header().section_num, 0);
     /// ```
     pub fn remove(&mut self, handle: Handle) {
         self.sections.remove(&handle.0);

@@ -51,7 +51,7 @@ pub trait Struct<const S: usize> {
     /// The type of error to return if this structure failed to read.
     ///
     /// *Must be constructable from io::Error to satisfy the Read function*
-    type Error: From<std::io::Error>;
+    type Error: From<io::Error>;
 
     /// Creates a new empty structure.
     fn new() -> Self;
@@ -217,7 +217,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader {
     fn new() -> Self {
         MainHeader {
             signature: *b"BPX",                 //+0
-            ty: b'P',                           //+3
+            ty: 0,                              //+3
             chksum: 0,                          //+4
             file_size: SIZE_MAIN_HEADER as u64, //+8
             section_num: 0,                     //+16

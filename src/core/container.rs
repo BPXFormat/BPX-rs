@@ -55,7 +55,16 @@ impl<T> Container<T> {
     ///
     /// # Arguments
     ///
-    /// * `main_header`: the new [MainHeader](crate::core::header::MainHeader).
+    /// * `main_header`: the new [MainHeader](MainHeader).
+    #[deprecated(note="use `main_header_mut`")]
+    pub fn set_main_header<H: Into<MainHeader>>(&mut self, main_header: H) {
+        self.main_header = main_header.into();
+        self.main_header_modified = true;
+    }
+
+    /// Returns a mutable reference to the main header.
+    ///
+    /// **NOTE: This function marks the BPX Main Header as changed.**
     ///
     /// # Examples
     ///
@@ -65,12 +74,12 @@ impl<T> Container<T> {
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// file.set_main_header(MainHeaderBuilder::new().ty(1));
-    /// assert_eq!(file.get_main_header().ty, 1);
+    /// *file.main_header_mut() = MainHeaderBuilder::new().ty(1).into();
+    /// assert_eq!(file.main_header().ty, 1);
     /// ```
-    pub fn set_main_header<H: Into<MainHeader>>(&mut self, main_header: H) {
-        self.main_header = main_header.into();
+    pub fn main_header_mut(&mut self) -> &mut MainHeader {
         self.main_header_modified = true;
+        &mut self.main_header
     }
 
     /// Returns a read-only reference to the BPX main header.
@@ -83,10 +92,16 @@ impl<T> Container<T> {
     /// use bpx::utils::new_byte_buf;
     ///
     /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// let header = file.get_main_header();
-    /// //Default BPX variant/type is 'P'
-    /// assert_eq!(header.ty, 'P' as u8);
+    /// let header = file.main_header();
+    /// //Default BPX variant/type is 0.
+    /// assert_eq!(header.ty, 0);
     /// ```
+    pub fn main_header(&self) -> &MainHeader {
+        &self.main_header
+    }
+
+    /// Returns a read-only reference to the BPX main header.
+    #[deprecated(note="use `main_header`")]
     pub fn get_main_header(&self) -> &MainHeader {
         &self.main_header
     }
@@ -112,7 +127,7 @@ impl<T: io::Read + io::Seek> Container<T> {
     ///
     /// # Arguments
     ///
-    /// * `backend`: A [Read](std::io::Read) + [Seek](std::io::Seek) backend to use for reading the BPX container.
+    /// * `backend`: A [Read](io::Read) + [Seek](io::Seek) backend to use for reading the BPX container.
     ///
     /// returns: Result<Decoder<TBackend>>
     ///
@@ -133,8 +148,8 @@ impl<T: io::Read + io::Seek> Container<T> {
     /// let mut buf = file.into_inner();
     /// buf.set_position(0);
     /// let file = Container::open(buf).unwrap();
-    /// //Default BPX variant/type is 'P'
-    /// assert_eq!(file.get_main_header().ty, 'P' as u8);
+    /// //Default BPX variant/type is 0.
+    /// assert_eq!(file.main_header().ty, 0);
     /// ```
     pub fn open(mut backend: T) -> Result<Container<T>> {
         let (checksum, header) = MainHeader::read(&mut backend)?;
@@ -158,8 +173,8 @@ impl<T: io::Write + io::Seek> Container<T> {
     ///
     /// # Arguments
     ///
-    /// * `backend`: A [Write](std::io::Write) + [Seek](std::io::Seek) backend to use for writing the BPX container.
-    /// * `header`: The [MainHeader](crate::core::header::MainHeader) to initialize the new container.
+    /// * `backend`: A [Write](io::Write) + [Seek](io::Seek) backend to use for writing the BPX container.
+    /// * `header`: The [MainHeader](MainHeader) to initialize the new container.
     ///
     /// returns: Container<T>
     ///
@@ -171,9 +186,9 @@ impl<T: io::Write + io::Seek> Container<T> {
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// assert_eq!(file.get_main_header().section_num, 0);
-    /// //Default BPX variant/type is 'P'
-    /// assert_eq!(file.get_main_header().ty, 'P' as u8);
+    /// assert_eq!(file.main_header().section_num, 0);
+    /// //Default BPX variant/type is 0.
+    /// assert_eq!(file.main_header().ty, 0);
     /// ```
     pub fn create<H: Into<MainHeader>>(backend: T, header: H) -> Container<T> {
         Container {
