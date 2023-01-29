@@ -47,6 +47,8 @@ use crate::{
     strings::StringSection,
     table::NamedItemTable,
 };
+use crate::package::{Architecture, Platform};
+use crate::shader::SECTION_TYPE_EXTENDED_DATA;
 
 /// A BPXP (Package).
 ///
@@ -96,8 +98,19 @@ pub struct Package<T> {
 
 impl<T> Package<T> {
     /// Gets the settings of this package.
+    #[deprecated(note="use `settings` or `settings_mut`")]
     pub fn get_settings(&self) -> &Settings {
         &self.settings
+    }
+
+    /// Returns a reference to the settings of this package.
+    pub fn settings(&self) -> &Settings {
+        &self.settings
+    }
+
+    /// Returns a mutable reference to the settings of this package.
+    pub fn settings_mut(&mut self) -> &mut Settings {
+        &mut self.settings
     }
 
     /// Consumes this Package and returns the inner BPX container.
@@ -117,29 +130,110 @@ impl<T> Package<T> {
     }
 }
 
+impl<T> TryFrom<Container<T>> for Package<T> {
+    type Error = Error;
+
+    fn try_from(mut container: Container<T>) -> std::result::Result<Self, Self::Error> {
+        match container.main_header().ty == b'P' {
+            true => {
+                if container.main_header().version != SUPPORTED_VERSION {
+                    return Err(Error::BadVersion {
+                        supported: SUPPORTED_VERSION,
+                        actual: container.main_header().version,
+                    });
+                }
+                let (a, p) = get_arch_platform_from_code(
+                    container.main_header().type_ext[0],
+                    container.main_header().type_ext[1],
+                )?;
+                let object_table = match container.sections().find_by_type(SECTION_TYPE_OBJECT_TABLE) {
+                    Some(v) => v,
+                    None => return Err(Error::MissingSection(Section::ObjectTable)),
+                };
+                Ok(Self {
+                    settings: Settings {
+                        metadata: Value::Null,
+                        architecture: a,
+                        platform: p,
+                        type_code: [
+                            container.main_header().type_ext[2],
+                            container.main_header().type_ext[3],
+                        ],
+                    },
+                    object_table,
+                    container,
+                    table: OnceCell::new(),
+                    metadata: OnceCell::new(),
+                })
+            },
+            false => {
+                container.main_header_mut().ty = b'P';
+                container.main_header_mut().version = SUPPORTED_VERSION;
+                let object_table = container.sections_mut().create(
+                    SectionHeaderBuilder::new()
+                        .checksum(Checksum::Weak)
+                        .compression(CompressionMethod::Zlib)
+                        .ty(SECTION_TYPE_OBJECT_TABLE),
+                );
+                let string_section = container.sections_mut().create(
+                    SectionHeaderBuilder::new()
+                        .checksum(Checksum::Weak)
+                        .compression(CompressionMethod::Zlib)
+                        .ty(SECTION_TYPE_STRING),
+                );
+                let strings = StringSection::new(string_section);
+                let (a, p) = get_arch_platform_from_code(
+                    container.main_header().type_ext[0],
+                    container.main_header().type_ext[1],
+                ).unwrap_or((Architecture::Any, Platform::Any));
+                Ok(Package {
+                    metadata: OnceCell::new(),
+                    settings: Settings {
+                        metadata: Value::Null,
+                        architecture: a,
+                        platform: p,
+                        type_code: [
+                            container.main_header().type_ext[2],
+                            container.main_header().type_ext[3],
+                        ],
+                    },
+                    container,
+                    object_table,
+                    table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings)),
+                })
+            }
+        }
+    }
+}
+
 impl<T: Write + Seek> Package<T> {
     /// Creates a new BPX type P.
     ///
     /// # Arguments
     ///
-    /// * `backend`: A [Write](std::io::Write) + [Seek](std::io::Seek) to use as backend.
+    /// * `backend`: A [Write](Write) + [Seek](Seek) to use as backend.
     /// * `settings`: The package creation settings.
     ///
     /// returns: Result<Package<T>>
     ///
     /// # Errors
     ///
-    /// Returns an [Error](crate::package::error::Error) if the metadata couldn't be created.
+    /// Returns an [Error](Error) if the metadata couldn't be created.
     ///
     /// # Examples
     ///
     /// ```
+    /// use bpx::core::builder::MainHeaderBuilder;
+    /// use bpx::core::Container;
     /// use bpx::package::Builder;
     /// use bpx::package::Package;
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut bpxp = Package::create(new_byte_buf(0), Builder::new()).unwrap();
-    /// bpxp.save();
+    /// bpxp.save().unwrap();
+    /// assert!(!bpxp.into_inner().into_inner().into_inner().is_empty());
+    /// let mut bpxp = Package::try_from(Container::create(new_byte_buf(0), MainHeaderBuilder::new())).unwrap();
+    /// bpxp.save().unwrap();
     /// assert!(!bpxp.into_inner().into_inner().into_inner().is_empty());
     /// ```
     pub fn create<S: Into<Settings>>(backend: T, settings: S) -> Result<Package<T>> {
@@ -187,9 +281,35 @@ impl<T: Write + Seek> Package<T> {
     ///
     /// # Errors
     ///
-    /// Returns an [Error](crate::package::error::Error) if some parts of this package
+    /// Returns an [Error](Error) if some parts of this package
     /// couldn't be saved.
     pub fn save(&mut self) -> Result<()> {
+        //Update metadata section if changed
+        if let Some(metadata) = self.metadata.get() {
+            if metadata != &self.settings.metadata {
+                if !self.settings.metadata.is_null() {
+                    let handle = self.container.sections().find_by_type(SECTION_TYPE_EXTENDED_DATA)
+                        .unwrap_or_else(|| self.container.sections_mut().create(SectionHeaderBuilder::new()
+                            .checksum(Checksum::Weak)
+                            .compression(CompressionMethod::Zlib)
+                            .ty(SECTION_TYPE_SD)));
+                    let mut section = self.container.sections().open(handle)?;
+                    self.settings.metadata.write(&mut *section)?;
+                } else {
+                    if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_EXTENDED_DATA) {
+                        self.container.sections_mut().remove(handle);
+                    }
+                }
+                self.metadata = OnceCell::from(self.settings.metadata.clone());
+            }
+        }
+        {
+            //Update type ext if changed
+            let data = get_type_ext(&self.settings);
+            if data != self.container.main_header().type_ext {
+                self.container.main_header_mut().type_ext = data;
+            }
+        }
         {
             let mut section = self.container.sections().open(self.object_table)?;
             section.seek(SeekFrom::Start(0))?;
@@ -209,13 +329,13 @@ impl<T: Read + Seek> Package<T> {
     ///
     /// # Arguments
     ///
-    /// * `backend`: A [Read](std::io::Read) + [Seek](std::io::Seek) to use as backend.
+    /// * `backend`: A [Read](Read) + [Seek](Seek) to use as backend.
     ///
     /// returns: Result<PackageDecoder<TBackend>>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::package::error::Error) is returned if some
+    /// An [Error](Error) is returned if some
     /// sections/headers could not be loaded.
     ///
     /// # Examples
@@ -226,7 +346,7 @@ impl<T: Read + Seek> Package<T> {
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut bpxp = Package::create(new_byte_buf(0), Builder::new()).unwrap();
-    /// bpxp.save();
+    /// bpxp.save().unwrap();
     /// let mut buf = bpxp.into_inner().into_inner();
     /// buf.set_position(0);
     /// let mut bpxp = Package::open(buf).unwrap();
@@ -235,41 +355,13 @@ impl<T: Read + Seek> Package<T> {
     /// ```
     pub fn open(backend: T) -> Result<Package<T>> {
         let container = Container::open(backend)?;
-        if container.get_main_header().ty != b'P' {
+        if container.main_header().ty != b'P' {
             return Err(Error::BadType {
                 expected: b'P',
-                actual: container.get_main_header().ty,
+                actual: container.main_header().ty,
             });
         }
-        if container.get_main_header().version != SUPPORTED_VERSION {
-            return Err(Error::BadVersion {
-                supported: SUPPORTED_VERSION,
-                actual: container.get_main_header().version,
-            });
-        }
-        let (a, p) = get_arch_platform_from_code(
-            container.get_main_header().type_ext[0],
-            container.get_main_header().type_ext[1],
-        )?;
-        let object_table = match container.sections().find_by_type(SECTION_TYPE_OBJECT_TABLE) {
-            Some(v) => v,
-            None => return Err(Error::MissingSection(Section::ObjectTable)),
-        };
-        Ok(Self {
-            settings: Settings {
-                metadata: Value::Null,
-                architecture: a,
-                platform: p,
-                type_code: [
-                    container.get_main_header().type_ext[2],
-                    container.get_main_header().type_ext[3],
-                ],
-            },
-            object_table,
-            container,
-            table: OnceCell::new(),
-            metadata: OnceCell::new(),
-        })
+        Self::try_from(container)
     }
 
     fn load_object_table(&self) -> Result<ObjectTable> {
@@ -304,7 +396,7 @@ impl<T: Read + Seek> Package<T> {
     ///
     /// # Errors
     ///
-    /// An [Error](crate::package::error::Error) is returned in case of corruption or system error.
+    /// An [Error](Error) is returned in case of corruption or system error.
     pub fn load_metadata(&self) -> Result<&Value> {
         if self.metadata.get().is_none() {
             let res = match self.container.sections().find_by_type(SECTION_TYPE_SD) {
