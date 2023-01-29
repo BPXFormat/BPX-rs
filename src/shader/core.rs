@@ -28,7 +28,7 @@
 
 use std::io::{Read, Seek, SeekFrom, Write};
 
-use byteorder::{ByteOrder, LittleEndian};
+use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use once_cell::unsync::OnceCell;
 
 use crate::{
@@ -49,6 +49,7 @@ use crate::{
     strings::StringSection,
     table::NamedItemTable,
 };
+use crate::shader::{Target, Type};
 
 /// A BPXS (ShaderPack).
 ///
@@ -73,7 +74,7 @@ use crate::{
 ///         data: Vec::new()
 ///     }).unwrap();
 /// }
-/// bpxs.save();
+/// bpxs.save().unwrap();
 /// //Reset our bytebuf pointer to start
 /// let mut bytebuf = bpxs.into_inner().into_inner();
 /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
@@ -100,8 +101,19 @@ pub struct ShaderPack<T> {
 
 impl<T> ShaderPack<T> {
     /// Returns the shader package settings.
+    #[deprecated(note="use `settings` or `settings_mut`")]
     pub fn get_settings(&self) -> &Settings {
         &self.settings
+    }
+
+    /// Returns a reference to the settings of this package.
+    pub fn settings(&self) -> &Settings {
+        &self.settings
+    }
+
+    /// Returns a mutable reference to the settings of this package.
+    pub fn settings_mut(&mut self) -> &mut Settings {
+        &mut self.settings
     }
 
     /// Consumes this ShaderPack and returns the BPX container.
@@ -110,11 +122,9 @@ impl<T> ShaderPack<T> {
     }
 
     /// Sets the assembly hash of this shader package.
+    #[deprecated(note="use `settings_mut` and set the `assembly_hash` field")]
     pub fn set_assembly(&mut self, hash: u64) {
         self.settings.assembly_hash = hash;
-        let mut header = *self.container.get_main_header();
-        LittleEndian::write_u64(&mut header.type_ext[0..8], hash);
-        self.container.set_main_header(header);
     }
 
     /// Returns a guard for mutable access to the symbol table.
@@ -168,12 +178,85 @@ impl<T> ShaderPack<T> {
     }
 }
 
+impl<T> TryFrom<Container<T>> for ShaderPack<T> {
+    type Error = Error;
+
+    fn try_from(mut container: Container<T>) -> std::result::Result<Self, Self::Error> {
+        match container.main_header().ty == b'S' {
+            true => {
+                if container.main_header().version != SUPPORTED_VERSION {
+                    return Err(Error::BadVersion {
+                        supported: SUPPORTED_VERSION,
+                        actual: container.main_header().version,
+                    });
+                }
+                let assembly_hash = (&container.main_header().type_ext[0..8]).read_u64::<LittleEndian>()?;
+                let (target, ty) = get_target_type_from_code(
+                    container.main_header().type_ext[10],
+                    container.main_header().type_ext[11],
+                )?;
+                let symbol_table = match container.sections().find_by_type(SECTION_TYPE_SYMBOL_TABLE) {
+                    Some(v) => v,
+                    None => return Err(Error::MissingSection(Section::SymbolTable)),
+                };
+                Ok(Self {
+                    settings: Settings {
+                        assembly_hash,
+                        target,
+                        ty,
+                    },
+                    symbol_table,
+                    extended_data: container
+                        .sections()
+                        .find_by_type(SECTION_TYPE_EXTENDED_DATA),
+                    container,
+                    symbols: OnceCell::new(),
+                    shaders: OnceCell::new(),
+                })
+            },
+            false => {
+                container.main_header_mut().ty = b'S';
+                container.main_header_mut().version = SUPPORTED_VERSION;
+                let string_section = container.sections_mut().create(
+                    SectionHeaderBuilder::new()
+                        .checksum(Checksum::Weak)
+                        .compression(CompressionMethod::Zlib)
+                        .ty(SECTION_TYPE_STRING),
+                );
+                let symbol_table = container.sections_mut().create(
+                    SectionHeaderBuilder::new()
+                        .checksum(Checksum::Weak)
+                        .compression(CompressionMethod::Zlib)
+                        .ty(SECTION_TYPE_SYMBOL_TABLE),
+                );
+                let strings = StringSection::new(string_section);
+                let (target, ty) = get_target_type_from_code(
+                    container.main_header().type_ext[10],
+                    container.main_header().type_ext[11],
+                ).unwrap_or((Target::Any, Type::Pipeline));
+                Ok(Self {
+                    container,
+                    settings: Settings {
+                        assembly_hash: 0,
+                        target,
+                        ty
+                    },
+                    symbol_table,
+                    symbols: OnceCell::from(SymbolTable::new(NamedItemTable::empty(), strings, None)),
+                    shaders: OnceCell::from(ShaderTable::new(Vec::new())),
+                    extended_data: None,
+                })
+            }
+        }
+    }
+}
+
 impl<T: Write + Seek> ShaderPack<T> {
     /// Creates a BPX type S.
     ///
     /// # Arguments
     ///
-    /// * `backend`: A [Write](std::io::Write) + [Seek](std::io::Seek) to use as backend.
+    /// * `backend`: A [Write](Write) + [Seek](Seek) to use as backend.
     /// * `settings`: The shader package creation settings.
     ///
     /// returns: ShaderPack<T>
@@ -181,12 +264,17 @@ impl<T: Write + Seek> ShaderPack<T> {
     /// # Examples
     ///
     /// ```
+    /// use bpx::core::builder::MainHeaderBuilder;
+    /// use bpx::core::Container;
     /// use bpx::shader::Builder;
     /// use bpx::shader::ShaderPack;
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut bpxs = ShaderPack::create(new_byte_buf(0), Builder::new());
-    /// bpxs.save();
+    /// bpxs.save().unwrap();
+    /// assert!(!bpxs.into_inner().into_inner().into_inner().is_empty());
+    /// let mut bpxs = ShaderPack::try_from(Container::create(new_byte_buf(0), MainHeaderBuilder::new())).unwrap();
+    /// bpxs.save().unwrap();
     /// assert!(!bpxs.into_inner().into_inner().into_inner().is_empty());
     /// ```
     pub fn create<S: Into<Settings>>(backend: T, settings: S) -> ShaderPack<T> {
@@ -211,7 +299,7 @@ impl<T: Write + Seek> ShaderPack<T> {
                 .ty(SECTION_TYPE_SYMBOL_TABLE),
         );
         let strings = StringSection::new(string_section);
-        ShaderPack {
+        Self {
             container,
             settings,
             symbol_table,
@@ -225,13 +313,18 @@ impl<T: Write + Seek> ShaderPack<T> {
     ///
     /// # Errors
     ///
-    /// Returns an [Error](crate::shader::error::Error) if some parts of this shader
+    /// Returns an [Error](Error) if some parts of this shader
     /// package couldn't be saved.
     pub fn save(&mut self) -> Result<()> {
+        {
+            //Update type ext if changed
+            let data = get_type_ext(&self.settings);
+            if data != self.container.main_header().type_ext {
+                self.container.main_header_mut().type_ext = data;
+            }
+        }
         if let Some(syms) = self.symbols.get() {
-            let mut header = *self.container.get_main_header();
-            LittleEndian::write_u16(&mut header.type_ext[8..10], syms.len() as u16);
-            self.container.set_main_header(header);
+            (&mut self.container.main_header_mut().type_ext[8..10]).write_u16::<LittleEndian>(syms.len() as _)?;
             let mut section = self.container.sections().open(self.symbol_table)?;
             section.seek(SeekFrom::Start(0))?;
             for v in syms {
@@ -248,13 +341,13 @@ impl<T: Read + Seek> ShaderPack<T> {
     ///
     /// # Arguments
     ///
-    /// * `backend`: A [Read](std::io::Read) + [Seek](std::io::Seek) to use as backend.
+    /// * `backend`: A [Read](Read) + [Seek](Seek) to use as backend.
     ///
     /// returns: Result<ShaderPack<T>>
     ///
     /// # Errors
     ///
-    /// An [Error](crate::shader::error::Error) is returned if some
+    /// An [Error](Error) is returned if some
     /// sections/headers could not be loaded.
     ///
     /// # Examples
@@ -265,7 +358,7 @@ impl<T: Read + Seek> ShaderPack<T> {
     /// use bpx::utils::new_byte_buf;
     ///
     /// let mut bpxs = ShaderPack::create(new_byte_buf(0), Builder::new());
-    /// bpxs.save();
+    /// bpxs.save().unwrap();
     /// let mut buf = bpxs.into_inner().into_inner();
     /// buf.set_position(0);
     /// let mut bpxs = ShaderPack::open(buf).unwrap();
@@ -274,41 +367,13 @@ impl<T: Read + Seek> ShaderPack<T> {
     /// ```
     pub fn open(backend: T) -> Result<ShaderPack<T>> {
         let container = Container::open(backend)?;
-        if container.get_main_header().ty != b'S' {
+        if container.main_header().ty != b'S' {
             return Err(Error::BadType {
                 expected: b'S',
-                actual: container.get_main_header().ty,
+                actual: container.main_header().ty,
             });
         }
-        if container.get_main_header().version != SUPPORTED_VERSION {
-            return Err(Error::BadVersion {
-                supported: SUPPORTED_VERSION,
-                actual: container.get_main_header().version,
-            });
-        }
-        let assembly_hash = LittleEndian::read_u64(&container.get_main_header().type_ext[0..8]);
-        let (target, ty) = get_target_type_from_code(
-            container.get_main_header().type_ext[10],
-            container.get_main_header().type_ext[11],
-        )?;
-        let symbol_table = match container.sections().find_by_type(SECTION_TYPE_SYMBOL_TABLE) {
-            Some(v) => v,
-            None => return Err(Error::MissingSection(Section::SymbolTable)),
-        };
-        Ok(Self {
-            settings: Settings {
-                assembly_hash,
-                target,
-                ty,
-            },
-            symbol_table,
-            extended_data: container
-                .sections()
-                .find_by_type(SECTION_TYPE_EXTENDED_DATA),
-            container,
-            symbols: OnceCell::new(),
-            shaders: OnceCell::new(),
-        })
+        Self::try_from(container)
     }
 
     fn load_symbol_table(&self) -> Result<SymbolTable> {
@@ -318,7 +383,7 @@ impl<T: Read + Seek> ShaderPack<T> {
             .find_by_type(SECTION_TYPE_STRING)
             .ok_or(Error::MissingSection(Section::Strings))?;
         let strings = StringSection::new(handle);
-        let num_symbols = LittleEndian::read_u16(&self.container.get_main_header().type_ext[8..10]);
+        let num_symbols = LittleEndian::read_u16(&self.container.main_header().type_ext[8..10]);
         let table = read_symbol_table(&self.container, num_symbols, self.symbol_table)?;
         Ok(SymbolTable::new(table, strings, self.extended_data))
     }
@@ -329,7 +394,7 @@ impl<T: Read + Seek> ShaderPack<T> {
     ///
     /// # Errors
     ///
-    /// An [Error](crate::shader::error::Error) is returned if the symbol table could not be
+    /// An [Error](Error) is returned if the symbol table could not be
     /// loaded.
     pub fn symbols(&self) -> Result<SymbolTableRef<T>> {
         let table = self.symbols.get_or_try_init(|| self.load_symbol_table())?;
