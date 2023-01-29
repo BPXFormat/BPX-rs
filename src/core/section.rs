@@ -158,7 +158,7 @@ impl<T> SectionTable<T> {
     ///
     /// * `handle`: a handle to the section.
     ///
-    /// returns: Result<RefMut<AutoSectionData>, OpenError>
+    /// returns: `Result<RefMut<AutoSectionData>, OpenError>`
     ///
     /// # Panics
     ///
@@ -316,7 +316,7 @@ impl<T> SectionTable<T> {
     ///
     /// * `ty`: section type byte.
     ///
-    /// returns: Option<Handle>
+    /// returns: `Option<Handle>`
     ///
     /// # Examples
     ///
@@ -344,7 +344,7 @@ impl<T> SectionTable<T> {
     ///
     /// * `index`: the section index to search for.
     ///
-    /// returns: Option<Handle>
+    /// returns: `Option<Handle>`
     ///
     /// # Examples
     ///

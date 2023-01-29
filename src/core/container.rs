@@ -129,7 +129,7 @@ impl<T: io::Read + io::Seek> Container<T> {
     ///
     /// * `backend`: A [Read](io::Read) + [Seek](io::Seek) backend to use for reading the BPX container.
     ///
-    /// returns: Result<Decoder<TBackend>>
+    /// returns: `Result<Decoder<TBackend>>`
     ///
     /// # Errors
     ///
@@ -176,7 +176,7 @@ impl<T: io::Write + io::Seek> Container<T> {
     /// * `backend`: A [Write](io::Write) + [Seek](io::Seek) backend to use for writing the BPX container.
     /// * `header`: The [MainHeader](MainHeader) to initialize the new container.
     ///
-    /// returns: Container<T>
+    /// returns: `Container<T>`
     ///
     /// # Examples
     ///

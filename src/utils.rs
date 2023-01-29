@@ -109,7 +109,7 @@ pub fn hash(s: &str) -> u64 {
 ///
 /// * `size`: the initial size of the buffer; if not known use 0.
 ///
-/// returns: Cursor<Vec<u8>>
+/// returns: `Cursor<Vec<u8>>`
 pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>> {
     if size > 0 {
         return Cursor::new(Vec::with_capacity(size));
