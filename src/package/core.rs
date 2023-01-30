@@ -48,7 +48,6 @@ use crate::{
     table::NamedItemTable,
 };
 use crate::package::{Architecture, Platform};
-use crate::shader::SECTION_TYPE_EXTENDED_DATA;
 
 /// A BPXP (Package).
 ///
@@ -288,7 +287,7 @@ impl<T: Write + Seek> Package<T> {
         if let Some(metadata) = self.metadata.get() {
             if metadata != &self.settings.metadata {
                 if !self.settings.metadata.is_null() {
-                    let handle = self.container.sections().find_by_type(SECTION_TYPE_EXTENDED_DATA)
+                    let handle = self.container.sections().find_by_type(SECTION_TYPE_SD)
                         .unwrap_or_else(|| self.container.sections_mut().create(SectionHeaderBuilder::new()
                             .checksum(Checksum::Weak)
                             .compression(CompressionMethod::Zlib)
@@ -296,7 +295,7 @@ impl<T: Write + Seek> Package<T> {
                     let mut section = self.container.sections().open(handle)?;
                     self.settings.metadata.write(&mut *section)?;
                 } else {
-                    if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_EXTENDED_DATA) {
+                    if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_SD) {
                         self.container.sections_mut().remove(handle);
                     }
                 }
