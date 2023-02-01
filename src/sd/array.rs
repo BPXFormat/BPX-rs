@@ -32,6 +32,7 @@ use std::{
     slice::Iter,
     vec::Vec,
 };
+use std::vec::IntoIter;
 
 use crate::sd::Value;
 
@@ -143,6 +144,15 @@ impl<'a> IntoIterator for &'a Array {
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
+    }
+}
+
+impl IntoIterator for Array {
+    type Item = Value;
+    type IntoIter = IntoIter<Value>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
