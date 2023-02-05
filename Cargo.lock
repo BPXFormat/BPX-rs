@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "bpx"
-version = "4.0.0-beta-8.1.0"
+version = "4.0.0-rc.8.2.0"
 dependencies = [
  "byteorder",
  "elsa",
