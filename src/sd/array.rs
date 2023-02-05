@@ -26,13 +26,13 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use std::vec::IntoIter;
 use std::{
     borrow::{Borrow, BorrowMut},
     ops::{Deref, DerefMut, Index, IndexMut},
     slice::Iter,
     vec::Vec,
 };
-use std::vec::IntoIter;
 
 use crate::sd::Value;
 

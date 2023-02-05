@@ -30,6 +30,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 
 use once_cell::unsync::OnceCell;
 
+use crate::package::{Architecture, Platform};
 use crate::{
     core::{
         builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
@@ -47,7 +48,6 @@ use crate::{
     strings::StringSection,
     table::NamedItemTable,
 };
-use crate::package::{Architecture, Platform};
 
 /// A BPXP (Package).
 ///
@@ -185,7 +185,8 @@ impl<T> TryFrom<Container<T>> for Package<T> {
                 let (a, p) = get_arch_platform_from_code(
                     container.main_header().type_ext[0],
                     container.main_header().type_ext[1],
-                ).unwrap_or((Architecture::Any, Platform::Any));
+                )
+                .unwrap_or((Architecture::Any, Platform::Any));
                 Ok(Package {
                     metadata: OnceCell::new(),
                     settings: Settings {
@@ -201,7 +202,7 @@ impl<T> TryFrom<Container<T>> for Package<T> {
                     object_table,
                     table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings)),
                 })
-            }
+            },
         }
     }
 }
@@ -288,11 +289,18 @@ impl<T: Write + Seek> Package<T> {
         if let Some(metadata) = self.metadata.get() {
             if metadata != &self.settings.metadata {
                 if !self.settings.metadata.is_null() {
-                    let handle = self.container.sections().find_by_type(SECTION_TYPE_SD)
-                        .unwrap_or_else(|| self.container.sections_mut().create(SectionHeaderBuilder::new()
-                            .checksum(Checksum::Weak)
-                            .compression(CompressionMethod::Zlib)
-                            .ty(SECTION_TYPE_SD)));
+                    let handle = self
+                        .container
+                        .sections()
+                        .find_by_type(SECTION_TYPE_SD)
+                        .unwrap_or_else(|| {
+                            self.container.sections_mut().create(
+                                SectionHeaderBuilder::new()
+                                    .checksum(Checksum::Weak)
+                                    .compression(CompressionMethod::Zlib)
+                                    .ty(SECTION_TYPE_SD),
+                            )
+                        });
                     let mut section = self.container.sections().open(handle)?;
                     self.settings.metadata.write(&mut *section)?;
                 } else {
