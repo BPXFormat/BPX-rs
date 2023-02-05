@@ -56,7 +56,7 @@ impl<T> Container<T> {
     /// # Arguments
     ///
     /// * `main_header`: the new [MainHeader](MainHeader).
-    #[deprecated(note="use `main_header_mut`")]
+    #[deprecated(note = "use `main_header_mut`")]
     pub fn set_main_header<H: Into<MainHeader>>(&mut self, main_header: H) {
         self.main_header = main_header.into();
         self.main_header_modified = true;
@@ -101,7 +101,7 @@ impl<T> Container<T> {
     }
 
     /// Returns a read-only reference to the BPX main header.
-    #[deprecated(note="use `main_header`")]
+    #[deprecated(note = "use `main_header`")]
     pub fn get_main_header(&self) -> &MainHeader {
         &self.main_header
     }

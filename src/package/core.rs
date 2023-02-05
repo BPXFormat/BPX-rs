@@ -97,7 +97,7 @@ pub struct Package<T> {
 
 impl<T> Package<T> {
     /// Gets the settings of this package.
-    #[deprecated(note="use `settings` or `settings_mut`")]
+    #[deprecated(note = "use `settings` or `settings_mut`")]
     pub fn get_settings(&self) -> &Settings {
         &self.settings
     }
@@ -145,10 +145,11 @@ impl<T> TryFrom<Container<T>> for Package<T> {
                     container.main_header().type_ext[0],
                     container.main_header().type_ext[1],
                 )?;
-                let object_table = match container.sections().find_by_type(SECTION_TYPE_OBJECT_TABLE) {
-                    Some(v) => v,
-                    None => return Err(Error::MissingSection(Section::ObjectTable)),
-                };
+                let object_table =
+                    match container.sections().find_by_type(SECTION_TYPE_OBJECT_TABLE) {
+                        Some(v) => v,
+                        None => return Err(Error::MissingSection(Section::ObjectTable)),
+                    };
                 Ok(Self {
                     settings: Settings {
                         metadata: Value::Null,

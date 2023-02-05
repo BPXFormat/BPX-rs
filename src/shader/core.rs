@@ -31,6 +31,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use once_cell::unsync::OnceCell;
 
+use crate::shader::{Target, Type};
 use crate::{
     core::{
         builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
@@ -49,7 +50,6 @@ use crate::{
     strings::StringSection,
     table::NamedItemTable,
 };
-use crate::shader::{Target, Type};
 
 /// A BPXS (ShaderPack).
 ///
@@ -101,7 +101,7 @@ pub struct ShaderPack<T> {
 
 impl<T> ShaderPack<T> {
     /// Returns the shader package settings.
-    #[deprecated(note="use `settings` or `settings_mut`")]
+    #[deprecated(note = "use `settings` or `settings_mut`")]
     pub fn get_settings(&self) -> &Settings {
         &self.settings
     }
@@ -122,7 +122,7 @@ impl<T> ShaderPack<T> {
     }
 
     /// Sets the assembly hash of this shader package.
-    #[deprecated(note="use `settings_mut` and set the `assembly_hash` field")]
+    #[deprecated(note = "use `settings_mut` and set the `assembly_hash` field")]
     pub fn set_assembly(&mut self, hash: u64) {
         self.settings.assembly_hash = hash;
     }
@@ -190,15 +190,17 @@ impl<T> TryFrom<Container<T>> for ShaderPack<T> {
                         actual: container.main_header().version,
                     });
                 }
-                let assembly_hash = (&container.main_header().type_ext[0..8]).read_u64::<LittleEndian>()?;
+                let assembly_hash =
+                    (&container.main_header().type_ext[0..8]).read_u64::<LittleEndian>()?;
                 let (target, ty) = get_target_type_from_code(
                     container.main_header().type_ext[10],
                     container.main_header().type_ext[11],
                 )?;
-                let symbol_table = match container.sections().find_by_type(SECTION_TYPE_SYMBOL_TABLE) {
-                    Some(v) => v,
-                    None => return Err(Error::MissingSection(Section::SymbolTable)),
-                };
+                let symbol_table =
+                    match container.sections().find_by_type(SECTION_TYPE_SYMBOL_TABLE) {
+                        Some(v) => v,
+                        None => return Err(Error::MissingSection(Section::SymbolTable)),
+                    };
                 Ok(Self {
                     settings: Settings {
                         assembly_hash,
@@ -233,20 +235,25 @@ impl<T> TryFrom<Container<T>> for ShaderPack<T> {
                 let (target, ty) = get_target_type_from_code(
                     container.main_header().type_ext[10],
                     container.main_header().type_ext[11],
-                ).unwrap_or((Target::Any, Type::Pipeline));
+                )
+                .unwrap_or((Target::Any, Type::Pipeline));
                 Ok(Self {
                     container,
                     settings: Settings {
                         assembly_hash: 0,
                         target,
-                        ty
+                        ty,
                     },
                     symbol_table,
-                    symbols: OnceCell::from(SymbolTable::new(NamedItemTable::empty(), strings, None)),
+                    symbols: OnceCell::from(SymbolTable::new(
+                        NamedItemTable::empty(),
+                        strings,
+                        None,
+                    )),
                     shaders: OnceCell::from(ShaderTable::new(Vec::new())),
                     extended_data: None,
                 })
-            }
+            },
         }
     }
 }
@@ -324,7 +331,8 @@ impl<T: Write + Seek> ShaderPack<T> {
             }
         }
         if let Some(syms) = self.symbols.get() {
-            (&mut self.container.main_header_mut().type_ext[8..10]).write_u16::<LittleEndian>(syms.len() as _)?;
+            (&mut self.container.main_header_mut().type_ext[8..10])
+                .write_u16::<LittleEndian>(syms.len() as _)?;
             let mut section = self.container.sections().open(self.symbol_table)?;
             section.seek(SeekFrom::Start(0))?;
             for v in syms {

@@ -140,7 +140,7 @@ impl<'a, 'de> VariantAccess<'de> for Enum<'a> {
 
     fn unit_variant(self) -> Result<(), Self::Error> {
         Err(Error::InvalidEnum) //This case should have been caught prior to calling this, if not
-        // then BPXSD enum deserialization in serde cannot be achieved.
+                                // then BPXSD enum deserialization in serde cannot be achieved.
     }
 
     fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
