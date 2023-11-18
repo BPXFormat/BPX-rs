@@ -252,21 +252,17 @@ impl SectionHeaderBuilder {
 }
 
 /// Utility to easily generate a [MainHeader](MainHeader).
-pub struct MainHeaderBuilder {
+pub struct CreateOptions<T> {
     header: MainHeader,
+    backend: T
 }
 
-impl Default for MainHeaderBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl MainHeaderBuilder {
+impl<T> CreateOptions<T> {
     /// Creates a new main header builder.
-    pub fn new() -> MainHeaderBuilder {
-        MainHeaderBuilder {
+    pub fn new(backend: T) -> CreateOptions<T> {
+        CreateOptions {
             header: MainHeader::new(),
+            backend
         }
     }
 
@@ -278,19 +274,19 @@ impl MainHeaderBuilder {
     ///
     /// * `ty`: the BPX type byte.
     ///
-    /// returns: MainHeaderBuilder
+    /// returns: CreateOptions
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
+    /// use bpx::core::builder::CreateOptions;
     ///
-    /// let header = MainHeaderBuilder::new()
+    /// let header = CreateOptions::new(())
     ///     .ty('M' as u8)
-    ///     .build();
+    ///     .main_header();
     /// assert_eq!(header.ty, 'M' as u8);
     /// ```
-    pub fn ty(&mut self, ty: u8) -> &mut Self {
+    pub fn ty(mut self, ty: u8) -> Self {
         self.header.ty = ty;
         self
     }
@@ -303,19 +299,19 @@ impl MainHeaderBuilder {
     ///
     /// * `type_ext`: the Extended Type Information block.
     ///
-    /// returns: MainHeaderBuilder
+    /// returns: CreateOptions
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
+    /// use bpx::core::builder::CreateOptions;
     ///
-    /// let header = MainHeaderBuilder::new()
+    /// let header = CreateOptions::new(())
     ///     .type_ext([1; 16])
-    ///     .build();
+    ///     .main_header();
     /// assert_eq!(header.type_ext, [1; 16]);
     /// ```
-    pub fn type_ext(&mut self, type_ext: [u8; 16]) -> &mut Self {
+    pub fn type_ext(mut self, type_ext: [u8; 16]) -> Self {
         self.header.type_ext = type_ext;
         self
     }
@@ -333,19 +329,19 @@ impl MainHeaderBuilder {
     ///
     /// * `version`: the new version of the BPX.
     ///
-    /// returns: MainHeaderBuilder
+    /// returns: CreateOptions
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
+    /// use bpx::core::builder::CreateOptions;
     ///
-    /// let header = MainHeaderBuilder::new()
+    /// let header = CreateOptions::new(())
     ///     .version(1)
-    ///     .build();
+    ///     .main_header();
     /// assert_eq!(header.version, 1);
     /// ```
-    pub fn version(&mut self, version: u32) -> &mut Self {
+    pub fn version(mut self, version: u32) -> Self {
         self.header.version = version;
         self
     }
@@ -355,27 +351,44 @@ impl MainHeaderBuilder {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
+    /// use bpx::core::builder::CreateOptions;
     ///
-    /// let header = MainHeaderBuilder::new()
+    /// let header = CreateOptions::new(())
     ///     .ty('M' as u8)
     ///     .type_ext([1; 16])
     ///     .version(1)
-    ///     .build();
+    ///     .main_header();
     /// assert_eq!(header.ty, 'M' as u8);
     /// assert_eq!(header.type_ext, [1; 16]);
     /// assert_eq!(header.version, 1);
     /// ```
-    pub fn build(&self) -> MainHeader {
+    pub fn main_header(&self) -> MainHeader {
         self.header
+    }
+
+    /// Returns the inner backend and [MainHeader](MainHeader).
+    pub fn into_inner(self) -> (T, MainHeader) {
+        (self.backend, self.header)
     }
 }
 
-impl From<&mut MainHeaderBuilder> for MainHeader {
+impl<T: std::io::Seek> From<T> for CreateOptions<T> {
+    fn from(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
+impl<T: std::io::Seek> From<(T, MainHeader)> for CreateOptions<T> {
+    fn from((backend, header): (T, MainHeader)) -> Self {
+        Self { header, backend }
+    }
+}
+
+/*impl From<&mut MainHeaderBuilder> for MainHeader {
     fn from(builder: &mut MainHeaderBuilder) -> Self {
         builder.build()
     }
-}
+}*/
 
 impl From<&mut SectionHeaderBuilder> for SectionHeader {
     fn from(builder: &mut SectionHeaderBuilder) -> Self {
@@ -383,11 +396,11 @@ impl From<&mut SectionHeaderBuilder> for SectionHeader {
     }
 }
 
-impl From<MainHeaderBuilder> for MainHeader {
+/*impl From<MainHeaderBuilder> for MainHeader {
     fn from(builder: MainHeaderBuilder) -> Self {
         builder.build()
     }
-}
+}*/
 
 impl From<SectionHeaderBuilder> for SectionHeader {
     fn from(builder: SectionHeaderBuilder) -> Self {

@@ -211,11 +211,11 @@ impl<T> SectionTable<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::{MainHeaderBuilder, SectionHeaderBuilder};
+    /// use bpx::core::builder::{SectionHeaderBuilder};
     /// use bpx::core::{Container, SectionData};
     /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let mut file = Container::create(new_byte_buf(0));
     /// assert_eq!(file.sections().len(), 0);
     /// file.sections_mut().create(SectionHeaderBuilder::new());
     /// assert_eq!(file.sections().len(), 1);
@@ -254,11 +254,11 @@ impl<T> SectionTable<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::{MainHeaderBuilder, SectionHeaderBuilder};
+    /// use bpx::core::builder::{SectionHeaderBuilder};
     /// use bpx::core::{Container, SectionData};
     /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let mut file = Container::create(new_byte_buf(0));
     /// let section = file.sections_mut().create(SectionHeaderBuilder::new());
     /// file.save().unwrap();
     /// assert_eq!(file.main_header().section_num, 1);
@@ -321,11 +321,10 @@ impl<T> SectionTable<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
     /// use bpx::utils::new_byte_buf;
     ///
-    /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let file = Container::create(new_byte_buf(0));
     /// assert!(file.sections().find_by_type(0).is_none());
     /// ```
     pub fn find_by_type(&self, ty: u8) -> Option<Handle> {
@@ -349,11 +348,10 @@ impl<T> SectionTable<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
     /// use bpx::utils::new_byte_buf;
     ///
-    /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let file = Container::create(new_byte_buf(0));
     /// assert!(file.sections().find_by_index(0).is_none());
     /// ```
     pub fn find_by_index(&self, index: u32) -> Option<Handle> {

@@ -417,3 +417,62 @@ impl<T: Read + Seek> Package<T> {
         unsafe { Ok(self.metadata.get().unwrap_unchecked()) }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Seek, SeekFrom};
+
+    use crate::{package::{Package, Builder}, utils::new_byte_buf};
+
+    #[test]
+    fn test_re_open_after_create() {
+        let mut bpxp = Package::create(new_byte_buf(128), Builder::new()).unwrap();
+        {
+            let mut objects = bpxp.objects_mut().unwrap();
+            objects.create("TestObject", "This is a test 你好".as_bytes()).unwrap();
+        }
+        bpxp.save().unwrap();
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt decoding the in-memory BPXP.
+        let mut bpxp = Package::open(bytebuf).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 1);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "TestObject");
+        {
+            let wanted = objects.find("TestObject").unwrap().unwrap();
+            let mut data = Vec::new();
+            objects.load(wanted, &mut data).unwrap();
+            let s = std::str::from_utf8(&data).unwrap();
+            assert_eq!(s, "This is a test 你好")
+        }
+        //Attempt to write one more object into the file.
+        bpxp.objects_mut().unwrap().create("AdditionalObject", "Another test".as_bytes()).unwrap();
+        bpxp.save().unwrap();
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt to re-decode the in-memory BPXP.
+        let bpxp = Package::open(bytebuf).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 2);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "AdditionalObject");
+        {
+            let wanted = objects.find("TestObject").unwrap().unwrap();
+            let mut data = Vec::new();
+            objects.load(wanted, &mut data).unwrap();
+            let s = std::str::from_utf8(&data).unwrap();
+            assert_eq!(s, "This is a test 你好")
+        }
+        {
+            let wanted = objects.find("AdditionalObject").unwrap().unwrap();
+            let mut data = Vec::new();
+            objects.load(wanted, &mut data).unwrap();
+            let s = std::str::from_utf8(&data).unwrap();
+            assert_eq!(s, "Another test")
+        }
+    }
+}

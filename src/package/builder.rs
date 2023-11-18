@@ -49,6 +49,31 @@ pub struct Settings {
     pub type_code: [u8; 2],
 }
 
+pub struct Builder1<T> {
+    settings: Settings,
+    backend: T
+}
+
+impl<T: std::io::Seek> From<T> for Builder1<T> {
+    fn from(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
+impl<T> Builder1<T> {
+    pub fn new(backend: T) -> Builder1<T> {
+        Builder1 {
+            settings: Settings {
+                architecture: Architecture::Any,
+                platform: Platform::Any,
+                metadata: Value::Null,
+                type_code: [0x50, 0x48],
+            },
+            backend
+        }
+    }
+}
+
 /// Utility to simplify generation of [Settings](Settings) required when creating a new BPXP.
 pub struct Builder {
     settings: Settings,

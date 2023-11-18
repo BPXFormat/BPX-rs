@@ -1,7 +1,7 @@
 use std::{fs::File, path::Path};
 
 use bpx::core::{
-    header::{MainHeader, Struct, BPX_CURRENT_VERSION},
+    header::BPX_CURRENT_VERSION,
     Container,
 };
 
@@ -9,7 +9,7 @@ use bpx::core::{
 fn attempt_write_empty_bpxp() {
     {
         let file = File::create(Path::new("./the_very_first_bpx.bpx")).unwrap();
-        let mut container = Container::create(file, MainHeader::new());
+        let mut container = Container::create(file);
         container.save().unwrap();
     }
     {

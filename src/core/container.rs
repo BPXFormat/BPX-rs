@@ -38,6 +38,8 @@ use crate::core::{
     Result, SectionData,
 };
 
+use super::builder::CreateOptions;
+
 /// The default maximum size of uncompressed sections.
 ///
 /// *Used as default compression threshold when a section is marked as compressible.*
@@ -51,17 +53,6 @@ pub struct Container<T> {
 }
 
 impl<T> Container<T> {
-    /// Sets the BPX Main Header.
-    ///
-    /// # Arguments
-    ///
-    /// * `main_header`: the new [MainHeader](MainHeader).
-    #[deprecated(note = "use `main_header_mut`")]
-    pub fn set_main_header<H: Into<MainHeader>>(&mut self, main_header: H) {
-        self.main_header = main_header.into();
-        self.main_header_modified = true;
-    }
-
     /// Returns a mutable reference to the main header.
     ///
     /// **NOTE: This function marks the BPX Main Header as changed.**
@@ -69,12 +60,11 @@ impl<T> Container<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
     /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// *file.main_header_mut() = MainHeaderBuilder::new().ty(1).into();
+    /// let mut file = Container::create(new_byte_buf(0));
+    /// file.main_header_mut().ty = 1;
     /// assert_eq!(file.main_header().ty, 1);
     /// ```
     pub fn main_header_mut(&mut self) -> &mut MainHeader {
@@ -87,11 +77,10 @@ impl<T> Container<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
     /// use bpx::utils::new_byte_buf;
     ///
-    /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let file = Container::create(new_byte_buf(0));
     /// let header = file.main_header();
     /// //Default BPX variant/type is 0.
     /// assert_eq!(header.ty, 0);
@@ -139,11 +128,10 @@ impl<T: io::Read + io::Seek> Container<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
     /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let mut file = Container::create(new_byte_buf(0));
     /// file.save().unwrap();
     /// let mut buf = file.into_inner();
     /// buf.set_position(0);
@@ -181,16 +169,16 @@ impl<T: io::Write + io::Seek> Container<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
     /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let mut file = Container::create(new_byte_buf(0));
     /// assert_eq!(file.main_header().section_num, 0);
     /// //Default BPX variant/type is 0.
     /// assert_eq!(file.main_header().ty, 0);
     /// ```
-    pub fn create<H: Into<MainHeader>>(backend: T, header: H) -> Container<T> {
+    pub fn create<H: Into<CreateOptions<T>>>(options: H) -> Container<T> {
+        let (backend, header) = options.into().into_inner();
         Container {
             table: SectionTable {
                 next_handle: 0,
@@ -260,11 +248,10 @@ impl<T: io::Write + io::Seek> Container<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
     /// use bpx::utils::new_byte_buf;
     ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let mut file = Container::create(new_byte_buf(0));
     /// file.save().unwrap();
     /// let buf = file.into_inner();
     /// assert!(!buf.into_inner().is_empty());

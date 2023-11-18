@@ -48,11 +48,11 @@ use crate::core::{AutoSectionData, Container, Handle, SectionData};
 ///
 /// ```
 /// use bpx::core::Container;
-/// use bpx::core::header::{MainHeader, SectionHeader, Struct};
+/// use bpx::core::header::{SectionHeader, Struct};
 /// use bpx::strings::StringSection;
 /// use bpx::utils::new_byte_buf;
 ///
-/// let mut file = Container::create(new_byte_buf(0), MainHeader::new());
+/// let mut file = Container::create(new_byte_buf(0));
 /// let section = file.sections_mut().create(SectionHeader::new());
 /// let mut strings = StringSection::new(section);
 /// let offset = strings.put(&mut file, "Test").unwrap();
