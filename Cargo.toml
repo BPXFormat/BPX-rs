@@ -13,8 +13,8 @@ categories = ["encoding", "rendering::data-formats", "parser-implementations"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bytesutil = "0.5.0"
 tempfile = "3.0.7"
-byteorder = "1"
 
 # The reason why we lock lzma-sys to static feature is because the library is unfortunatly unable to understand that
 # macOS does not come with a proper lzma by defaut and as such should auto build as static to avoid linking against

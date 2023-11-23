@@ -38,7 +38,7 @@ use crate::core::{
     Result, SectionData,
 };
 
-use super::builder::CreateOptions;
+use super::builder::{CreateOptions, OpenOptions};
 
 /// The default maximum size of uncompressed sections.
 ///
@@ -139,12 +139,13 @@ impl<T: io::Read + io::Seek> Container<T> {
     /// //Default BPX variant/type is 0.
     /// assert_eq!(file.main_header().ty, 0);
     /// ```
-    pub fn open(mut backend: T) -> Result<Container<T>> {
-        let (checksum, header) = MainHeader::read(&mut backend)?;
-        let (next_handle, sections) = read_section_header_table(&mut backend, &header, checksum)?;
+    pub fn open(options: impl Into<OpenOptions<T>>) -> Result<Container<T>> {
+        let mut options = options.into();
+        let (checksum, header) = MainHeader::read(&mut options.backend)?;
+        let (next_handle, sections) = read_section_header_table(&mut options.backend, &header, checksum)?;
         Ok(Container {
             table: SectionTable {
-                backend: RefCell::new(backend),
+                backend: RefCell::new(options.backend),
                 next_handle,
                 modified: false,
                 sections,
@@ -177,17 +178,17 @@ impl<T: io::Write + io::Seek> Container<T> {
     /// //Default BPX variant/type is 0.
     /// assert_eq!(file.main_header().ty, 0);
     /// ```
-    pub fn create<H: Into<CreateOptions<T>>>(options: H) -> Container<T> {
-        let (backend, header) = options.into().into_inner();
+    pub fn create(options: impl Into<CreateOptions<T>>) -> Container<T> {
+        let options = options.into();
         Container {
             table: SectionTable {
                 next_handle: 0,
                 count: 0,
                 modified: true,
-                backend: RefCell::new(backend),
+                backend: RefCell::new(options.backend),
                 sections: BTreeMap::new(),
             },
-            main_header: header.into(),
+            main_header: options.header.into(),
             main_header_modified: true,
         }
     }

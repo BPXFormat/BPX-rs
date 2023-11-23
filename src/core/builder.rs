@@ -28,6 +28,8 @@
 
 //! High-level utilities to generate low-level file headers.
 
+use bytesutil::StaticByteBuf;
+
 use crate::core::header::{
     MainHeader, SectionHeader, Struct, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ,
     FLAG_COMPRESS_ZLIB,
@@ -251,14 +253,50 @@ impl SectionHeaderBuilder {
     }
 }
 
-/// Utility to easily generate a [MainHeader](MainHeader).
+/// Utility to open an existing BPX [Container](crate::core::Container).
+pub struct OpenOptions<T> {
+    pub(crate) backend: T,
+    pub(crate) skip_signature_check: bool,
+    pub(crate) skip_checksum: bool
+}
+
+impl<T> OpenOptions<T> {
+     /// Creates a new container builder.
+     pub fn new(backend: T) -> OpenOptions<T> {
+        OpenOptions {
+            backend,
+            skip_checksum: false,
+            skip_signature_check: false
+        }
+    }
+
+    /// Disable signature checks when loading the container.
+    pub fn skip_signature(mut self) -> Self {
+        self.skip_signature_check = true;
+        self
+    }
+
+    /// Disable checksum checks when loading the section header/table or a section.
+    pub fn skip_checksum(mut self) -> Self {
+        self.skip_checksum = true;
+        self
+    }
+}
+
+impl<T: std::io::Seek> From<T> for OpenOptions<T> {
+    fn from(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
+/// Utility to create a new BPX [Container](crate::core::Container) with a [MainHeader](MainHeader).
 pub struct CreateOptions<T> {
-    header: MainHeader,
-    backend: T
+    pub(crate) header: MainHeader,
+    pub(crate) backend: T
 }
 
 impl<T> CreateOptions<T> {
-    /// Creates a new main header builder.
+    /// Creates a new container builder.
     pub fn new(backend: T) -> CreateOptions<T> {
         CreateOptions {
             header: MainHeader::new(),
@@ -309,10 +347,10 @@ impl<T> CreateOptions<T> {
     /// let header = CreateOptions::new(())
     ///     .type_ext([1; 16])
     ///     .main_header();
-    /// assert_eq!(header.type_ext, [1; 16]);
+    /// assert_eq!(header.type_ext.into_inner(), [1; 16]);
     /// ```
-    pub fn type_ext(mut self, type_ext: [u8; 16]) -> Self {
-        self.header.type_ext = type_ext;
+    pub fn type_ext(mut self, type_ext: impl Into<StaticByteBuf<16>>) -> Self {
+        self.header.type_ext = type_ext.into();
         self
     }
 
@@ -352,6 +390,7 @@ impl<T> CreateOptions<T> {
     ///
     /// ```
     /// use bpx::core::builder::CreateOptions;
+    /// use bytesutil::ByteBuf;
     ///
     /// let header = CreateOptions::new(())
     ///     .ty('M' as u8)
@@ -359,16 +398,11 @@ impl<T> CreateOptions<T> {
     ///     .version(1)
     ///     .main_header();
     /// assert_eq!(header.ty, 'M' as u8);
-    /// assert_eq!(header.type_ext, [1; 16]);
+    /// assert_eq!(header.type_ext.into_inner(), [1; 16]);
     /// assert_eq!(header.version, 1);
     /// ```
     pub fn main_header(&self) -> MainHeader {
         self.header
-    }
-
-    /// Returns the inner backend and [MainHeader](MainHeader).
-    pub fn into_inner(self) -> (T, MainHeader) {
-        (self.backend, self.header)
     }
 }
 
@@ -384,23 +418,11 @@ impl<T: std::io::Seek> From<(T, MainHeader)> for CreateOptions<T> {
     }
 }
 
-/*impl From<&mut MainHeaderBuilder> for MainHeader {
-    fn from(builder: &mut MainHeaderBuilder) -> Self {
-        builder.build()
-    }
-}*/
-
 impl From<&mut SectionHeaderBuilder> for SectionHeader {
     fn from(builder: &mut SectionHeaderBuilder) -> Self {
         builder.build()
     }
 }
-
-/*impl From<MainHeaderBuilder> for MainHeader {
-    fn from(builder: MainHeaderBuilder) -> Self {
-        builder.build()
-    }
-}*/
 
 impl From<SectionHeaderBuilder> for SectionHeader {
     fn from(builder: SectionHeaderBuilder) -> Self {

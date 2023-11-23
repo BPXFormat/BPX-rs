@@ -28,7 +28,7 @@
 
 use std::io::Write;
 
-use byteorder::{ByteOrder, LittleEndian};
+use bytesutil::WriteBytes;
 
 use crate::sd::{error::Error, Array, Object, Result, Value};
 
@@ -67,43 +67,43 @@ fn write_value(val: &Value) -> Result<Vec<u8>> {
         Value::Uint8(v) => buf.push(*v),
         Value::Uint16(v) => {
             let mut b: [u8; 2] = [0; 2];
-            LittleEndian::write_u16(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Uint32(v) => {
             let mut b: [u8; 4] = [0; 4];
-            LittleEndian::write_u32(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Uint64(v) => {
             let mut b: [u8; 8] = [0; 8];
-            LittleEndian::write_u64(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Int8(v) => buf.push(*v as u8),
         Value::Int16(v) => {
             let mut b: [u8; 2] = [0; 2];
-            LittleEndian::write_i16(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Int32(v) => {
             let mut b: [u8; 4] = [0; 4];
-            LittleEndian::write_i32(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Int64(v) => {
             let mut b: [u8; 8] = [0; 8];
-            LittleEndian::write_i64(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Float(v) => {
             let mut b: [u8; 4] = [0; 4];
-            LittleEndian::write_f32(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Double(v) => {
             let mut b: [u8; 8] = [0; 8];
-            LittleEndian::write_f64(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::String(s) => {
@@ -126,7 +126,7 @@ fn write_object(obj: &Object) -> Result<Vec<u8>> {
     v.push(count as u8);
     for (hash, val) in obj {
         let mut head: [u8; 9] = [0; 9];
-        LittleEndian::write_u64(&mut head[0..8], hash.into_inner());
+        hash.into_inner().write_bytes_le(&mut head[0..8]);
         head[8] = get_value_type_code(val);
         v.extend_from_slice(&head);
         v.append(&mut write_value(val)?);

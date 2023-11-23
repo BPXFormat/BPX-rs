@@ -29,54 +29,10 @@
 //! Contains public IO traits to be used by other modules of BPX as well as external codes.
 
 use std::io::Result;
-use std::io::{Read, Write};
+use std::io::Write;
 
-/// Allows to read into a buffer as much as possible.
-///
-/// *Allows the use BufReader with BPX*
-pub trait ReadFill: Read {
-    /// Reads into `buf` as much as possible.
-    ///
-    /// *Returns the number of bytes that could be read.*
-    ///
-    /// # Arguments
-    ///
-    /// * `buf`: the buffer to read into.
-    ///
-    /// returns: Result<usize, Error>
-    ///
-    /// # Errors
-    ///
-    /// Returns an [Error](std::io::Error) when read has failed.
-    fn read_fill(&mut self, buf: &mut [u8]) -> Result<usize> {
-        let mut bytes = 0;
-        let mut len = self.read(buf)?;
-        bytes += len;
-        while len > 0 && buf.len() - len > 0 {
-            len = self.read(&mut buf[len..])?;
-            bytes += len;
-        }
-        Ok(bytes)
-    }
-}
-
-//Unfortunately it's impossible in rust to allow an extension of the Read trait with custom
-// implementations.
-impl<T: Read + ?Sized> ReadFill for T {}
-
-/// Allows reading an entire IO stream into a vec.
-pub trait ReadToVec: Read {
-    /// Loads this stream into memory.
-    ///
-    /// # Errors
-    ///
-    /// An [Error](std::io::Error) is returned if the stream could not be loaded.
-    fn read_to_vec(&mut self) -> Result<Vec<u8>> {
-        let mut data: Vec<u8> = Vec::new();
-        self.read_to_end(&mut data)?;
-        Ok(data)
-    }
-}
+pub use bytesutil::ReadFill;
+pub use bytesutil::ReadToVec;
 
 /// Shift direction and length for shifting IO streams.
 pub enum ShiftTo {

@@ -27,8 +27,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::Read;
-
-use byteorder::{ByteOrder, LittleEndian};
+use bytesutil::ReadBytes;
 
 use crate::{
     sd::{error::Error, value::Type, Array, Object, Result, Value},
@@ -68,7 +67,7 @@ fn read_uint16<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     if stream.read_fill(&mut val)? != 2 {
         return Err(Error::Truncation(Type::Uint16));
     }
-    Ok(Value::Uint16(LittleEndian::read_u16(&val)))
+    Ok(Value::Uint16(u16::read_bytes_le(&val)))
 }
 
 fn read_int16<TRead: Read>(stream: &mut TRead) -> Result<Value> {
@@ -77,7 +76,7 @@ fn read_int16<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     if stream.read_fill(&mut val)? != 2 {
         return Err(Error::Truncation(Type::Int16));
     }
-    Ok(Value::Int16(LittleEndian::read_i16(&val)))
+    Ok(Value::Int16(i16::read_bytes_le(&val)))
 }
 
 fn read_uint32<TRead: Read>(stream: &mut TRead) -> Result<Value> {
@@ -86,7 +85,7 @@ fn read_uint32<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     if stream.read_fill(&mut val)? != 4 {
         return Err(Error::Truncation(Type::Uint32));
     }
-    Ok(Value::Uint32(LittleEndian::read_u32(&val)))
+    Ok(Value::Uint32(u32::read_bytes_le(&val)))
 }
 
 fn read_int32<TRead: Read>(stream: &mut TRead) -> Result<Value> {
@@ -95,7 +94,7 @@ fn read_int32<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     if stream.read_fill(&mut val)? != 4 {
         return Err(Error::Truncation(Type::Int32));
     }
-    Ok(Value::Int32(LittleEndian::read_i32(&val)))
+    Ok(Value::Int32(i32::read_bytes_le(&val)))
 }
 
 fn read_uint64<TRead: Read>(stream: &mut TRead) -> Result<Value> {
@@ -104,7 +103,7 @@ fn read_uint64<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     if stream.read_fill(&mut val)? != 8 {
         return Err(Error::Truncation(Type::Uint64));
     }
-    Ok(Value::Uint64(LittleEndian::read_u64(&val)))
+    Ok(Value::Uint64(u64::read_bytes_le(&val)))
 }
 
 fn read_int64<TRead: Read>(stream: &mut TRead) -> Result<Value> {
@@ -113,7 +112,7 @@ fn read_int64<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     if stream.read_fill(&mut val)? != 8 {
         return Err(Error::Truncation(Type::Int64));
     }
-    Ok(Value::Int64(LittleEndian::read_i64(&val)))
+    Ok(Value::Int64(i64::read_bytes_le(&val)))
 }
 
 fn read_float<TRead: Read>(stream: &mut TRead) -> Result<Value> {
@@ -122,7 +121,7 @@ fn read_float<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     if stream.read_fill(&mut val)? != 4 {
         return Err(Error::Truncation(Type::Float));
     }
-    Ok(Value::Float(LittleEndian::read_f32(&val)))
+    Ok(Value::Float(f32::read_bytes_le(&val)))
 }
 
 fn read_double<TRead: Read>(stream: &mut TRead) -> Result<Value> {
@@ -131,7 +130,7 @@ fn read_double<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     if stream.read_fill(&mut val)? != 8 {
         return Err(Error::Truncation(Type::Double));
     }
-    Ok(Value::Double(LittleEndian::read_f64(&val)))
+    Ok(Value::Double(f64::read_bytes_le(&val)))
 }
 
 fn read_string<TRead: Read>(stream: &mut TRead) -> Result<Value> {
@@ -168,7 +167,7 @@ fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object> {
         if stream.read_fill(&mut prop)? != 9 {
             return Err(Error::Truncation(Type::Object));
         }
-        let hash = LittleEndian::read_u64(&prop[0..8]);
+        let hash = u64::read_bytes_le(&prop[0..8]);
         let type_code = prop[8];
         match get_value_parser(type_code) {
             Some(func) => obj.set(hash, func(stream)?),

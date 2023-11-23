@@ -30,7 +30,7 @@
 
 use std::io;
 
-use byteorder::{ByteOrder, LittleEndian};
+use bytesutil::{ReadBytes, WriteBytes, StaticByteBuf, ByteBuf};
 
 use crate::{
     core::{
@@ -207,7 +207,7 @@ pub struct MainHeader {
     /// Extended Type Information.
     ///
     /// Offset: +24
-    pub type_ext: [u8; 16],
+    pub type_ext: StaticByteBuf<16>,
 }
 
 impl Struct<SIZE_MAIN_HEADER> for MainHeader {
@@ -222,7 +222,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader {
             file_size: SIZE_MAIN_HEADER as u64, //+8
             section_num: 0,                     //+16
             version: BPX_CURRENT_VERSION,       //+20
-            type_ext: [0; 16],
+            type_ext: ByteBuf::default(),
         }
     }
 
@@ -241,11 +241,11 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader {
         let head = MainHeader {
             signature: extract_slice(&buffer, 0),
             ty: buffer[3],
-            chksum: LittleEndian::read_u32(&buffer[4..8]),
-            file_size: LittleEndian::read_u64(&buffer[8..16]),
-            section_num: LittleEndian::read_u32(&buffer[16..20]),
-            version: LittleEndian::read_u32(&buffer[20..24]),
-            type_ext: extract_slice(&buffer, 24),
+            chksum: u32::read_bytes_le(&buffer[4..8]),
+            file_size: u64::read_bytes_le(&buffer[8..16]),
+            section_num: u32::read_bytes_le(&buffer[16..20]),
+            version: u32::read_bytes_le(&buffer[20..24]),
+            type_ext: ByteBuf::new(extract_slice(&buffer, 24)),
         };
         if &head.signature != b"BPX" {
             return Err(Error::BadSignature(head.signature));
@@ -262,11 +262,11 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader {
         block[1] = self.signature[1];
         block[2] = self.signature[2];
         block[3] = self.ty;
-        LittleEndian::write_u32(&mut block[4..8], self.chksum);
-        LittleEndian::write_u64(&mut block[8..16], self.file_size);
-        LittleEndian::write_u32(&mut block[16..20], self.section_num);
-        LittleEndian::write_u32(&mut block[20..24], self.version);
-        block[24..40].copy_from_slice(&self.type_ext);
+        self.chksum.write_bytes_le(&mut block[4..8]);
+        self.file_size.write_bytes_le(&mut block[8..16]);
+        self.section_num.write_bytes_le(&mut block[16..20]);
+        self.version.write_bytes_le(&mut block[20..24]);
+        block[24..40].copy_from_slice(self.type_ext.as_ref());
         block
     }
 }
@@ -335,10 +335,10 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader {
         Ok((
             checksum,
             SectionHeader {
-                pointer: LittleEndian::read_u64(&buffer[0..8]),
-                csize: LittleEndian::read_u32(&buffer[8..12]),
-                size: LittleEndian::read_u32(&buffer[12..16]),
-                chksum: LittleEndian::read_u32(&buffer[16..20]),
+                pointer: u64::read_bytes_le(&buffer[0..8]),
+                csize: u32::read_bytes_le(&buffer[8..12]),
+                size: u32::read_bytes_le(&buffer[12..16]),
+                chksum: u32::read_bytes_le(&buffer[16..20]),
                 ty: buffer[20],
                 flags: buffer[21],
             },
@@ -347,10 +347,10 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader {
 
     fn to_bytes(&self) -> [u8; SIZE_SECTION_HEADER] {
         let mut block: [u8; SIZE_SECTION_HEADER] = [0; SIZE_SECTION_HEADER];
-        LittleEndian::write_u64(&mut block[0..8], self.pointer);
-        LittleEndian::write_u32(&mut block[8..12], self.csize);
-        LittleEndian::write_u32(&mut block[12..16], self.size);
-        LittleEndian::write_u32(&mut block[16..20], self.chksum);
+        self.pointer.write_bytes_le(&mut block[0..8]);
+        self.csize.write_bytes_le(&mut block[8..12]);
+        self.size.write_bytes_le(&mut block[12..16]);
+        self.chksum.write_bytes_le(&mut block[16..20]);
         block[20] = self.ty;
         block[21] = self.flags;
         block
