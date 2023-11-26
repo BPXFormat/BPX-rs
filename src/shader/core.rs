@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -60,7 +60,7 @@ use crate::{
 /// use bpx::shader::{Builder, Shader, ShaderPack, Stage};
 /// use bpx::shader::symbol;
 /// use bpx::shader::symbol::FLAG_EXTENDED_DATA;
-/// use bpx::utils::new_byte_buf;
+/// use bpx::util::new_byte_buf;
 ///
 /// let mut bpxs = ShaderPack::create(new_byte_buf(0), Builder::new());
 /// {
@@ -275,7 +275,7 @@ impl<T: Write + Seek> ShaderPack<T> {
     /// use bpx::core::Container;
     /// use bpx::shader::Builder;
     /// use bpx::shader::ShaderPack;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
     /// let mut bpxs = ShaderPack::create(new_byte_buf(0), Builder::new());
     /// bpxs.save().unwrap();
@@ -363,7 +363,7 @@ impl<T: Read + Seek> ShaderPack<T> {
     /// ```
     /// use bpx::shader::Builder;
     /// use bpx::shader::ShaderPack;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
     /// let mut bpxs = ShaderPack::create(new_byte_buf(0), Builder::new());
     /// bpxs.save().unwrap();

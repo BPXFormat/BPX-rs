@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -38,7 +38,7 @@ use crate::{
         error::Error,
     },
     garraylen::*,
-    traits::ReadFill,
+    traits::ReadFill, util::RecoverableError,
 };
 
 /// Represents a serializable and deserializable byte structure in a BPX.
@@ -212,7 +212,7 @@ pub struct MainHeader {
 
 impl Struct<SIZE_MAIN_HEADER> for MainHeader {
     type Output = (u32, MainHeader);
-    type Error = Error;
+    type Error = RecoverableError<Self::Output, Error>;
 
     fn new() -> Self {
         MainHeader {
@@ -227,7 +227,7 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader {
     }
 
     fn error_buffer_size() -> Option<Self::Error> {
-        None
+        Some(Error::Truncated.into())
     }
 
     fn from_bytes(buffer: [u8; SIZE_MAIN_HEADER]) -> Result<Self::Output, Self::Error> {
@@ -248,10 +248,10 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader {
             type_ext: ByteBuf::new(extract_slice(&buffer, 24)),
         };
         if &head.signature != b"BPX" {
-            return Err(Error::BadSignature(head.signature));
+            return Err(RecoverableError::new(Error::BadSignature(head.signature), (checksum, head)));
         }
         if !KNOWN_VERSIONS.contains(&head.version) {
-            return Err(Error::BadVersion(head.version));
+            return Err(RecoverableError::new(Error::BadVersion(head.version), (checksum, head)));
         }
         Ok((checksum, head))
     }
@@ -309,7 +309,7 @@ pub struct SectionHeader {
 
 impl Struct<SIZE_SECTION_HEADER> for SectionHeader {
     type Output = (u32, SectionHeader);
-    type Error = io::Error;
+    type Error = Error;
 
     fn new() -> Self {
         SectionHeader {
@@ -323,7 +323,7 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader {
     }
 
     fn error_buffer_size() -> Option<Self::Error> {
-        None
+        Some(Error::Truncated)
     }
 
     fn from_bytes(buffer: [u8; SIZE_SECTION_HEADER]) -> Result<Self::Output, Self::Error> {

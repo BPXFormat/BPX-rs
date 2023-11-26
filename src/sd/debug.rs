@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -32,7 +32,7 @@ use std::{borrow::Cow, collections::HashMap, convert::TryInto};
 
 use crate::{
     sd::{error::TypeError, Array, Object, Value},
-    utils::Name,
+    hash::Name,
 };
 
 /// A BPXSD object debugger iterator.
@@ -136,7 +136,7 @@ impl<'a> Debugger<'a> {
     ///
     /// ```
     /// use bpx::sd::{Object, debug::Debugger};
-    /// use bpx::utils::hash;
+    /// use bpx::hash::hash;
     ///
     /// let debugger = Debugger::attach(Object::new()).unwrap();
     /// assert!(debugger.lookup("Test").is_none());

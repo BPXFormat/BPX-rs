@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -35,7 +35,8 @@ pub mod core;
 mod garraylen;
 pub mod macros;
 pub mod traits;
-pub mod utils;
+pub mod hash;
+pub mod util;
 
 #[cfg(feature = "table")]
 pub mod table;

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -59,7 +59,7 @@ pub fn read_section_header_table<T: Read>(
     mut backend: &mut T,
     main_header: &MainHeader,
     checksum: u32,
-) -> Result<(u32, BTreeMap<u32, SectionEntry>)> {
+) -> Result<(u32, BTreeMap<u32, SectionEntry>, u32)> {
     let mut sections = BTreeMap::new();
     let mut final_checksum = checksum;
     let mut hdl: u32 = 0;
@@ -82,20 +82,15 @@ pub fn read_section_header_table<T: Read>(
         );
         hdl += 1;
     }
-    if final_checksum != main_header.chksum {
-        return Err(Error::Checksum {
-            actual: final_checksum,
-            expected: main_header.chksum,
-        });
-    }
-    Ok((hdl, sections))
+    Ok((hdl, sections, final_checksum))
 }
 
 pub fn load_section1<T: Read + Seek>(
     file: &mut T,
     section: &SectionHeader,
+    memory_threshold: u32
 ) -> Result<AutoSectionData> {
-    let mut data = AutoSectionData::new_with_size(section.size)?;
+    let mut data = AutoSectionData::new_with_size(section.size, memory_threshold)?;
     data.seek(io::SeekFrom::Start(0))?;
     if section.flags & FLAG_CHECK_WEAK != 0 {
         let mut chksum = WeakChecksum::new();

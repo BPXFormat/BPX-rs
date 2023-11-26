@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -26,13 +26,9 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! Contains various utilities to be used by other modules.
+//! Contains an implementation of the BPXSD hashing function.
 
-use std::{
-    fmt::{Display, Formatter},
-    io::Cursor,
-    num::Wrapping,
-};
+use std::{fmt::{Display, Formatter}, num::Wrapping};
 
 /// Convenient utility to wrap object property name hashes.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -86,7 +82,7 @@ impl From<String> for Name {
 /// # Examples
 ///
 /// ```
-/// use bpx::utils::hash;
+/// use bpx::hash::hash;
 ///
 /// let s = "MyString";
 /// assert_eq!(hash(s), hash("MyString"));
@@ -100,19 +96,4 @@ pub fn hash(s: &str) -> u64 {
         val = ((val << 5) + val) + Wrapping(*v as u64);
     }
     val.0
-}
-
-/// Creates a new in-memory byte buffer which can be used
-/// to plug as IoBackend to a BPX encoder or decoder.
-///
-/// # Arguments
-///
-/// * `size`: the initial size of the buffer; if not known use 0.
-///
-/// returns: `Cursor<Vec<u8>>`
-pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>> {
-    if size > 0 {
-        return Cursor::new(Vec::with_capacity(size));
-    }
-    Cursor::new(Vec::new())
 }

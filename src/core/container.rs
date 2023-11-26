@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -39,17 +39,21 @@ use crate::core::{
 };
 
 use super::builder::{CreateOptions, OpenOptions};
+use super::error::Error;
 
 /// The default maximum size of uncompressed sections.
 ///
 /// *Used as default compression threshold when a section is marked as compressible.*
 pub const DEFAULT_COMPRESSION_THRESHOLD: u32 = 65536;
 
+/// The default maximum size of a section stored in memory (RAM) in bytes.
+pub const DEFAULT_MEMORY_THRESHOLD: u32 = 100000000;
+
 /// The main BPX container implementation.
 pub struct Container<T> {
     table: SectionTable<T>,
     main_header: MainHeader,
-    main_header_modified: bool,
+    main_header_modified: bool
 }
 
 impl<T> Container<T> {
@@ -61,7 +65,7 @@ impl<T> Container<T> {
     ///
     /// ```
     /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0));
     /// file.main_header_mut().ty = 1;
@@ -78,7 +82,7 @@ impl<T> Container<T> {
     ///
     /// ```
     /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
     /// let file = Container::create(new_byte_buf(0));
     /// let header = file.main_header();
@@ -129,7 +133,7 @@ impl<T: io::Read + io::Seek> Container<T> {
     ///
     /// ```
     /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0));
     /// file.save().unwrap();
@@ -141,8 +145,29 @@ impl<T: io::Read + io::Seek> Container<T> {
     /// ```
     pub fn open(options: impl Into<OpenOptions<T>>) -> Result<Container<T>> {
         let mut options = options.into();
-        let (checksum, header) = MainHeader::read(&mut options.backend)?;
-        let (next_handle, sections) = read_section_header_table(&mut options.backend, &header, checksum)?;
+        let (checksum, header) = match MainHeader::read(&mut options.backend) {
+            Ok(v) => v,
+            Err(e) => {
+                match e.error() {
+                    Error::BadSignature(_) => match options.skip_signature_check {
+                        true => e.unwrap_value(),
+                        false => return e.into()
+                    },
+                    Error::BadVersion(_) => match options.skip_version_check {
+                        true => e.unwrap_value(),
+                        false => return e.into()
+                    },
+                    _ => return e.into()
+                }
+            }
+        };
+        let (next_handle, sections, chksum) = read_section_header_table(&mut options.backend, &header, checksum)?;
+        if !options.skip_checksum && chksum != header.chksum {
+            return Err(Error::Checksum {
+                actual: chksum,
+                expected: header.chksum,
+            });
+        }
         Ok(Container {
             table: SectionTable {
                 backend: RefCell::new(options.backend),
@@ -150,9 +175,11 @@ impl<T: io::Read + io::Seek> Container<T> {
                 modified: false,
                 sections,
                 count: header.section_num,
+                skip_checksum: options.skip_checksum,
+                memory_threshold: options.memory_threshold
             },
             main_header: header,
-            main_header_modified: false,
+            main_header_modified: false
         })
     }
 }
@@ -171,7 +198,7 @@ impl<T: io::Write + io::Seek> Container<T> {
     ///
     /// ```
     /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0));
     /// assert_eq!(file.main_header().section_num, 0);
@@ -187,9 +214,11 @@ impl<T: io::Write + io::Seek> Container<T> {
                 modified: true,
                 backend: RefCell::new(options.backend),
                 sections: BTreeMap::new(),
+                skip_checksum: false,
+                memory_threshold: options.memory_threshold
             },
             main_header: options.header.into(),
-            main_header_modified: true,
+            main_header_modified: true
         }
     }
 
@@ -250,7 +279,7 @@ impl<T: io::Write + io::Seek> Container<T> {
     ///
     /// ```
     /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0));
     /// file.save().unwrap();

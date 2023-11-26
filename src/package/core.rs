@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -55,7 +55,7 @@ use crate::package::{Architecture, Platform};
 ///
 /// ```
 /// use std::io::{Seek, SeekFrom};
-/// use bpx::utils::new_byte_buf;
+/// use bpx::util::new_byte_buf;
 /// use bpx::package::{Builder, Package};
 ///
 /// let mut bpxp = Package::create(new_byte_buf(128), Builder::new()).unwrap();
@@ -227,7 +227,7 @@ impl<T: Write + Seek> Package<T> {
     /// use bpx::core::Container;
     /// use bpx::package::Builder;
     /// use bpx::package::Package;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
     /// let mut bpxp = Package::create(new_byte_buf(0), Builder::new()).unwrap();
     /// bpxp.save().unwrap();
@@ -343,7 +343,7 @@ impl<T: Read + Seek> Package<T> {
     /// ```
     /// use bpx::package::Builder;
     /// use bpx::package::Package;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
     /// let mut bpxp = Package::create(new_byte_buf(0), Builder::new()).unwrap();
     /// bpxp.save().unwrap();

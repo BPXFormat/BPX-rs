@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -120,6 +120,8 @@ pub struct SectionTable<T> {
     pub(crate) count: u32,
     pub(crate) modified: bool,
     pub(crate) next_handle: u32,
+    pub(crate) skip_checksum: bool,
+    pub(crate) memory_threshold: u32
 }
 
 impl<T: Read + Seek> SectionTable<T> {
@@ -141,7 +143,16 @@ impl<T: Read + Seek> SectionTable<T> {
             .map_err(|_| Error::Open(OpenError::SectionInUse))?;
         if data.is_none() {
             let mut backend = self.backend.borrow_mut();
-            let loaded = load_section1(&mut *backend, &section.header)?;
+            let loaded = match self.skip_checksum {
+                false => load_section1(&mut *backend, &section.header, self.memory_threshold)?,
+                true => {
+                    let mut header = section.header;
+                    //If checksum is to be ignored, clear the checksum flags before loading the section.
+                    header.flags &= !FLAG_CHECK_WEAK;
+                    header.flags &= !FLAG_CHECK_CRC32;
+                    load_section1(&mut *backend, &section.header, self.memory_threshold)?
+                }
+            };
             *data = Some(loaded);
         }
         section.modified.set(true);
@@ -213,7 +224,7 @@ impl<T> SectionTable<T> {
     /// ```
     /// use bpx::core::builder::{SectionHeaderBuilder};
     /// use bpx::core::{Container, SectionData};
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0));
     /// assert_eq!(file.sections().len(), 0);
@@ -224,7 +235,7 @@ impl<T> SectionTable<T> {
         self.modified = true;
         self.count += 1;
         let r = self.next_handle;
-        let section = AutoSectionData::new();
+        let section = AutoSectionData::new(self.memory_threshold);
         let h = header.into();
         let entry = SectionEntry {
             header: h,
@@ -256,7 +267,7 @@ impl<T> SectionTable<T> {
     /// ```
     /// use bpx::core::builder::{SectionHeaderBuilder};
     /// use bpx::core::{Container, SectionData};
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0));
     /// let section = file.sections_mut().create(SectionHeaderBuilder::new());
@@ -322,7 +333,7 @@ impl<T> SectionTable<T> {
     ///
     /// ```
     /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
     /// let file = Container::create(new_byte_buf(0));
     /// assert!(file.sections().find_by_type(0).is_none());
@@ -349,7 +360,7 @@ impl<T> SectionTable<T> {
     ///
     /// ```
     /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
     /// let file = Container::create(new_byte_buf(0));
     /// assert!(file.sections().find_by_index(0).is_none());

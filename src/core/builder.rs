@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -35,7 +35,7 @@ use crate::core::header::{
     FLAG_COMPRESS_ZLIB,
 };
 
-const COMPRESSION_THRESHOLD: u32 = 65536;
+use super::{DEFAULT_COMPRESSION_THRESHOLD, DEFAULT_MEMORY_THRESHOLD};
 
 /// The compression method to use for a section.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -163,7 +163,7 @@ impl SectionHeaderBuilder {
             CompressionMethod::Xz => self.header.flags |= FLAG_COMPRESS_XZ,
             CompressionMethod::Zlib => self.header.flags |= FLAG_COMPRESS_ZLIB,
         }
-        self.header.csize = COMPRESSION_THRESHOLD;
+        self.header.csize = DEFAULT_COMPRESSION_THRESHOLD;
         self
     }
 
@@ -257,7 +257,9 @@ impl SectionHeaderBuilder {
 pub struct OpenOptions<T> {
     pub(crate) backend: T,
     pub(crate) skip_signature_check: bool,
-    pub(crate) skip_checksum: bool
+    pub(crate) skip_checksum: bool,
+    pub(crate) skip_version_check: bool,
+    pub(crate) memory_threshold: u32
 }
 
 impl<T> OpenOptions<T> {
@@ -266,19 +268,35 @@ impl<T> OpenOptions<T> {
         OpenOptions {
             backend,
             skip_checksum: false,
-            skip_signature_check: false
+            skip_signature_check: false,
+            skip_version_check: false,
+            memory_threshold: DEFAULT_MEMORY_THRESHOLD
         }
     }
 
     /// Disable signature checks when loading the container.
-    pub fn skip_signature(mut self) -> Self {
-        self.skip_signature_check = true;
+    pub fn skip_signature(mut self, flag: bool) -> Self {
+        self.skip_signature_check = flag;
+        self
+    }
+
+    /// Skip BPX version checks.
+    pub fn skip_versions(mut self, flag: bool) -> Self {
+        self.skip_version_check = flag;
         self
     }
 
     /// Disable checksum checks when loading the section header/table or a section.
-    pub fn skip_checksum(mut self) -> Self {
-        self.skip_checksum = true;
+    pub fn skip_checksum(mut self, flag: bool) -> Self {
+        self.skip_checksum = flag;
+        self
+    }
+
+    /// Sets the maximum size of a section allowed to fit in RAM in bytes.
+    ///
+    /// The default is set to [DEFAULT_MEMORY_THRESHOLD](DEFAULT_MEMORY_THRESHOLD) bytes.
+    pub fn memory_threshold(mut self, size: u32) -> Self {
+        self.memory_threshold = size;
         self
     }
 }
@@ -292,7 +310,8 @@ impl<T: std::io::Seek> From<T> for OpenOptions<T> {
 /// Utility to create a new BPX [Container](crate::core::Container) with a [MainHeader](MainHeader).
 pub struct CreateOptions<T> {
     pub(crate) header: MainHeader,
-    pub(crate) backend: T
+    pub(crate) backend: T,
+    pub(crate) memory_threshold: u32
 }
 
 impl<T> CreateOptions<T> {
@@ -300,7 +319,8 @@ impl<T> CreateOptions<T> {
     pub fn new(backend: T) -> CreateOptions<T> {
         CreateOptions {
             header: MainHeader::new(),
-            backend
+            backend,
+            memory_threshold: DEFAULT_MEMORY_THRESHOLD
         }
     }
 
@@ -384,6 +404,14 @@ impl<T> CreateOptions<T> {
         self
     }
 
+    /// Sets the maximum size of a section allowed to fit in RAM in bytes.
+    ///
+    /// The default is set to 100000000 bytes (100Mb).
+    pub fn memory_threshold(mut self, size: u32) -> Self {
+        self.memory_threshold = size;
+        self
+    }
+
     /// Returns the generated [MainHeader](MainHeader).
     ///
     /// # Examples
@@ -414,7 +442,7 @@ impl<T: std::io::Seek> From<T> for CreateOptions<T> {
 
 impl<T: std::io::Seek> From<(T, MainHeader)> for CreateOptions<T> {
     fn from((backend, header): (T, MainHeader)) -> Self {
-        Self { header, backend }
+        Self { header, backend, memory_threshold: DEFAULT_MEMORY_THRESHOLD }
     }
 }
 

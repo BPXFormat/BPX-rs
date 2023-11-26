@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -33,7 +33,7 @@ use std::{
     ops::Index,
 };
 
-use crate::{sd::Value, utils::Name};
+use crate::{sd::Value, hash::Name};
 
 /// Represents a BPX Structured Data Object.
 #[derive(PartialEq, Clone)]

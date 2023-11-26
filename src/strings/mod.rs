@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -50,7 +50,7 @@ use crate::core::{AutoSectionData, Container, Handle, SectionData};
 /// use bpx::core::Container;
 /// use bpx::core::header::{SectionHeader, Struct};
 /// use bpx::strings::StringSection;
-/// use bpx::utils::new_byte_buf;
+/// use bpx::util::new_byte_buf;
 ///
 /// let mut file = Container::create(new_byte_buf(0));
 /// let section = file.sections_mut().create(SectionHeader::new());
