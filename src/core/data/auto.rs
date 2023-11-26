@@ -1,4 +1,4 @@
-// Copyright (c) 2022, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -32,11 +32,10 @@ use tempfile::tempfile;
 
 use crate::core::{
     data::{file::FileBasedSection, memory::InMemorySection},
-    SectionData,
+    SectionData, DEFAULT_MEMORY_THRESHOLD,
 };
 use crate::traits::ReadToVec;
 
-const MEMORY_THRESHOLD: u32 = 100000000;
 const INIT_BUF_SIZE: usize = 512;
 
 #[allow(clippy::large_enum_variant)] // This is always used behind a Box
@@ -51,19 +50,21 @@ enum DynSectionData {
 /// when the size of the data exceeds 100Mb.*
 pub struct AutoSectionData {
     inner: Box<DynSectionData>,
+    memory_threshold: u32
 }
 
 impl Default for AutoSectionData {
     fn default() -> Self {
-        Self::new()
+        Self::new(DEFAULT_MEMORY_THRESHOLD)
     }
 }
 
 impl AutoSectionData {
     /// Creates a new section data backed by a dynamically sized in-memory buffer.
-    pub fn new() -> AutoSectionData {
+    pub fn new(memory_threshold: u32) -> AutoSectionData {
         AutoSectionData {
             inner: Box::new(DynSectionData::Memory(InMemorySection::new(512))),
+            memory_threshold
         }
     }
 
@@ -72,6 +73,7 @@ impl AutoSectionData {
     /// # Arguments
     ///
     /// * `size`: the size of the new section data.
+    /// * `memory_threshold`: the maximum size of a section in memort (RAM) in bytes.
     ///
     /// returns: Result<AutoSectionData, Error>
     ///
@@ -79,15 +81,17 @@ impl AutoSectionData {
     ///
     /// This function returns an [Error](std::io::Error) if a file backed section was needed,
     /// given the size constraint, but failed to initialize.
-    pub fn new_with_size(size: u32) -> std::io::Result<AutoSectionData> {
-        if size >= MEMORY_THRESHOLD {
+    pub fn new_with_size(size: u32, memory_threshold: u32) -> std::io::Result<AutoSectionData> {
+        if size >= memory_threshold {
             let file = FileBasedSection::new(tempfile()?);
             Ok(AutoSectionData {
                 inner: Box::new(DynSectionData::File(file)),
+                memory_threshold
             })
         } else {
             Ok(AutoSectionData {
                 inner: Box::new(DynSectionData::Memory(InMemorySection::new(size as usize))),
+                memory_threshold
             })
         }
     }
@@ -144,7 +148,7 @@ impl Write for AutoSectionData {
             DynSectionData::File(f) => f.write(buf),
             DynSectionData::Memory(m) => {
                 let size = m.write(buf)?;
-                if m.size() >= MEMORY_THRESHOLD as usize {
+                if m.size() >= self.memory_threshold as usize {
                     unsafe {
                         self.move_to_file()?;
                     }

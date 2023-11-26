@@ -1,4 +1,4 @@
-// Copyright (c) 2022, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -26,7 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use crate::core::data::utils::IoReadBuffer;
+use crate::core::data::util::IoReadBuffer;
 use std::{
     fs::File,
     io::{Read, Result, Seek, SeekFrom, Write},

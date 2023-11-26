@@ -1,4 +1,4 @@
-// Copyright (c) 2022, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -29,7 +29,7 @@
 use std::io::{Cursor, Read, Result, Seek, SeekFrom, Write};
 
 use crate::traits::ReadToVec;
-use crate::{core::SectionData, utils::new_byte_buf};
+use crate::{core::SectionData, util::new_byte_buf};
 
 pub struct InMemorySection {
     byte_buf: Cursor<Vec<u8>>,

@@ -1,4 +1,4 @@
-// Copyright (c) 2022, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -31,7 +31,7 @@
 mod auto;
 mod file;
 mod memory;
-mod utils;
+mod util;
 
 use std::io::{Read, Result, Seek, Write};
 
@@ -53,7 +53,7 @@ pub trait SectionData: Read + Write + Seek + ReadToVec {
     /// use std::io::{Read, Seek, SeekFrom, Write};
     /// use bpx::core::{AutoSectionData, SectionData};
     ///
-    /// let mut data = AutoSectionData::new();
+    /// let mut data = AutoSectionData::default();
     /// data.write_all(b"test").unwrap();
     /// data.truncate(2).unwrap();
     /// data.seek(SeekFrom::Start(0)).unwrap();
@@ -70,10 +70,10 @@ pub trait SectionData: Read + Write + Seek + ReadToVec {
 impl<T: SectionData> Shift for T {
     fn shift(&mut self, pos: ShiftTo) -> Result<()> {
         match pos {
-            ShiftTo::Left(length) => utils::shift_left(self, length as u32),
+            ShiftTo::Left(length) => util::shift_left(self, length as u32),
             ShiftTo::Right(length) => {
                 let fuckingrust = self.size();
-                utils::shift_right(self, fuckingrust as u64, length as u32)
+                util::shift_right(self, fuckingrust as u64, length as u32)
             },
         }
     }
@@ -91,7 +91,7 @@ mod tests {
 
     #[test]
     fn basic_shift_left() {
-        let mut data = AutoSectionData::new();
+        let mut data = AutoSectionData::default();
         data.write_all(SEED.as_bytes()).unwrap();
         data.seek(SeekFrom::End(-4)).unwrap();
         data.shift(ShiftTo::Left(2)).unwrap();
@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn basic_shift_right() {
-        let mut data = AutoSectionData::new();
+        let mut data = AutoSectionData::default();
         data.write_all(SEED.as_bytes()).unwrap();
         data.seek(SeekFrom::End(-4)).unwrap();
         data.shift(ShiftTo::Right(2)).unwrap();
@@ -115,7 +115,7 @@ mod tests {
 
     #[test]
     fn shift_left_maintain_cursor() {
-        let mut data = AutoSectionData::new();
+        let mut data = AutoSectionData::default();
         data.write_all(SEED.as_bytes()).unwrap();
         let cursor = data.seek(SeekFrom::End(-4)).unwrap();
         data.shift(ShiftTo::Left(2)).unwrap();
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn shift_right_maintain_cursor() {
-        let mut data = AutoSectionData::new();
+        let mut data = AutoSectionData::default();
         data.write_all(SEED.as_bytes()).unwrap();
         let cursor = data.seek(SeekFrom::End(-4)).unwrap();
         data.shift(ShiftTo::Right(2)).unwrap();
@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn long_shift_left() {
-        let mut data = AutoSectionData::new();
+        let mut data = AutoSectionData::default();
         data.write_all(SEED.as_bytes()).unwrap();
         data.seek(SeekFrom::Start(4)).unwrap();
         data.shift(ShiftTo::Left(2)).unwrap();
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn long_shift_right() {
-        let mut data = AutoSectionData::new();
+        let mut data = AutoSectionData::default();
         data.write_all(SEED.as_bytes()).unwrap();
         data.seek(SeekFrom::Start(4)).unwrap();
         data.shift(ShiftTo::Right(2)).unwrap();
@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn zero_shift_left() {
-        let mut data = AutoSectionData::new();
+        let mut data = AutoSectionData::default();
         data.write_all(SEED.as_bytes()).unwrap();
         data.seek(SeekFrom::Start(0)).unwrap();
         data.shift(ShiftTo::Left(2)).unwrap();
@@ -169,7 +169,7 @@ mod tests {
 
     #[test]
     fn zero_shift_right() {
-        let mut data = AutoSectionData::new();
+        let mut data = AutoSectionData::default();
         data.write_all(SEED.as_bytes()).unwrap();
         data.seek(SeekFrom::Start(0)).unwrap();
         data.shift(ShiftTo::Right(2)).unwrap();
@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn write_append() {
-        let mut data = AutoSectionData::new();
+        let mut data = AutoSectionData::default();
         data.write_all("tt".as_bytes()).unwrap();
         data.seek(SeekFrom::Start(1)).unwrap();
         data.write_append(b"es").unwrap();
