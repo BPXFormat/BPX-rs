@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -30,7 +30,7 @@
 
 mod container;
 
-pub mod builder;
+pub mod options;
 mod compression;
 mod data;
 mod decoder;

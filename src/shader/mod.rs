@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -28,7 +28,7 @@
 
 //! An implementation of the BPX type S (Shader) specification.
 
-mod builder;
+mod options;
 mod core;
 mod decoder;
 mod encoder;
@@ -39,7 +39,7 @@ mod table;
 /// Result type for all ShaderPack operations.
 pub type Result<T> = std::result::Result<T, error::Error>;
 
-pub use builder::*;
+pub use options::*;
 pub use table::{ShaderTableMut, ShaderTableRef, SymbolTableMut, SymbolTableRef};
 
 pub use self::core::*;

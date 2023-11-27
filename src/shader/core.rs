@@ -33,7 +33,7 @@ use once_cell::unsync::OnceCell;
 use crate::shader::{Target, Type};
 use crate::{
     core::{
-        builder::{Checksum, CompressionMethod, SectionHeaderBuilder},
+        options::{Checksum, CompressionMethod, SectionHeaderBuilder},
         header::{Struct, SECTION_TYPE_STRING},
         Container, Handle,
     },

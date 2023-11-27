@@ -34,7 +34,7 @@ use bytesutil::{ReadBytes, WriteBytes, StaticByteBuf, ByteBuf};
 
 use crate::{
     core::{
-        builder::{Checksum, CompressionMethod},
+        options::{Checksum, CompressionMethod},
         error::Error,
     },
     garraylen::*,

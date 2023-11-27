@@ -1,4 +1,4 @@
-// Copyright (c) 2022, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -33,7 +33,7 @@ use elsa::FrozenMap;
 use crate::traits::ReadToVec;
 use crate::{
     core::{
-        builder::{Checksum, CompressionMethod, SectionHeaderBuilder},
+        options::{Checksum, CompressionMethod, SectionHeaderBuilder},
         Container, Handle, SectionData,
     },
     shader::{

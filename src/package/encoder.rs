@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -30,7 +30,7 @@ use std::io::{Read, Write};
 
 use crate::{
     core::{
-        builder::{Checksum, CompressionMethod, SectionHeaderBuilder},
+        options::{Checksum, CompressionMethod, SectionHeaderBuilder},
         header::SectionHeader,
         Container, Handle, SectionData,
     },

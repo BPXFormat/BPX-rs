@@ -148,7 +148,7 @@ impl<T> CreateOptions<T> {
 impl<T: std::io::Seek> From<(T, Settings)> for CreateOptions<T> {
     fn from((backend, settings): (T, Settings)) -> Self {
         Self {
-            options: crate::core::builder::CreateOptions::new(backend),
+            options: crate::core::options::CreateOptions::new(backend),
             settings
         }
     }

@@ -38,7 +38,7 @@ use crate::core::{
     Result, SectionData,
 };
 
-use super::builder::{CreateOptions, OpenOptions};
+use super::options::{CreateOptions, OpenOptions};
 use super::error::Error;
 
 /// The default maximum size of uncompressed sections.

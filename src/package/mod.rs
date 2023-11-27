@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -31,7 +31,7 @@
 pub mod error;
 pub mod object;
 
-mod builder;
+mod options;
 mod core;
 mod decoder;
 mod encoder;
@@ -41,7 +41,7 @@ pub mod utils;
 /// Result type for all Package operations.
 pub type Result<T> = std::result::Result<T, error::Error>;
 
-pub use builder::*;
+pub use options::*;
 pub use table::{ObjectTableMut, ObjectTableRef};
 
 pub use self::core::*;
