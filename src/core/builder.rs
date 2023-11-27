@@ -406,7 +406,7 @@ impl<T> CreateOptions<T> {
 
     /// Sets the maximum size of a section allowed to fit in RAM in bytes.
     ///
-    /// The default is set to 100000000 bytes (100Mb).
+    /// The default is set to [DEFAULT_MEMORY_THRESHOLD](DEFAULT_MEMORY_THRESHOLD) bytes.
     pub fn memory_threshold(mut self, size: u32) -> Self {
         self.memory_threshold = size;
         self
