@@ -50,5 +50,5 @@ pub mod strings;
 #[cfg(feature = "package")]
 pub mod package;
 
-//#[cfg(feature = "shader")]
-//pub mod shader;
+#[cfg(feature = "shader")]
+pub mod shader;

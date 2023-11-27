@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -26,7 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use crate::shader::{Target, Type};
+use crate::{shader::{Target, Type}, macros::{create_options, open_options}};
 
 /// The required settings to create a new BPXS.
 ///
@@ -41,6 +41,75 @@ pub struct Settings {
 
     /// The type of the shader package (Assembly or Pipeline).
     pub ty: Type,
+}
+
+create_options! {
+    /// Utility to simplify generation of [Settings](Settings) required when creating a new BPXS.
+    CreateOptions {
+        settings: Settings = Settings {
+            assembly_hash: 0,
+            target: Target::Any,
+            ty: Type::Pipeline,
+        }
+    }
+}
+
+impl<T> CreateOptions<T> {
+    /// Defines the shader assembly this package is linked against.
+    ///
+    /// *By default, no shader assembly is linked and the hash is 0.*
+    ///
+    /// # Arguments
+    ///
+    /// * `hash`: the shader assembly hash.
+    ///
+    /// returns: ShaderPackBuilder
+    pub fn assembly(mut self, hash: u64) -> Self {
+        self.settings.assembly_hash = hash;
+        self
+    }
+
+    /// Defines the target of this shader package.
+    ///
+    /// *By default, the target is Any.*
+    ///
+    /// # Arguments
+    ///
+    /// * `target`: the shader target.
+    ///
+    /// returns: ShaderPackBuilder
+    pub fn target(mut self, target: Target) -> Self {
+        self.settings.target = target;
+        self
+    }
+
+    /// Defines the shader package type.
+    ///
+    /// *By default, the type is Pipeline.*
+    ///
+    /// # Arguments
+    ///
+    /// * `ty`: the shader package type (pipeline/program or assembly).
+    ///
+    /// returns: ShaderPackBuilder
+    pub fn ty(mut self, ty: Type) -> Self {
+        self.settings.ty = ty;
+        self
+    }
+}
+
+impl<T: std::io::Seek> From<(T, Settings)> for CreateOptions<T> {
+    fn from((backend, settings): (T, Settings)) -> Self {
+        Self {
+            options: crate::core::builder::CreateOptions::new(backend),
+            settings
+        }
+    }
+}
+
+open_options! {
+    /// Utility to allow configuring the underlying BPX container when opening a BPXS.
+    OpenOptions {}
 }
 
 /// Utility to simplify generation of [Settings](Settings) required when creating a new BPXS.

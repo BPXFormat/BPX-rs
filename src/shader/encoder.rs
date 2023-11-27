@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -26,12 +26,12 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use byteorder::{ByteOrder, LittleEndian};
+use bytesutil::{StaticByteBuf, ByteBuf};
 
 use crate::shader::{Settings, Target, Type};
 
-pub fn get_type_ext(settings: &Settings) -> [u8; 16] {
-    let mut type_ext: [u8; 16] = [0; 16];
+pub fn get_type_ext(settings: &Settings) -> StaticByteBuf<16> {
+    let mut type_ext = ByteBuf::default();
     match settings.target {
         Target::DX11 => type_ext[10] = 0x1,
         Target::DX12 => type_ext[10] = 0x2,
@@ -56,6 +56,6 @@ pub fn get_type_ext(settings: &Settings) -> [u8; 16] {
         Type::Assembly => type_ext[11] = b'A',
         Type::Pipeline => type_ext[11] = b'P',
     };
-    LittleEndian::write_u64(&mut type_ext[0..8], settings.assembly_hash);
+    type_ext.set_le(0, settings.assembly_hash);
     type_ext
 }

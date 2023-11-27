@@ -28,13 +28,12 @@
 
 use std::io::{Read, Seek, SeekFrom, Write};
 
-use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use once_cell::unsync::OnceCell;
 
 use crate::shader::{Target, Type};
 use crate::{
     core::{
-        builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
+        builder::{Checksum, CompressionMethod, SectionHeaderBuilder},
         header::{Struct, SECTION_TYPE_STRING},
         Container, Handle,
     },
@@ -51,18 +50,20 @@ use crate::{
     table::NamedItemTable,
 };
 
+use super::{OpenOptions, CreateOptions};
+
 /// A BPXS (ShaderPack).
 ///
 /// # Examples
 ///
 /// ```
 /// use std::io::{Seek, SeekFrom};
-/// use bpx::shader::{Builder, Shader, ShaderPack, Stage};
+/// use bpx::shader::{Shader, ShaderPack, Stage};
 /// use bpx::shader::symbol;
 /// use bpx::shader::symbol::FLAG_EXTENDED_DATA;
 /// use bpx::util::new_byte_buf;
 ///
-/// let mut bpxs = ShaderPack::create(new_byte_buf(0), Builder::new());
+/// let mut bpxs = ShaderPack::create(new_byte_buf(0));
 /// {
 ///     let mut symbols = bpxs.symbols_mut().unwrap();
 ///     symbols.create(symbol::Builder::new("test")).unwrap();
@@ -191,7 +192,7 @@ impl<T> TryFrom<Container<T>> for ShaderPack<T> {
                     });
                 }
                 let assembly_hash =
-                    (&container.main_header().type_ext[0..8]).read_u64::<LittleEndian>()?;
+                    container.main_header().type_ext.get_le(0);
                 let (target, ty) = get_target_type_from_code(
                     container.main_header().type_ext[10],
                     container.main_header().type_ext[11],
@@ -271,27 +272,24 @@ impl<T: Write + Seek> ShaderPack<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
-    /// use bpx::shader::Builder;
     /// use bpx::shader::ShaderPack;
     /// use bpx::util::new_byte_buf;
     ///
-    /// let mut bpxs = ShaderPack::create(new_byte_buf(0), Builder::new());
+    /// let mut bpxs = ShaderPack::create(new_byte_buf(0));
     /// bpxs.save().unwrap();
     /// assert!(!bpxs.into_inner().into_inner().into_inner().is_empty());
-    /// let mut bpxs = ShaderPack::try_from(Container::create(new_byte_buf(0), MainHeaderBuilder::new())).unwrap();
+    /// let mut bpxs = ShaderPack::try_from(Container::create(new_byte_buf(0))).unwrap();
     /// bpxs.save().unwrap();
     /// assert!(!bpxs.into_inner().into_inner().into_inner().is_empty());
     /// ```
-    pub fn create<S: Into<Settings>>(backend: T, settings: S) -> ShaderPack<T> {
-        let settings = settings.into();
-        let mut container = Container::create(
-            backend,
-            MainHeaderBuilder::new()
-                .ty(b'S')
-                .type_ext(get_type_ext(&settings))
-                .version(SUPPORTED_VERSION),
+    pub fn create(options: impl Into<CreateOptions<T>>) -> ShaderPack<T> {
+        let options = options.into();
+        let settings = options.settings;
+        let mut container = Container::create(options.options
+            .ty(b'S')
+            .type_ext(get_type_ext(&settings))
+            .version(SUPPORTED_VERSION)
         );
         let string_section = container.sections_mut().create(
             SectionHeaderBuilder::new()
@@ -331,8 +329,7 @@ impl<T: Write + Seek> ShaderPack<T> {
             }
         }
         if let Some(syms) = self.symbols.get() {
-            (&mut self.container.main_header_mut().type_ext[8..10])
-                .write_u16::<LittleEndian>(syms.len() as _)?;
+            self.container.main_header_mut().type_ext.set_le(8, syms.len() as u16);
             let mut section = self.container.sections().open(self.symbol_table)?;
             section.seek(SeekFrom::Start(0))?;
             for v in syms {
@@ -361,11 +358,10 @@ impl<T: Read + Seek> ShaderPack<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::shader::Builder;
     /// use bpx::shader::ShaderPack;
     /// use bpx::util::new_byte_buf;
     ///
-    /// let mut bpxs = ShaderPack::create(new_byte_buf(0), Builder::new());
+    /// let mut bpxs = ShaderPack::create(new_byte_buf(0));
     /// bpxs.save().unwrap();
     /// let mut buf = bpxs.into_inner().into_inner();
     /// buf.set_position(0);
@@ -373,8 +369,8 @@ impl<T: Read + Seek> ShaderPack<T> {
     /// let symbols = bpxs.symbols().unwrap();
     /// assert_eq!(symbols.len(), 0);
     /// ```
-    pub fn open(backend: T) -> Result<ShaderPack<T>> {
-        let container = Container::open(backend)?;
+    pub fn open(options: impl Into<OpenOptions<T>>) -> Result<ShaderPack<T>> {
+        let container = Container::open(options.into().options)?;
         if container.main_header().ty != b'S' {
             return Err(Error::BadType {
                 expected: b'S',
@@ -391,7 +387,7 @@ impl<T: Read + Seek> ShaderPack<T> {
             .find_by_type(SECTION_TYPE_STRING)
             .ok_or(Error::MissingSection(Section::Strings))?;
         let strings = StringSection::new(handle);
-        let num_symbols = LittleEndian::read_u16(&self.container.main_header().type_ext[8..10]);
+        let num_symbols = self.container.main_header().type_ext.get_le(8);
         let table = read_symbol_table(&self.container, num_symbols, self.symbol_table)?;
         Ok(SymbolTable::new(table, strings, self.extended_data))
     }

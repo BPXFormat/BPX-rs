@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -28,7 +28,7 @@
 
 //! Contains utilities to work with the symbol table section.
 
-use byteorder::{ByteOrder, LittleEndian};
+use bytesutil::{ReadBytes, WriteBytes};
 
 use crate::{
     core::header::Struct,
@@ -152,9 +152,9 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol {
     }
 
     fn from_bytes(buffer: [u8; SIZE_SYMBOL_STRUCTURE]) -> Result<Self::Output, Self::Error> {
-        let name = LittleEndian::read_u32(&buffer[0..4]);
-        let extended_data = LittleEndian::read_u32(&buffer[4..8]);
-        let flags = LittleEndian::read_u16(&buffer[8..10]);
+        let name = u32::read_bytes_le(&buffer[0..4]);
+        let extended_data = u32::read_bytes_le(&buffer[4..8]);
+        let flags = u16::read_bytes_le(&buffer[8..10]);
         let ty = get_symbol_type_from_code(buffer[10])?;
         let register = buffer[11];
         Ok(Symbol {
@@ -168,9 +168,9 @@ impl Struct<SIZE_SYMBOL_STRUCTURE> for Symbol {
 
     fn to_bytes(&self) -> [u8; SIZE_SYMBOL_STRUCTURE] {
         let mut buf = [0; SIZE_SYMBOL_STRUCTURE];
-        LittleEndian::write_u32(&mut buf[0..4], self.name);
-        LittleEndian::write_u32(&mut buf[4..8], self.extended_data);
-        LittleEndian::write_u16(&mut buf[8..10], self.flags);
+        self.name.write_bytes_le(&mut buf[0..4]);
+        self.extended_data.write_bytes_le(&mut buf[4..8]);
+        self.flags.write_bytes_le(&mut buf[8..10]);
         match self.ty {
             Type::Texture => buf[10] = 0x0,
             Type::Sampler => buf[10] = 0x1,
