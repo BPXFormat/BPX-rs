@@ -213,14 +213,14 @@ pub struct Settings {
 }
 
 /// Utility to simplify generation of [Settings](Settings) required when creating a new BPXS.
-pub struct Builder {
+pub struct Options {
     sym: Settings,
 }
 
-impl Builder {
+impl Options {
     /// Creates a new symbol builder.
-    pub fn new<S: Into<String>>(name: S) -> Builder {
-        Builder {
+    pub fn new<S: Into<String>>(name: S) -> Options {
+        Options {
             sym: Settings {
                 name: name.into(),
                 extended_data: Value::Null,
@@ -326,14 +326,14 @@ impl Builder {
     }
 }
 
-impl From<&mut Builder> for Settings {
-    fn from(builder: &mut Builder) -> Self {
+impl From<&mut Options> for Settings {
+    fn from(builder: &mut Options) -> Self {
         builder.build()
     }
 }
 
-impl From<Builder> for Settings {
-    fn from(builder: Builder) -> Self {
+impl From<Options> for Settings {
+    fn from(builder: Options) -> Self {
         builder.build()
     }
 }
