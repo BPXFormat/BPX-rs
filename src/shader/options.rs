@@ -30,7 +30,7 @@ use crate::{shader::{Target, Type}, macros::{create_options, open_options}};
 
 /// The required settings to create a new BPXS.
 ///
-/// *This is intended to be generated with help of [Builder](Builder).*
+/// *This is intended to be generated with help of [CreateOptions](CreateOptions).*
 #[derive(Clone)]
 pub struct Settings {
     /// The assembly hash of the shader package.

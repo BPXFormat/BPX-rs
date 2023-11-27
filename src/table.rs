@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -52,8 +52,6 @@ impl<T> NamedItemTable<T> {
     /// # Arguments
     ///
     /// * `list`: the list of items.
-    ///
-    /// returns: ItemTable<T>
     pub fn with_list(list: Vec<T>) -> Self {
         Self {
             list,

@@ -1,4 +1,4 @@
-// Copyright (c) 2022, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -199,8 +199,6 @@ impl<'a, T: Read + Seek> ObjectTableRef<'a, T> {
     /// # Arguments
     ///
     /// * `out`: A [Write](Write) to unpack object data to.
-    ///
-    /// returns: Result<u64>
     ///
     /// # Errors
     ///

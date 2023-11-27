@@ -193,7 +193,7 @@ impl Item for Symbol {
 
 /// The required settings to create a new symbol.
 ///
-/// *This is intended to be generated with help of [Builder](Builder).*
+/// *This is intended to be generated with help of [Options](Options).*
 #[derive(Clone)]
 pub struct Settings {
     /// The name of the symbol.

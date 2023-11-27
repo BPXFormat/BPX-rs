@@ -66,7 +66,7 @@ use super::{OpenOptions, CreateOptions};
 /// let mut bpxs = ShaderPack::create(new_byte_buf(0));
 /// {
 ///     let mut symbols = bpxs.symbols_mut().unwrap();
-///     symbols.create(symbol::Builder::new("test")).unwrap();
+///     symbols.create(symbol::Options::new("test")).unwrap();
 /// }
 /// {
 ///     let mut shaders = bpxs.shaders_mut();
@@ -267,8 +267,6 @@ impl<T: Write + Seek> ShaderPack<T> {
     /// * `backend`: A [Write](Write) + [Seek](Seek) to use as backend.
     /// * `settings`: The shader package creation settings.
     ///
-    /// returns: ShaderPack<T>
-    ///
     /// # Examples
     ///
     /// ```
@@ -347,8 +345,6 @@ impl<T: Read + Seek> ShaderPack<T> {
     /// # Arguments
     ///
     /// * `backend`: A [Read](Read) + [Seek](Seek) to use as backend.
-    ///
-    /// returns: Result<ShaderPack<T>>
     ///
     /// # Errors
     ///

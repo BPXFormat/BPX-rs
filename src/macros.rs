@@ -98,7 +98,7 @@ macro_rules! create_options {
 
             /// Sets the maximum size of a section allowed to fit in RAM in bytes.
             ///
-            /// The default is set to [DEFAULT_MEMORY_THRESHOLD](crate::core::container::DEFAULT_MEMORY_THRESHOLD) bytes.
+            /// The default is set to [DEFAULT_MEMORY_THRESHOLD](crate::core::DEFAULT_MEMORY_THRESHOLD) bytes.
             pub fn memory_threshold(mut self, size: u32) -> Self {
                 self.options = self.options.memory_threshold(size);
                 self
@@ -156,7 +156,7 @@ macro_rules! open_options {
 
             /// Sets the maximum size of a section allowed to fit in RAM in bytes.
             ///
-            /// The default is set to [DEFAULT_MEMORY_THRESHOLD](crate::core::container::DEFAULT_MEMORY_THRESHOLD) bytes.
+            /// The default is set to [DEFAULT_MEMORY_THRESHOLD](crate::core::DEFAULT_MEMORY_THRESHOLD) bytes.
             pub fn memory_threshold(mut self, size: u32) -> Self {
                 self.options = self.options.memory_threshold(size);
                 self

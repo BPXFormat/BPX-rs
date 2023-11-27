@@ -108,8 +108,6 @@ impl StringSection {
     /// * `container`: the BPX container.
     /// * `s`: the string to write.
     ///
-    /// returns: Result<u32>
-    ///
     /// # Errors
     ///
     /// Returns an [Error](Error) if the string could not be written.

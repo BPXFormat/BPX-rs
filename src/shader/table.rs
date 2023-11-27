@@ -286,7 +286,7 @@ impl<'a, T> SymbolTableMut<'a, T> {
     ///
     /// # Arguments
     ///
-    /// * `sym`: An [Settings](Settings), see [Builder](crate::shader::symbol::Builder) for more information.
+    /// * `sym`: An [Settings](Settings), see [Options](crate::shader::symbol::Options) for more information.
     ///
     /// returns: Result<()>
     ///
@@ -458,8 +458,6 @@ impl<'a, T: Read + Seek> ShaderTableRef<'a, T> {
     /// # Arguments
     ///
     /// * `handle`: a handle to the shader section.
-    ///
-    /// returns: Result<Shader>
     ///
     /// # Errors
     ///

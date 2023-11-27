@@ -217,8 +217,6 @@ impl<T: Write + Seek> Package<T> {
     /// * `backend`: A [Write](Write) + [Seek](Seek) to use as backend.
     /// * `settings`: The package creation settings.
     ///
-    /// returns: Result<Package<T>>
-    ///
     /// # Errors
     ///
     /// Returns an [Error](Error) if the metadata couldn't be created.
@@ -331,8 +329,6 @@ impl<T: Read + Seek> Package<T> {
     /// # Arguments
     ///
     /// * `backend`: A [Read](Read) + [Seek](Seek) to use as backend.
-    ///
-    /// returns: Result<PackageDecoder<TBackend>>
     ///
     /// # Errors
     ///
