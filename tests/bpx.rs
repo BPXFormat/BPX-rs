@@ -28,10 +28,7 @@
 
 use std::{fs::File, path::Path};
 
-use bpx::core::{
-    header::BPX_CURRENT_VERSION,
-    Container,
-};
+use bpx::core::{header::BPX_CURRENT_VERSION, Container};
 
 #[test]
 fn attempt_write_empty_bpxp() {

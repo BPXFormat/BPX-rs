@@ -88,7 +88,7 @@ pub fn read_section_header_table<T: Read>(
 pub fn load_section1<T: Read + Seek>(
     file: &mut T,
     section: &SectionHeader,
-    memory_threshold: u32
+    memory_threshold: u32,
 ) -> Result<AutoSectionData> {
     let mut data = AutoSectionData::new_with_size(section.size, memory_threshold)?;
     data.seek(io::SeekFrom::Start(0))?;

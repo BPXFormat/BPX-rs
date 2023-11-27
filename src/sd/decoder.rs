@@ -26,8 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::Read;
 use bytesutil::ReadBytes;
+use std::io::Read;
 
 use crate::{
     sd::{error::Error, value::Type, Array, Object, Result, Value},

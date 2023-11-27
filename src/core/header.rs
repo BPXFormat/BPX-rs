@@ -30,15 +30,16 @@
 
 use std::io;
 
-use bytesutil::{ReadBytes, WriteBytes, StaticByteBuf, ByteBuf};
+use bytesutil::{ByteBuf, ReadBytes, StaticByteBuf, WriteBytes};
 
 use crate::{
     core::{
-        options::{Checksum, CompressionMethod},
         error::Error,
+        options::{Checksum, CompressionMethod},
     },
     garraylen::*,
-    traits::ReadFill, util::RecoverableError,
+    traits::ReadFill,
+    util::RecoverableError,
 };
 
 /// Represents a serializable and deserializable byte structure in a BPX.
@@ -248,10 +249,16 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader {
             type_ext: ByteBuf::new(extract_slice(&buffer, 24)),
         };
         if &head.signature != b"BPX" {
-            return Err(RecoverableError::new(Error::BadSignature(head.signature), (checksum, head)));
+            return Err(RecoverableError::new(
+                Error::BadSignature(head.signature),
+                (checksum, head),
+            ));
         }
         if !KNOWN_VERSIONS.contains(&head.version) {
-            return Err(RecoverableError::new(Error::BadVersion(head.version), (checksum, head)));
+            return Err(RecoverableError::new(
+                Error::BadVersion(head.version),
+                (checksum, head),
+            ));
         }
         Ok((checksum, head))
     }

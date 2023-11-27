@@ -121,7 +121,7 @@ pub struct SectionTable<T> {
     pub(crate) modified: bool,
     pub(crate) next_handle: u32,
     pub(crate) skip_checksum: bool,
-    pub(crate) memory_threshold: u32
+    pub(crate) memory_threshold: u32,
 }
 
 impl<T: Read + Seek> SectionTable<T> {
@@ -151,7 +151,7 @@ impl<T: Read + Seek> SectionTable<T> {
                     header.flags &= !FLAG_CHECK_WEAK;
                     header.flags &= !FLAG_CHECK_CRC32;
                     load_section1(&mut *backend, &section.header, self.memory_threshold)?
-                }
+                },
             };
             *data = Some(loaded);
         }

@@ -31,10 +31,10 @@
 pub mod error;
 pub mod object;
 
-mod options;
 mod core;
 mod decoder;
 mod encoder;
+mod options;
 mod table;
 pub mod utils;
 

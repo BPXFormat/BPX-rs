@@ -34,8 +34,8 @@ use once_cell::unsync::OnceCell;
 use crate::package::{Architecture, Platform};
 use crate::{
     core::{
-        options::{Checksum, CompressionMethod, SectionOptions},
         header::{Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
+        options::{Checksum, CompressionMethod, SectionOptions},
         Container, Handle,
     },
     package::{
@@ -50,7 +50,7 @@ use crate::{
     table::NamedItemTable,
 };
 
-use super::{OpenOptions, CreateOptions};
+use super::{CreateOptions, OpenOptions};
 
 /// A BPXP (Package).
 ///
@@ -240,10 +240,11 @@ impl<T: Write + Seek> Package<T> {
         let options = options.into();
         let settings = options.settings;
         let mut container = Container::create(
-            options.options
+            options
+                .options
                 .ty(b'P')
                 .type_ext(get_type_ext(&settings))
-                .version(SUPPORTED_VERSION)
+                .version(SUPPORTED_VERSION),
         );
         let object_table = container.sections_mut().create(
             SectionOptions::new()
@@ -288,11 +289,18 @@ impl<T: Write + Seek> Package<T> {
         if let Some(metadata) = self.metadata.get() {
             if metadata != &self.settings.metadata {
                 if !self.settings.metadata.is_null() {
-                    let handle = self.container.sections().find_by_type(SECTION_TYPE_SD)
-                        .unwrap_or_else(|| self.container.sections_mut().create(SectionOptions::new()
-                            .checksum(Checksum::Weak)
-                            .compression(CompressionMethod::Zlib)
-                            .ty(SECTION_TYPE_SD)));
+                    let handle = self
+                        .container
+                        .sections()
+                        .find_by_type(SECTION_TYPE_SD)
+                        .unwrap_or_else(|| {
+                            self.container.sections_mut().create(
+                                SectionOptions::new()
+                                    .checksum(Checksum::Weak)
+                                    .compression(CompressionMethod::Zlib)
+                                    .ty(SECTION_TYPE_SD),
+                            )
+                        });
                     let mut section = self.container.sections().open(handle)?;
                     self.settings.metadata.write(&mut *section)?;
                 } else {
@@ -426,7 +434,9 @@ mod tests {
         let mut bpxp = Package::create(new_byte_buf(128)).unwrap();
         {
             let mut objects = bpxp.objects_mut().unwrap();
-            objects.create("TestObject", "This is a test 你好".as_bytes()).unwrap();
+            objects
+                .create("TestObject", "This is a test 你好".as_bytes())
+                .unwrap();
         }
         bpxp.save().unwrap();
         //Reset the byte buffer pointer to start.
@@ -446,7 +456,10 @@ mod tests {
             assert_eq!(s, "This is a test 你好")
         }
         //Attempt to write one more object into the file.
-        bpxp.objects_mut().unwrap().create("AdditionalObject", "Another test".as_bytes()).unwrap();
+        bpxp.objects_mut()
+            .unwrap()
+            .create("AdditionalObject", "Another test".as_bytes())
+            .unwrap();
         bpxp.save().unwrap();
         //Reset the byte buffer pointer to start.
         let mut bytebuf = bpxp.into_inner().into_inner();

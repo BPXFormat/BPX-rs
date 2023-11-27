@@ -33,8 +33,8 @@ use once_cell::unsync::OnceCell;
 use crate::shader::{Target, Type};
 use crate::{
     core::{
-        options::{Checksum, CompressionMethod, SectionOptions},
         header::{Struct, SECTION_TYPE_STRING},
+        options::{Checksum, CompressionMethod, SectionOptions},
         Container, Handle,
     },
     shader::{
@@ -50,7 +50,7 @@ use crate::{
     table::NamedItemTable,
 };
 
-use super::{OpenOptions, CreateOptions};
+use super::{CreateOptions, OpenOptions};
 
 /// A BPXS (ShaderPack).
 ///
@@ -191,8 +191,7 @@ impl<T> TryFrom<Container<T>> for ShaderPack<T> {
                         actual: container.main_header().version,
                     });
                 }
-                let assembly_hash =
-                    container.main_header().type_ext.get_le(0);
+                let assembly_hash = container.main_header().type_ext.get_le(0);
                 let (target, ty) = get_target_type_from_code(
                     container.main_header().type_ext[10],
                     container.main_header().type_ext[11],
@@ -284,10 +283,12 @@ impl<T: Write + Seek> ShaderPack<T> {
     pub fn create(options: impl Into<CreateOptions<T>>) -> ShaderPack<T> {
         let options = options.into();
         let settings = options.settings;
-        let mut container = Container::create(options.options
-            .ty(b'S')
-            .type_ext(get_type_ext(&settings))
-            .version(SUPPORTED_VERSION)
+        let mut container = Container::create(
+            options
+                .options
+                .ty(b'S')
+                .type_ext(get_type_ext(&settings))
+                .version(SUPPORTED_VERSION),
         );
         let string_section = container.sections_mut().create(
             SectionOptions::new()
@@ -327,7 +328,10 @@ impl<T: Write + Seek> ShaderPack<T> {
             }
         }
         if let Some(syms) = self.symbols.get() {
-            self.container.main_header_mut().type_ext.set_le(8, syms.len() as u16);
+            self.container
+                .main_header_mut()
+                .type_ext
+                .set_le(8, syms.len() as u16);
             let mut section = self.container.sections().open(self.symbol_table)?;
             section.seek(SeekFrom::Start(0))?;
             for v in syms {

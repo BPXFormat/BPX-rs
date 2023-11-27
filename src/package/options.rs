@@ -27,8 +27,9 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use crate::{
+    macros::{create_options, open_options},
     package::{Architecture, Platform},
-    sd::Value, macros::{create_options, open_options},
+    sd::Value,
 };
 
 /// The required settings to create a new BPXP.
@@ -116,7 +117,7 @@ impl<T: std::io::Seek> From<(T, Settings)> for CreateOptions<T> {
     fn from((backend, settings): (T, Settings)) -> Self {
         Self {
             options: crate::core::options::CreateOptions::new(backend),
-            settings
+            settings,
         }
     }
 }

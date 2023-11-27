@@ -171,8 +171,8 @@ macro_rules! open_options {
     };
 }
 
-pub(crate) use open_options;
 pub(crate) use create_options;
+pub(crate) use open_options;
 
 pub use impl_err_conversion;
 pub use named_enum;

@@ -26,7 +26,10 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use crate::{shader::{Target, Type}, macros::{create_options, open_options}};
+use crate::{
+    macros::{create_options, open_options},
+    shader::{Target, Type},
+};
 
 /// The required settings to create a new BPXS.
 ///
@@ -96,7 +99,7 @@ impl<T: std::io::Seek> From<(T, Settings)> for CreateOptions<T> {
     fn from((backend, settings): (T, Settings)) -> Self {
         Self {
             options: crate::core::options::CreateOptions::new(backend),
-            settings
+            settings,
         }
     }
 }

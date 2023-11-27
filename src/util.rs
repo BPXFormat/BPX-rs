@@ -28,7 +28,7 @@
 
 //! Contains various utilities to be used by other modules.
 
-use std::{io::Cursor, error::Error, fmt::Display};
+use std::{error::Error, fmt::Display, io::Cursor};
 
 /// Creates a new in-memory byte buffer which can be used
 /// to plug as IoBackend to a BPX encoder or decoder.
@@ -49,19 +49,25 @@ pub fn new_byte_buf(size: usize) -> Cursor<Vec<u8>> {
 #[derive(Debug, PartialEq, Eq)]
 pub struct RecoverableError<T, E: Error> {
     error: E,
-    value: Option<T>
+    value: Option<T>,
 }
 
 impl<T, E: Error, E1: Error + Into<E>> From<E1> for RecoverableError<T, E> {
     fn from(value: E1) -> Self {
-        RecoverableError { error: value.into(), value: None }
+        RecoverableError {
+            error: value.into(),
+            value: None,
+        }
     }
 }
 
 impl<T, E: Error> RecoverableError<T, E> {
     /// Create a new recoverable error with both an error and the recovery.
     pub fn new<E1: Into<E>>(error: E1, value: T) -> Self {
-        RecoverableError { error: error.into(), value: Some(value) }
+        RecoverableError {
+            error: error.into(),
+            value: Some(value),
+        }
     }
 
     /// Returns the recovery value if any.
@@ -78,7 +84,9 @@ impl<T, E: Error> RecoverableError<T, E> {
     pub fn unwrap_value(self) -> T {
         match self.value {
             Some(v) => v,
-            None => panic!("attempt to unwrap the value of a recoverable error with no recovery option")
+            None => {
+                panic!("attempt to unwrap the value of a recoverable error with no recovery option")
+            },
         }
     }
 
@@ -98,8 +106,7 @@ impl<T: Display, E: Error> Display for RecoverableError<T, E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.value {
             Some(v) => write!(f, "recoverable error: {} ({})", self.error, v),
-            None => write!(f, "{}", self.error)
+            None => write!(f, "{}", self.error),
         }
-        
     }
 }

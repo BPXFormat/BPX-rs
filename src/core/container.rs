@@ -38,8 +38,8 @@ use crate::core::{
     Result, SectionData,
 };
 
-use super::options::{CreateOptions, OpenOptions};
 use super::error::Error;
+use super::options::{CreateOptions, OpenOptions};
 
 /// The default maximum size of uncompressed sections.
 ///
@@ -53,7 +53,7 @@ pub const DEFAULT_MEMORY_THRESHOLD: u32 = 100000000;
 pub struct Container<T> {
     table: SectionTable<T>,
     main_header: MainHeader,
-    main_header_modified: bool
+    main_header_modified: bool,
 }
 
 impl<T> Container<T> {
@@ -147,21 +147,20 @@ impl<T: io::Read + io::Seek> Container<T> {
         let mut options = options.into();
         let (checksum, header) = match MainHeader::read(&mut options.backend) {
             Ok(v) => v,
-            Err(e) => {
-                match e.error() {
-                    Error::BadSignature(_) => match options.skip_signature_check {
-                        true => e.unwrap_value(),
-                        false => return e.into()
-                    },
-                    Error::BadVersion(_) => match options.skip_version_check {
-                        true => e.unwrap_value(),
-                        false => return e.into()
-                    },
-                    _ => return e.into()
-                }
-            }
+            Err(e) => match e.error() {
+                Error::BadSignature(_) => match options.skip_signature_check {
+                    true => e.unwrap_value(),
+                    false => return e.into(),
+                },
+                Error::BadVersion(_) => match options.skip_version_check {
+                    true => e.unwrap_value(),
+                    false => return e.into(),
+                },
+                _ => return e.into(),
+            },
         };
-        let (next_handle, sections, chksum) = read_section_header_table(&mut options.backend, &header, checksum)?;
+        let (next_handle, sections, chksum) =
+            read_section_header_table(&mut options.backend, &header, checksum)?;
         if !options.skip_checksum && chksum != header.chksum {
             return Err(Error::Checksum {
                 actual: chksum,
@@ -176,10 +175,10 @@ impl<T: io::Read + io::Seek> Container<T> {
                 sections,
                 count: header.section_num,
                 skip_checksum: options.skip_checksum,
-                memory_threshold: options.memory_threshold
+                memory_threshold: options.memory_threshold,
             },
             main_header: header,
-            main_header_modified: false
+            main_header_modified: false,
         })
     }
 }
@@ -215,10 +214,10 @@ impl<T: io::Write + io::Seek> Container<T> {
                 backend: RefCell::new(options.backend),
                 sections: BTreeMap::new(),
                 skip_checksum: false,
-                memory_threshold: options.memory_threshold
+                memory_threshold: options.memory_threshold,
             },
             main_header: options.header.into(),
-            main_header_modified: true
+            main_header_modified: true,
         }
     }
 

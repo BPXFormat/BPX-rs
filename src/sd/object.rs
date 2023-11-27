@@ -33,7 +33,7 @@ use std::{
     ops::Index,
 };
 
-use crate::{sd::Value, hash::Name};
+use crate::{hash::Name, sd::Value};
 
 /// Represents a BPX Structured Data Object.
 #[derive(PartialEq, Clone)]
