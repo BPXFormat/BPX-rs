@@ -30,7 +30,7 @@ use std::io::{Read, Write};
 
 use crate::{
     core::{
-        options::{Checksum, CompressionMethod, SectionHeaderBuilder},
+        options::{Checksum, CompressionMethod, SectionOptions},
         header::SectionHeader,
         Container, Handle, SectionData,
     },
@@ -67,7 +67,7 @@ pub fn write_object<T, TRead: Read>(
 }
 
 pub fn create_data_section_header() -> SectionHeader {
-    SectionHeaderBuilder::new()
+    SectionOptions::new()
         .ty(SECTION_TYPE_DATA)
         .compression(CompressionMethod::Xz)
         .checksum(Checksum::Crc32)

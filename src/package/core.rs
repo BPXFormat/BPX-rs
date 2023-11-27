@@ -33,7 +33,7 @@ use once_cell::unsync::OnceCell;
 
 use crate::{
     core::{
-        options::{Checksum, CompressionMethod, SectionHeaderBuilder},
+        options::{Checksum, CompressionMethod, SectionOptions},
         header::{Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
         Container, Handle,
     },
@@ -173,13 +173,13 @@ impl<T> TryFrom<Container<T>> for Package<T> {
                 container.main_header_mut().ty = b'P';
                 container.main_header_mut().version = SUPPORTED_VERSION;
                 let object_table = container.sections_mut().create(
-                    SectionHeaderBuilder::new()
+                    SectionOptions::new()
                         .checksum(Checksum::Weak)
                         .compression(CompressionMethod::Zlib)
                         .ty(SECTION_TYPE_OBJECT_TABLE),
                 );
                 let string_section = container.sections_mut().create(
-                    SectionHeaderBuilder::new()
+                    SectionOptions::new()
                         .checksum(Checksum::Weak)
                         .compression(CompressionMethod::Zlib)
                         .ty(SECTION_TYPE_STRING),
@@ -247,13 +247,13 @@ impl<T: Write + Seek> Package<T> {
                 .version(SUPPORTED_VERSION)
         );
         let object_table = container.sections_mut().create(
-            SectionHeaderBuilder::new()
+            SectionOptions::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
                 .ty(SECTION_TYPE_OBJECT_TABLE),
         );
         let string_section = container.sections_mut().create(
-            SectionHeaderBuilder::new()
+            SectionOptions::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
                 .ty(SECTION_TYPE_STRING),
@@ -261,7 +261,7 @@ impl<T: Write + Seek> Package<T> {
         let strings = StringSection::new(string_section);
         if !settings.metadata.is_null() {
             let metadata_section = container.sections_mut().create(
-                SectionHeaderBuilder::new()
+                SectionOptions::new()
                     .checksum(Checksum::Weak)
                     .compression(CompressionMethod::Zlib)
                     .ty(SECTION_TYPE_SD),
@@ -290,7 +290,7 @@ impl<T: Write + Seek> Package<T> {
             if metadata != &self.settings.metadata {
                 if !self.settings.metadata.is_null() {
                     let handle = self.container.sections().find_by_type(SECTION_TYPE_SD)
-                        .unwrap_or_else(|| self.container.sections_mut().create(SectionHeaderBuilder::new()
+                        .unwrap_or_else(|| self.container.sections_mut().create(SectionOptions::new()
                             .checksum(Checksum::Weak)
                             .compression(CompressionMethod::Zlib)
                             .ty(SECTION_TYPE_SD)));

@@ -222,13 +222,13 @@ impl<T> SectionTable<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::{SectionHeaderBuilder};
+    /// use bpx::core::options::{SectionOptions};
     /// use bpx::core::{Container, SectionData};
     /// use bpx::util::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0));
     /// assert_eq!(file.sections().len(), 0);
-    /// file.sections_mut().create(SectionHeaderBuilder::new());
+    /// file.sections_mut().create(SectionOptions::new());
     /// assert_eq!(file.sections().len(), 1);
     /// ```
     pub fn create<H: Into<SectionHeader>>(&mut self, header: H) -> Handle {
@@ -265,12 +265,12 @@ impl<T> SectionTable<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::{SectionHeaderBuilder};
+    /// use bpx::core::options::{SectionOptions};
     /// use bpx::core::{Container, SectionData};
     /// use bpx::util::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0));
-    /// let section = file.sections_mut().create(SectionHeaderBuilder::new());
+    /// let section = file.sections_mut().create(SectionOptions::new());
     /// file.save().unwrap();
     /// assert_eq!(file.main_header().section_num, 1);
     /// file.sections_mut().remove(section);

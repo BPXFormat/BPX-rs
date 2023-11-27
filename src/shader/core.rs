@@ -33,7 +33,7 @@ use once_cell::unsync::OnceCell;
 use crate::shader::{Target, Type};
 use crate::{
     core::{
-        options::{Checksum, CompressionMethod, SectionHeaderBuilder},
+        options::{Checksum, CompressionMethod, SectionOptions},
         header::{Struct, SECTION_TYPE_STRING},
         Container, Handle,
     },
@@ -221,13 +221,13 @@ impl<T> TryFrom<Container<T>> for ShaderPack<T> {
                 container.main_header_mut().ty = b'S';
                 container.main_header_mut().version = SUPPORTED_VERSION;
                 let string_section = container.sections_mut().create(
-                    SectionHeaderBuilder::new()
+                    SectionOptions::new()
                         .checksum(Checksum::Weak)
                         .compression(CompressionMethod::Zlib)
                         .ty(SECTION_TYPE_STRING),
                 );
                 let symbol_table = container.sections_mut().create(
-                    SectionHeaderBuilder::new()
+                    SectionOptions::new()
                         .checksum(Checksum::Weak)
                         .compression(CompressionMethod::Zlib)
                         .ty(SECTION_TYPE_SYMBOL_TABLE),
@@ -292,13 +292,13 @@ impl<T: Write + Seek> ShaderPack<T> {
             .version(SUPPORTED_VERSION)
         );
         let string_section = container.sections_mut().create(
-            SectionHeaderBuilder::new()
+            SectionOptions::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
                 .ty(SECTION_TYPE_STRING),
         );
         let symbol_table = container.sections_mut().create(
-            SectionHeaderBuilder::new()
+            SectionOptions::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
                 .ty(SECTION_TYPE_SYMBOL_TABLE),

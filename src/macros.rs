@@ -79,7 +79,7 @@ macro_rules! create_options {
     }) => {
         $(#[$options_outer])*
         pub struct CreateOptions<T> {
-            pub(crate) options: crate::core::builder::CreateOptions<T>,
+            pub(crate) options: crate::core::options::CreateOptions<T>,
             $(
                 pub(crate) $field_name: $field_type
             ),*
@@ -89,7 +89,7 @@ macro_rules! create_options {
             /// Creates a new container builder.
             pub fn new(backend: T) -> CreateOptions<T> {
                 CreateOptions {
-                    options: crate::core::builder::CreateOptions::new(backend),
+                    options: crate::core::options::CreateOptions::new(backend),
                     $(
                         $field_name: $field_default
                     ),*
@@ -119,7 +119,7 @@ macro_rules! open_options {
     }) => {
         $(#[$options_outer])*
         pub struct OpenOptions<T> {
-            pub(crate) options: crate::core::builder::OpenOptions<T>,
+            pub(crate) options: crate::core::options::OpenOptions<T>,
             $(
                 pub(crate) $field_name: $field_type
             ),*
@@ -129,7 +129,7 @@ macro_rules! open_options {
             /// Creates a new container builder.
             pub fn new(backend: T) -> OpenOptions<T> {
                 OpenOptions {
-                    options: crate::core::builder::OpenOptions::new(backend),
+                    options: crate::core::options::OpenOptions::new(backend),
                     $(
                         $field_name: $field_default
                     ),*

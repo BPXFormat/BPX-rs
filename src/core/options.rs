@@ -68,20 +68,20 @@ pub enum Checksum {
 }
 
 /// Utility to easily generate a [SectionHeader](SectionHeader).
-pub struct SectionHeaderBuilder {
+pub struct SectionOptions {
     header: SectionHeader,
 }
 
-impl Default for SectionHeaderBuilder {
+impl Default for SectionOptions {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl SectionHeaderBuilder {
+impl SectionOptions {
     /// Creates a new section header builder.
-    pub fn new() -> SectionHeaderBuilder {
-        SectionHeaderBuilder {
+    pub fn new() -> SectionOptions {
+        SectionOptions {
             header: SectionHeader::new(),
         }
     }
@@ -95,14 +95,14 @@ impl SectionHeaderBuilder {
     ///
     /// * `size`: the size in bytes of the section.
     ///
-    /// returns: SectionHeaderBuilder
+    /// returns: SectionOptions
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::SectionHeaderBuilder;
+    /// use bpx::core::options::SectionOptions;
     ///
-    /// let header = SectionHeaderBuilder::new()
+    /// let header = SectionOptions::new()
     ///     .size(128)
     ///     .build();
     /// assert_eq!(header.size, 128);
@@ -120,14 +120,14 @@ impl SectionHeaderBuilder {
     ///
     /// * `ty`: the type byte of the section.
     ///
-    /// returns: SectionHeaderBuilder
+    /// returns: SectionOptions
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::SectionHeaderBuilder;
+    /// use bpx::core::options::SectionOptions;
     ///
-    /// let header = SectionHeaderBuilder::new()
+    /// let header = SectionOptions::new()
     ///     .ty(1)
     ///     .build();
     /// assert_eq!(header.ty, 1);
@@ -145,15 +145,15 @@ impl SectionHeaderBuilder {
     ///
     /// * `method`: the [CompressionMethod](CompressionMethod) to use for saving this section.
     ///
-    /// returns: SectionHeaderBuilder
+    /// returns: SectionOptions
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::{CompressionMethod, SectionHeaderBuilder};
+    /// use bpx::core::options::{CompressionMethod, SectionOptions};
     /// use bpx::core::header::FLAG_COMPRESS_ZLIB;
     ///
-    /// let header = SectionHeaderBuilder::new()
+    /// let header = SectionOptions::new()
     ///     .compression(CompressionMethod::Zlib)
     ///     .build();
     /// assert_ne!(header.flags & FLAG_COMPRESS_ZLIB, 0);
@@ -177,14 +177,14 @@ impl SectionHeaderBuilder {
     ///
     /// * `threshold`: the new value of the compression threshold.
     ///
-    /// returns: SectionHeaderBuilder
+    /// returns: SectionOptions
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::{CompressionMethod, SectionHeaderBuilder};
+    /// use bpx::core::options::{CompressionMethod, SectionOptions};
     ///
-    /// let header = SectionHeaderBuilder::new()
+    /// let header = SectionOptions::new()
     ///     .compression(CompressionMethod::Zlib)
     ///     .threshold(0)
     ///     .build();
@@ -206,15 +206,15 @@ impl SectionHeaderBuilder {
     ///
     /// * `chksum`: the new [Checksum](Checksum) algorithm to use for data verification.
     ///
-    /// returns: SectionHeaderBuilder
+    /// returns: SectionOptions
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::{Checksum, SectionHeaderBuilder};
+    /// use bpx::core::options::{Checksum, SectionOptions};
     /// use bpx::core::header::FLAG_CHECK_CRC32;
     ///
-    /// let header = SectionHeaderBuilder::new()
+    /// let header = SectionOptions::new()
     ///     .checksum(Checksum::Crc32)
     ///     .build();
     /// assert_ne!(header.flags & FLAG_CHECK_CRC32, 0);
@@ -232,10 +232,10 @@ impl SectionHeaderBuilder {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::{Checksum, CompressionMethod, SectionHeaderBuilder};
+    /// use bpx::core::options::{Checksum, CompressionMethod, SectionOptions};
     /// use bpx::core::header::{FLAG_CHECK_CRC32, FLAG_COMPRESS_ZLIB};
     ///
-    /// let header = SectionHeaderBuilder::new()
+    /// let header = SectionOptions::new()
     ///     .size(128)
     ///     .ty(1)
     ///     .compression(CompressionMethod::Zlib)
@@ -337,7 +337,7 @@ impl<T> CreateOptions<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::CreateOptions;
+    /// use bpx::core::options::CreateOptions;
     ///
     /// let header = CreateOptions::new(())
     ///     .ty('M' as u8)
@@ -362,7 +362,7 @@ impl<T> CreateOptions<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::CreateOptions;
+    /// use bpx::core::options::CreateOptions;
     ///
     /// let header = CreateOptions::new(())
     ///     .type_ext([1; 16])
@@ -392,7 +392,7 @@ impl<T> CreateOptions<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::CreateOptions;
+    /// use bpx::core::options::CreateOptions;
     ///
     /// let header = CreateOptions::new(())
     ///     .version(1)
@@ -417,7 +417,7 @@ impl<T> CreateOptions<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::CreateOptions;
+    /// use bpx::core::options::CreateOptions;
     /// use bytesutil::ByteBuf;
     ///
     /// let header = CreateOptions::new(())
@@ -446,14 +446,14 @@ impl<T: std::io::Seek> From<(T, MainHeader)> for CreateOptions<T> {
     }
 }
 
-impl From<&mut SectionHeaderBuilder> for SectionHeader {
-    fn from(builder: &mut SectionHeaderBuilder) -> Self {
+impl From<&mut SectionOptions> for SectionHeader {
+    fn from(builder: &mut SectionOptions) -> Self {
         builder.build()
     }
 }
 
-impl From<SectionHeaderBuilder> for SectionHeader {
-    fn from(builder: SectionHeaderBuilder) -> Self {
+impl From<SectionOptions> for SectionHeader {
+    fn from(builder: SectionOptions) -> Self {
         builder.build()
     }
 }
