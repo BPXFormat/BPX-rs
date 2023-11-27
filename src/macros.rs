@@ -86,7 +86,7 @@ macro_rules! create_options {
         }
 
         impl<T> CreateOptions<T> {
-            /// Creates a new container builder.
+            /// Creates a new set of options for a BPX container.
             pub fn new(backend: T) -> CreateOptions<T> {
                 CreateOptions {
                     options: crate::core::options::CreateOptions::new(backend),
@@ -126,7 +126,7 @@ macro_rules! open_options {
         }
 
         impl<T> OpenOptions<T> {
-            /// Creates a new container builder.
+            /// Creates a new set of options for a BPX container.
             pub fn new(backend: T) -> OpenOptions<T> {
                 OpenOptions {
                     options: crate::core::options::OpenOptions::new(backend),

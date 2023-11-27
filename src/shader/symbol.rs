@@ -218,7 +218,7 @@ pub struct Options {
 }
 
 impl Options {
-    /// Creates a new symbol builder.
+    /// Creates a new set of options for a BPXS symbol.
     pub fn new<S: Into<String>>(name: S) -> Options {
         Options {
             sym: Settings {
@@ -236,8 +236,6 @@ impl Options {
     /// # Arguments
     ///
     /// * `ty`: the symbol type.
-    ///
-    /// returns: &mut Builder
     pub fn ty(&mut self, ty: Type) -> &mut Self {
         self.sym.ty = ty;
         self
@@ -251,8 +249,6 @@ impl Options {
     /// # Arguments
     ///
     /// * `val`: A [Value](Value) to store as extended data.
-    ///
-    /// returns: &mut Builder
     pub fn extended_data(&mut self, val: Value) -> &mut Self {
         self.sym.extended_data = val;
         self.sym.flags |= FLAG_EXTENDED_DATA;
@@ -267,8 +263,6 @@ impl Options {
     /// # Arguments
     ///
     /// * `register`: the register number of this symbol.
-    ///
-    /// returns: &mut Builder
     pub fn register(&mut self, register: u8) -> &mut Self {
         self.sym.register = register;
         self.sym.flags |= FLAG_REGISTER;
@@ -307,8 +301,6 @@ impl Options {
     /// # Arguments
     ///
     /// * `stage`: the stage to add.
-    ///
-    /// returns: &mut Builder
     pub fn stage(&mut self, stage: Stage) -> &mut Self {
         match stage {
             Stage::Vertex => self.sym.flags |= FLAG_VERTEX_STAGE,
@@ -327,13 +319,13 @@ impl Options {
 }
 
 impl From<&mut Options> for Settings {
-    fn from(builder: &mut Options) -> Self {
-        builder.build()
+    fn from(options: &mut Options) -> Self {
+        options.build()
     }
 }
 
 impl From<Options> for Settings {
-    fn from(builder: Options) -> Self {
-        builder.build()
+    fn from(options: Options) -> Self {
+        options.build()
     }
 }

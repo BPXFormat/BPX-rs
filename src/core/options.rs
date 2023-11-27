@@ -79,7 +79,7 @@ impl Default for SectionOptions {
 }
 
 impl SectionOptions {
-    /// Creates a new section header builder.
+    /// Creates a new set of options for a BPX section.
     pub fn new() -> SectionOptions {
         SectionOptions {
             header: SectionHeader::new(),
@@ -263,7 +263,7 @@ pub struct OpenOptions<T> {
 }
 
 impl<T> OpenOptions<T> {
-     /// Creates a new container builder.
+     /// Creates a new set of options for a BPX container.
      pub fn new(backend: T) -> OpenOptions<T> {
         OpenOptions {
             backend,
@@ -315,7 +315,7 @@ pub struct CreateOptions<T> {
 }
 
 impl<T> CreateOptions<T> {
-    /// Creates a new container builder.
+    /// Creates a new set of options for a BPX container.
     pub fn new(backend: T) -> CreateOptions<T> {
         CreateOptions {
             header: MainHeader::new(),
@@ -447,13 +447,13 @@ impl<T: std::io::Seek> From<(T, MainHeader)> for CreateOptions<T> {
 }
 
 impl From<&mut SectionOptions> for SectionHeader {
-    fn from(builder: &mut SectionOptions) -> Self {
-        builder.build()
+    fn from(options: &mut SectionOptions) -> Self {
+        options.build()
     }
 }
 
 impl From<SectionOptions> for SectionHeader {
-    fn from(builder: SectionOptions) -> Self {
-        builder.build()
+    fn from(options: SectionOptions) -> Self {
+        options.build()
     }
 }

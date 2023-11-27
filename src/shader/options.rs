@@ -62,8 +62,6 @@ impl<T> CreateOptions<T> {
     /// # Arguments
     ///
     /// * `hash`: the shader assembly hash.
-    ///
-    /// returns: ShaderPackBuilder
     pub fn assembly(mut self, hash: u64) -> Self {
         self.settings.assembly_hash = hash;
         self
@@ -76,8 +74,6 @@ impl<T> CreateOptions<T> {
     /// # Arguments
     ///
     /// * `target`: the shader target.
-    ///
-    /// returns: ShaderPackBuilder
     pub fn target(mut self, target: Target) -> Self {
         self.settings.target = target;
         self
@@ -90,8 +86,6 @@ impl<T> CreateOptions<T> {
     /// # Arguments
     ///
     /// * `ty`: the shader package type (pipeline/program or assembly).
-    ///
-    /// returns: ShaderPackBuilder
     pub fn ty(mut self, ty: Type) -> Self {
         self.settings.ty = ty;
         self

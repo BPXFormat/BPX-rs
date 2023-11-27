@@ -69,8 +69,6 @@ impl<T> CreateOptions<T> {
     /// # Arguments
     ///
     /// * `arch`: the CPU architecture this package is designed to work on.
-    ///
-    /// returns: PackageBuilder
     pub fn architecture(mut self, arch: Architecture) -> Self {
         self.settings.architecture = arch;
         self
@@ -83,8 +81,6 @@ impl<T> CreateOptions<T> {
     /// # Arguments
     ///
     /// * `platform`: the platform this package is designed to work on.
-    ///
-    /// returns: PackageBuilder
     pub fn platform(mut self, platform: Platform) -> Self {
         self.settings.platform = platform;
         self
@@ -97,8 +93,6 @@ impl<T> CreateOptions<T> {
     /// # Arguments
     ///
     /// * `val`: the BPXSD metadata value.
-    ///
-    /// returns: PackageBuilder
     pub fn metadata(mut self, val: Value) -> Self {
         self.settings.metadata = val;
         self
@@ -112,8 +106,6 @@ impl<T> CreateOptions<T> {
     /// # Arguments
     ///
     /// * `type_code`: the type code of this package.
-    ///
-    /// returns: PackageBuilder
     pub fn type_code(mut self, type_code: [u8; 2]) -> Self {
         self.settings.type_code = type_code;
         self
