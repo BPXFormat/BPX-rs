@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -28,7 +28,7 @@
 
 use crate::{
     package::{Architecture, Platform},
-    sd::Value,
+    sd::Value, macros::{create_options, open_options},
 };
 
 /// The required settings to create a new BPXP.
@@ -49,7 +49,7 @@ pub struct Settings {
     pub type_code: [u8; 2],
 }
 
-pub struct Builder1<T> {
+/*pub struct Builder1<T> {
     settings: Settings,
     backend: T
 }
@@ -72,6 +72,91 @@ impl<T> Builder1<T> {
             backend
         }
     }
+}*/
+
+create_options! {
+    /// Utility to simplify generation of [Settings](Settings) required when creating a new BPXP.
+    CreateOptions {
+        settings: Settings = Settings {
+            architecture: Architecture::Any,
+            platform: Platform::Any,
+            metadata: Value::Null,
+            type_code: [0x50, 0x48],
+        }
+    }
+}
+
+impl<T> CreateOptions<T> {
+    /// Defines the CPU architecture that the package is targeting.
+    ///
+    /// *By default, no CPU architecture is targeted.*
+    ///
+    /// # Arguments
+    ///
+    /// * `arch`: the CPU architecture this package is designed to work on.
+    ///
+    /// returns: PackageBuilder
+    pub fn architecture(mut self, arch: Architecture) -> Self {
+        self.settings.architecture = arch;
+        self
+    }
+
+    /// Defines the platform that the package is targeting.
+    ///
+    /// *By default, no platform is targeted.*
+    ///
+    /// # Arguments
+    ///
+    /// * `platform`: the platform this package is designed to work on.
+    ///
+    /// returns: PackageBuilder
+    pub fn platform(mut self, platform: Platform) -> Self {
+        self.settings.platform = platform;
+        self
+    }
+
+    /// Defines the metadata for the package.
+    ///
+    /// *By default, no metadata object is set.*
+    ///
+    /// # Arguments
+    ///
+    /// * `val`: the BPXSD metadata value.
+    ///
+    /// returns: PackageBuilder
+    pub fn metadata(mut self, val: Value) -> Self {
+        self.settings.metadata = val;
+        self
+    }
+
+    /// Defines the type of the package.
+    ///
+    /// *By default, the package variant is 'PK' to identify
+    /// a package designed for FPKG.*
+    ///
+    /// # Arguments
+    ///
+    /// * `type_code`: the type code of this package.
+    ///
+    /// returns: PackageBuilder
+    pub fn type_code(mut self, type_code: [u8; 2]) -> Self {
+        self.settings.type_code = type_code;
+        self
+    }
+}
+
+impl<T: std::io::Seek> From<(T, Settings)> for CreateOptions<T> {
+    fn from((backend, settings): (T, Settings)) -> Self {
+        Self {
+            options: crate::core::builder::CreateOptions::new(backend),
+            settings
+        }
+    }
+}
+
+open_options! {
+    /// Utility to allow configuring the underlying BPX container when opening a BPXP.
+    OpenOptions {}
 }
 
 /// Utility to simplify generation of [Settings](Settings) required when creating a new BPXP.

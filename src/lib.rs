@@ -47,8 +47,8 @@ pub mod sd;
 #[cfg(feature = "strings")]
 pub mod strings;
 
-//#[cfg(feature = "package")]
-//pub mod package;
+#[cfg(feature = "package")]
+pub mod package;
 
 //#[cfg(feature = "shader")]
 //pub mod shader;

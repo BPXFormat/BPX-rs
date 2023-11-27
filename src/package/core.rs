@@ -28,11 +28,12 @@
 
 use std::io::{Read, Seek, SeekFrom, Write};
 
+use bytesutil::ByteBuf;
 use once_cell::unsync::OnceCell;
 
 use crate::{
     core::{
-        builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
+        builder::{Checksum, CompressionMethod, SectionHeaderBuilder},
         header::{Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
         Container, Handle,
     },
@@ -49,6 +50,8 @@ use crate::{
 };
 use crate::package::{Architecture, Platform};
 
+use super::{OpenOptions, CreateOptions};
+
 /// A BPXP (Package).
 ///
 /// # Examples
@@ -56,9 +59,9 @@ use crate::package::{Architecture, Platform};
 /// ```
 /// use std::io::{Seek, SeekFrom};
 /// use bpx::util::new_byte_buf;
-/// use bpx::package::{Builder, Package};
+/// use bpx::package::Package;
 ///
-/// let mut bpxp = Package::create(new_byte_buf(128), Builder::new()).unwrap();
+/// let mut bpxp = Package::create(new_byte_buf(128)).unwrap();
 /// {
 ///     let mut objects = bpxp.objects_mut().unwrap();
 ///     objects.create("TestObject", "This is a test 你好".as_bytes()).unwrap();
@@ -223,27 +226,25 @@ impl<T: Write + Seek> Package<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
-    /// use bpx::package::Builder;
     /// use bpx::package::Package;
     /// use bpx::util::new_byte_buf;
     ///
-    /// let mut bpxp = Package::create(new_byte_buf(0), Builder::new()).unwrap();
+    /// let mut bpxp = Package::create(new_byte_buf(0)).unwrap();
     /// bpxp.save().unwrap();
     /// assert!(!bpxp.into_inner().into_inner().into_inner().is_empty());
-    /// let mut bpxp = Package::try_from(Container::create(new_byte_buf(0), MainHeaderBuilder::new())).unwrap();
+    /// let mut bpxp = Package::try_from(Container::create(new_byte_buf(0))).unwrap();
     /// bpxp.save().unwrap();
     /// assert!(!bpxp.into_inner().into_inner().into_inner().is_empty());
     /// ```
-    pub fn create<S: Into<Settings>>(backend: T, settings: S) -> Result<Package<T>> {
-        let settings = settings.into();
+    pub fn create(options: impl Into<CreateOptions<T>>) -> Result<Package<T>> {
+        let options = options.into();
+        let settings = options.settings;
         let mut container = Container::create(
-            backend,
-            MainHeaderBuilder::new()
+            options.options
                 .ty(b'P')
                 .type_ext(get_type_ext(&settings))
-                .version(SUPPORTED_VERSION),
+                .version(SUPPORTED_VERSION)
         );
         let object_table = container.sections_mut().create(
             SectionHeaderBuilder::new()
@@ -306,8 +307,8 @@ impl<T: Write + Seek> Package<T> {
         {
             //Update type ext if changed
             let data = get_type_ext(&self.settings);
-            if data != self.container.main_header().type_ext {
-                self.container.main_header_mut().type_ext = data;
+            if data != self.container.main_header().type_ext.as_ref() {
+                self.container.main_header_mut().type_ext = ByteBuf::new(data);
             }
         }
         {
@@ -341,11 +342,10 @@ impl<T: Read + Seek> Package<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::package::Builder;
     /// use bpx::package::Package;
     /// use bpx::util::new_byte_buf;
     ///
-    /// let mut bpxp = Package::create(new_byte_buf(0), Builder::new()).unwrap();
+    /// let mut bpxp = Package::create(new_byte_buf(0)).unwrap();
     /// bpxp.save().unwrap();
     /// let mut buf = bpxp.into_inner().into_inner();
     /// buf.set_position(0);
@@ -353,8 +353,8 @@ impl<T: Read + Seek> Package<T> {
     /// let objects = bpxp.objects().unwrap();
     /// assert_eq!(objects.len(), 0);
     /// ```
-    pub fn open(backend: T) -> Result<Package<T>> {
-        let container = Container::open(backend)?;
+    pub fn open(options: impl Into<OpenOptions<T>>) -> Result<Package<T>> {
+        let container = Container::open(options.into().options)?;
         if container.main_header().ty != b'P' {
             return Err(Error::BadType {
                 expected: b'P',
@@ -422,11 +422,11 @@ impl<T: Read + Seek> Package<T> {
 mod tests {
     use std::io::{Seek, SeekFrom};
 
-    use crate::{package::{Package, Builder}, utils::new_byte_buf};
+    use crate::{package::Package, util::new_byte_buf};
 
     #[test]
     fn test_re_open_after_create() {
-        let mut bpxp = Package::create(new_byte_buf(128), Builder::new()).unwrap();
+        let mut bpxp = Package::create(new_byte_buf(128)).unwrap();
         {
             let mut objects = bpxp.objects_mut().unwrap();
             objects.create("TestObject", "This is a test 你好".as_bytes()).unwrap();

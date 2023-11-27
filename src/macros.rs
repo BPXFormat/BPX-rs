@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -72,6 +72,107 @@ macro_rules! named_enum {
         }
     };
 }
+
+macro_rules! create_options {
+    ($(#[$options_outer:meta])* CreateOptions {
+        $($field_name: ident : $field_type: ty = $field_default: expr),*
+    }) => {
+        $(#[$options_outer])*
+        pub struct CreateOptions<T> {
+            pub(crate) options: crate::core::builder::CreateOptions<T>,
+            $(
+                pub(crate) $field_name: $field_type
+            ),*
+        }
+
+        impl<T> CreateOptions<T> {
+            /// Creates a new container builder.
+            pub fn new(backend: T) -> CreateOptions<T> {
+                CreateOptions {
+                    options: crate::core::builder::CreateOptions::new(backend),
+                    $(
+                        $field_name: $field_default
+                    ),*
+                }
+            }
+
+            /// Sets the maximum size of a section allowed to fit in RAM in bytes.
+            ///
+            /// The default is set to [DEFAULT_MEMORY_THRESHOLD](crate::core::container::DEFAULT_MEMORY_THRESHOLD) bytes.
+            pub fn memory_threshold(mut self, size: u32) -> Self {
+                self.options = self.options.memory_threshold(size);
+                self
+            }
+        }
+
+        impl<T: std::io::Seek> From<T> for CreateOptions<T> {
+            fn from(value: T) -> Self {
+                Self::new(value)
+            }
+        }
+    };
+}
+
+macro_rules! open_options {
+    ($(#[$options_outer:meta])* OpenOptions {
+        $($field_name: ident : $field_type: ty = $field_default: expr),*
+    }) => {
+        $(#[$options_outer])*
+        pub struct OpenOptions<T> {
+            pub(crate) options: crate::core::builder::OpenOptions<T>,
+            $(
+                pub(crate) $field_name: $field_type
+            ),*
+        }
+
+        impl<T> OpenOptions<T> {
+            /// Creates a new container builder.
+            pub fn new(backend: T) -> OpenOptions<T> {
+                OpenOptions {
+                    options: crate::core::builder::OpenOptions::new(backend),
+                    $(
+                        $field_name: $field_default
+                    ),*
+                }
+            }
+
+            /// Disable signature checks when loading the container.
+            pub fn skip_signature(mut self, flag: bool) -> Self {
+                self.options = self.options.skip_signature(flag);
+                self
+            }
+
+            /// Skip BPX version checks.
+            pub fn skip_versions(mut self, flag: bool) -> Self {
+                self.options = self.options.skip_versions(flag);
+                self
+            }
+
+            /// Disable checksum checks when loading the section header/table or a section.
+            pub fn skip_checksum(mut self, flag: bool) -> Self {
+                self.options = self.options.skip_checksum(flag);
+                self
+            }
+
+            /// Sets the maximum size of a section allowed to fit in RAM in bytes.
+            ///
+            /// The default is set to [DEFAULT_MEMORY_THRESHOLD](crate::core::container::DEFAULT_MEMORY_THRESHOLD) bytes.
+            pub fn memory_threshold(mut self, size: u32) -> Self {
+                self.options = self.options.memory_threshold(size);
+                self
+            }
+        }
+
+        impl<T: std::io::Seek> From<T> for OpenOptions<T> {
+            fn from(value: T) -> Self {
+                Self::new(value)
+            }
+        }
+    };
+}
+
+pub(crate) use open_options;
+pub(crate) use create_options;
 
 pub use impl_err_conversion;
 pub use named_enum;

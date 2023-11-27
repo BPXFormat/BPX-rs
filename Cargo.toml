@@ -13,7 +13,7 @@ categories = ["encoding", "rendering::data-formats", "parser-implementations"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bytesutil = "0.5.0"
+bytesutil = "0.6.0"
 tempfile = "3.0.7"
 
 # The reason why we lock lzma-sys to static feature is because the library is unfortunatly unable to understand that
