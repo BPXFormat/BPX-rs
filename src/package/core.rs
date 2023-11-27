@@ -49,7 +49,6 @@ use crate::{
     strings::StringSection,
     table::NamedItemTable,
 };
-use crate::package::{Architecture, Platform};
 
 use super::{OpenOptions, CreateOptions};
 
