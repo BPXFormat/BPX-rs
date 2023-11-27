@@ -31,6 +31,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use bytesutil::ByteBuf;
 use once_cell::unsync::OnceCell;
 
+use crate::package::{Architecture, Platform};
 use crate::{
     core::{
         options::{Checksum, CompressionMethod, SectionOptions},
@@ -188,7 +189,8 @@ impl<T> TryFrom<Container<T>> for Package<T> {
                 let (a, p) = get_arch_platform_from_code(
                     container.main_header().type_ext[0],
                     container.main_header().type_ext[1],
-                ).unwrap_or((Architecture::Any, Platform::Any));
+                )
+                .unwrap_or((Architecture::Any, Platform::Any));
                 Ok(Package {
                     metadata: OnceCell::new(),
                     settings: Settings {
@@ -204,7 +206,7 @@ impl<T> TryFrom<Container<T>> for Package<T> {
                     object_table,
                     table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings)),
                 })
-            }
+            },
         }
     }
 }
