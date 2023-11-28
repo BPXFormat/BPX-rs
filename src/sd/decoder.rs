@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -34,7 +34,7 @@ use crate::{
     traits::ReadFill,
 };
 
-fn read_bool<TRead: Read>(stream: &mut TRead) -> Result<Value> {
+fn read_bool<TRead: Read>(stream: &mut TRead, _: &mut usize) -> Result<Value> {
     let mut flag: [u8; 1] = [0; 1];
 
     if stream.read_fill(&mut flag)? != 1 {
@@ -43,7 +43,7 @@ fn read_bool<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     Ok(Value::Bool(flag[0] == 1))
 }
 
-fn read_uint8<TRead: Read>(stream: &mut TRead) -> Result<Value> {
+fn read_uint8<TRead: Read>(stream: &mut TRead, _: &mut usize) -> Result<Value> {
     let mut val: [u8; 1] = [0; 1];
 
     if stream.read_fill(&mut val)? != 1 {
@@ -52,7 +52,7 @@ fn read_uint8<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     Ok(Value::Uint8(val[0]))
 }
 
-fn read_int8<TRead: Read>(stream: &mut TRead) -> Result<Value> {
+fn read_int8<TRead: Read>(stream: &mut TRead, _: &mut usize) -> Result<Value> {
     let mut val: [u8; 1] = [0; 1];
 
     if stream.read_fill(&mut val)? != 1 {
@@ -61,7 +61,7 @@ fn read_int8<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     Ok(Value::Int8(val[0] as i8))
 }
 
-fn read_uint16<TRead: Read>(stream: &mut TRead) -> Result<Value> {
+fn read_uint16<TRead: Read>(stream: &mut TRead, _: &mut usize) -> Result<Value> {
     let mut val: [u8; 2] = [0; 2];
 
     if stream.read_fill(&mut val)? != 2 {
@@ -70,7 +70,7 @@ fn read_uint16<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     Ok(Value::Uint16(u16::read_bytes_le(&val)))
 }
 
-fn read_int16<TRead: Read>(stream: &mut TRead) -> Result<Value> {
+fn read_int16<TRead: Read>(stream: &mut TRead, _: &mut usize) -> Result<Value> {
     let mut val: [u8; 2] = [0; 2];
 
     if stream.read_fill(&mut val)? != 2 {
@@ -79,7 +79,7 @@ fn read_int16<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     Ok(Value::Int16(i16::read_bytes_le(&val)))
 }
 
-fn read_uint32<TRead: Read>(stream: &mut TRead) -> Result<Value> {
+fn read_uint32<TRead: Read>(stream: &mut TRead, _: &mut usize) -> Result<Value> {
     let mut val: [u8; 4] = [0; 4];
 
     if stream.read_fill(&mut val)? != 4 {
@@ -88,7 +88,7 @@ fn read_uint32<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     Ok(Value::Uint32(u32::read_bytes_le(&val)))
 }
 
-fn read_int32<TRead: Read>(stream: &mut TRead) -> Result<Value> {
+fn read_int32<TRead: Read>(stream: &mut TRead, _: &mut usize) -> Result<Value> {
     let mut val: [u8; 4] = [0; 4];
 
     if stream.read_fill(&mut val)? != 4 {
@@ -97,7 +97,7 @@ fn read_int32<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     Ok(Value::Int32(i32::read_bytes_le(&val)))
 }
 
-fn read_uint64<TRead: Read>(stream: &mut TRead) -> Result<Value> {
+fn read_uint64<TRead: Read>(stream: &mut TRead, _: &mut usize) -> Result<Value> {
     let mut val: [u8; 8] = [0; 8];
 
     if stream.read_fill(&mut val)? != 8 {
@@ -106,7 +106,7 @@ fn read_uint64<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     Ok(Value::Uint64(u64::read_bytes_le(&val)))
 }
 
-fn read_int64<TRead: Read>(stream: &mut TRead) -> Result<Value> {
+fn read_int64<TRead: Read>(stream: &mut TRead, _: &mut usize) -> Result<Value> {
     let mut val: [u8; 8] = [0; 8];
 
     if stream.read_fill(&mut val)? != 8 {
@@ -115,7 +115,7 @@ fn read_int64<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     Ok(Value::Int64(i64::read_bytes_le(&val)))
 }
 
-fn read_float<TRead: Read>(stream: &mut TRead) -> Result<Value> {
+fn read_float<TRead: Read>(stream: &mut TRead, _: &mut usize) -> Result<Value> {
     let mut val: [u8; 4] = [0; 4];
 
     if stream.read_fill(&mut val)? != 4 {
@@ -124,7 +124,7 @@ fn read_float<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     Ok(Value::Float(f32::read_bytes_le(&val)))
 }
 
-fn read_double<TRead: Read>(stream: &mut TRead) -> Result<Value> {
+fn read_double<TRead: Read>(stream: &mut TRead, _: &mut usize) -> Result<Value> {
     let mut val: [u8; 8] = [0; 8];
 
     if stream.read_fill(&mut val)? != 8 {
@@ -133,7 +133,7 @@ fn read_double<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     Ok(Value::Double(f64::read_bytes_le(&val)))
 }
 
-fn read_string<TRead: Read>(stream: &mut TRead) -> Result<Value> {
+fn read_string<TRead: Read>(stream: &mut TRead, _: &mut usize) -> Result<Value> {
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
 
@@ -152,7 +152,12 @@ fn read_string<TRead: Read>(stream: &mut TRead) -> Result<Value> {
     }
 }
 
-fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object> {
+fn parse_object<TRead: Read>(stream: &mut TRead, max_depth: &mut usize) -> Result<Object> {
+    *max_depth -= 1;
+    if *max_depth == 0 {
+        return Err(Error::MaxDepthExceeded);
+    }
+
     let mut obj = Object::new();
     let mut count = {
         let mut buf: [u8; 1] = [0; 1];
@@ -170,7 +175,7 @@ fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object> {
         let hash = u64::read_bytes_le(&prop[0..8]);
         let type_code = prop[8];
         match get_value_parser(type_code) {
-            Some(func) => obj.set(hash, func(stream)?),
+            Some(func) => obj.set(hash, func(stream, max_depth)?),
             None => return Err(Error::BadTypeCode(type_code)),
         }
         count -= 1;
@@ -178,7 +183,12 @@ fn parse_object<TRead: Read>(stream: &mut TRead) -> Result<Object> {
     Ok(obj)
 }
 
-fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array> {
+fn parse_array<TRead: Read>(stream: &mut TRead, max_depth: &mut usize) -> Result<Array> {
+    *max_depth -= 1;
+    if *max_depth == 0 {
+        return Err(Error::MaxDepthExceeded);
+    }
+
     let mut count = {
         let mut buf: [u8; 1] = [0; 1];
         if stream.read_fill(&mut buf)? != 1 {
@@ -194,7 +204,7 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array> {
             return Err(Error::Truncation(Type::Array));
         }
         match get_value_parser(type_code[0]) {
-            Some(func) => arr.as_mut().push(func(stream)?),
+            Some(func) => arr.as_mut().push(func(stream, max_depth)?),
             None => return Err(Error::BadTypeCode(type_code[0])),
         }
         count -= 1;
@@ -202,11 +212,11 @@ fn parse_array<TRead: Read>(stream: &mut TRead) -> Result<Array> {
     Ok(arr)
 }
 
-type ValueParserFunc<TRead> = fn(stream: &mut TRead) -> Result<Value>;
+type ValueParserFunc<TRead> = fn(stream: &mut TRead, max_depth: &mut usize) -> Result<Value>;
 
 fn get_value_parser<TRead: Read>(type_code: u8) -> Option<ValueParserFunc<TRead>> {
     match type_code {
-        0x0 => Some(|_| Ok(Value::Null)),
+        0x0 => Some(|_, _| Ok(Value::Null)),
         0x1 => Some(read_bool),
         0x2 => Some(read_uint8),
         0x3 => Some(read_uint16),
@@ -219,12 +229,12 @@ fn get_value_parser<TRead: Read>(type_code: u8) -> Option<ValueParserFunc<TRead>
         0xA => Some(read_float),
         0xB => Some(read_double),
         0xC => Some(read_string),
-        0xD => Some(|stream| Ok(Value::Array(parse_array(stream)?))),
-        0xE => Some(|stream| Ok(Value::Object(parse_object(stream)?))),
+        0xD => Some(|stream, max_depth| Ok(Value::Array(parse_array(stream, max_depth)?))),
+        0xE => Some(|stream, max_depth| Ok(Value::Object(parse_object(stream, max_depth)?))),
         _ => None,
     }
 }
 
-pub fn read_structured_data<TRead: Read>(mut source: TRead) -> Result<Object> {
-    parse_object(&mut source)
+pub fn read_structured_data<TRead: Read>(mut source: TRead, mut max_depth: usize) -> Result<Object> {
+    parse_object(&mut source, &mut max_depth)
 }

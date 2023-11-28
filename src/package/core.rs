@@ -50,7 +50,7 @@ use crate::{
     table::NamedItemTable,
 };
 
-use super::{OpenOptions, CreateOptions};
+use super::{OpenOptions, CreateOptions, DEFAULT_MAX_DEPTH, Options};
 
 /// A BPXP (Package).
 ///
@@ -96,6 +96,7 @@ pub struct Package<T> {
     object_table: Handle,
     table: OnceCell<ObjectTable>,
     metadata: OnceCell<Value>,
+    max_depth: usize
 }
 
 impl<T> Package<T> {
@@ -135,7 +136,17 @@ impl<T> Package<T> {
 impl<T> TryFrom<Container<T>> for Package<T> {
     type Error = Error;
 
-    fn try_from(mut container: Container<T>) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: Container<T>) -> std::prelude::v1::Result<Self, Self::Error> {
+        Self::try_from((value, Options {
+            max_depth: DEFAULT_MAX_DEPTH
+        }))
+    }
+}
+
+impl<T> TryFrom<(Container<T>, Options)> for Package<T> {
+    type Error = Error;
+
+    fn try_from((mut container, options): (Container<T>, Options)) -> std::result::Result<Self, Self::Error> {
         match container.main_header().ty == b'P' {
             true => {
                 if container.main_header().version != SUPPORTED_VERSION {
@@ -167,6 +178,7 @@ impl<T> TryFrom<Container<T>> for Package<T> {
                     container,
                     table: OnceCell::new(),
                     metadata: OnceCell::new(),
+                    max_depth: options.max_depth
                 })
             },
             false => {
@@ -204,6 +216,7 @@ impl<T> TryFrom<Container<T>> for Package<T> {
                     container,
                     object_table,
                     table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings)),
+                    max_depth: options.max_depth
                 })
             },
         }
@@ -266,7 +279,7 @@ impl<T: Write + Seek> Package<T> {
                     .ty(SECTION_TYPE_SD),
             );
             let mut section = container.sections().open(metadata_section)?;
-            settings.metadata.write(&mut *section)?;
+            settings.metadata.write(&mut *section, options.max_depth)?;
         }
         Ok(Package {
             metadata: OnceCell::from(settings.metadata.clone()),
@@ -274,6 +287,7 @@ impl<T: Write + Seek> Package<T> {
             container,
             object_table,
             table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings)),
+            max_depth: options.max_depth
         })
     }
 
@@ -294,7 +308,7 @@ impl<T: Write + Seek> Package<T> {
                             .compression(CompressionMethod::Zlib)
                             .ty(SECTION_TYPE_SD)));
                     let mut section = self.container.sections().open(handle)?;
-                    self.settings.metadata.write(&mut *section)?;
+                    self.settings.metadata.write(&mut *section, self.max_depth)?;
                 } else {
                     if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_SD) {
                         self.container.sections_mut().remove(handle);
@@ -351,14 +365,17 @@ impl<T: Read + Seek> Package<T> {
     /// assert_eq!(objects.len(), 0);
     /// ```
     pub fn open(options: impl Into<OpenOptions<T>>) -> Result<Package<T>> {
-        let container = Container::open(options.into().options)?;
+        let options = options.into();
+        let container = Container::open(options.options)?;
         if container.main_header().ty != b'P' {
             return Err(Error::BadType {
                 expected: b'P',
                 actual: container.main_header().ty,
             });
         }
-        Self::try_from(container)
+        Self::try_from((container, Options {
+            max_depth: options.max_depth
+        }))
     }
 
     fn load_object_table(&self) -> Result<ObjectTable> {
@@ -399,7 +416,7 @@ impl<T: Read + Seek> Package<T> {
             let res = match self.container.sections().find_by_type(SECTION_TYPE_SD) {
                 Some(v) => {
                     let mut section = self.container.sections().load(v)?;
-                    let obj = Value::read(&mut *section)?;
+                    let obj = Value::read(&mut *section, self.max_depth)?;
                     self.metadata.set(obj)
                 },
                 None => self.metadata.set(Value::Null),

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -52,7 +52,7 @@ fn get_value_type_code(val: &Value) -> u8 {
     }
 }
 
-fn write_value(val: &Value) -> Result<Vec<u8>> {
+fn write_value(val: &Value, max_depth: &mut usize) -> Result<Vec<u8>> {
     let mut buf = Vec::new();
 
     match val {
@@ -110,16 +110,20 @@ fn write_value(val: &Value) -> Result<Vec<u8>> {
             buf.extend_from_slice(s.as_bytes());
             buf.push(0x0); //Add null byte terminator
         },
-        Value::Array(arr) => buf.append(&mut write_array(arr)?),
-        Value::Object(obj) => buf.append(&mut write_object(obj)?),
+        Value::Array(arr) => buf.append(&mut write_array(arr, max_depth)?),
+        Value::Object(obj) => buf.append(&mut write_object(obj, max_depth)?),
     }
     Ok(buf)
 }
 
-fn write_object(obj: &Object) -> Result<Vec<u8>> {
+fn write_object(obj: &Object, max_depth: &mut usize) -> Result<Vec<u8>> {
     let mut v: Vec<u8> = Vec::new();
     let count = obj.len();
 
+    *max_depth -= 1;
+    if *max_depth == 0 {
+        return Err(Error::MaxDepthExceeded);
+    }
     if count > 255 {
         return Err(Error::CapacityExceeded(count));
     }
@@ -129,15 +133,19 @@ fn write_object(obj: &Object) -> Result<Vec<u8>> {
         hash.into_inner().write_bytes_le(&mut head[0..8]);
         head[8] = get_value_type_code(val);
         v.extend_from_slice(&head);
-        v.append(&mut write_value(val)?);
+        v.append(&mut write_value(val, max_depth)?);
     }
     Ok(v)
 }
 
-fn write_array(arr: &Array) -> Result<Vec<u8>> {
+fn write_array(arr: &Array, max_depth: &mut usize) -> Result<Vec<u8>> {
     let mut v: Vec<u8> = Vec::new();
     let count = arr.len();
 
+    *max_depth -= 1;
+    if *max_depth == 0 {
+        return Err(Error::MaxDepthExceeded);
+    }
     if count > 255 {
         return Err(Error::CapacityExceeded(count));
     }
@@ -145,13 +153,13 @@ fn write_array(arr: &Array) -> Result<Vec<u8>> {
     for i in 0..count {
         let val = &arr[i];
         v.push(get_value_type_code(val));
-        v.append(&mut write_value(val)?);
+        v.append(&mut write_value(val, max_depth)?);
     }
     Ok(v)
 }
 
-pub fn write_structured_data<TWrite: Write>(mut dest: TWrite, obj: &Object) -> Result<()> {
-    let bytes = write_object(obj)?;
+pub fn write_structured_data<TWrite: Write>(mut dest: TWrite, obj: &Object, mut max_depth: usize) -> Result<()> {
+    let bytes = write_object(obj, &mut max_depth)?;
     dest.write_all(&bytes)?;
     Ok(())
 }

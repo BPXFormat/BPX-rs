@@ -56,6 +56,9 @@ pub const SECTION_TYPE_SYMBOL_TABLE: u8 = 0x2;
 /// The standard type for an extended data section in a BPX Shader Package (type S).
 pub const SECTION_TYPE_EXTENDED_DATA: u8 = 0x3;
 
+/// The default maximum depth of a symbol extended data BPXSD object.
+pub const DEFAULT_MAX_DEPTH: usize = 4;
+
 /// Represents a shader in a BPXS.
 #[derive(Clone, Debug)]
 pub struct Shader {

@@ -50,7 +50,7 @@ use crate::{
     table::NamedItemTable,
 };
 
-use super::{OpenOptions, CreateOptions};
+use super::{OpenOptions, CreateOptions, Options, DEFAULT_MAX_DEPTH};
 
 /// A BPXS (ShaderPack).
 ///
@@ -98,6 +98,7 @@ pub struct ShaderPack<T> {
     symbols: OnceCell<SymbolTable>,
     shaders: OnceCell<ShaderTable>,
     extended_data: Option<Handle>,
+    max_depth: usize
 }
 
 impl<T> ShaderPack<T> {
@@ -182,7 +183,17 @@ impl<T> ShaderPack<T> {
 impl<T> TryFrom<Container<T>> for ShaderPack<T> {
     type Error = Error;
 
-    fn try_from(mut container: Container<T>) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: Container<T>) -> std::prelude::v1::Result<Self, Self::Error> {
+        Self::try_from((value, Options {
+            max_depth: DEFAULT_MAX_DEPTH
+        }))
+    }
+}
+
+impl<T> TryFrom<(Container<T>, Options)> for ShaderPack<T> {
+    type Error = Error;
+
+    fn try_from((mut container, options): (Container<T>, Options)) -> std::result::Result<Self, Self::Error> {
         match container.main_header().ty == b'S' {
             true => {
                 if container.main_header().version != SUPPORTED_VERSION {
@@ -215,6 +226,7 @@ impl<T> TryFrom<Container<T>> for ShaderPack<T> {
                     container,
                     symbols: OnceCell::new(),
                     shaders: OnceCell::new(),
+                    max_depth: options.max_depth
                 })
             },
             false => {
@@ -250,9 +262,11 @@ impl<T> TryFrom<Container<T>> for ShaderPack<T> {
                         NamedItemTable::empty(),
                         strings,
                         None,
+                        options.max_depth
                     )),
                     shaders: OnceCell::from(ShaderTable::new(Vec::new())),
                     extended_data: None,
+                    max_depth: options.max_depth
                 })
             },
         }
@@ -306,9 +320,10 @@ impl<T: Write + Seek> ShaderPack<T> {
             container,
             settings,
             symbol_table,
-            symbols: OnceCell::from(SymbolTable::new(NamedItemTable::empty(), strings, None)),
+            symbols: OnceCell::from(SymbolTable::new(NamedItemTable::empty(), strings, None, options.max_depth)),
             shaders: OnceCell::from(ShaderTable::new(Vec::new())),
             extended_data: None,
+            max_depth: options.max_depth
         }
     }
 
@@ -366,14 +381,17 @@ impl<T: Read + Seek> ShaderPack<T> {
     /// assert_eq!(symbols.len(), 0);
     /// ```
     pub fn open(options: impl Into<OpenOptions<T>>) -> Result<ShaderPack<T>> {
-        let container = Container::open(options.into().options)?;
+        let options = options.into();
+        let container = Container::open(options.options)?;
         if container.main_header().ty != b'S' {
             return Err(Error::BadType {
                 expected: b'S',
                 actual: container.main_header().ty,
             });
         }
-        Self::try_from(container)
+        Self::try_from((container, Options {
+            max_depth: options.max_depth
+        }))
     }
 
     fn load_symbol_table(&self) -> Result<SymbolTable> {
@@ -385,7 +403,7 @@ impl<T: Read + Seek> ShaderPack<T> {
         let strings = StringSection::new(handle);
         let num_symbols = self.container.main_header().type_ext.get_le(8);
         let table = read_symbol_table(&self.container, num_symbols, self.symbol_table)?;
-        Ok(SymbolTable::new(table, strings, self.extended_data))
+        Ok(SymbolTable::new(table, strings, self.extended_data, self.max_depth))
     }
 
     /// Returns a guard for immutable access to the symbol table.

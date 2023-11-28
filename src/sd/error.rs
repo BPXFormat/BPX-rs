@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -51,6 +51,9 @@ pub enum Error {
     /// Describes too large structured data Object or Array (ie exceeds 255 entries).
     CapacityExceeded(usize),
 
+    /// Maximum depth for nested values exceeded.
+    MaxDepthExceeded,
+
     /// Writing non object values into an io stream is currently not supported by BPXSD.
     ///
     /// This is however subject to change.
@@ -69,6 +72,7 @@ impl Display for Error {
             Error::CapacityExceeded(count) => {
                 write!(f, "capacity exceeded ({} > 255)", count)
             },
+            Error::MaxDepthExceeded => f.write_str("maximum depth for nested values exceeded"),
             Error::NotAnObject => f.write_str("not an object"),
         }
     }

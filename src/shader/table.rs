@@ -51,6 +51,7 @@ pub struct SymbolTable {
     table: NamedItemTable<Symbol>,
     extended_data: Option<Handle>,
     extended_data_objs: FrozenMap<u32, Box<crate::sd::Value>>,
+    max_depth: usize
 }
 
 impl SymbolTable {
@@ -58,12 +59,14 @@ impl SymbolTable {
         table: NamedItemTable<Symbol>,
         strings: StringSection,
         extended_data: Option<Handle>,
+        max_depth: usize
     ) -> SymbolTable {
         SymbolTable {
             strings,
             table,
             extended_data,
             extended_data_objs: FrozenMap::new(),
+            max_depth
         }
     }
 
@@ -95,7 +98,7 @@ impl SymbolTable {
             });
             let mut section = container.sections().open(handle)?;
             let offset = section.size();
-            extended_data.write(&mut *section)?;
+            extended_data.write(&mut *section, self.max_depth)?;
             return Ok(offset as u32);
         }
         Ok(0xFFFFFF)
@@ -161,7 +164,7 @@ impl SymbolTable {
                 .ok_or(Error::MissingSection(Section::ExtendedData))?;
             let mut section = container.sections().load(section)?;
             section.seek(SeekFrom::Start(sym.extended_data as _))?;
-            let obj = crate::sd::Value::read(&mut *section)?;
+            let obj = crate::sd::Value::read(&mut *section, self.max_depth)?;
             self.extended_data_objs
                 .insert(sym.extended_data, Box::new(obj));
         }

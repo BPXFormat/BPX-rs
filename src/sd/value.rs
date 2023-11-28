@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -173,6 +173,7 @@ impl Value {
     /// # Arguments
     ///
     /// * `dest`: the destination [Write](std::io::Write).
+    /// * `max_depth`: maximum depth for nested BPXSD values.
     ///
     /// returns: Result<(), Error>
     ///
@@ -185,12 +186,12 @@ impl Value {
     /// let mut obj = Object::new();
     /// obj.set("Test", 12.into());
     /// let mut buf = Vec::<u8>::new();
-    /// Value::from(obj).write(&mut buf).unwrap();
+    /// Value::from(obj).write(&mut buf, 4).unwrap();
     /// assert!(buf.len() > 0);
     /// ```
-    pub fn write<TWrite: std::io::Write>(&self, dest: TWrite) -> super::Result<()> {
+    pub fn write<TWrite: std::io::Write>(&self, dest: TWrite, max_depth: usize) -> super::Result<()> {
         match self.as_object() {
-            Some(v) => super::encoder::write_structured_data(dest, v),
+            Some(v) => super::encoder::write_structured_data(dest, v, max_depth),
             None => Err(super::error::Error::NotAnObject),
         }
     }
@@ -200,6 +201,7 @@ impl Value {
     /// # Arguments
     ///
     /// * `source`: the source [Read](std::io::Read).
+    /// * `max_depth`: maximum depth for nested BPXSD values.
     ///
     /// returns: Result<Object, Error>
     ///
@@ -212,13 +214,13 @@ impl Value {
     /// let mut obj = Object::new();
     /// obj.set("Test", 12.into());
     /// let mut buf = Vec::<u8>::new();
-    /// Value::from(obj).write(&mut buf).unwrap();
-    /// let obj1 = Value::read(&mut buf.as_slice()).unwrap();
+    /// Value::from(obj).write(&mut buf, 4).unwrap();
+    /// let obj1 = Value::read(&mut buf.as_slice(), 4).unwrap();
     /// assert!(obj1.as_object().unwrap().get("Test").is_some());
     /// assert!(obj1.as_object().unwrap().get("Test").unwrap() == &Value::from(12));
     /// ```
-    pub fn read<TRead: std::io::Read>(source: TRead) -> super::Result<Value> {
-        super::decoder::read_structured_data(source).map(|v| v.into())
+    pub fn read<TRead: std::io::Read>(source: TRead, max_depth: usize) -> super::Result<Value> {
+        super::decoder::read_structured_data(source, max_depth).map(|v| v.into())
     }
 }
 

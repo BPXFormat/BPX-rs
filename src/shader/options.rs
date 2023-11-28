@@ -28,6 +28,8 @@
 
 use crate::{shader::{Target, Type}, macros::{create_options, open_options}};
 
+use super::DEFAULT_MAX_DEPTH;
+
 /// The required settings to create a new BPXS.
 ///
 /// *This is intended to be generated with help of [CreateOptions](CreateOptions).*
@@ -43,6 +45,12 @@ pub struct Settings {
     pub ty: Type,
 }
 
+/// Specific cofniguration options for BPXS.
+pub struct Options {
+    /// Defines the maximum depth of an extended data BPXSD object.
+    pub max_depth: usize
+}
+
 create_options! {
     /// Utility to simplify generation of [Settings](Settings) required when creating a new BPXS.
     CreateOptions {
@@ -50,7 +58,8 @@ create_options! {
             assembly_hash: 0,
             target: Target::Any,
             ty: Type::Pipeline,
-        }
+        },
+        max_depth: usize = DEFAULT_MAX_DEPTH
     }
 }
 
@@ -90,18 +99,47 @@ impl<T> CreateOptions<T> {
         self.settings.ty = ty;
         self
     }
+
+    /// Defines the maximum depth of an extended data BPXSD object.
+    ///
+    /// *By default, the maximum depth is set to [DEFAULT_MAX_DEPTH](DEFAULT_MAX_DEPTH).*
+    ///
+    /// # Arguments
+    ///
+    /// * `max_depth`: the maximum depth of an extended data BPXSD object.
+    pub fn max_depth(mut self, max_depth: usize) -> Self {
+        self.max_depth = max_depth;
+        self
+    }
 }
 
 impl<T: std::io::Seek> From<(T, Settings)> for CreateOptions<T> {
     fn from((backend, settings): (T, Settings)) -> Self {
         Self {
             options: crate::core::options::CreateOptions::new(backend),
-            settings
+            settings,
+            max_depth: DEFAULT_MAX_DEPTH
         }
     }
 }
 
 open_options! {
     /// Utility to allow configuring the underlying BPX container when opening a BPXS.
-    OpenOptions {}
+    OpenOptions {
+        max_depth: usize = DEFAULT_MAX_DEPTH
+    }
+}
+
+impl<T> OpenOptions<T> {
+    /// Defines the maximum depth of an extended data BPXSD object.
+    ///
+    /// *By default, the maximum depth is set to [DEFAULT_MAX_DEPTH](DEFAULT_MAX_DEPTH).*
+    ///
+    /// # Arguments
+    ///
+    /// * `max_depth`: the maximum depth of an extended data BPXSD object.
+    pub fn max_depth(mut self, max_depth: usize) -> Self {
+        self.max_depth = max_depth;
+        self
+    }
 }

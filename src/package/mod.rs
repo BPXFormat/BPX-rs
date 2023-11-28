@@ -55,6 +55,9 @@ pub const SECTION_TYPE_OBJECT_TABLE: u8 = 0x2;
 /// The supported BPX version for this package variant decoder/encoder.
 pub const SUPPORTED_VERSION: u32 = 0x2;
 
+/// The default maximum depth for the metadata BPXSD object.
+pub const DEFAULT_MAX_DEPTH: usize = 16;
+
 /// Enum of all supported processor architectures by BPXP.
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum Architecture {
