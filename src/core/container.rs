@@ -38,6 +38,8 @@ use crate::core::{
     Result, SectionData,
 };
 
+use super::compression::{WeakChecksum, Checksum};
+use super::header::GetChecksum;
 use super::options::{CreateOptions, OpenOptions};
 use super::error::Error;
 
@@ -145,7 +147,8 @@ impl<T: io::Read + io::Seek> Container<T> {
     /// ```
     pub fn open(options: impl Into<OpenOptions<T>>) -> Result<Container<T>> {
         let mut options = options.into();
-        let (checksum, header) = match MainHeader::read(&mut options.backend) {
+        let mut checksum = WeakChecksum::default();
+        let header = match MainHeader::read(&mut options.backend) {
             Ok(v) => v,
             Err(e) => {
                 match e.error() {
@@ -161,7 +164,9 @@ impl<T: io::Read + io::Seek> Container<T> {
                 }
             }
         };
-        let (next_handle, sections, chksum) = read_section_header_table(&mut options.backend, &header, checksum)?;
+        header.get_checksum(&mut checksum);
+        let (next_handle, sections) = read_section_header_table(&mut options.backend, &header, &mut checksum)?;
+        let chksum = checksum.finish();
         if !options.skip_checksum && chksum != header.chksum {
             return Err(Error::Checksum {
                 actual: chksum,

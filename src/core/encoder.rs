@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -56,10 +56,10 @@ fn write_sections<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
     file_start_offset: usize,
-) -> Result<(u32, usize)> {
+    chksum_sht: &mut impl Checksum
+) -> Result<usize> {
     let mut ptr: u64 = file_start_offset as _;
     let mut all_sections_size: usize = 0;
-    let mut chksum_sht: u32 = 0;
 
     for (idx, (_handle, section)) in sections.iter_mut().enumerate() {
         //At this point the handle must be valid otherwise sections_in_order is broken
@@ -96,10 +96,10 @@ fn write_sections<T: Write + Seek>(
             //Reset file pointer back to the end of the last written section
             backend.seek(SeekFrom::Start(ptr))?;
         }
-        chksum_sht += section.header.get_checksum();
+        section.header.get_checksum(chksum_sht);
         all_sections_size += csize;
     }
-    Ok((chksum_sht, all_sections_size))
+    Ok(all_sections_size)
 }
 
 pub fn internal_save<T: Write + Seek>(
@@ -112,11 +112,11 @@ pub fn internal_save<T: Write + Seek>(
     //Seek to the start of the actual file content
     backend.seek(SeekFrom::Start(file_start_offset as _))?;
     //Write all section data and section headers
-    let (chksum_sht, all_sections_size) =
-        write_sections(&mut backend, sections, file_start_offset)?;
+    let mut chksum_sht = WeakChecksum::default();
+    let all_sections_size = write_sections(&mut backend, sections, file_start_offset, &mut chksum_sht)?;
     main_header.file_size = all_sections_size as u64 + file_start_offset as u64;
-    main_header.chksum = 0;
-    main_header.chksum = chksum_sht + main_header.get_checksum();
+    main_header.get_checksum(&mut chksum_sht);
+    main_header.chksum = chksum_sht.finish();
     //Relocate to the start of the file and write the BPX main header
     backend.seek(SeekFrom::Start(0))?;
     main_header.write(&mut backend)?;
@@ -153,12 +153,12 @@ pub fn recompute_header_checksum(
     main_header: &mut MainHeader,
     sections: &BTreeMap<u32, SectionEntry>,
 ) {
-    let mut chksum_sht: u32 = 0;
+    let mut chksum_sht = WeakChecksum::default();
     for entry in sections.values() {
-        chksum_sht += entry.header.get_checksum();
+        entry.header.get_checksum(&mut chksum_sht);
     }
-    main_header.chksum = 0;
-    main_header.chksum = chksum_sht + main_header.get_checksum();
+    main_header.get_checksum(&mut chksum_sht);
+    main_header.chksum = chksum_sht.finish();
 }
 
 pub fn internal_save_single<T: Write + Seek>(
@@ -242,11 +242,11 @@ pub fn write_section<TWrite: Write>(
         let size = write_section_checked(flags, section, out, &mut chksum)?;
         Ok((size, chksum.finish()))
     } else if flags & FLAG_CHECK_WEAK != 0 {
-        let mut chksum = WeakChecksum::new();
+        let mut chksum = WeakChecksum::default();
         let size = write_section_checked(flags, section, out, &mut chksum)?;
         Ok((size, chksum.finish()))
     } else {
-        let mut chksum = WeakChecksum::new();
+        let mut chksum = WeakChecksum::default();
         let size = write_section_checked(flags, section, out, &mut chksum)?;
         Ok((size, 0))
     }

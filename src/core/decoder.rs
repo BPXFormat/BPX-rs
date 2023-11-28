@@ -53,20 +53,21 @@ use crate::{
     traits::ReadFill,
 };
 
+use super::header::GetChecksum;
+
 const READ_BLOCK_SIZE: usize = 8192;
 
 pub fn read_section_header_table<T: Read>(
     mut backend: &mut T,
     main_header: &MainHeader,
-    checksum: u32,
-) -> Result<(u32, BTreeMap<u32, SectionEntry>, u32)> {
+    checksum: &mut impl Checksum,
+) -> Result<(u32, BTreeMap<u32, SectionEntry>)> {
     let mut sections = BTreeMap::new();
-    let mut final_checksum = checksum;
     let mut hdl: u32 = 0;
 
     for i in 0..main_header.section_num {
-        let (checksum, header) = SectionHeader::read(&mut backend)?;
-        final_checksum += checksum;
+        let header = SectionHeader::read(&mut backend)?;
+        header.get_checksum(checksum);
         sections.insert(
             hdl,
             SectionEntry {
@@ -82,7 +83,7 @@ pub fn read_section_header_table<T: Read>(
         );
         hdl += 1;
     }
-    Ok((hdl, sections, final_checksum))
+    Ok((hdl, sections))
 }
 
 pub fn load_section1<T: Read + Seek>(
@@ -93,7 +94,7 @@ pub fn load_section1<T: Read + Seek>(
     let mut data = AutoSectionData::new_with_size(section.size, memory_threshold)?;
     data.seek(io::SeekFrom::Start(0))?;
     if section.flags & FLAG_CHECK_WEAK != 0 {
-        let mut chksum = WeakChecksum::new();
+        let mut chksum = WeakChecksum::new(0);
         load_section_checked(file, section, &mut data, &mut chksum)?;
         let v = chksum.finish();
         if v != section.chksum {
@@ -113,7 +114,7 @@ pub fn load_section1<T: Read + Seek>(
             });
         }
     } else {
-        let mut chksum = WeakChecksum::new();
+        let mut chksum = WeakChecksum::new(0);
         load_section_checked(file, section, &mut data, &mut chksum)?;
     }
     data.seek(io::SeekFrom::Start(0))?;

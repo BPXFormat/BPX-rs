@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -46,10 +46,16 @@ impl Checksum for WeakChecksum {
     }
 }
 
+impl Default for WeakChecksum {
+    fn default() -> Self {
+        Self::new(0)
+    }
+}
+
 impl WeakChecksum {
-    pub fn new() -> Self {
+    pub fn new(initial: u32) -> Self {
         WeakChecksum {
-            current: Wrapping(0),
+            current: Wrapping(initial),
         }
     }
 }

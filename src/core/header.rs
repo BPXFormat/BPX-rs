@@ -131,13 +131,9 @@ where
     Self: Struct<D>,
 {
     /// Computes the checksum for this header.
-    fn get_checksum(&self) -> u32 {
-        let mut checksum: u32 = 0;
+    fn get_checksum(&self, checksum: &mut impl super::compression::Checksum) {
         let buf = self.to_bytes();
-        for byte in &buf {
-            checksum += *byte as u32;
-        }
-        checksum
+        checksum.push(&buf);
     }
 }
 
@@ -211,7 +207,7 @@ pub struct MainHeader {
 }
 
 impl Struct<SIZE_MAIN_HEADER> for MainHeader {
-    type Output = (u32, MainHeader);
+    type Output = MainHeader;
     type Error = RecoverableError<Self::Output, Error>;
 
     fn new() -> Self {
@@ -231,13 +227,6 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader {
     }
 
     fn from_bytes(buffer: [u8; SIZE_MAIN_HEADER]) -> Result<Self::Output, Self::Error> {
-        let mut checksum: u32 = 0;
-
-        for (i, byte) in buffer.iter().enumerate() {
-            if !(4..8).contains(&i) {
-                checksum += *byte as u32;
-            }
-        }
         let head = MainHeader {
             signature: extract_slice(&buffer, 0),
             ty: buffer[3],
@@ -248,12 +237,12 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader {
             type_ext: ByteBuf::new(extract_slice(&buffer, 24)),
         };
         if &head.signature != b"BPX" {
-            return Err(RecoverableError::new(Error::BadSignature(head.signature), (checksum, head)));
+            return Err(RecoverableError::new(Error::BadSignature(head.signature), head));
         }
         if !KNOWN_VERSIONS.contains(&head.version) {
-            return Err(RecoverableError::new(Error::BadVersion(head.version), (checksum, head)));
+            return Err(RecoverableError::new(Error::BadVersion(head.version), head));
         }
-        Ok((checksum, head))
+        Ok(head)
     }
 
     fn to_bytes(&self) -> [u8; SIZE_MAIN_HEADER] {
@@ -271,7 +260,13 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader {
     }
 }
 
-impl GetChecksum<SIZE_MAIN_HEADER> for MainHeader {}
+impl GetChecksum<SIZE_MAIN_HEADER> for MainHeader {
+    fn get_checksum(&self, checksum: &mut impl super::compression::Checksum) {
+        let buf = self.to_bytes();
+        checksum.push(&buf[..4]);
+        checksum.push(&buf[8..]);
+    }
+}
 
 /// The BPX Section Header.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -308,7 +303,7 @@ pub struct SectionHeader {
 }
 
 impl Struct<SIZE_SECTION_HEADER> for SectionHeader {
-    type Output = (u32, SectionHeader);
+    type Output = SectionHeader;
     type Error = Error;
 
     fn new() -> Self {
@@ -327,13 +322,7 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader {
     }
 
     fn from_bytes(buffer: [u8; SIZE_SECTION_HEADER]) -> Result<Self::Output, Self::Error> {
-        let mut checksum: u32 = 0;
-
-        for byte in &buffer {
-            checksum += *byte as u32;
-        }
-        Ok((
-            checksum,
+        Ok(
             SectionHeader {
                 pointer: u64::read_bytes_le(&buffer[0..8]),
                 csize: u32::read_bytes_le(&buffer[8..12]),
@@ -342,7 +331,7 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader {
                 ty: buffer[20],
                 flags: buffer[21],
             },
-        ))
+        )
     }
 
     fn to_bytes(&self) -> [u8; SIZE_SECTION_HEADER] {
@@ -357,7 +346,8 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader {
     }
 }
 
-impl GetChecksum<SIZE_SECTION_HEADER> for SectionHeader {}
+impl GetChecksum<SIZE_SECTION_HEADER> for SectionHeader {
+}
 
 impl SectionHeader {
     /// Checks if this section is huge (greater than 100Mb).
