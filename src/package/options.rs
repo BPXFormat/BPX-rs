@@ -45,7 +45,7 @@ pub struct Settings {
     pub platform: Platform,
 
     /// The package metadata (stored as a BPXSD [Object](crate::sd::Object)).
-    pub metadata: Value,
+    pub metadata: Option<Value>,
 
     /// The package type code.
     pub type_code: [u8; 2],
@@ -63,7 +63,7 @@ create_options! {
         settings: Settings = Settings {
             architecture: Architecture::Any,
             platform: Platform::Any,
-            metadata: Value::Null,
+            metadata: None,
             type_code: [0x50, 0x48],
         },
         max_depth: usize = DEFAULT_MAX_DEPTH
@@ -103,7 +103,7 @@ impl<T> CreateOptions<T> {
     ///
     /// * `val`: the BPXSD metadata value.
     pub fn metadata(mut self, val: Value) -> Self {
-        self.settings.metadata = val;
+        self.settings.metadata = Some(val);
         self
     }
 

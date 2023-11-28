@@ -166,7 +166,7 @@ impl<T> TryFrom<(Container<T>, Options)> for Package<T> {
                     };
                 Ok(Self {
                     settings: Settings {
-                        metadata: Value::Null,
+                        metadata: None,
                         architecture: a,
                         platform: p,
                         type_code: [
@@ -205,7 +205,7 @@ impl<T> TryFrom<(Container<T>, Options)> for Package<T> {
                 Ok(Package {
                     metadata: OnceCell::new(),
                     settings: Settings {
-                        metadata: Value::Null,
+                        metadata: None,
                         architecture: a,
                         platform: p,
                         type_code: [
@@ -271,18 +271,20 @@ impl<T: Write + Seek> Package<T> {
                 .ty(SECTION_TYPE_STRING),
         );
         let strings = StringSection::new(string_section);
-        if !settings.metadata.is_null() {
-            let metadata_section = container.sections_mut().create(
-                SectionOptions::new()
-                    .checksum(Checksum::Weak)
-                    .compression(CompressionMethod::Zlib)
-                    .ty(SECTION_TYPE_SD),
-            );
-            let mut section = container.sections().open(metadata_section)?;
-            settings.metadata.write(&mut *section, options.max_depth)?;
+        if let Some(metadata) = &settings.metadata {
+            if !metadata.is_null() {
+                let metadata_section = container.sections_mut().create(
+                    SectionOptions::new()
+                        .checksum(Checksum::Weak)
+                        .compression(CompressionMethod::Zlib)
+                        .ty(SECTION_TYPE_SD),
+                );
+                let mut section = container.sections().open(metadata_section)?;
+                metadata.write(&mut *section, options.max_depth)?;
+            }
         }
         Ok(Package {
-            metadata: OnceCell::from(settings.metadata.clone()),
+            metadata: settings.metadata.clone().map(OnceCell::from).unwrap_or(OnceCell::new()),
             settings,
             container,
             object_table,
@@ -299,23 +301,21 @@ impl<T: Write + Seek> Package<T> {
     /// couldn't be saved.
     pub fn save(&mut self) -> Result<()> {
         //Update metadata section if changed
-        if let Some(metadata) = self.metadata.get() {
-            if metadata != &self.settings.metadata {
-                if !self.settings.metadata.is_null() {
-                    let handle = self.container.sections().find_by_type(SECTION_TYPE_SD)
-                        .unwrap_or_else(|| self.container.sections_mut().create(SectionOptions::new()
-                            .checksum(Checksum::Weak)
-                            .compression(CompressionMethod::Zlib)
-                            .ty(SECTION_TYPE_SD)));
-                    let mut section = self.container.sections().open(handle)?;
-                    self.settings.metadata.write(&mut *section, self.max_depth)?;
-                } else {
-                    if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_SD) {
-                        self.container.sections_mut().remove(handle);
-                    }
+        if let Some(metadata) = &self.settings.metadata {
+            if !metadata.is_null() {
+                let handle = self.container.sections().find_by_type(SECTION_TYPE_SD)
+                    .unwrap_or_else(|| self.container.sections_mut().create(SectionOptions::new()
+                        .checksum(Checksum::Weak)
+                        .compression(CompressionMethod::Zlib)
+                        .ty(SECTION_TYPE_SD)));
+                let mut section = self.container.sections().open(handle)?;
+                metadata.write(&mut *section, self.max_depth)?;
+            } else {
+                if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_SD) {
+                    self.container.sections_mut().remove(handle);
                 }
-                self.metadata = OnceCell::from(self.settings.metadata.clone());
             }
+            self.metadata = OnceCell::from(metadata.clone());
         }
         {
             //Update type ext if changed
