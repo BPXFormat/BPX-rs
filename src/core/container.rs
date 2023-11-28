@@ -189,6 +189,13 @@ impl<T: io::Read + io::Seek> Container<T> {
     }
 }
 
+enum SaveMode {
+    Regenerate,
+    MainHeaderOnly,
+    PatchMultipleSections,
+    PatchSingleSection(u32)
+}
+
 impl<T: io::Write + io::Seek> Container<T> {
     /// Creates a new BPX container in the given `backend`.
     ///
@@ -269,6 +276,106 @@ impl<T: io::Write + io::Seek> Container<T> {
         Ok(main_header)
     }
 
+    fn get_save_mode(&self) -> SaveMode {
+        if self.table.modified {
+            return SaveMode::Regenerate;
+        }
+        let count = self
+            .table
+            .sections
+            .values()
+            .filter(|entry| entry.modified.get())
+            .count();
+        if count == 0 {
+            // No sections have changed and the table didn't change; might have nothing to do.
+            return SaveMode::MainHeaderOnly
+        }
+        let expanded_sections = self
+            .table
+            .sections
+            .values()
+            .filter(|entry| entry.modified.get())
+            .filter(|entry| {
+                entry.data.borrow().as_ref().unwrap().size() != entry.header.size as usize
+            })
+            .count();
+        if expanded_sections == 0 {
+            if count > 1 {
+                // If n sections changed but did not expand -> only write these n sections and patch section header table.
+                return SaveMode::PatchMultipleSections;
+            } else {
+                // If 1 section changed but did not expand -> only write this section and patch section header table.
+                let section = self
+                    .table
+                    .sections
+                    .iter()
+                    .find(|(_, entry)| entry.modified.get())
+                    .map(|(handle, _)| *handle)
+                    .unwrap();
+
+                return SaveMode::PatchSingleSection(section);
+            }
+        }
+        if expanded_sections == 1 {
+            let expanded_section = self
+                .table
+                .sections
+                .iter()
+                .filter(|(_, entry)| entry.modified.get())
+                .find(|(_, entry)| {
+                    entry.data.borrow().as_ref().unwrap().size() != entry.header.size as usize
+                })
+                .map(|(handle, _)| *handle)
+                .unwrap();
+            if expanded_section == self.table.next_handle - 1 {
+                if count > 1 {
+                    // If n sections changed but did not expand and the last section has expanded
+                    // -> write only these n sections, write the last section and patch section
+                    // header table.
+                    return SaveMode::PatchMultipleSections;
+                } else {
+                    //If last section expanded -> only write last section and update section header table.
+                    return SaveMode::PatchSingleSection(expanded_section);
+                }
+            }
+        }
+        SaveMode::Regenerate
+    }
+
+    fn save_with_mode(&mut self, mode: SaveMode) -> Result<()> {
+        match mode {
+            SaveMode::Regenerate => {
+                self.main_header_modified = false;
+                self.table.modified = false;
+                self.main_header.section_num = self.table.count;
+                internal_save(
+                    self.table.backend.get_mut(),
+                    &mut self.table.sections,
+                    &mut self.main_header,
+                )
+            },
+            SaveMode::MainHeaderOnly => {
+                // No sections have changed and the table didn't change; might have nothing to do.
+                self.patch_main_header_if_needed(false)
+            },
+            SaveMode::PatchMultipleSections => {
+                //Multiple sections have changed.
+                let flag = self.patch_modified_sections()?;
+                self.patch_main_header_if_needed(flag)
+            },
+            SaveMode::PatchSingleSection(section) => {
+                //A single section has changed.
+                let flag = internal_save_single(
+                    self.table.backend.get_mut(),
+                    &mut self.table.sections,
+                    &mut self.main_header,
+                    section
+                )?;
+                self.patch_main_header_if_needed(flag)
+            },
+        }
+    }
+
     /// Writes all sections to the underlying IO backend.
     ///
     /// **This function prints some information to standard output as a way
@@ -292,94 +399,44 @@ impl<T: io::Write + io::Seek> Container<T> {
     /// assert!(!buf.into_inner().is_empty());
     /// ```
     pub fn save(&mut self) -> Result<()> {
-        if self.table.modified {
-            // If table changed -> write all file.
-            self.main_header_modified = false;
-            self.table.modified = false;
-            self.main_header.section_num = self.table.count;
-            return internal_save(
-                self.table.backend.get_mut(),
-                &mut self.table.sections,
-                &mut self.main_header,
-            );
+        self.save_with_mode(self.get_save_mode())
+    }
+}
+
+impl<T: io::Read + io::Write + io::Seek> Container<T> {
+    /// Loads sections on demand and saves all changes to the underlying IO backend.
+    /// This allows saving a BPX container event when all sections have not already been loaded.
+    ///
+    /// **This function prints some information to standard output as a way
+    /// to debug data compression issues unless the `debug-log` feature
+    /// is disabled.**
+    ///
+    /// # Errors
+    ///
+    /// An [Error](crate::core::error::Error) is returned if some data could
+    /// not be written.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::Container;
+    /// use bpx::util::new_byte_buf;
+    ///
+    /// let mut file = Container::create(new_byte_buf(0));
+    /// file.save().unwrap();
+    /// let buf = file.into_inner();
+    /// assert!(!buf.into_inner().is_empty());
+    /// ```
+    pub fn load_and_save(&mut self) -> Result<()> {
+        let mode = self.get_save_mode();
+        match mode {
+            SaveMode::Regenerate => {
+                for handle in self.sections() {
+                    self.sections().load(handle)?;
+                }
+            },
+            _ => ()
         }
-        let count = self
-            .table
-            .sections
-            .values()
-            .filter(|entry| entry.modified.get())
-            .count();
-        if count == 0 {
-            // No sections have changed and the table didn't change; might have nothing to do.
-            return self.patch_main_header_if_needed(false);
-        }
-        let expanded_sections = self
-            .table
-            .sections
-            .values()
-            .filter(|entry| entry.modified.get())
-            .filter(|entry| {
-                entry.data.borrow().as_ref().unwrap().size() != entry.header.size as usize
-            })
-            .count();
-        if expanded_sections == 0 {
-            let flag = if count > 1 {
-                // If n sections changed but did not expand -> only write these n sections and patch section header table.
-                self.patch_modified_sections()
-            } else {
-                // If 1 section changed but did not expand -> only write this section and patch section header table.
-                let section = self
-                    .table
-                    .sections
-                    .iter()
-                    .find(|(_, entry)| entry.modified.get())
-                    .map(|(handle, _)| *handle)
-                    .unwrap();
-                internal_save_single(
-                    self.table.backend.get_mut(),
-                    &mut self.table.sections,
-                    &mut self.main_header,
-                    section,
-                )
-            };
-            return self.patch_main_header_if_needed(flag?);
-        }
-        if expanded_sections == 1 {
-            let expanded_section = self
-                .table
-                .sections
-                .iter()
-                .filter(|(_, entry)| entry.modified.get())
-                .find(|(_, entry)| {
-                    entry.data.borrow().as_ref().unwrap().size() != entry.header.size as usize
-                })
-                .map(|(handle, _)| *handle)
-                .unwrap();
-            if expanded_section == self.table.next_handle - 1 {
-                let flag = if count > 1 {
-                    // If n sections changed but did not expand and the last section has expanded
-                    // -> write only these n sections, write the last section and patch section
-                    // header table.
-                    self.patch_modified_sections()
-                } else {
-                    //If last section expanded -> only write last section and update section header table.
-                    internal_save_single(
-                        self.table.backend.get_mut(),
-                        &mut self.table.sections,
-                        &mut self.main_header,
-                        expanded_section,
-                    )
-                };
-                return self.patch_main_header_if_needed(flag?);
-            }
-        }
-        self.main_header_modified = false;
-        self.table.modified = false;
-        self.main_header.section_num = self.table.count;
-        internal_save(
-            self.table.backend.get_mut(),
-            &mut self.table.sections,
-            &mut self.main_header,
-        )
+        self.save_with_mode(mode)
     }
 }

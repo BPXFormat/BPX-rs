@@ -329,6 +329,8 @@ impl<T: Write + Seek> ShaderPack<T> {
 
     /// Saves this shader package.
     ///
+    /// This function calls **`save`** on the underlying BPX [Container](crate::core::Container).
+    ///
     /// # Errors
     ///
     /// Returns an [Error](Error) if some parts of this shader
@@ -420,5 +422,35 @@ impl<T: Read + Seek> ShaderPack<T> {
             table,
             container: &self.container,
         })
+    }
+}
+
+impl<T: Read + Write + Seek> ShaderPack<T> {
+    /// Saves this shader package.
+    ///
+    /// This function calls **`save`** on the underlying BPX [Container](crate::core::Container).
+    ///
+    /// # Errors
+    ///
+    /// Returns an [Error](Error) if some parts of this shader
+    /// package couldn't be saved.
+    pub fn load_and_save(&mut self) -> Result<()> {
+        {
+            //Update type ext if changed
+            let data = get_type_ext(&self.settings);
+            if data != self.container.main_header().type_ext {
+                self.container.main_header_mut().type_ext = data;
+            }
+        }
+        if let Some(syms) = self.symbols.get() {
+            self.container.main_header_mut().type_ext.set_le(8, syms.len() as u16);
+            let mut section = self.container.sections().load(self.symbol_table)?;
+            section.seek(SeekFrom::Start(0))?;
+            for v in syms {
+                v.write(&mut *section)?;
+            }
+        }
+        self.container.load_and_save()?;
+        Ok(())
     }
 }

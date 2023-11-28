@@ -295,6 +295,8 @@ impl<T: Write + Seek> Package<T> {
 
     /// Saves this package.
     ///
+    /// This function calls **`save`** on the underlying BPX [Container](crate::core::Container).
+    ///
     /// # Errors
     ///
     /// Returns an [Error](Error) if some parts of this package
@@ -429,6 +431,54 @@ impl<T: Read + Seek> Package<T> {
         //SAFETY: There's a check right before this line which inserts the value if it doesn't
         // exist.
         unsafe { Ok(self.metadata.get().unwrap_unchecked()) }
+    }
+}
+
+impl<T: Read + Write + Seek> Package<T> {
+    /// Saves this package.
+    ///
+    /// This function calls **`load_and_save`** on the underlying BPX [Container](crate::core::Container).
+    ///
+    /// # Errors
+    ///
+    /// Returns an [Error](Error) if some parts of this package
+    /// couldn't be saved.
+    pub fn load_and_save(&mut self) -> Result<()> {
+        //Update metadata section if changed
+        if let Some(metadata) = &self.settings.metadata {
+            if !metadata.is_null() {
+                let handle = self.container.sections().find_by_type(SECTION_TYPE_SD)
+                    .unwrap_or_else(|| self.container.sections_mut().create(SectionOptions::new()
+                        .checksum(Checksum::Weak)
+                        .compression(CompressionMethod::Zlib)
+                        .ty(SECTION_TYPE_SD)));
+                let mut section = self.container.sections().load(handle)?;
+                metadata.write(&mut *section, self.max_depth)?;
+            } else {
+                if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_SD) {
+                    self.container.sections_mut().remove(handle);
+                }
+            }
+            self.metadata = OnceCell::from(metadata.clone());
+        }
+        {
+            //Update type ext if changed
+            let data = get_type_ext(&self.settings);
+            if data != self.container.main_header().type_ext.as_ref() {
+                self.container.main_header_mut().type_ext = ByteBuf::new(data);
+            }
+        }
+        {
+            let mut section = self.container.sections().load(self.object_table)?;
+            section.seek(SeekFrom::Start(0))?;
+            if let Some(val) = self.table.get() {
+                for v in val {
+                    v.write(&mut *section)?;
+                }
+            }
+        }
+        self.container.load_and_save()?;
+        Ok(())
     }
 }
 
