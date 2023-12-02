@@ -26,8 +26,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::Read;
 use bytesutil::ReadBytes;
+use std::io::Read;
 
 use crate::{
     sd::{error::Error, value::Type, Array, Object, Result, Value},
@@ -235,6 +235,9 @@ fn get_value_parser<TRead: Read>(type_code: u8) -> Option<ValueParserFunc<TRead>
     }
 }
 
-pub fn read_structured_data<TRead: Read>(mut source: TRead, mut max_depth: usize) -> Result<Object> {
+pub fn read_structured_data<TRead: Read>(
+    mut source: TRead,
+    mut max_depth: usize,
+) -> Result<Object> {
     parse_object(&mut source, &mut max_depth)
 }

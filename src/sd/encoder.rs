@@ -158,7 +158,11 @@ fn write_array(arr: &Array, max_depth: &mut usize) -> Result<Vec<u8>> {
     Ok(v)
 }
 
-pub fn write_structured_data<TWrite: Write>(mut dest: TWrite, obj: &Object, mut max_depth: usize) -> Result<()> {
+pub fn write_structured_data<TWrite: Write>(
+    mut dest: TWrite,
+    obj: &Object,
+    mut max_depth: usize,
+) -> Result<()> {
     let bytes = write_object(obj, &mut max_depth)?;
     dest.write_all(&bytes)?;
     Ok(())

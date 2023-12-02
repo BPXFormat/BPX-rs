@@ -30,8 +30,8 @@ use std::io::{Read, Write};
 
 use crate::{
     core::{
-        options::{Checksum, CompressionMethod, SectionOptions},
         header::SectionHeader,
+        options::{Checksum, CompressionMethod, SectionOptions},
         Container, Handle, SectionData,
     },
     package::{Architecture, Platform, Result, Settings, SECTION_TYPE_DATA},

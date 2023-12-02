@@ -51,7 +51,7 @@ pub struct SymbolTable {
     table: NamedItemTable<Symbol>,
     extended_data: Option<Handle>,
     extended_data_objs: FrozenMap<u32, Box<crate::sd::Value>>,
-    max_depth: usize
+    max_depth: usize,
 }
 
 impl SymbolTable {
@@ -59,14 +59,14 @@ impl SymbolTable {
         table: NamedItemTable<Symbol>,
         strings: StringSection,
         extended_data: Option<Handle>,
-        max_depth: usize
+        max_depth: usize,
     ) -> SymbolTable {
         SymbolTable {
             strings,
             table,
             extended_data,
             extended_data_objs: FrozenMap::new(),
-            max_depth
+            max_depth,
         }
     }
 

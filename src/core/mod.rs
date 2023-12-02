@@ -30,13 +30,13 @@
 
 mod container;
 
-pub mod options;
 mod compression;
 mod data;
 mod decoder;
 mod encoder;
 pub mod error;
 pub mod header;
+pub mod options;
 mod section;
 
 /// Result type used in all [Container] operations.

@@ -31,8 +31,8 @@
 use std::{borrow::Cow, collections::HashMap, convert::TryInto};
 
 use crate::{
-    sd::{error::TypeError, Array, Object, Value},
     hash::Name,
+    sd::{error::TypeError, Array, Object, Value},
 };
 
 /// A BPXSD object debugger iterator.

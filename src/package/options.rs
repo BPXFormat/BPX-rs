@@ -27,8 +27,9 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use crate::{
+    macros::{create_options, open_options},
     package::{Architecture, Platform},
-    sd::Value, macros::{create_options, open_options},
+    sd::Value,
 };
 
 use super::DEFAULT_MAX_DEPTH;
@@ -54,7 +55,7 @@ pub struct Settings {
 /// Specific cofniguration options for BPXP.
 pub struct Options {
     /// Defines the maximum depth of the metadata BPXSD object.
-    pub max_depth: usize
+    pub max_depth: usize,
 }
 
 create_options! {
@@ -138,7 +139,7 @@ impl<T: std::io::Seek> From<(T, Settings)> for CreateOptions<T> {
         Self {
             options: crate::core::options::CreateOptions::new(backend),
             settings,
-            max_depth: DEFAULT_MAX_DEPTH
+            max_depth: DEFAULT_MAX_DEPTH,
         }
     }
 }

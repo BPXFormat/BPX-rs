@@ -30,15 +30,16 @@
 
 use std::io;
 
-use bytesutil::{ReadBytes, WriteBytes, StaticByteBuf, ByteBuf};
+use bytesutil::{ByteBuf, ReadBytes, StaticByteBuf, WriteBytes};
 
 use crate::{
     core::{
-        options::{Checksum, CompressionMethod},
         error::Error,
+        options::{Checksum, CompressionMethod},
     },
     garraylen::*,
-    traits::ReadFill, util::RecoverableError,
+    traits::ReadFill,
+    util::RecoverableError,
 };
 
 /// Represents a serializable and deserializable byte structure in a BPX.
@@ -237,7 +238,10 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader {
             type_ext: ByteBuf::new(extract_slice(&buffer, 24)),
         };
         if &head.signature != b"BPX" {
-            return Err(RecoverableError::new(Error::BadSignature(head.signature), head));
+            return Err(RecoverableError::new(
+                Error::BadSignature(head.signature),
+                head,
+            ));
         }
         if !KNOWN_VERSIONS.contains(&head.version) {
             return Err(RecoverableError::new(Error::BadVersion(head.version), head));
@@ -322,16 +326,14 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader {
     }
 
     fn from_bytes(buffer: [u8; SIZE_SECTION_HEADER]) -> Result<Self::Output, Self::Error> {
-        Ok(
-            SectionHeader {
-                pointer: u64::read_bytes_le(&buffer[0..8]),
-                csize: u32::read_bytes_le(&buffer[8..12]),
-                size: u32::read_bytes_le(&buffer[12..16]),
-                chksum: u32::read_bytes_le(&buffer[16..20]),
-                ty: buffer[20],
-                flags: buffer[21],
-            },
-        )
+        Ok(SectionHeader {
+            pointer: u64::read_bytes_le(&buffer[0..8]),
+            csize: u32::read_bytes_le(&buffer[8..12]),
+            size: u32::read_bytes_le(&buffer[12..16]),
+            chksum: u32::read_bytes_le(&buffer[16..20]),
+            ty: buffer[20],
+            flags: buffer[21],
+        })
     }
 
     fn to_bytes(&self) -> [u8; SIZE_SECTION_HEADER] {
@@ -346,8 +348,7 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader {
     }
 }
 
-impl GetChecksum<SIZE_SECTION_HEADER> for SectionHeader {
-}
+impl GetChecksum<SIZE_SECTION_HEADER> for SectionHeader {}
 
 impl SectionHeader {
     /// Checks if this section is huge (greater than 100Mb).

@@ -33,8 +33,8 @@ use once_cell::unsync::OnceCell;
 use crate::shader::{Target, Type};
 use crate::{
     core::{
-        options::{Checksum, CompressionMethod, SectionOptions},
         header::{Struct, SECTION_TYPE_STRING},
+        options::{Checksum, CompressionMethod, SectionOptions},
         Container, Handle,
     },
     shader::{
@@ -50,7 +50,7 @@ use crate::{
     table::NamedItemTable,
 };
 
-use super::{OpenOptions, CreateOptions, Options, DEFAULT_MAX_DEPTH};
+use super::{CreateOptions, OpenOptions, Options, DEFAULT_MAX_DEPTH};
 
 /// A BPXS (ShaderPack).
 ///
@@ -98,7 +98,7 @@ pub struct ShaderPack<T> {
     symbols: OnceCell<SymbolTable>,
     shaders: OnceCell<ShaderTable>,
     extended_data: Option<Handle>,
-    max_depth: usize
+    max_depth: usize,
 }
 
 impl<T> ShaderPack<T> {
@@ -184,16 +184,21 @@ impl<T> TryFrom<Container<T>> for ShaderPack<T> {
     type Error = Error;
 
     fn try_from(value: Container<T>) -> std::prelude::v1::Result<Self, Self::Error> {
-        Self::try_from((value, Options {
-            max_depth: DEFAULT_MAX_DEPTH
-        }))
+        Self::try_from((
+            value,
+            Options {
+                max_depth: DEFAULT_MAX_DEPTH,
+            },
+        ))
     }
 }
 
 impl<T> TryFrom<(Container<T>, Options)> for ShaderPack<T> {
     type Error = Error;
 
-    fn try_from((mut container, options): (Container<T>, Options)) -> std::result::Result<Self, Self::Error> {
+    fn try_from(
+        (mut container, options): (Container<T>, Options),
+    ) -> std::result::Result<Self, Self::Error> {
         match container.main_header().ty == b'S' {
             true => {
                 if container.main_header().version != SUPPORTED_VERSION {
@@ -202,8 +207,7 @@ impl<T> TryFrom<(Container<T>, Options)> for ShaderPack<T> {
                         actual: container.main_header().version,
                     });
                 }
-                let assembly_hash =
-                    container.main_header().type_ext.get_le(0);
+                let assembly_hash = container.main_header().type_ext.get_le(0);
                 let (target, ty) = get_target_type_from_code(
                     container.main_header().type_ext[10],
                     container.main_header().type_ext[11],
@@ -226,7 +230,7 @@ impl<T> TryFrom<(Container<T>, Options)> for ShaderPack<T> {
                     container,
                     symbols: OnceCell::new(),
                     shaders: OnceCell::new(),
-                    max_depth: options.max_depth
+                    max_depth: options.max_depth,
                 })
             },
             false => {
@@ -262,11 +266,11 @@ impl<T> TryFrom<(Container<T>, Options)> for ShaderPack<T> {
                         NamedItemTable::empty(),
                         strings,
                         None,
-                        options.max_depth
+                        options.max_depth,
                     )),
                     shaders: OnceCell::from(ShaderTable::new(Vec::new())),
                     extended_data: None,
-                    max_depth: options.max_depth
+                    max_depth: options.max_depth,
                 })
             },
         }
@@ -298,10 +302,12 @@ impl<T: Write + Seek> ShaderPack<T> {
     pub fn create(options: impl Into<CreateOptions<T>>) -> ShaderPack<T> {
         let options = options.into();
         let settings = options.settings;
-        let mut container = Container::create(options.options
-            .ty(b'S')
-            .type_ext(get_type_ext(&settings))
-            .version(SUPPORTED_VERSION)
+        let mut container = Container::create(
+            options
+                .options
+                .ty(b'S')
+                .type_ext(get_type_ext(&settings))
+                .version(SUPPORTED_VERSION),
         );
         let string_section = container.sections_mut().create(
             SectionOptions::new()
@@ -320,10 +326,15 @@ impl<T: Write + Seek> ShaderPack<T> {
             container,
             settings,
             symbol_table,
-            symbols: OnceCell::from(SymbolTable::new(NamedItemTable::empty(), strings, None, options.max_depth)),
+            symbols: OnceCell::from(SymbolTable::new(
+                NamedItemTable::empty(),
+                strings,
+                None,
+                options.max_depth,
+            )),
             shaders: OnceCell::from(ShaderTable::new(Vec::new())),
             extended_data: None,
-            max_depth: options.max_depth
+            max_depth: options.max_depth,
         }
     }
 
@@ -344,7 +355,10 @@ impl<T: Write + Seek> ShaderPack<T> {
             }
         }
         if let Some(syms) = self.symbols.get() {
-            self.container.main_header_mut().type_ext.set_le(8, syms.len() as u16);
+            self.container
+                .main_header_mut()
+                .type_ext
+                .set_le(8, syms.len() as u16);
             let mut section = self.container.sections().open(self.symbol_table)?;
             section.seek(SeekFrom::Start(0))?;
             for v in syms {
@@ -391,9 +405,12 @@ impl<T: Read + Seek> ShaderPack<T> {
                 actual: container.main_header().ty,
             });
         }
-        Self::try_from((container, Options {
-            max_depth: options.max_depth
-        }))
+        Self::try_from((
+            container,
+            Options {
+                max_depth: options.max_depth,
+            },
+        ))
     }
 
     fn load_symbol_table(&self) -> Result<SymbolTable> {
@@ -405,7 +422,12 @@ impl<T: Read + Seek> ShaderPack<T> {
         let strings = StringSection::new(handle);
         let num_symbols = self.container.main_header().type_ext.get_le(8);
         let table = read_symbol_table(&self.container, num_symbols, self.symbol_table)?;
-        Ok(SymbolTable::new(table, strings, self.extended_data, self.max_depth))
+        Ok(SymbolTable::new(
+            table,
+            strings,
+            self.extended_data,
+            self.max_depth,
+        ))
     }
 
     /// Returns a guard for immutable access to the symbol table.
@@ -443,7 +465,10 @@ impl<T: Read + Write + Seek> ShaderPack<T> {
             }
         }
         if let Some(syms) = self.symbols.get() {
-            self.container.main_header_mut().type_ext.set_le(8, syms.len() as u16);
+            self.container
+                .main_header_mut()
+                .type_ext
+                .set_le(8, syms.len() as u16);
             let mut section = self.container.sections().load(self.symbol_table)?;
             section.seek(SeekFrom::Start(0))?;
             for v in syms {

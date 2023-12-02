@@ -50,7 +50,7 @@ enum DynSectionData {
 /// when the size of the data exceeds 100Mb.*
 pub struct AutoSectionData {
     inner: Box<DynSectionData>,
-    memory_threshold: u32
+    memory_threshold: u32,
 }
 
 impl Default for AutoSectionData {
@@ -64,7 +64,7 @@ impl AutoSectionData {
     pub fn new(memory_threshold: u32) -> AutoSectionData {
         AutoSectionData {
             inner: Box::new(DynSectionData::Memory(InMemorySection::new(512))),
-            memory_threshold
+            memory_threshold,
         }
     }
 
@@ -86,12 +86,12 @@ impl AutoSectionData {
             let file = FileBasedSection::new(tempfile()?);
             Ok(AutoSectionData {
                 inner: Box::new(DynSectionData::File(file)),
-                memory_threshold
+                memory_threshold,
             })
         } else {
             Ok(AutoSectionData {
                 inner: Box::new(DynSectionData::Memory(InMemorySection::new(size as usize))),
-                memory_threshold
+                memory_threshold,
             })
         }
     }
