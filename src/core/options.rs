@@ -260,23 +260,23 @@ pub struct OpenOptions<T> {
     pub(crate) skip_checksum: bool,
     pub(crate) skip_version_check: bool,
     pub(crate) memory_threshold: u32,
-    pub(crate) revert_on_save_fail: bool
+    pub(crate) revert_on_save_fail: bool,
 }
 
 impl<T> OpenOptions<T> {
-     /// Creates a new set of options for a BPX container.
-     ///
-     /// # Arguments
-     ///
-     /// * `backend`: the IO backend to be associated with the container.
-     pub fn new(backend: T) -> OpenOptions<T> {
+    /// Creates a new set of options for a BPX container.
+    ///
+    /// # Arguments
+    ///
+    /// * `backend`: the IO backend to be associated with the container.
+    pub fn new(backend: T) -> OpenOptions<T> {
         OpenOptions {
             backend,
             skip_checksum: false,
             skip_signature_check: false,
             skip_version_check: false,
             memory_threshold: DEFAULT_MEMORY_THRESHOLD,
-            revert_on_save_fail: false
+            revert_on_save_fail: false,
         }
     }
 
@@ -399,7 +399,7 @@ pub struct CreateOptions<T> {
     pub(crate) header: MainHeader,
     pub(crate) backend: T,
     pub(crate) memory_threshold: u32,
-    pub(crate) revert_on_save_fail: bool
+    pub(crate) revert_on_save_fail: bool,
 }
 
 impl<T> CreateOptions<T> {
@@ -413,7 +413,7 @@ impl<T> CreateOptions<T> {
             header: MainHeader::new(),
             backend,
             memory_threshold: DEFAULT_MEMORY_THRESHOLD,
-            revert_on_save_fail: false
+            revert_on_save_fail: false,
         }
     }
 
@@ -567,7 +567,12 @@ impl<T: std::io::Seek> From<T> for CreateOptions<T> {
 
 impl<T: std::io::Seek> From<(T, MainHeader)> for CreateOptions<T> {
     fn from((backend, header): (T, MainHeader)) -> Self {
-        Self { header, backend, memory_threshold: DEFAULT_MEMORY_THRESHOLD, revert_on_save_fail: false }
+        Self {
+            header,
+            backend,
+            memory_threshold: DEFAULT_MEMORY_THRESHOLD,
+            revert_on_save_fail: false,
+        }
     }
 }
 
