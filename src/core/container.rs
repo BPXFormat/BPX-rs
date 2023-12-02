@@ -122,7 +122,7 @@ impl<T: io::Read + io::Seek> Container<T> {
     ///
     /// # Errors
     ///
-    /// An [Error](crate::core::error::Error) is returned if some headers
+    /// An [Error](Error) is returned if some headers
     /// could not be read or if the header data is corrupted.
     ///
     /// # Examples
@@ -247,9 +247,9 @@ impl<T: io::Write + io::Seek> Container<T> {
             })
             .count();
         if expanded_sections == 0 {
-            if count > 1 {
+            return if count > 1 {
                 // If n sections changed but did not expand -> only write these n sections and patch section header table.
-                return SaveMode::PatchMultipleSections;
+                SaveMode::PatchMultipleSections
             } else {
                 // If 1 section changed but did not expand -> only write this section and patch section header table.
                 let section = self
@@ -260,7 +260,7 @@ impl<T: io::Write + io::Seek> Container<T> {
                     .map(|(handle, _)| *handle)
                     .unwrap();
 
-                return SaveMode::PatchSingleSection(section);
+                SaveMode::PatchSingleSection(section)
             }
         }
         if expanded_sections == 1 {
@@ -275,14 +275,14 @@ impl<T: io::Write + io::Seek> Container<T> {
                 .map(|(handle, _)| *handle)
                 .unwrap();
             if expanded_section == self.table.next_handle - 1 {
-                if count > 1 {
+                return if count > 1 {
                     // If n sections changed but did not expand and the last section has expanded
                     // -> write only these n sections, write the last section and patch section
                     // header table.
-                    return SaveMode::PatchMultipleSections;
+                    SaveMode::PatchMultipleSections
                 } else {
                     //If last section expanded -> only write last section and update section header table.
-                    return SaveMode::PatchSingleSection(expanded_section);
+                    SaveMode::PatchSingleSection(expanded_section)
                 }
             }
         }
@@ -328,7 +328,7 @@ impl<T: io::Write + io::Seek> Container<T> {
     ///
     /// # Errors
     ///
-    /// An [Error](crate::core::error::Error) is returned if some data could
+    /// An [Error](Error) is returned if some data could
     /// not be written.
     ///
     /// # Examples
@@ -360,7 +360,7 @@ impl<T: io::Read + io::Write + io::Seek> Container<T> {
     ///
     /// # Errors
     ///
-    /// An [Error](crate::core::error::Error) is returned if some data could
+    /// An [Error](Error) is returned if some data could
     /// not be written.
     ///
     /// # Examples

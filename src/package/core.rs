@@ -295,7 +295,7 @@ impl<T: Write + Seek> Package<T> {
 
     /// Saves this package.
     ///
-    /// This function calls **`save`** on the underlying BPX [Container](crate::core::Container).
+    /// This function calls **`save`** on the underlying BPX [Container](Container).
     ///
     /// # Errors
     ///
@@ -437,7 +437,7 @@ impl<T: Read + Seek> Package<T> {
 impl<T: Read + Write + Seek> Package<T> {
     /// Saves this package.
     ///
-    /// This function calls **`load_and_save`** on the underlying BPX [Container](crate::core::Container).
+    /// This function calls **`load_and_save`** on the underlying BPX [Container](Container).
     ///
     /// # Errors
     ///

@@ -86,7 +86,7 @@ impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader {
 
     fn to_bytes(&self) -> [u8; SIZE_OBJECT_HEADER] {
         let mut buf: [u8; SIZE_OBJECT_HEADER] = [0; SIZE_OBJECT_HEADER];
-        (self.size as u64).write_bytes_le(&mut buf[0..8]);
+        self.size.write_bytes_le(&mut buf[0..8]);
         self.name.write_bytes_le(&mut buf[8..12]);
         self.start.write_bytes_le(&mut buf[12..16]);
         self.offset.write_bytes_le(&mut buf[16..20]);

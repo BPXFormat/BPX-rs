@@ -39,7 +39,7 @@ pub mod error;
 pub mod header;
 mod section;
 
-/// Result type used in all [Container](Container) operations.
+/// Result type used in all [Container] operations.
 pub type Result<T> = std::result::Result<T, error::Error>;
 
 pub use container::*;

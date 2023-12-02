@@ -102,7 +102,7 @@ pub fn read_symbol_table<T: Read + Seek>(
     symbol_table: Handle,
 ) -> Result<NamedItemTable<Symbol>> {
     let sections = container.sections();
-    let count = sections.header(symbol_table).size as u32 / SIZE_SYMBOL_STRUCTURE as u32;
+    let count = sections.header(symbol_table).size / SIZE_SYMBOL_STRUCTURE as u32;
 
     if count != num_symbols as u32 {
         return Err(Error::Eos(EosContext::SymbolTable));

@@ -329,7 +329,7 @@ impl<T: Write + Seek> ShaderPack<T> {
 
     /// Saves this shader package.
     ///
-    /// This function calls **`save`** on the underlying BPX [Container](crate::core::Container).
+    /// This function calls **`save`** on the underlying BPX [Container](Container).
     ///
     /// # Errors
     ///
@@ -428,7 +428,7 @@ impl<T: Read + Seek> ShaderPack<T> {
 impl<T: Read + Write + Seek> ShaderPack<T> {
     /// Saves this shader package.
     ///
-    /// This function calls **`save`** on the underlying BPX [Container](crate::core::Container).
+    /// This function calls **`save`** on the underlying BPX [Container](Container).
     ///
     /// # Errors
     ///

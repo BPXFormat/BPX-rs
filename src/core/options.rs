@@ -67,7 +67,7 @@ pub enum Checksum {
     Crc32,
 }
 
-/// Utility to easily generate a [SectionHeader](SectionHeader).
+/// Utility to easily generate a [SectionHeader].
 pub struct SectionOptions {
     header: SectionHeader,
 }
@@ -143,7 +143,7 @@ impl SectionOptions {
     ///
     /// # Arguments
     ///
-    /// * `method`: the [CompressionMethod](CompressionMethod) to use for saving this section.
+    /// * `method`: the [CompressionMethod] to use for saving this section.
     ///
     /// returns: SectionOptions
     ///
@@ -204,7 +204,7 @@ impl SectionOptions {
     ///
     /// # Arguments
     ///
-    /// * `chksum`: the new [Checksum](Checksum) algorithm to use for data verification.
+    /// * `chksum`: the new [Checksum] algorithm to use for data verification.
     ///
     /// returns: SectionOptions
     ///
@@ -227,7 +227,7 @@ impl SectionOptions {
         self
     }
 
-    /// Returns the generated [SectionHeader](SectionHeader).
+    /// Returns the generated [SectionHeader].
     ///
     /// # Examples
     ///
@@ -269,8 +269,6 @@ impl<T> OpenOptions<T> {
      /// # Arguments
      ///
      /// * `backend`: the IO backend to be associated with the container.
-     ///
-     /// returns: OpenOptions<T>
      pub fn new(backend: T) -> OpenOptions<T> {
         OpenOptions {
             backend,
@@ -289,8 +287,6 @@ impl<T> OpenOptions<T> {
     /// # Arguments
     ///
     /// * `flag`: true to skip signature checks, false otherwise.
-    ///
-    /// returns: OpenOptions<T>
     ///
     /// # Examples
     ///
@@ -313,8 +309,6 @@ impl<T> OpenOptions<T> {
     ///
     /// * `flag`: true to skip version checks, false otherwise.
     ///
-    /// returns: OpenOptions<T>
-    ///
     /// # Examples
     ///
     /// ```
@@ -336,8 +330,6 @@ impl<T> OpenOptions<T> {
     ///
     /// * `flag`: true to skip checksum checks on load, false otherwise.
     ///
-    /// returns: OpenOptions<T>
-    ///
     /// # Examples
     ///
     /// ```
@@ -353,13 +345,11 @@ impl<T> OpenOptions<T> {
 
     /// Sets the maximum size of a section allowed to fit in RAM in bytes.
     ///
-    /// The default is set to [DEFAULT_MEMORY_THRESHOLD](DEFAULT_MEMORY_THRESHOLD) bytes.
+    /// The default is set to [DEFAULT_MEMORY_THRESHOLD] bytes.
     ///
     /// # Arguments
     ///
     /// * `size`: the maximum size of a section (in bytes) in RAM.
-    ///
-    /// returns: CreateOptions<T>
     ///
     /// # Examples
     ///
@@ -384,8 +374,6 @@ impl<T> OpenOptions<T> {
     ///
     /// * `flag`: true to revert the file on save failure, false otherwise.
     ///
-    /// returns: OpenOptions<T>
-    ///
     /// # Examples
     ///
     /// ```
@@ -406,7 +394,7 @@ impl<T: std::io::Seek> From<T> for OpenOptions<T> {
     }
 }
 
-/// Utility to create a new BPX [Container](crate::core::Container) with a [MainHeader](MainHeader).
+/// Utility to create a new BPX [Container](crate::core::Container) with a [MainHeader].
 pub struct CreateOptions<T> {
     pub(crate) header: MainHeader,
     pub(crate) backend: T,
@@ -420,8 +408,6 @@ impl<T> CreateOptions<T> {
     /// # Arguments
     ///
     /// * `backend`: the IO backend to be associated with the container.
-    ///
-    /// returns: OpenOptions<T>
     pub fn new(backend: T) -> CreateOptions<T> {
         CreateOptions {
             header: MainHeader::new(),
@@ -438,8 +424,6 @@ impl<T> CreateOptions<T> {
     /// # Arguments
     ///
     /// * `ty`: the BPX type byte.
-    ///
-    /// returns: CreateOptions
     ///
     /// # Examples
     ///
@@ -463,8 +447,6 @@ impl<T> CreateOptions<T> {
     /// # Arguments
     ///
     /// * `type_ext`: the Extended Type Information block.
-    ///
-    /// returns: CreateOptions
     ///
     /// # Examples
     ///
@@ -494,8 +476,6 @@ impl<T> CreateOptions<T> {
     ///
     /// * `version`: the new version of the BPX.
     ///
-    /// returns: CreateOptions
-    ///
     /// # Examples
     ///
     /// ```
@@ -513,13 +493,11 @@ impl<T> CreateOptions<T> {
 
     /// Sets the maximum size of a section allowed to fit in RAM in bytes.
     ///
-    /// The default is set to [DEFAULT_MEMORY_THRESHOLD](DEFAULT_MEMORY_THRESHOLD) bytes.
+    /// The default is set to [DEFAULT_MEMORY_THRESHOLD] bytes.
     ///
     /// # Arguments
     ///
     /// * `size`: the maximum size of a section in RAM.
-    ///
-    /// returns: CreateOptions<T>
     ///
     /// # Examples
     ///
@@ -546,8 +524,6 @@ impl<T> CreateOptions<T> {
     ///
     /// * `flag`: true to revert the file on save failure, false otherwise.
     ///
-    /// returns: CreateOptions<T>
-    ///
     /// # Examples
     ///
     /// ```
@@ -561,7 +537,7 @@ impl<T> CreateOptions<T> {
         self
     }
 
-    /// Returns the generated [MainHeader](MainHeader).
+    /// Returns the generated [MainHeader].
     ///
     /// # Examples
     ///
