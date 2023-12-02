@@ -34,8 +34,8 @@ use once_cell::unsync::OnceCell;
 use crate::package::{Architecture, Platform};
 use crate::{
     core::{
-        options::{Checksum, CompressionMethod, SectionOptions},
         header::{Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
+        options::{Checksum, CompressionMethod, SectionOptions},
         Container, Handle,
     },
     package::{
@@ -50,7 +50,7 @@ use crate::{
     table::NamedItemTable,
 };
 
-use super::{OpenOptions, CreateOptions, DEFAULT_MAX_DEPTH, Options};
+use super::{CreateOptions, OpenOptions, Options, DEFAULT_MAX_DEPTH};
 
 /// A BPXP (Package).
 ///
@@ -96,7 +96,7 @@ pub struct Package<T> {
     object_table: Handle,
     table: OnceCell<ObjectTable>,
     metadata: OnceCell<Value>,
-    max_depth: usize
+    max_depth: usize,
 }
 
 impl<T> Package<T> {
@@ -137,16 +137,21 @@ impl<T> TryFrom<Container<T>> for Package<T> {
     type Error = Error;
 
     fn try_from(value: Container<T>) -> std::prelude::v1::Result<Self, Self::Error> {
-        Self::try_from((value, Options {
-            max_depth: DEFAULT_MAX_DEPTH
-        }))
+        Self::try_from((
+            value,
+            Options {
+                max_depth: DEFAULT_MAX_DEPTH,
+            },
+        ))
     }
 }
 
 impl<T> TryFrom<(Container<T>, Options)> for Package<T> {
     type Error = Error;
 
-    fn try_from((mut container, options): (Container<T>, Options)) -> std::result::Result<Self, Self::Error> {
+    fn try_from(
+        (mut container, options): (Container<T>, Options),
+    ) -> std::result::Result<Self, Self::Error> {
         match container.main_header().ty == b'P' {
             true => {
                 if container.main_header().version != SUPPORTED_VERSION {
@@ -178,7 +183,7 @@ impl<T> TryFrom<(Container<T>, Options)> for Package<T> {
                     container,
                     table: OnceCell::new(),
                     metadata: OnceCell::new(),
-                    max_depth: options.max_depth
+                    max_depth: options.max_depth,
                 })
             },
             false => {
@@ -216,7 +221,7 @@ impl<T> TryFrom<(Container<T>, Options)> for Package<T> {
                     container,
                     object_table,
                     table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings)),
-                    max_depth: options.max_depth
+                    max_depth: options.max_depth,
                 })
             },
         }
@@ -253,10 +258,11 @@ impl<T: Write + Seek> Package<T> {
         let options = options.into();
         let settings = options.settings;
         let mut container = Container::create(
-            options.options
+            options
+                .options
                 .ty(b'P')
                 .type_ext(get_type_ext(&settings))
-                .version(SUPPORTED_VERSION)
+                .version(SUPPORTED_VERSION),
         );
         let object_table = container.sections_mut().create(
             SectionOptions::new()
@@ -284,12 +290,16 @@ impl<T: Write + Seek> Package<T> {
             }
         }
         Ok(Package {
-            metadata: settings.metadata.clone().map(OnceCell::from).unwrap_or(OnceCell::new()),
+            metadata: settings
+                .metadata
+                .clone()
+                .map(OnceCell::from)
+                .unwrap_or(OnceCell::new()),
             settings,
             container,
             object_table,
             table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings)),
-            max_depth: options.max_depth
+            max_depth: options.max_depth,
         })
     }
 
@@ -305,11 +315,18 @@ impl<T: Write + Seek> Package<T> {
         //Update metadata section if changed
         if let Some(metadata) = &self.settings.metadata {
             if !metadata.is_null() {
-                let handle = self.container.sections().find_by_type(SECTION_TYPE_SD)
-                    .unwrap_or_else(|| self.container.sections_mut().create(SectionOptions::new()
-                        .checksum(Checksum::Weak)
-                        .compression(CompressionMethod::Zlib)
-                        .ty(SECTION_TYPE_SD)));
+                let handle = self
+                    .container
+                    .sections()
+                    .find_by_type(SECTION_TYPE_SD)
+                    .unwrap_or_else(|| {
+                        self.container.sections_mut().create(
+                            SectionOptions::new()
+                                .checksum(Checksum::Weak)
+                                .compression(CompressionMethod::Zlib)
+                                .ty(SECTION_TYPE_SD),
+                        )
+                    });
                 let mut section = self.container.sections().open(handle)?;
                 metadata.write(&mut *section, self.max_depth)?;
             } else {
@@ -375,9 +392,12 @@ impl<T: Read + Seek> Package<T> {
                 actual: container.main_header().ty,
             });
         }
-        Self::try_from((container, Options {
-            max_depth: options.max_depth
-        }))
+        Self::try_from((
+            container,
+            Options {
+                max_depth: options.max_depth,
+            },
+        ))
     }
 
     fn load_object_table(&self) -> Result<ObjectTable> {
@@ -447,11 +467,18 @@ impl<T: Read + Write + Seek> Package<T> {
         //Update metadata section if changed
         if let Some(metadata) = &self.settings.metadata {
             if !metadata.is_null() {
-                let handle = self.container.sections().find_by_type(SECTION_TYPE_SD)
-                    .unwrap_or_else(|| self.container.sections_mut().create(SectionOptions::new()
-                        .checksum(Checksum::Weak)
-                        .compression(CompressionMethod::Zlib)
-                        .ty(SECTION_TYPE_SD)));
+                let handle = self
+                    .container
+                    .sections()
+                    .find_by_type(SECTION_TYPE_SD)
+                    .unwrap_or_else(|| {
+                        self.container.sections_mut().create(
+                            SectionOptions::new()
+                                .checksum(Checksum::Weak)
+                                .compression(CompressionMethod::Zlib)
+                                .ty(SECTION_TYPE_SD),
+                        )
+                    });
                 let mut section = self.container.sections().load(handle)?;
                 metadata.write(&mut *section, self.max_depth)?;
             } else {
@@ -493,7 +520,9 @@ mod tests {
         let mut bpxp = Package::create(new_byte_buf(128)).unwrap();
         {
             let mut objects = bpxp.objects_mut().unwrap();
-            objects.create("TestObject", "This is a test 你好".as_bytes()).unwrap();
+            objects
+                .create("TestObject", "This is a test 你好".as_bytes())
+                .unwrap();
         }
         bpxp.save().unwrap();
         //Reset the byte buffer pointer to start.
@@ -513,7 +542,10 @@ mod tests {
             assert_eq!(s, "This is a test 你好")
         }
         //Attempt to write one more object into the file.
-        bpxp.objects_mut().unwrap().create("AdditionalObject", "Another test".as_bytes()).unwrap();
+        bpxp.objects_mut()
+            .unwrap()
+            .create("AdditionalObject", "Another test".as_bytes())
+            .unwrap();
         bpxp.save().unwrap();
         //Reset the byte buffer pointer to start.
         let mut bytebuf = bpxp.into_inner().into_inner();

@@ -38,10 +38,10 @@ use crate::core::{
     Result, SectionData,
 };
 
-use super::compression::{WeakChecksum, Checksum};
+use super::compression::{Checksum, WeakChecksum};
+use super::error::Error;
 use super::header::GetChecksum;
 use super::options::{CreateOptions, OpenOptions};
-use super::error::Error;
 
 /// The default maximum size of uncompressed sections.
 ///
@@ -55,7 +55,7 @@ pub const DEFAULT_MEMORY_THRESHOLD: u32 = 100000000;
 pub struct Container<T> {
     table: SectionTable<T>,
     main_header: MainHeader,
-    main_header_modified: bool
+    main_header_modified: bool,
 }
 
 impl<T> Container<T> {
@@ -150,22 +150,21 @@ impl<T: io::Read + io::Seek> Container<T> {
         let mut checksum = WeakChecksum::default();
         let header = match MainHeader::read(&mut options.backend) {
             Ok(v) => v,
-            Err(e) => {
-                match e.error() {
-                    Error::BadSignature(_) => match options.skip_signature_check {
-                        true => e.unwrap_value(),
-                        false => return e.into()
-                    },
-                    Error::BadVersion(_) => match options.skip_version_check {
-                        true => e.unwrap_value(),
-                        false => return e.into()
-                    },
-                    _ => return e.into()
-                }
-            }
+            Err(e) => match e.error() {
+                Error::BadSignature(_) => match options.skip_signature_check {
+                    true => e.unwrap_value(),
+                    false => return e.into(),
+                },
+                Error::BadVersion(_) => match options.skip_version_check {
+                    true => e.unwrap_value(),
+                    false => return e.into(),
+                },
+                _ => return e.into(),
+            },
         };
         header.get_checksum(&mut checksum);
-        let (next_handle, sections) = read_section_header_table(&mut options.backend, &header, &mut checksum)?;
+        let (next_handle, sections) =
+            read_section_header_table(&mut options.backend, &header, &mut checksum)?;
         let chksum = checksum.finish();
         if !options.skip_checksum && chksum != header.chksum {
             return Err(Error::Checksum {
@@ -181,10 +180,10 @@ impl<T: io::Read + io::Seek> Container<T> {
                 sections,
                 count: header.section_num,
                 skip_checksum: options.skip_checksum,
-                memory_threshold: options.memory_threshold
+                memory_threshold: options.memory_threshold,
             },
             main_header: header,
-            main_header_modified: false
+            main_header_modified: false,
         })
     }
 }
@@ -193,7 +192,7 @@ enum SaveMode {
     Regenerate,
     MainHeaderOnly,
     PatchMultipleSections,
-    PatchSingleSection(u32)
+    PatchSingleSection(u32),
 }
 
 impl<T: io::Write + io::Seek> Container<T> {
@@ -227,10 +226,10 @@ impl<T: io::Write + io::Seek> Container<T> {
                 backend: RefCell::new(options.backend),
                 sections: BTreeMap::new(),
                 skip_checksum: false,
-                memory_threshold: options.memory_threshold
+                memory_threshold: options.memory_threshold,
             },
             main_header: options.header.into(),
-            main_header_modified: true
+            main_header_modified: true,
         }
     }
 
@@ -288,7 +287,7 @@ impl<T: io::Write + io::Seek> Container<T> {
             .count();
         if count == 0 {
             // No sections have changed and the table didn't change; might have nothing to do.
-            return SaveMode::MainHeaderOnly
+            return SaveMode::MainHeaderOnly;
         }
         let expanded_sections = self
             .table
@@ -369,7 +368,7 @@ impl<T: io::Write + io::Seek> Container<T> {
                     self.table.backend.get_mut(),
                     &mut self.table.sections,
                     &mut self.main_header,
-                    section
+                    section,
                 )?;
                 self.patch_main_header_if_needed(flag)
             },
@@ -435,7 +434,7 @@ impl<T: io::Read + io::Write + io::Seek> Container<T> {
                     self.sections().load(handle)?;
                 }
             },
-            _ => ()
+            _ => (),
         }
         self.save_with_mode(mode)
     }

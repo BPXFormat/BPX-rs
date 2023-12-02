@@ -28,11 +28,11 @@
 
 //! An implementation of the BPX type S (Shader) specification.
 
-mod options;
 mod core;
 mod decoder;
 mod encoder;
 pub mod error;
+mod options;
 pub mod symbol;
 mod table;
 

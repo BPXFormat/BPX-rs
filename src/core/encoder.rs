@@ -56,7 +56,7 @@ fn write_sections<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
     file_start_offset: usize,
-    chksum_sht: &mut impl Checksum
+    chksum_sht: &mut impl Checksum,
 ) -> Result<usize> {
     let mut ptr: u64 = file_start_offset as _;
     let mut all_sections_size: usize = 0;
@@ -113,7 +113,8 @@ pub fn internal_save<T: Write + Seek>(
     backend.seek(SeekFrom::Start(file_start_offset as _))?;
     //Write all section data and section headers
     let mut chksum_sht = WeakChecksum::default();
-    let all_sections_size = write_sections(&mut backend, sections, file_start_offset, &mut chksum_sht)?;
+    let all_sections_size =
+        write_sections(&mut backend, sections, file_start_offset, &mut chksum_sht)?;
     main_header.file_size = all_sections_size as u64 + file_start_offset as u64;
     main_header.get_checksum(&mut chksum_sht);
     main_header.chksum = chksum_sht.finish();

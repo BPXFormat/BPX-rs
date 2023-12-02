@@ -28,7 +28,10 @@
 
 //! Contains an implementation of the BPXSD hashing function.
 
-use std::{fmt::{Display, Formatter}, num::Wrapping};
+use std::{
+    fmt::{Display, Formatter},
+    num::Wrapping,
+};
 
 /// Convenient utility to wrap object property name hashes.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]

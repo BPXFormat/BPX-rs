@@ -189,7 +189,11 @@ impl Value {
     /// Value::from(obj).write(&mut buf, 4).unwrap();
     /// assert!(buf.len() > 0);
     /// ```
-    pub fn write<TWrite: std::io::Write>(&self, dest: TWrite, max_depth: usize) -> super::Result<()> {
+    pub fn write<TWrite: std::io::Write>(
+        &self,
+        dest: TWrite,
+        max_depth: usize,
+    ) -> super::Result<()> {
         match self.as_object() {
             Some(v) => super::encoder::write_structured_data(dest, v, max_depth),
             None => Err(super::error::Error::NotAnObject),

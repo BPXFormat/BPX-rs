@@ -140,7 +140,7 @@ pub enum Error {
     Open(OpenError),
 
     /// The BPX container is truncated and does not have enough data to be loaded.
-    Truncated
+    Truncated,
 }
 
 impl_err_conversion!(
@@ -171,7 +171,7 @@ impl Display for Error {
                 write!(f, "maximum section size exceeded ({} > 2^32)", size)
             },
             Error::Deflate(e) => write!(f, "deflate error: {}", e),
-            Error::Truncated => f.write_str("data is truncated")
+            Error::Truncated => f.write_str("data is truncated"),
         }
     }
 }

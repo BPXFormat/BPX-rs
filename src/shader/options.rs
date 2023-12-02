@@ -26,7 +26,10 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use crate::{shader::{Target, Type}, macros::{create_options, open_options}};
+use crate::{
+    macros::{create_options, open_options},
+    shader::{Target, Type},
+};
 
 use super::DEFAULT_MAX_DEPTH;
 
@@ -48,7 +51,7 @@ pub struct Settings {
 /// Specific cofniguration options for BPXS.
 pub struct Options {
     /// Defines the maximum depth of an extended data BPXSD object.
-    pub max_depth: usize
+    pub max_depth: usize,
 }
 
 create_options! {
@@ -118,7 +121,7 @@ impl<T: std::io::Seek> From<(T, Settings)> for CreateOptions<T> {
         Self {
             options: crate::core::options::CreateOptions::new(backend),
             settings,
-            max_depth: DEFAULT_MAX_DEPTH
+            max_depth: DEFAULT_MAX_DEPTH,
         }
     }
 }
