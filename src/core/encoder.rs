@@ -28,10 +28,7 @@
 
 //! The BPX encoder.
 
-use std::{
-    collections::BTreeMap,
-    io::{Seek, SeekFrom, Write},
-};
+use std::{collections::BTreeMap, io::{Seek, SeekFrom, Write}};
 
 use crate::{
     core::{
@@ -102,7 +99,7 @@ fn write_sections<T: Write + Seek>(
     Ok(all_sections_size)
 }
 
-pub fn internal_save<T: Write + Seek>(
+fn internal_save<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
     main_header: &mut MainHeader,
@@ -161,7 +158,7 @@ pub fn recompute_header_checksum(
     main_header.chksum = chksum_sht.finish();
 }
 
-pub fn internal_save_single<T: Write + Seek>(
+fn internal_save_single<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
     main_header: &mut MainHeader,
@@ -197,7 +194,7 @@ fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(
 ) -> Result<usize> {
     let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
     let mut count: usize = 0;
-    while count < section.size() as usize {
+    while count < section.size() {
         let res = section.read_fill(&mut idata)?;
         out.write_all(&idata[0..res])?;
         chksum.push(&idata[0..res]);
@@ -232,7 +229,7 @@ fn write_section_checked<TWrite: Write, TChecksum: Checksum>(
     }
 }
 
-pub fn write_section<TWrite: Write>(
+fn write_section<TWrite: Write>(
     flags: u8,
     section: &mut dyn SectionData,
     out: &mut TWrite,
@@ -249,5 +246,98 @@ pub fn write_section<TWrite: Write>(
         let mut chksum = WeakChecksum::default();
         let size = write_section_checked(flags, section, out, &mut chksum)?;
         Ok((size, 0))
+    }
+}
+
+pub enum SaveMode {
+    Regenerate,
+    MainHeaderOnly,
+    PatchMultipleSections,
+    PatchSingleSection(u32)
+}
+
+pub struct Encoder<'a> {
+    pub main_header: &'a mut MainHeader,
+    pub sections: &'a mut BTreeMap<u32, SectionEntry>,
+    pub main_header_modified: &'a mut bool,
+    pub table_modified: &'a mut bool,
+    pub table_count: u32,
+    pub mode: SaveMode
+}
+
+impl<'a> Encoder<'a> {
+    fn get_modified_sections(&self) -> Vec<u32> {
+        // Returns a list of modified sections.
+        self.sections
+            .iter()
+            .filter(|(_, entry)| entry.modified.get())
+            .map(|(handle, _)| *handle)
+            .collect()
+    }
+
+    fn patch_main_header_if_needed<B: Write + Seek>(&mut self, mut backend: B, was_written: bool) -> Result<()> {
+        if was_written {
+            *self.main_header_modified = false;
+            Ok(())
+        } else if *self.main_header_modified {
+            // If only main header changed -> write only main header.
+            *self.main_header_modified = false;
+            recompute_header_checksum(&mut self.main_header, &self.sections);
+            backend.seek(SeekFrom::Start(0))?;
+            self.main_header.write(&mut backend)?;
+            Ok(())
+        } else {
+            Ok(())
+        }
+    }
+
+    fn patch_modified_sections<B: Write + Seek>(&mut self, mut backend: B) -> Result<bool> {
+        let mut main_header = false;
+        for section in self.get_modified_sections() {
+            if internal_save_single(
+                &mut backend,
+                self.sections,
+                self.main_header,
+                section,
+            )? {
+                main_header = true;
+            }
+        }
+        Ok(main_header)
+    }
+
+    pub fn run<T: Write + Seek>(mut self, mut backend: T) -> Result<()> {
+        match self.mode {
+            SaveMode::Regenerate => {
+                self.main_header.section_num = self.table_count;
+                internal_save(
+                    backend,
+                    self.sections,
+                    self.main_header,
+                )?;
+                *self.main_header_modified = false;
+                *self.table_modified = false;
+                Ok(())
+            },
+            SaveMode::MainHeaderOnly => {
+                // No sections have changed and the table didn't change; might have nothing to do.
+                self.patch_main_header_if_needed(backend, false)
+            },
+            SaveMode::PatchMultipleSections => {
+                //Multiple sections have changed.
+                let flag = self.patch_modified_sections(&mut backend)?;
+                self.patch_main_header_if_needed(backend, flag)
+            },
+            SaveMode::PatchSingleSection(section) => {
+                //A single section has changed.
+                let flag = internal_save_single(
+                    &mut backend,
+                    self.sections,
+                    self.main_header,
+                    section
+                )?;
+                self.patch_main_header_if_needed(backend, flag)
+            },
+        }
     }
 }

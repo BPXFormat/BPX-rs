@@ -87,6 +87,10 @@ macro_rules! create_options {
 
         impl<T> CreateOptions<T> {
             /// Creates a new set of options for a BPX container.
+            ///
+            /// # Arguments
+            ///
+            /// * `backend`: the IO backend to be associated with the container.
             pub fn new(backend: T) -> CreateOptions<T> {
                 CreateOptions {
                     options: crate::core::options::CreateOptions::new(backend),
@@ -99,8 +103,26 @@ macro_rules! create_options {
             /// Sets the maximum size of a section allowed to fit in RAM in bytes.
             ///
             /// The default is set to [DEFAULT_MEMORY_THRESHOLD](crate::core::DEFAULT_MEMORY_THRESHOLD) bytes.
+            ///
+            /// # Arguments
+            ///
+            /// * `size`: the maximum size of a section in RAM.
             pub fn memory_threshold(mut self, size: u32) -> Self {
                 self.options = self.options.memory_threshold(size);
+                self
+            }
+
+            /// Reverts the file when a save operation fails to keep the BPX unchanged/unmodified after
+            /// a save failure.
+            ///
+            /// This works by saving the container to a temporary storage before overwriting the original
+            /// IO backend. The default for this option is set to false.
+            ///
+            /// # Arguments
+            ///
+            /// * `flag`: true to revert the file on save failure, false otherwise.
+            pub fn revert_on_save_failure(mut self, flag: bool) -> Self {
+                self.options = self.options.revert_on_save_failure(flag);
                 self
             }
         }
@@ -127,6 +149,10 @@ macro_rules! open_options {
 
         impl<T> OpenOptions<T> {
             /// Creates a new set of options for a BPX container.
+            ///
+            /// # Arguments
+            ///
+            /// * `backend`: the IO backend to be associated with the container.
             pub fn new(backend: T) -> OpenOptions<T> {
                 OpenOptions {
                     options: crate::core::options::OpenOptions::new(backend),
@@ -137,18 +163,36 @@ macro_rules! open_options {
             }
 
             /// Disable signature checks when loading the container.
+            ///
+            /// The default is set to false.
+            ///
+            /// # Arguments
+            ///
+            /// * `flag`: true to skip signature checks, false otherwise.
             pub fn skip_signature(mut self, flag: bool) -> Self {
                 self.options = self.options.skip_signature(flag);
                 self
             }
 
             /// Skip BPX version checks.
+            ///
+            /// The default is set to false.
+            ///
+            /// # Arguments
+            ///
+            /// * `flag`: true to skip version checks, false otherwise.
             pub fn skip_versions(mut self, flag: bool) -> Self {
                 self.options = self.options.skip_versions(flag);
                 self
             }
 
             /// Disable checksum checks when loading the section header/table or a section.
+            ///
+            /// The default is set to false.
+            ///
+            /// # Arguments
+            ///
+            /// * `flag`: true to skip checksum checks on load, false otherwise.
             pub fn skip_checksum(mut self, flag: bool) -> Self {
                 self.options = self.options.skip_checksum(flag);
                 self
@@ -157,8 +201,26 @@ macro_rules! open_options {
             /// Sets the maximum size of a section allowed to fit in RAM in bytes.
             ///
             /// The default is set to [DEFAULT_MEMORY_THRESHOLD](crate::core::DEFAULT_MEMORY_THRESHOLD) bytes.
+            ///
+            /// # Arguments
+            ///
+            /// * `size`: the maximum size of a section in RAM.
             pub fn memory_threshold(mut self, size: u32) -> Self {
                 self.options = self.options.memory_threshold(size);
+                self
+            }
+
+            /// Reverts the file when a save operation fails to keep the BPX unchanged/unmodified after
+            /// a save failure.
+            ///
+            /// This works by saving the container to a temporary storage before overwriting the original
+            /// IO backend. The default for this option is set to false.
+            ///
+            /// # Arguments
+            ///
+            /// * `flag`: true to revert the file on save failure, false otherwise.
+            pub fn revert_on_save_failure(mut self, flag: bool) -> Self {
+                self.options = self.options.revert_on_save_failure(flag);
                 self
             }
         }

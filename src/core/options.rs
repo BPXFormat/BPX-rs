@@ -259,34 +259,93 @@ pub struct OpenOptions<T> {
     pub(crate) skip_signature_check: bool,
     pub(crate) skip_checksum: bool,
     pub(crate) skip_version_check: bool,
-    pub(crate) memory_threshold: u32
+    pub(crate) memory_threshold: u32,
+    pub(crate) revert_on_save_fail: bool
 }
 
 impl<T> OpenOptions<T> {
      /// Creates a new set of options for a BPX container.
+     ///
+     /// # Arguments
+     ///
+     /// * `backend`: the IO backend to be associated with the container.
+     ///
+     /// returns: OpenOptions<T>
      pub fn new(backend: T) -> OpenOptions<T> {
         OpenOptions {
             backend,
             skip_checksum: false,
             skip_signature_check: false,
             skip_version_check: false,
-            memory_threshold: DEFAULT_MEMORY_THRESHOLD
+            memory_threshold: DEFAULT_MEMORY_THRESHOLD,
+            revert_on_save_fail: false
         }
     }
 
     /// Disable signature checks when loading the container.
+    ///
+    /// The default is set to false.
+    ///
+    /// # Arguments
+    ///
+    /// * `flag`: true to skip signature checks, false otherwise.
+    ///
+    /// returns: OpenOptions<T>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::options::OpenOptions;
+    ///
+    /// let header = OpenOptions::new(())
+    ///     .skip_signature(true);
+    /// ```
     pub fn skip_signature(mut self, flag: bool) -> Self {
         self.skip_signature_check = flag;
         self
     }
 
     /// Skip BPX version checks.
+    ///
+    /// The default is set to false.
+    ///
+    /// # Arguments
+    ///
+    /// * `flag`: true to skip version checks, false otherwise.
+    ///
+    /// returns: OpenOptions<T>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::options::OpenOptions;
+    ///
+    /// let header = OpenOptions::new(())
+    ///     .skip_versions(true);
+    /// ```
     pub fn skip_versions(mut self, flag: bool) -> Self {
         self.skip_version_check = flag;
         self
     }
 
     /// Disable checksum checks when loading the section header/table or a section.
+    ///
+    /// The default is set to false.
+    ///
+    /// # Arguments
+    ///
+    /// * `flag`: true to skip checksum checks on load, false otherwise.
+    ///
+    /// returns: OpenOptions<T>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::options::OpenOptions;
+    ///
+    /// let header = OpenOptions::new(())
+    ///     .skip_checksum(true);
+    /// ```
     pub fn skip_checksum(mut self, flag: bool) -> Self {
         self.skip_checksum = flag;
         self
@@ -295,8 +354,48 @@ impl<T> OpenOptions<T> {
     /// Sets the maximum size of a section allowed to fit in RAM in bytes.
     ///
     /// The default is set to [DEFAULT_MEMORY_THRESHOLD](DEFAULT_MEMORY_THRESHOLD) bytes.
+    ///
+    /// # Arguments
+    ///
+    /// * `size`: the maximum size of a section (in bytes) in RAM.
+    ///
+    /// returns: CreateOptions<T>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::options::OpenOptions;
+    ///
+    /// let header = OpenOptions::new(())
+    ///     .memory_threshold(4096); //Set memory threshold to 4Kb.
+    /// ```
     pub fn memory_threshold(mut self, size: u32) -> Self {
         self.memory_threshold = size;
+        self
+    }
+
+    /// Reverts the file when a save operation fails to keep the BPX unchanged/unmodified after
+    /// a save failure.
+    ///
+    /// This works by saving the container to a temporary storage before overwriting the original
+    /// IO backend. The default for this option is set to false.
+    ///
+    /// # Arguments
+    ///
+    /// * `flag`: true to revert the file on save failure, false otherwise.
+    ///
+    /// returns: OpenOptions<T>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::options::OpenOptions;
+    ///
+    /// let header = OpenOptions::new(())
+    ///     .revert_on_save_failure(true);
+    /// ```
+    pub fn revert_on_save_failure(mut self, flag: bool) -> Self {
+        self.revert_on_save_fail = flag;
         self
     }
 }
@@ -311,16 +410,24 @@ impl<T: std::io::Seek> From<T> for OpenOptions<T> {
 pub struct CreateOptions<T> {
     pub(crate) header: MainHeader,
     pub(crate) backend: T,
-    pub(crate) memory_threshold: u32
+    pub(crate) memory_threshold: u32,
+    pub(crate) revert_on_save_fail: bool
 }
 
 impl<T> CreateOptions<T> {
     /// Creates a new set of options for a BPX container.
+    ///
+    /// # Arguments
+    ///
+    /// * `backend`: the IO backend to be associated with the container.
+    ///
+    /// returns: OpenOptions<T>
     pub fn new(backend: T) -> CreateOptions<T> {
         CreateOptions {
             header: MainHeader::new(),
             backend,
-            memory_threshold: DEFAULT_MEMORY_THRESHOLD
+            memory_threshold: DEFAULT_MEMORY_THRESHOLD,
+            revert_on_save_fail: false
         }
     }
 
@@ -407,8 +514,50 @@ impl<T> CreateOptions<T> {
     /// Sets the maximum size of a section allowed to fit in RAM in bytes.
     ///
     /// The default is set to [DEFAULT_MEMORY_THRESHOLD](DEFAULT_MEMORY_THRESHOLD) bytes.
+    ///
+    /// # Arguments
+    ///
+    /// * `size`: the maximum size of a section in RAM.
+    ///
+    /// returns: CreateOptions<T>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::options::CreateOptions;
+    ///
+    /// let header = CreateOptions::new(())
+    ///     .memory_threshold(4096) //Set memory threshold to 4Kb.
+    ///     .main_header();
+    /// assert_eq!(header.version, 2);
+    /// ```
     pub fn memory_threshold(mut self, size: u32) -> Self {
         self.memory_threshold = size;
+        self
+    }
+
+    /// Reverts the file when a save operation fails to keep the BPX unchanged/unmodified after
+    /// a save failure.
+    ///
+    /// This works by saving the container to a temporary storage before overwriting the original
+    /// IO backend. The default for this option is set to false.
+    ///
+    /// # Arguments
+    ///
+    /// * `flag`: true to revert the file on save failure, false otherwise.
+    ///
+    /// returns: CreateOptions<T>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::options::CreateOptions;
+    ///
+    /// let header = CreateOptions::new(())
+    ///     .revert_on_save_failure(true);
+    /// ```
+    pub fn revert_on_save_failure(mut self, flag: bool) -> Self {
+        self.revert_on_save_fail = flag;
         self
     }
 
@@ -442,7 +591,7 @@ impl<T: std::io::Seek> From<T> for CreateOptions<T> {
 
 impl<T: std::io::Seek> From<(T, MainHeader)> for CreateOptions<T> {
     fn from((backend, header): (T, MainHeader)) -> Self {
-        Self { header, backend, memory_threshold: DEFAULT_MEMORY_THRESHOLD }
+        Self { header, backend, memory_threshold: DEFAULT_MEMORY_THRESHOLD, revert_on_save_fail: false }
     }
 }
 

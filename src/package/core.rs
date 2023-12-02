@@ -487,6 +487,7 @@ mod tests {
     use std::io::{Seek, SeekFrom};
 
     use crate::{package::Package, util::new_byte_buf};
+    use crate::package::OpenOptions;
 
     #[test]
     fn test_re_open_after_create() {
@@ -515,6 +516,133 @@ mod tests {
         //Attempt to write one more object into the file.
         bpxp.objects_mut().unwrap().create("AdditionalObject", "Another test".as_bytes()).unwrap();
         bpxp.save().unwrap();
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt to re-decode the in-memory BPXP.
+        let bpxp = Package::open(bytebuf).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 2);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "AdditionalObject");
+        {
+            let wanted = objects.find("TestObject").unwrap().unwrap();
+            let mut data = Vec::new();
+            objects.load(wanted, &mut data).unwrap();
+            let s = std::str::from_utf8(&data).unwrap();
+            assert_eq!(s, "This is a test 你好")
+        }
+        {
+            let wanted = objects.find("AdditionalObject").unwrap().unwrap();
+            let mut data = Vec::new();
+            objects.load(wanted, &mut data).unwrap();
+            let s = std::str::from_utf8(&data).unwrap();
+            assert_eq!(s, "Another test")
+        }
+    }
+
+    #[test]
+    fn test_re_open_after_create_bad() {
+        let mut bpxp = Package::create(new_byte_buf(128)).unwrap();
+        {
+            let mut objects = bpxp.objects_mut().unwrap();
+            objects.create("TestObject", "This is a test 你好".as_bytes()).unwrap();
+        }
+        bpxp.save().unwrap();
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt decoding the in-memory BPXP.
+        let mut bpxp = Package::open(bytebuf).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 1);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "TestObject");
+        //Do not load any other object to make sure the section is not loaded.
+        //Attempt to write one more object into the file.
+        bpxp.objects_mut().unwrap().create("AdditionalObject", "Another test".as_bytes()).unwrap();
+
+        //Using save here is inapropriate because not all sections are loaded.
+        assert!(bpxp.save().is_err());
+        //Unfortunatly, due to the design of bpx-rs, at this point the underlying backend is corrupted because the save operation was interrupted.
+    }
+
+    #[test]
+    fn test_re_open_after_create_bad_recover() {
+        let mut bpxp = Package::create(new_byte_buf(128)).unwrap();
+        {
+            let mut objects = bpxp.objects_mut().unwrap();
+            objects.create("TestObject", "This is a test 你好".as_bytes()).unwrap();
+        }
+        bpxp.save().unwrap();
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt decoding the in-memory BPXP.
+        let mut bpxp = Package::open(OpenOptions::new(bytebuf).revert_on_save_failure(true)).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 1);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "TestObject");
+        //Do not load any other object to make sure the section is not loaded.
+        //Attempt to write one more object into the file.
+        bpxp.objects_mut().unwrap().create("AdditionalObject", "Another test".as_bytes()).unwrap();
+
+        //Using save here is inapropriate because not all sections are loaded.
+        assert!(bpxp.save().is_err());
+        //In this case we use load_and_save to load all sections before saving.
+        bpxp.load_and_save().unwrap();
+
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt to re-decode the in-memory BPXP.
+        let bpxp = Package::open(bytebuf).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 2);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "AdditionalObject");
+        {
+            let wanted = objects.find("TestObject").unwrap().unwrap();
+            let mut data = Vec::new();
+            objects.load(wanted, &mut data).unwrap();
+            let s = std::str::from_utf8(&data).unwrap();
+            assert_eq!(s, "This is a test 你好")
+        }
+        {
+            let wanted = objects.find("AdditionalObject").unwrap().unwrap();
+            let mut data = Vec::new();
+            objects.load(wanted, &mut data).unwrap();
+            let s = std::str::from_utf8(&data).unwrap();
+            assert_eq!(s, "Another test")
+        }        
+    }
+
+    #[test]
+    fn test_re_open_after_create_good() {
+        let mut bpxp = Package::create(new_byte_buf(128)).unwrap();
+        {
+            let mut objects = bpxp.objects_mut().unwrap();
+            objects.create("TestObject", "This is a test 你好".as_bytes()).unwrap();
+        }
+        bpxp.save().unwrap();
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt decoding the in-memory BPXP.
+        let mut bpxp = Package::open(bytebuf).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 1);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "TestObject");
+        //Do not load any other object to make sure the section is not loaded.
+        //Attempt to write one more object into the file.
+        bpxp.objects_mut().unwrap().create("AdditionalObject", "Another test".as_bytes()).unwrap();
+
+        //Using save here is inapropriate because not all sections are loaded.
+        //In this case we use load_and_save to load all sections before saving.
+        bpxp.load_and_save().unwrap();
+
         //Reset the byte buffer pointer to start.
         let mut bytebuf = bpxp.into_inner().into_inner();
         bytebuf.seek(SeekFrom::Start(0)).unwrap();

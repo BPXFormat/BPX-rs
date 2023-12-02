@@ -26,17 +26,10 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::SeekFrom;
 use std::{cell::RefCell, collections::BTreeMap, io};
 
-use crate::core::encoder::recompute_header_checksum;
-use crate::core::{
-    decoder::read_section_header_table,
-    encoder::{internal_save, internal_save_single},
-    header::{MainHeader, Struct},
-    section::SectionTable,
-    Result, SectionData,
-};
+use crate::core::encoder::{Encoder, SaveMode};
+use crate::core::{decoder::read_section_header_table, header::{MainHeader, Struct}, section::SectionTable, Result, SectionData, AutoSectionData};
 
 use super::compression::{WeakChecksum, Checksum};
 use super::header::GetChecksum;
@@ -55,7 +48,8 @@ pub const DEFAULT_MEMORY_THRESHOLD: u32 = 100000000;
 pub struct Container<T> {
     table: SectionTable<T>,
     main_header: MainHeader,
-    main_header_modified: bool
+    main_header_modified: bool,
+    revert_on_save_failure: bool
 }
 
 impl<T> Container<T> {
@@ -184,16 +178,10 @@ impl<T: io::Read + io::Seek> Container<T> {
                 memory_threshold: options.memory_threshold
             },
             main_header: header,
-            main_header_modified: false
+            main_header_modified: false,
+            revert_on_save_failure: options.revert_on_save_fail
         })
     }
-}
-
-enum SaveMode {
-    Regenerate,
-    MainHeaderOnly,
-    PatchMultipleSections,
-    PatchSingleSection(u32)
 }
 
 impl<T: io::Write + io::Seek> Container<T> {
@@ -230,50 +218,9 @@ impl<T: io::Write + io::Seek> Container<T> {
                 memory_threshold: options.memory_threshold
             },
             main_header: options.header.into(),
-            main_header_modified: true
+            main_header_modified: true,
+            revert_on_save_failure: options.revert_on_save_fail
         }
-    }
-
-    fn get_modified_sections(&self) -> Vec<u32> {
-        // Returns a list of modified sections.
-        self.table
-            .sections
-            .iter()
-            .filter(|(_, entry)| entry.modified.get())
-            .map(|(handle, _)| *handle)
-            .collect()
-    }
-
-    fn patch_main_header_if_needed(&mut self, was_written: bool) -> Result<()> {
-        if was_written {
-            self.main_header_modified = false;
-            Ok(())
-        } else if self.main_header_modified {
-            // If only main header changed -> write only main header.
-            self.main_header_modified = false;
-            recompute_header_checksum(&mut self.main_header, &self.table.sections);
-            let backend = self.table.backend.get_mut();
-            backend.seek(SeekFrom::Start(0))?;
-            self.main_header.write(backend)?;
-            Ok(())
-        } else {
-            Ok(())
-        }
-    }
-
-    fn patch_modified_sections(&mut self) -> Result<bool> {
-        let mut main_header = false;
-        for section in self.get_modified_sections() {
-            if internal_save_single(
-                self.table.backend.get_mut(),
-                &mut self.table.sections,
-                &mut self.main_header,
-                section,
-            )? {
-                main_header = true;
-            }
-        }
-        Ok(main_header)
     }
 
     fn get_save_mode(&self) -> SaveMode {
@@ -342,38 +289,35 @@ impl<T: io::Write + io::Seek> Container<T> {
         SaveMode::Regenerate
     }
 
-    fn save_with_mode(&mut self, mode: SaveMode) -> Result<()> {
-        match mode {
-            SaveMode::Regenerate => {
-                self.main_header_modified = false;
-                self.table.modified = false;
-                self.main_header.section_num = self.table.count;
-                internal_save(
-                    self.table.backend.get_mut(),
-                    &mut self.table.sections,
-                    &mut self.main_header,
-                )
-            },
-            SaveMode::MainHeaderOnly => {
-                // No sections have changed and the table didn't change; might have nothing to do.
-                self.patch_main_header_if_needed(false)
-            },
-            SaveMode::PatchMultipleSections => {
-                //Multiple sections have changed.
-                let flag = self.patch_modified_sections()?;
-                self.patch_main_header_if_needed(flag)
-            },
-            SaveMode::PatchSingleSection(section) => {
-                //A single section has changed.
-                let flag = internal_save_single(
-                    self.table.backend.get_mut(),
-                    &mut self.table.sections,
-                    &mut self.main_header,
-                    section
-                )?;
-                self.patch_main_header_if_needed(flag)
-            },
+    fn save_with_mode_direct(&mut self, mode: SaveMode) -> Result<()> {
+        Encoder {
+            mode,
+            main_header: &mut self.main_header,
+            sections: &mut self.table.sections,
+            main_header_modified: &mut self.main_header_modified,
+            table_modified: &mut self.table.modified,
+            table_count: self.table.count
+        }.run(self.table.backend.get_mut())
+    }
+
+    fn save_with_mode_indirect(&mut self, mode: SaveMode) -> Result<()> {
+        use std::io::Seek;
+        let mut temp = AutoSectionData::new(self.table.memory_threshold);
+        let res = Encoder {
+            mode,
+            main_header: &mut self.main_header,
+            sections: &mut self.table.sections,
+            main_header_modified: &mut self.main_header_modified,
+            table_modified: &mut self.table.modified,
+            table_count: self.table.count
+        }.run(&mut temp);
+        if res.is_ok() {
+            let backend = self.table.backend.get_mut();
+            backend.seek(io::SeekFrom::Start(0))?;
+            temp.seek(io::SeekFrom::Start(0))?;
+            std::io::copy(&mut temp, backend)?;
         }
+        res
     }
 
     /// Writes all sections to the underlying IO backend.
@@ -399,7 +343,10 @@ impl<T: io::Write + io::Seek> Container<T> {
     /// assert!(!buf.into_inner().is_empty());
     /// ```
     pub fn save(&mut self) -> Result<()> {
-        self.save_with_mode(self.get_save_mode())
+        match self.revert_on_save_failure {
+            true => self.save_with_mode_indirect(self.get_save_mode()),
+            false => self.save_with_mode_direct(self.get_save_mode())
+        }
     }
 }
 
@@ -423,7 +370,7 @@ impl<T: io::Read + io::Write + io::Seek> Container<T> {
     /// use bpx::util::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0));
-    /// file.save().unwrap();
+    /// file.load_and_save().unwrap();
     /// let buf = file.into_inner();
     /// assert!(!buf.into_inner().is_empty());
     /// ```
@@ -437,6 +384,9 @@ impl<T: io::Read + io::Write + io::Seek> Container<T> {
             },
             _ => ()
         }
-        self.save_with_mode(mode)
+        match self.revert_on_save_failure {
+            true => self.save_with_mode_indirect(mode),
+            false => self.save_with_mode_direct(mode)
+        }
     }
 }

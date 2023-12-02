@@ -4,9 +4,9 @@ version = 3
 
 [[package]]
 name = "bpx"
-version = "4.0.0-rc.8.2.0"
+version = "4.0.0-rc.9.0.0"
 dependencies = [
- "byteorder",
+ "bytesutil",
  "elsa",
  "libz-sys",
  "lzma-sys",
@@ -17,10 +17,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "byteorder"
-version = "1.4.2"
+name = "bytesutil"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae44d1a3d5a19df61dd0c8beb138458ac2a53a7ac09eba97d55592540004306b"
+checksum = "f028603bc6194fbcb01bbf64dfaf4dbaff564a3b6b102e43707227da6e266839"
 
 [[package]]
 name = "cc"
