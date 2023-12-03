@@ -291,7 +291,7 @@ impl<'a> Encoder<'a> {
         } else if *self.main_header_modified {
             // If only main header changed -> write only main header.
             *self.main_header_modified = false;
-            recompute_header_checksum(&mut self.main_header, &self.sections);
+            recompute_header_checksum(self.main_header, self.sections);
             backend.seek(SeekFrom::Start(0))?;
             self.main_header.write(&mut backend)?;
             Ok(())
