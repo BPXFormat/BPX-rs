@@ -29,12 +29,17 @@
 use std::{cell::RefCell, collections::BTreeMap, io};
 
 use crate::core::encoder::{Encoder, SaveMode};
-use crate::core::{decoder::read_section_header_table, header::{MainHeader, Struct}, section::SectionTable, Result, SectionData, AutoSectionData};
+use crate::core::{
+    decoder::read_section_header_table,
+    header::{MainHeader, Struct},
+    section::SectionTable,
+    AutoSectionData, Result, SectionData,
+};
 
-use super::compression::{WeakChecksum, Checksum};
+use super::compression::{Checksum, WeakChecksum};
+use super::error::Error;
 use super::header::GetChecksum;
 use super::options::{CreateOptions, OpenOptions};
-use super::error::Error;
 
 /// The default maximum size of uncompressed sections.
 ///
@@ -49,7 +54,7 @@ pub struct Container<T> {
     table: SectionTable<T>,
     main_header: MainHeader,
     main_header_modified: bool,
-    revert_on_save_failure: bool
+    revert_on_save_failure: bool,
 }
 
 impl<T> Container<T> {
@@ -144,22 +149,21 @@ impl<T: io::Read + io::Seek> Container<T> {
         let mut checksum = WeakChecksum::default();
         let header = match MainHeader::read(&mut options.backend) {
             Ok(v) => v,
-            Err(e) => {
-                match e.error() {
-                    Error::BadSignature(_) => match options.skip_signature_check {
-                        true => e.unwrap_value(),
-                        false => return e.into()
-                    },
-                    Error::BadVersion(_) => match options.skip_version_check {
-                        true => e.unwrap_value(),
-                        false => return e.into()
-                    },
-                    _ => return e.into()
-                }
-            }
+            Err(e) => match e.error() {
+                Error::BadSignature(_) => match options.skip_signature_check {
+                    true => e.unwrap_value(),
+                    false => return e.into(),
+                },
+                Error::BadVersion(_) => match options.skip_version_check {
+                    true => e.unwrap_value(),
+                    false => return e.into(),
+                },
+                _ => return e.into(),
+            },
         };
         header.get_checksum(&mut checksum);
-        let (next_handle, sections) = read_section_header_table(&mut options.backend, &header, &mut checksum)?;
+        let (next_handle, sections) =
+            read_section_header_table(&mut options.backend, &header, &mut checksum)?;
         let chksum = checksum.finish();
         if !options.skip_checksum && chksum != header.chksum {
             return Err(Error::Checksum {
@@ -175,11 +179,11 @@ impl<T: io::Read + io::Seek> Container<T> {
                 sections,
                 count: header.section_num,
                 skip_checksum: options.skip_checksum,
-                memory_threshold: options.memory_threshold
+                memory_threshold: options.memory_threshold,
             },
             main_header: header,
             main_header_modified: false,
-            revert_on_save_failure: options.revert_on_save_fail
+            revert_on_save_failure: options.revert_on_save_fail,
         })
     }
 }
@@ -215,11 +219,11 @@ impl<T: io::Write + io::Seek> Container<T> {
                 backend: RefCell::new(options.backend),
                 sections: BTreeMap::new(),
                 skip_checksum: false,
-                memory_threshold: options.memory_threshold
+                memory_threshold: options.memory_threshold,
             },
             main_header: options.header,
             main_header_modified: true,
-            revert_on_save_failure: options.revert_on_save_fail
+            revert_on_save_failure: options.revert_on_save_fail,
         }
     }
 
@@ -235,7 +239,7 @@ impl<T: io::Write + io::Seek> Container<T> {
             .count();
         if count == 0 {
             // No sections have changed and the table didn't change; might have nothing to do.
-            return SaveMode::MainHeaderOnly
+            return SaveMode::MainHeaderOnly;
         }
         let expanded_sections = self
             .table
@@ -261,7 +265,7 @@ impl<T: io::Write + io::Seek> Container<T> {
                     .unwrap();
 
                 SaveMode::PatchSingleSection(section)
-            }
+            };
         }
         if expanded_sections == 1 {
             let expanded_section = self
@@ -283,7 +287,7 @@ impl<T: io::Write + io::Seek> Container<T> {
                 } else {
                     //If last section expanded -> only write last section and update section header table.
                     SaveMode::PatchSingleSection(expanded_section)
-                }
+                };
             }
         }
         SaveMode::Regenerate
@@ -296,8 +300,9 @@ impl<T: io::Write + io::Seek> Container<T> {
             sections: &mut self.table.sections,
             main_header_modified: &mut self.main_header_modified,
             table_modified: &mut self.table.modified,
-            table_count: self.table.count
-        }.run(self.table.backend.get_mut())
+            table_count: self.table.count,
+        }
+        .run(self.table.backend.get_mut())
     }
 
     fn save_with_mode_indirect(&mut self, mode: SaveMode) -> Result<()> {
@@ -309,8 +314,9 @@ impl<T: io::Write + io::Seek> Container<T> {
             sections: &mut self.table.sections,
             main_header_modified: &mut self.main_header_modified,
             table_modified: &mut self.table.modified,
-            table_count: self.table.count
-        }.run(&mut temp);
+            table_count: self.table.count,
+        }
+        .run(&mut temp);
         if res.is_ok() {
             let backend = self.table.backend.get_mut();
             backend.seek(io::SeekFrom::Start(0))?;
@@ -345,7 +351,7 @@ impl<T: io::Write + io::Seek> Container<T> {
     pub fn save(&mut self) -> Result<()> {
         match self.revert_on_save_failure {
             true => self.save_with_mode_indirect(self.get_save_mode()),
-            false => self.save_with_mode_direct(self.get_save_mode())
+            false => self.save_with_mode_direct(self.get_save_mode()),
         }
     }
 }
@@ -383,7 +389,7 @@ impl<T: io::Read + io::Write + io::Seek> Container<T> {
         }
         match self.revert_on_save_failure {
             true => self.save_with_mode_indirect(mode),
-            false => self.save_with_mode_direct(mode)
+            false => self.save_with_mode_direct(mode),
         }
     }
 }
