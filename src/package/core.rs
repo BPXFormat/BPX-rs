@@ -329,10 +329,8 @@ impl<T: Write + Seek> Package<T> {
                     });
                 let mut section = self.container.sections().open(handle)?;
                 metadata.write(&mut *section, self.max_depth)?;
-            } else {
-                if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_SD) {
-                    self.container.sections_mut().remove(handle);
-                }
+            } else if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_SD) {
+                self.container.sections_mut().remove(handle);
             }
             self.metadata = OnceCell::from(metadata.clone());
         }
@@ -481,10 +479,8 @@ impl<T: Read + Write + Seek> Package<T> {
                     });
                 let mut section = self.container.sections().load(handle)?;
                 metadata.write(&mut *section, self.max_depth)?;
-            } else {
-                if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_SD) {
-                    self.container.sections_mut().remove(handle);
-                }
+            } else if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_SD) {
+                self.container.sections_mut().remove(handle);
             }
             self.metadata = OnceCell::from(metadata.clone());
         }

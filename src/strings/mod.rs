@@ -95,7 +95,7 @@ impl StringSection {
     pub fn get<T>(&self, container: &Container<T>, address: u32) -> Result<&str, Error> {
         if self.cache.get(&address).is_none() {
             let mut section = container.sections().open(self.section)?;
-            let s = low_level_read_string(address, &mut *section)?;
+            let s = low_level_read_string(address, &mut section)?;
             self.cache.insert(address, s);
         }
         Ok(unsafe { self.cache.get(&address).unwrap_unchecked() })

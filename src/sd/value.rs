@@ -388,7 +388,7 @@ impl TryFrom<Value> for String {
         if let Value::String(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new(Type::String, v.get_type()));
+        Err(TypeError::new(Type::String, v.get_type()))
     }
 }
 
@@ -399,7 +399,7 @@ impl TryFrom<Value> for Array {
         if let Value::Array(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new(Type::Array, v.get_type()));
+        Err(TypeError::new(Type::Array, v.get_type()))
     }
 }
 
@@ -410,7 +410,7 @@ impl TryFrom<Value> for Object {
         if let Value::Object(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new(Type::Object, v.get_type()));
+        Err(TypeError::new(Type::Object, v.get_type()))
     }
 }
 
@@ -421,7 +421,7 @@ impl<'a> TryFrom<&'a Value> for &'a str {
         if let Value::String(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new(Type::String, v.get_type()));
+        Err(TypeError::new(Type::String, v.get_type()))
     }
 }
 
@@ -432,7 +432,7 @@ impl<'a> TryFrom<&'a Value> for &'a Array {
         if let Value::Array(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new(Type::Array, v.get_type()));
+        Err(TypeError::new(Type::Array, v.get_type()))
     }
 }
 
@@ -443,7 +443,7 @@ impl<'a> TryFrom<&'a Value> for &'a Object {
         if let Value::Object(v) = v {
             return Ok(v);
         }
-        return Err(TypeError::new(Type::Object, v.get_type()));
+        Err(TypeError::new(Type::Object, v.get_type()))
     }
 }
 
@@ -471,7 +471,7 @@ macro_rules! generate_option_try_from {
 macro_rules! generate_option_try_from_ref {
     ($($t:ident)*) => {
         $(
-            impl <'a> TryFrom<&'a Value> for Option<&'a $t>
+            impl<'a> TryFrom<&'a Value> for Option<&'a $t>
             {
                 type Error = TypeError;
 
@@ -482,7 +482,7 @@ macro_rules! generate_option_try_from_ref {
                         return Ok(None);
                     }
                     let v = v.try_into()?;
-                    return Ok(Some(v));
+                    Ok(Some(v))
                 }
             }
         )*
@@ -492,7 +492,7 @@ macro_rules! generate_option_try_from_ref {
 macro_rules! generate_option_try_from_ref_scalar {
     ($($t:ident)*) => {
         $(
-            impl <'a> TryFrom<&'a Value> for Option<$t>
+            impl<'a> TryFrom<&'a Value> for Option<$t>
             {
                 type Error = TypeError;
 
@@ -503,7 +503,7 @@ macro_rules! generate_option_try_from_ref_scalar {
                         return Ok(None);
                     }
                     let v = v.try_into()?;
-                    return Ok(Some(v));
+                    Ok(Some(v))
                 }
             }
         )*

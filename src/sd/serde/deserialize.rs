@@ -359,7 +359,7 @@ impl<'a, 'de> serde::Deserializer<'de> for Deserializer<'a> {
         V: Visitor<'de>,
     {
         let v: &str = self.val.as_ref().try_into()?;
-        visitor.visit_str(&v)
+        visitor.visit_str(v)
     }
 
     fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error>

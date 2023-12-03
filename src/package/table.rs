@@ -86,7 +86,7 @@ impl ObjectTable {
         } as u32;
 
         loop {
-            let (count, need_section) = write_object(&container, &mut source, data_section)?;
+            let (count, need_section) = write_object(container, &mut source, data_section)?;
             object_size += count;
             if need_section {
                 data_section = container

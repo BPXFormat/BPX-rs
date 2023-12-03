@@ -217,7 +217,7 @@ impl<T: io::Write + io::Seek> Container<T> {
                 skip_checksum: false,
                 memory_threshold: options.memory_threshold
             },
-            main_header: options.header.into(),
+            main_header: options.header,
             main_header_modified: true,
             revert_on_save_failure: options.revert_on_save_fail
         }
@@ -376,13 +376,10 @@ impl<T: io::Read + io::Write + io::Seek> Container<T> {
     /// ```
     pub fn load_and_save(&mut self) -> Result<()> {
         let mode = self.get_save_mode();
-        match mode {
-            SaveMode::Regenerate => {
-                for handle in self.sections() {
-                    self.sections().load(handle)?;
-                }
-            },
-            _ => ()
+        if mode == SaveMode::Regenerate {
+            for handle in self.sections() {
+                self.sections().load(handle)?;
+            }
         }
         match self.revert_on_save_failure {
             true => self.save_with_mode_indirect(mode),

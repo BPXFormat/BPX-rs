@@ -250,6 +250,7 @@ fn write_section<TWrite: Write>(
     }
 }
 
+#[derive(Eq, PartialEq)]
 pub enum SaveMode {
     Regenerate,
     MainHeaderOnly,

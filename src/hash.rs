@@ -58,7 +58,7 @@ impl From<u64> for Name {
 
 impl<'a> From<&'a str> for Name {
     fn from(s: &'a str) -> Self {
-        Self(hash(s.as_ref()))
+        Self(hash(s))
     }
 }
 

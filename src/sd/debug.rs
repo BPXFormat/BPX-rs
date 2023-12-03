@@ -51,7 +51,7 @@ impl<'a> Iterator for Iter<'a> {
             k = k1;
             v = v1;
         }
-        Some((self.symbols_map.get(&k).map(|v| &**v), *k, v))
+        Some((self.symbols_map.get(k).map(|v| &**v), *k, v))
     }
 }
 
