@@ -28,7 +28,10 @@
 
 //! The BPX encoder.
 
-use std::{collections::BTreeMap, io::{Seek, SeekFrom, Write}};
+use std::{
+    collections::BTreeMap,
+    io::{Seek, SeekFrom, Write},
+};
 
 use crate::{
     core::{
@@ -255,7 +258,7 @@ pub enum SaveMode {
     Regenerate,
     MainHeaderOnly,
     PatchMultipleSections,
-    PatchSingleSection(u32)
+    PatchSingleSection(u32),
 }
 
 pub struct Encoder<'a> {
@@ -264,7 +267,7 @@ pub struct Encoder<'a> {
     pub main_header_modified: &'a mut bool,
     pub table_modified: &'a mut bool,
     pub table_count: u32,
-    pub mode: SaveMode
+    pub mode: SaveMode,
 }
 
 impl<'a> Encoder<'a> {
@@ -277,7 +280,11 @@ impl<'a> Encoder<'a> {
             .collect()
     }
 
-    fn patch_main_header_if_needed<B: Write + Seek>(&mut self, mut backend: B, was_written: bool) -> Result<()> {
+    fn patch_main_header_if_needed<B: Write + Seek>(
+        &mut self,
+        mut backend: B,
+        was_written: bool,
+    ) -> Result<()> {
         if was_written {
             *self.main_header_modified = false;
             Ok(())
@@ -296,12 +303,7 @@ impl<'a> Encoder<'a> {
     fn patch_modified_sections<B: Write + Seek>(&mut self, mut backend: B) -> Result<bool> {
         let mut main_header = false;
         for section in self.get_modified_sections() {
-            if internal_save_single(
-                &mut backend,
-                self.sections,
-                self.main_header,
-                section,
-            )? {
+            if internal_save_single(&mut backend, self.sections, self.main_header, section)? {
                 main_header = true;
             }
         }
@@ -312,11 +314,7 @@ impl<'a> Encoder<'a> {
         match self.mode {
             SaveMode::Regenerate => {
                 self.main_header.section_num = self.table_count;
-                internal_save(
-                    backend,
-                    self.sections,
-                    self.main_header,
-                )?;
+                internal_save(backend, self.sections, self.main_header)?;
                 *self.main_header_modified = false;
                 *self.table_modified = false;
                 Ok(())
@@ -332,12 +330,8 @@ impl<'a> Encoder<'a> {
             },
             SaveMode::PatchSingleSection(section) => {
                 //A single section has changed.
-                let flag = internal_save_single(
-                    &mut backend,
-                    self.sections,
-                    self.main_header,
-                    section
-                )?;
+                let flag =
+                    internal_save_single(&mut backend, self.sections, self.main_header, section)?;
                 self.patch_main_header_if_needed(backend, flag)
             },
         }
