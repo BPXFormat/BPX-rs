@@ -307,7 +307,7 @@ impl<T: io::Write + io::Seek> Container<T> {
 
     fn save_with_mode_indirect(&mut self, mode: SaveMode) -> Result<()> {
         use std::io::Seek;
-        let mut temp = AutoSectionData::new(self.table.memory_threshold);
+        let mut temp = AutoSectionData::new(self.table.memory_threshold as _);
         let res = Encoder {
             mode,
             main_header: &mut self.main_header,

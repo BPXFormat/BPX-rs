@@ -235,7 +235,7 @@ impl<T> SectionTable<T> {
         self.modified = true;
         self.count += 1;
         let r = self.next_handle;
-        let section = AutoSectionData::new(self.memory_threshold);
+        let section = AutoSectionData::new(self.memory_threshold as _);
         let h = header.into();
         let entry = SectionEntry {
             header: h,

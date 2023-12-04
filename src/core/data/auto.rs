@@ -50,18 +50,18 @@ enum DynSectionData {
 /// when the size of the data exceeds 100Mb.*
 pub struct AutoSectionData {
     inner: Box<DynSectionData>,
-    memory_threshold: u32,
+    memory_threshold: usize,
 }
 
 impl Default for AutoSectionData {
     fn default() -> Self {
-        Self::new(DEFAULT_MEMORY_THRESHOLD)
+        Self::new(DEFAULT_MEMORY_THRESHOLD as _)
     }
 }
 
 impl AutoSectionData {
     /// Creates a new section data backed by a dynamically sized in-memory buffer.
-    pub fn new(memory_threshold: u32) -> AutoSectionData {
+    pub fn new(memory_threshold: usize) -> AutoSectionData {
         AutoSectionData {
             inner: Box::new(DynSectionData::Memory(InMemorySection::new(512))),
             memory_threshold,
@@ -81,7 +81,7 @@ impl AutoSectionData {
     ///
     /// This function returns an [Error](std::io::Error) if a file backed section was needed,
     /// given the size constraint, but failed to initialize.
-    pub fn new_with_size(size: u32, memory_threshold: u32) -> std::io::Result<AutoSectionData> {
+    pub fn new_with_size(size: usize, memory_threshold: usize) -> std::io::Result<AutoSectionData> {
         if size >= memory_threshold {
             let file = FileBasedSection::new(tempfile()?);
             Ok(AutoSectionData {
@@ -90,7 +90,7 @@ impl AutoSectionData {
             })
         } else {
             Ok(AutoSectionData {
-                inner: Box::new(DynSectionData::Memory(InMemorySection::new(size as usize))),
+                inner: Box::new(DynSectionData::Memory(InMemorySection::new(size))),
                 memory_threshold,
             })
         }
@@ -148,7 +148,7 @@ impl Write for AutoSectionData {
             DynSectionData::File(f) => f.write(buf),
             DynSectionData::Memory(m) => {
                 let size = m.write(buf)?;
-                if m.size() >= self.memory_threshold as usize {
+                if m.size() >= self.memory_threshold {
                     unsafe {
                         self.move_to_file()?;
                     }

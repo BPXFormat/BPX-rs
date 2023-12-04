@@ -91,7 +91,7 @@ pub fn load_section1<T: Read + Seek>(
     section: &SectionHeader,
     memory_threshold: u32,
 ) -> Result<AutoSectionData> {
-    let mut data = AutoSectionData::new_with_size(section.size, memory_threshold)?;
+    let mut data = AutoSectionData::new_with_size(section.size as _, memory_threshold as _)?;
     data.seek(io::SeekFrom::Start(0))?;
     if section.flags & FLAG_CHECK_WEAK != 0 {
         let mut chksum = WeakChecksum::new(0);
