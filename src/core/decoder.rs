@@ -52,6 +52,7 @@ use crate::{
     },
     traits::ReadFill,
 };
+use crate::core::SectionInfo;
 
 use super::header::GetChecksum;
 
@@ -71,10 +72,9 @@ pub fn read_section_header_table<T: Read>(
         sections.insert(
             hdl,
             SectionEntry {
-                header,
+                info: SectionInfo::new(i, header),
                 data: RefCell::new(None),
                 modified: Cell::new(false),
-                index: i,
                 entry1: SectionEntry1 {
                     flags: header.flags,
                     threshold: DEFAULT_COMPRESSION_THRESHOLD,

@@ -49,6 +49,8 @@ use crate::{
     },
     traits::ReadFill,
 };
+use crate::core::header::SectionHeader;
+use crate::core::SectionInfo;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -76,27 +78,29 @@ fn write_sections<T: Write + Seek>(
         let flags = section.entry1.get_flags(data.size() as u32);
         let (csize, chksum) = write_section(flags, data, &mut backend)?;
         data.seek(SeekFrom::Start(last_section_ptr))?;
-        section.header.csize = csize as u32;
-        section.header.size = data.size() as u32;
-        section.header.chksum = chksum;
-        section.header.flags = flags;
-        section.header.pointer = ptr;
-        section.index = idx as _;
+        section.info = SectionInfo::new(idx as _, SectionHeader {
+            pointer: ptr,
+            csize: csize as _,
+            size: data.size() as _,
+            chksum,
+            ty: section.info.header().ty,
+            flags,
+        });
         #[cfg(feature = "debug-log")]
         println!(
             "Writing section #{}: Size = {}, Size after compression = {}, Handle = {}",
-            idx, section.header.size, section.header.csize, _handle
+            idx, section.info.header().size, section.info.header().csize, _handle
         );
         ptr += csize as u64;
         {
             //Locate section header offset, then directly write section header
             let header_start_offset = SIZE_MAIN_HEADER + (idx * SIZE_SECTION_HEADER);
             backend.seek(SeekFrom::Start(header_start_offset as _))?;
-            section.header.write(&mut backend)?;
+            section.info.header().write(&mut backend)?;
             //Reset file pointer back to the end of the last written section
             backend.seek(SeekFrom::Start(ptr))?;
         }
-        section.header.get_checksum(chksum_sht);
+        section.info.header().get_checksum(chksum_sht);
         all_sections_size += csize;
     }
     Ok(all_sections_size)
@@ -130,7 +134,7 @@ fn write_section_single<T: Write + Seek>(
     handle: u32,
 ) -> Result<(bool, i64)> {
     let entry = sections.get_mut(&handle).unwrap();
-    backend.seek(SeekFrom::Start(entry.header.pointer))?;
+    backend.seek(SeekFrom::Start(entry.info.header().pointer))?;
     let data = entry
         .data
         .get_mut()
@@ -141,13 +145,13 @@ fn write_section_single<T: Write + Seek>(
     data.seek(SeekFrom::Start(0))?;
     let (csize, chksum) = write_section(flags, data, &mut backend)?;
     data.seek(SeekFrom::Start(last_section_ptr))?;
-    let old = entry.header;
-    entry.header.csize = csize as u32;
-    entry.header.size = data.size() as u32;
-    entry.header.chksum = chksum;
-    entry.header.flags = flags;
-    let diff = entry.header.csize as i64 - old.csize as i64;
-    Ok((old != entry.header, diff))
+    let old = *entry.info.header();
+    entry.info.header_mut().csize = csize as u32;
+    entry.info.header_mut().size = data.size() as u32;
+    entry.info.header_mut().chksum = chksum;
+    entry.info.header_mut().flags = flags;
+    let diff = entry.info.header().csize as i64 - old.csize as i64;
+    Ok((&old != entry.info.header(), diff))
 }
 
 pub fn recompute_header_checksum(
@@ -156,7 +160,7 @@ pub fn recompute_header_checksum(
 ) {
     let mut chksum_sht = WeakChecksum::default();
     for entry in sections.values() {
-        entry.header.get_checksum(&mut chksum_sht);
+        entry.info.header().get_checksum(&mut chksum_sht);
     }
     main_header.get_checksum(&mut chksum_sht);
     main_header.chksum = chksum_sht.finish();
@@ -174,9 +178,9 @@ fn internal_save_single<T: Write + Seek>(
     if update_sht {
         let entry = &sections[&handle];
         let offset_section_header =
-            SIZE_MAIN_HEADER as u64 + (SIZE_SECTION_HEADER as u64 * entry.index as u64);
+            SIZE_MAIN_HEADER as u64 + (SIZE_SECTION_HEADER as u64 * entry.info.index() as u64);
         backend.seek(SeekFrom::Start(offset_section_header))?;
-        entry.header.write(&mut backend)?;
+        entry.info.header().write(&mut backend)?;
         write_main_header = true;
     }
     if diff != 0 {

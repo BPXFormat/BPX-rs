@@ -31,6 +31,7 @@ use std::{
     collections::{btree_map::Keys, BTreeMap, Bound},
     io::{Read, Seek},
 };
+use std::ops::Index;
 
 use crate::core::{
     data::AutoSectionData,
@@ -92,11 +93,46 @@ impl SectionEntry1 {
     }
 }
 
+/// Information about a section.
+pub struct SectionInfo {
+    index: u32,
+    header: SectionHeader
+}
+
+impl SectionInfo {
+    /// Creates a new [SectionInfo].
+    ///
+    /// # Arguments
+    ///
+    /// * `index`: section index.
+    /// * `header`: section header.
+    pub fn new(index: u32, header: SectionHeader) -> SectionInfo {
+        SectionInfo {
+            index,
+            header
+        }
+    }
+
+    /// Returns a reference to the section header.
+    pub fn header(&self) -> &SectionHeader {
+        &self.header
+    }
+
+    /// Returns a mutable reference to the section header.
+    pub fn header_mut(&mut self) -> &mut SectionHeader {
+        &mut self.header
+    }
+
+    /// Returns the index of the section.
+    pub fn index(&self) -> u32 {
+        self.index
+    }
+}
+
 pub struct SectionEntry {
     pub(crate) entry1: SectionEntry1,
-    pub(crate) header: SectionHeader,
+    pub(crate) info: SectionInfo,
     pub(crate) data: RefCell<Option<AutoSectionData>>,
-    pub(crate) index: u32,
     pub(crate) modified: Cell<bool>,
 }
 
@@ -144,13 +180,13 @@ impl<T: Read + Seek> SectionTable<T> {
         if data.is_none() {
             let mut backend = self.backend.borrow_mut();
             let loaded = match self.skip_checksum {
-                false => load_section1(&mut *backend, &section.header, self.memory_threshold)?,
+                false => load_section1(&mut *backend, &section.info.header, self.memory_threshold)?,
                 true => {
-                    let mut header = section.header;
+                    let mut header = section.info.header;
                     //If checksum is to be ignored, clear the checksum flags before loading the section.
                     header.flags &= !FLAG_CHECK_WEAK;
                     header.flags &= !FLAG_CHECK_CRC32;
-                    load_section1(&mut *backend, &section.header, self.memory_threshold)?
+                    load_section1(&mut *backend, &section.info.header, self.memory_threshold)?
                 },
             };
             *data = Some(loaded);
@@ -238,10 +274,9 @@ impl<T> SectionTable<T> {
         let section = AutoSectionData::new(self.memory_threshold as _);
         let h = header.into();
         let entry = SectionEntry {
-            header: h,
+            info: SectionInfo::new(self.count - 1, h),
             data: RefCell::new(Some(section)),
             modified: Cell::new(false),
-            index: self.count - 1,
             entry1: SectionEntry1 {
                 threshold: h.csize,
                 flags: h.flags,
@@ -284,40 +319,8 @@ impl<T> SectionTable<T> {
         self.sections
             .range_mut((Bound::Included(handle.0), Bound::Unbounded))
             .for_each(|(_, v)| {
-                v.index -= 1;
+                v.info.index -= 1;
             });
-    }
-
-    /// Gets the header of a section.
-    ///
-    /// # Arguments
-    ///
-    /// * `handle`: a handle to the section.
-    ///
-    /// returns: &SectionHeader
-    ///
-    /// # Panics
-    ///
-    /// Panics if the given section handle is invalid.
-    ///
-    pub fn header(&self, handle: Handle) -> &SectionHeader {
-        &self.sections[&handle.0].header
-    }
-
-    /// Gets the index of a section.
-    ///
-    /// # Arguments
-    ///
-    /// * `handle`: a handle to the section.
-    ///
-    /// returns: u32
-    ///
-    /// # Panics
-    ///
-    /// Panics if the given section handle is invalid.
-    ///
-    pub fn index(&self, handle: Handle) -> u32 {
-        self.sections[&handle.0].index
     }
 
     /// Searches for the first section of a given type.
@@ -340,7 +343,7 @@ impl<T> SectionTable<T> {
     /// ```
     pub fn find_by_type(&self, ty: u8) -> Option<Handle> {
         for (handle, entry) in &self.sections {
-            if entry.header.ty == ty {
+            if entry.info.header.ty == ty {
                 return Some(Handle(*handle));
             }
         }
@@ -381,5 +384,13 @@ impl<'a, T> IntoIterator for &'a SectionTable<T> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
+    }
+}
+
+impl<T> Index<Handle> for SectionTable<T> {
+    type Output = SectionInfo;
+
+    fn index(&self, index: Handle) -> &Self::Output {
+        &self.sections[&index.0].info
     }
 }

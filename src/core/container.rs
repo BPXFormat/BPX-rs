@@ -247,7 +247,7 @@ impl<T: io::Write + io::Seek> Container<T> {
             .values()
             .filter(|entry| entry.modified.get())
             .filter(|entry| {
-                entry.data.borrow().as_ref().unwrap().size() != entry.header.size as usize
+                entry.data.borrow().as_ref().unwrap().size() != entry.info.header().size as usize
             })
             .count();
         if expanded_sections == 0 {
@@ -274,7 +274,7 @@ impl<T: io::Write + io::Seek> Container<T> {
                 .iter()
                 .filter(|(_, entry)| entry.modified.get())
                 .find(|(_, entry)| {
-                    entry.data.borrow().as_ref().unwrap().size() != entry.header.size as usize
+                    entry.data.borrow().as_ref().unwrap().size() != entry.info.header().size as usize
                 })
                 .map(|(handle, _)| *handle)
                 .unwrap();

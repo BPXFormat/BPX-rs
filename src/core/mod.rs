@@ -44,4 +44,4 @@ pub type Result<T> = std::result::Result<T, error::Error>;
 
 pub use container::*;
 pub use data::{AutoSectionData, SectionData};
-pub use section::{Handle, Iter, SectionTable};
+pub use section::{Handle, Iter, SectionTable, SectionInfo};

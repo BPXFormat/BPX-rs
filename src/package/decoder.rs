@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -76,7 +76,7 @@ pub fn unpack_object<T: Read + Seek, W: Write>(
             Some(i) => i,
             None => break,
         };
-        let section = container.sections().header(handle);
+        let section = container.sections()[handle].header();
         let remaining_section_size = section.size - offset;
         let val = load_from_section(
             container,
@@ -97,7 +97,7 @@ pub fn read_object_table<T: Read + Seek>(
     object_table: Handle,
 ) -> Result<NamedItemTable<ObjectHeader>> {
     let sections = container.sections();
-    let count = sections.header(object_table).size / 20;
+    let count = sections[object_table].header().size / 20;
     let mut v = Vec::with_capacity(count as _);
     let mut data = sections.load(object_table)?;
 

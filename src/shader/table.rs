@@ -417,7 +417,7 @@ impl ShaderTable {
         if self.shaders.get(&h).is_none() {
             let sections = container.sections();
             //let mut section = self.container.sections().open(handle)?;
-            if sections.header(*handle).size < 1 {
+            if sections[*handle].header().size < 1 {
                 //We must at least find a stage byte
                 return Err(Error::Eos(EosContext::Shader));
             }

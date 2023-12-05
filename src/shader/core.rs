@@ -145,7 +145,7 @@ impl<T> ShaderPack<T> {
             .container
             .sections()
             .iter()
-            .filter(|v| self.container.sections().header(*v).ty == SECTION_TYPE_SHADER)
+            .filter(|v| self.container.sections()[*v].header().ty == SECTION_TYPE_SHADER)
             .collect();
         ShaderTable::new(handles)
     }

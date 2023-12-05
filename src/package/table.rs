@@ -80,7 +80,7 @@ impl ObjectTable {
                 .sections_mut()
                 .create(create_data_section_header())
         });
-        let start = container.sections().index(data_section);
+        let start = container.sections()[data_section].index();
         let offset = {
             let section = container.sections().open(data_section)?;
             section.size()
