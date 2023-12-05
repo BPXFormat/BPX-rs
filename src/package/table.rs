@@ -27,6 +27,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::{Read, Seek, Write};
+use std::ops::Index;
 
 use crate::{
     core::{Container, Handle, SectionData},
@@ -161,6 +162,14 @@ impl<'a> IntoIterator for &'a ObjectTable {
     }
 }
 
+impl Index<usize> for ObjectTable {
+    type Output = ObjectHeader;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.table[index]
+    }
+}
+
 /// Immutable guard to the table of all objects in a BPXP.
 pub struct ObjectTableRef<'a, T> {
     pub(crate) container: &'a Container<T>,
@@ -190,6 +199,14 @@ impl<'a, 'b, T> IntoIterator for &'a ObjectTableRef<'b, T> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
+    }
+}
+
+impl<'a, T> Index<usize> for ObjectTableRef<'a, T> {
+    type Output = ObjectHeader;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.table[index]
     }
 }
 

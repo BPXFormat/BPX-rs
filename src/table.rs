@@ -29,6 +29,7 @@
 //! This module provides a lookup-table style implementation.
 
 use std::collections::HashMap;
+use std::ops::Index;
 
 use once_cell::unsync::OnceCell;
 
@@ -211,5 +212,13 @@ impl<'a, T> IntoIterator for &'a NamedItemTable<T> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
+    }
+}
+
+impl<T> Index<usize> for NamedItemTable<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.list[index]
     }
 }
