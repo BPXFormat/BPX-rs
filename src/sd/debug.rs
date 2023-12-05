@@ -153,7 +153,7 @@ impl<'a> Debugger<'a> {
     /// # Arguments
     ///
     /// * `name`: the property name.
-    /// * `value`: the [Value](Value) to set.
+    /// * `value`: the [Value] to set.
     ///
     /// # Examples
     ///

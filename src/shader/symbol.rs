@@ -193,13 +193,13 @@ impl Item for Symbol {
 
 /// The required settings to create a new symbol.
 ///
-/// *This is intended to be generated with help of [Options](Options).*
+/// *This is intended to be generated with help of [Options].*
 #[derive(Clone)]
 pub struct Settings {
     /// The name of the symbol.
     pub name: String,
 
-    /// The extended data [Value](Value) of the symbol.
+    /// The extended data [Value] of the symbol.
     pub extended_data: Value,
 
     /// The symbol type.
@@ -212,7 +212,7 @@ pub struct Settings {
     pub register: u8,
 }
 
-/// Utility to simplify generation of [Settings](Settings) required when creating a new BPXS.
+/// Utility to simplify generation of [Settings] required when creating a new BPXS.
 pub struct Options {
     sym: Settings,
 }
@@ -243,12 +243,11 @@ impl Options {
 
     /// Defines the extended data for this symbol.
     ///
-    /// *This function automatically adds the
-    /// [FLAG_EXTENDED_DATA](FLAG_EXTENDED_DATA) flag.*
+    /// *This function automatically adds the [FLAG_EXTENDED_DATA] flag.*
     ///
     /// # Arguments
     ///
-    /// * `val`: A [Value](Value) to store as extended data.
+    /// * `val`: A [Value] to store as extended data.
     pub fn extended_data(&mut self, val: Value) -> &mut Self {
         self.sym.extended_data = val;
         self.sym.flags |= FLAG_EXTENDED_DATA;
@@ -257,8 +256,7 @@ impl Options {
 
     /// Defines the register number of this symbol.
     ///
-    /// *This function automatically adds the [FLAG_REGISTER](FLAG_REGISTER)
-    /// flag.*
+    /// *This function automatically adds the [FLAG_REGISTER] flag.*
     ///
     /// # Arguments
     ///
@@ -271,7 +269,7 @@ impl Options {
 
     /// Marks this symbol as internal.
     ///
-    /// *Adds the [FLAG_INTERNAL](FLAG_INTERNAL).*
+    /// *Adds the [FLAG_INTERNAL].*
     pub fn internal(&mut self) -> &mut Self {
         self.sym.flags |= FLAG_INTERNAL;
         self
@@ -279,7 +277,7 @@ impl Options {
 
     /// Marks this symbol as external.
     ///
-    /// *Adds the [FLAG_EXTERNAL](FLAG_EXTERNAL).*
+    /// *Adds the [FLAG_EXTERNAL].*
     pub fn external(&mut self) -> &mut Self {
         self.sym.flags |= FLAG_EXTERNAL;
         self
@@ -287,7 +285,7 @@ impl Options {
 
     /// Marks this symbol as being part of an assembly.
     ///
-    /// *Adds the [FLAG_ASSEMBLY](FLAG_ASSEMBLY).*
+    /// *Adds the [FLAG_ASSEMBLY].*
     pub fn assembly(&mut self) -> &mut Self {
         self.sym.flags |= FLAG_ASSEMBLY;
         self

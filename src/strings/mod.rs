@@ -90,7 +90,7 @@ impl StringSection {
     ///
     /// # Errors
     ///
-    /// Returns an [Error](Error) if the string could not be read or the
+    /// Returns an [Error] if the string could not be read or the
     /// section is corrupted/truncated.
     pub fn get<T>(&self, container: &Container<T>, address: u32) -> Result<&str, Error> {
         if self.cache.get(&address).is_none() {
@@ -110,7 +110,7 @@ impl StringSection {
     ///
     /// # Errors
     ///
-    /// Returns an [Error](Error) if the string could not be written.
+    /// Returns an [Error] if the string could not be written.
     pub fn put<T>(&self, container: &Container<T>, s: &str) -> Result<u32, Error> {
         let mut section = container.sections().open(self.section)?;
         let address = low_level_write_string(s, &mut *section)?;
@@ -179,7 +179,7 @@ fn low_level_write_string(
 ///
 /// # Arguments
 ///
-/// * `path`: the rust [Path](Path).
+/// * `path`: the rust [Path].
 ///
 /// returns: Result<String, Error>
 ///
