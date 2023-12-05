@@ -94,6 +94,11 @@ impl<T, E: Error> RecoverableError<T, E> {
     pub fn into_error(self) -> E {
         self.error
     }
+
+    /// Returns the underlying value if any and drop the error.
+    pub fn into_value(self) -> Option<T> {
+        self.value
+    }
 }
 
 impl<T1, T, E: Error> From<RecoverableError<T, E>> for Result<T1, E> {
@@ -107,6 +112,30 @@ impl<T: Display, E: Error> Display for RecoverableError<T, E> {
         match &self.value {
             Some(v) => write!(f, "recoverable error: {} ({})", self.error, v),
             None => write!(f, "{}", self.error),
+        }
+    }
+}
+
+/// Trait to allow unwrapping an error on either value or error.
+pub trait UnwrapAny<T> {
+    /// Unwraps a [Result] with an error type similar to the value type.
+    fn unwrap_any(self) -> T;
+}
+
+impl<T> UnwrapAny<Option<T>> for Result<T, Option<T>> {
+    fn unwrap_any(self) -> Option<T> {
+        match self.map(Some) {
+            Ok(v) => v,
+            Err(v) => v
+        }
+    }
+}
+
+impl<T> UnwrapAny<T> for Result<T, T> {
+    fn unwrap_any(self) -> T {
+        match self {
+            Ok(v) => v,
+            Err(v) => v
         }
     }
 }

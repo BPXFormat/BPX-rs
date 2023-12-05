@@ -26,32 +26,9 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
-#![warn(missing_docs)]
+//! A specific implementation of [BufReader](std::io::BufReader) and [BufWriter](std::io::BufWriter)
+//! for use with BPX.
 
-//! This library is the official implementation for the [BPX](https://gitlab.com/bp3d/bpx/bpx/-/blob/rev2/BPX_Format.pdf) container format.
+mod reader;
 
-pub mod core;
-mod garraylen;
-pub mod hash;
-pub mod macros;
-pub mod traits;
-pub mod util;
-
-#[cfg(feature = "table")]
-pub mod table;
-
-#[cfg(feature = "sd")]
-pub mod sd;
-
-#[cfg(feature = "strings")]
-pub mod strings;
-
-#[cfg(feature = "package")]
-pub mod package;
-
-#[cfg(feature = "shader")]
-pub mod shader;
-
-#[cfg(feature = "buf")]
-pub mod buf;
+pub use reader::BufReader;

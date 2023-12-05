@@ -53,6 +53,8 @@ strings = ["elsa"]
 # Enable named table helpers.
 table = ["strings", "once_cell"]
 
+buf = []
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
