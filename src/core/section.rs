@@ -94,6 +94,7 @@ impl SectionEntry1 {
 }
 
 /// Information about a section.
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct SectionInfo {
     index: u32,
     header: SectionHeader
