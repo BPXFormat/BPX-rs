@@ -82,6 +82,8 @@ impl<T> BufWriter<T> {
     /// let mut buffer = package.into_inner().into_inner();
     /// // Read the byte block back.
     /// let block = buffer.into_inner();
+    /// // Of course, the last unwrap on the package will panic as the buffer wasn't let a chance
+    /// // to fill the byte block.
     /// Package::open(BufReader::new(&*block).unwrap()).unwrap();
     /// ```
     pub fn new(inner: T) -> BufWriter<T> {
