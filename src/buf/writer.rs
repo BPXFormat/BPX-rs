@@ -26,15 +26,15 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{Seek, SeekFrom, Write};
-use std::io::Result;
 use crate::core::{AutoSectionData, DEFAULT_MEMORY_THRESHOLD};
+use std::io::Result;
+use std::io::{Seek, SeekFrom, Write};
 
 /// A BufWriter which supports converting a [Write] only stream into a [Write] + [Seek] for use in a
 /// BPX [Container](crate::core::Container).
 pub struct BufWriter<T> {
     inner: T,
-    buffer: AutoSectionData
+    buffer: AutoSectionData,
 }
 
 impl<T> BufWriter<T> {
@@ -89,7 +89,7 @@ impl<T> BufWriter<T> {
     pub fn new(inner: T) -> BufWriter<T> {
         BufWriter {
             inner,
-            buffer: AutoSectionData::new(DEFAULT_MEMORY_THRESHOLD as _)
+            buffer: AutoSectionData::new(DEFAULT_MEMORY_THRESHOLD as _),
         }
     }
 

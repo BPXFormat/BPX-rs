@@ -126,7 +126,7 @@ impl<T> UnwrapAny<Option<T>> for Result<T, Option<T>> {
     fn unwrap_any(self) -> Option<T> {
         match self.map(Some) {
             Ok(v) => v,
-            Err(v) => v
+            Err(v) => v,
         }
     }
 }
@@ -135,7 +135,7 @@ impl<T> UnwrapAny<T> for Result<T, T> {
     fn unwrap_any(self) -> T {
         match self {
             Ok(v) => v,
-            Err(v) => v
+            Err(v) => v,
         }
     }
 }

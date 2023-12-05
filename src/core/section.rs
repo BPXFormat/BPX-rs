@@ -26,12 +26,12 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use std::ops::Index;
 use std::{
     cell::{Cell, RefCell, RefMut},
     collections::{btree_map::Keys, BTreeMap, Bound},
     io::{Read, Seek},
 };
-use std::ops::Index;
 
 use crate::core::{
     data::AutoSectionData,
@@ -97,7 +97,7 @@ impl SectionEntry1 {
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct SectionInfo {
     index: u32,
-    header: SectionHeader
+    header: SectionHeader,
 }
 
 impl SectionInfo {
@@ -108,10 +108,7 @@ impl SectionInfo {
     /// * `index`: section index.
     /// * `header`: section header.
     pub fn new(index: u32, header: SectionHeader) -> SectionInfo {
-        SectionInfo {
-            index,
-            header
-        }
+        SectionInfo { index, header }
     }
 
     /// Returns a reference to the section header.

@@ -26,12 +26,12 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::cmp::min;
-use std::io::{Read, Write, Result, Seek, SeekFrom, Error, ErrorKind};
-use bytesutil::ReadFill;
+use crate::core::header::{MainHeader, Struct, SIZE_MAIN_HEADER};
 use crate::core::{AutoSectionData, DEFAULT_MEMORY_THRESHOLD};
-use crate::core::header::{MainHeader, SIZE_MAIN_HEADER, Struct};
 use crate::util::UnwrapAny;
+use bytesutil::ReadFill;
+use std::cmp::min;
+use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom, Write};
 
 pub const MAX_IMMEDIATE_MEMORY_SIZE: u64 = 16384;
 
@@ -45,7 +45,7 @@ pub struct BufReader<T> {
     inner: T,
     buffer: AutoSectionData,
     maximum_size: usize,
-    cur_size: usize
+    cur_size: usize,
 }
 
 impl<T: Read> BufReader<T> {
@@ -70,7 +70,10 @@ impl<T: Read> BufReader<T> {
     /// assert!(res.is_err()); //This is expected to fail because the BPX signature s broken.
     /// ```
     pub fn new(mut read: T) -> Result<BufReader<T>> {
-        if let Some(header) = MainHeader::read(&mut read).map_err(|e| e.into_value()).unwrap_any() {
+        if let Some(header) = MainHeader::read(&mut read)
+            .map_err(|e| e.into_value())
+            .unwrap_any()
+        {
             let size = header.file_size;
             if size > 0 {
                 let mut buffer = AutoSectionData::new_with_size(size as _, MAX_MEMORY_SIZE as _)?;
@@ -92,15 +95,15 @@ impl<T: Read> BufReader<T> {
                     inner: read,
                     buffer,
                     maximum_size: size as _,
-                    cur_size
-                })
+                    cur_size,
+                });
             }
         }
         Ok(BufReader {
             inner: read,
             buffer: AutoSectionData::new(MAX_MEMORY_SIZE as _),
             maximum_size: 0,
-            cur_size: 0
+            cur_size: 0,
         })
     }
 
@@ -142,13 +145,19 @@ impl<T: Read> Seek for BufReader<T> {
             SeekFrom::Start(v) => v,
             SeekFrom::End(v) => {
                 if self.maximum_size == 0 {
-                    return Err(Error::new(ErrorKind::Unsupported, "seek from the end is unsupported on unsized streams"));
+                    return Err(Error::new(
+                        ErrorKind::Unsupported,
+                        "seek from the end is unsupported on unsized streams",
+                    ));
                 }
                 if v > 0 {
-                    return Err(Error::new(ErrorKind::Unsupported, "seek past the end of the BPX is unsupported"));
+                    return Err(Error::new(
+                        ErrorKind::Unsupported,
+                        "seek past the end of the BPX is unsupported",
+                    ));
                 }
                 self.maximum_size as u64 - ((-v) as u64)
-            }
+            },
             SeekFrom::Current(v) => {
                 let cur = self.buffer.stream_position()?;
                 if v > 0 {
@@ -156,10 +165,13 @@ impl<T: Read> Seek for BufReader<T> {
                 } else {
                     cur - ((-v) as u64)
                 }
-            }
+            },
         };
         if self.maximum_size != 0 && pos1 > self.maximum_size as _ {
-            return Err(Error::new(ErrorKind::Unsupported, "seek past the end of the BPX is unsupported"));
+            return Err(Error::new(
+                ErrorKind::Unsupported,
+                "seek past the end of the BPX is unsupported",
+            ));
         }
         while self.cur_size < pos1 as _ {
             let len = min(BUF_SIZE, pos1 as usize - self.cur_size);
@@ -182,16 +194,25 @@ mod tests {
     #[test]
     fn basic() {
         let mut package = Package::create(new_byte_buf(1024)).unwrap();
-        package.objects_mut().unwrap().create("TestObject", b"This is a test".as_ref()).unwrap();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("TestObject", b"This is a test".as_ref())
+            .unwrap();
         package.save().unwrap();
         let buffer = package.into_inner().into_inner().into_inner();
         let reader = BufReader::new(&*buffer).unwrap();
         let package = Package::open(reader).unwrap();
         let objects = package.objects().unwrap();
         assert_eq!(objects.len(), 1);
-        assert_eq!(objects.load_name(objects.iter().next().unwrap()).unwrap(), "TestObject");
+        assert_eq!(
+            objects.load_name(objects.iter().next().unwrap()).unwrap(),
+            "TestObject"
+        );
         let mut vec = Vec::new();
-        let size = objects.load(objects.iter().next().unwrap(), &mut vec).unwrap();
+        let size = objects
+            .load(objects.iter().next().unwrap(), &mut vec)
+            .unwrap();
         assert_eq!(&vec[..size as _], b"This is a test");
     }
 }
