@@ -121,7 +121,6 @@ pub trait Struct<const S: usize> {
     fn write<TWriter: io::Write>(&self, writer: &mut TWriter) -> io::Result<()> {
         let buf = self.to_bytes();
         writer.write_all(&buf)?;
-        writer.flush()?;
         Ok(())
     }
 }
