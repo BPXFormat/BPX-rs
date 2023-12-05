@@ -27,6 +27,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use std::io::{Read, Seek, SeekFrom, Write};
+use std::ops::Index;
 
 use elsa::FrozenMap;
 
@@ -190,6 +191,14 @@ impl<'a> IntoIterator for &'a SymbolTable {
     }
 }
 
+impl Index<usize> for SymbolTable {
+    type Output = Symbol;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.table[index]
+    }
+}
+
 /// Immutable guard to the table of all symbols in a BPXS.
 pub struct SymbolTableRef<'a, T> {
     pub(crate) container: &'a Container<T>,
@@ -230,6 +239,14 @@ impl<'a, 'b, T> IntoIterator for &'a SymbolTableRef<'b, T> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
+    }
+}
+
+impl<'a, T> Index<usize> for SymbolTableRef<'a, T> {
+    type Output = Symbol;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.table[index]
     }
 }
 
