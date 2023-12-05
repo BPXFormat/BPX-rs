@@ -30,5 +30,7 @@
 //! for use with BPX.
 
 mod reader;
+mod writer;
 
 pub use reader::BufReader;
+pub use writer::BufWriter;

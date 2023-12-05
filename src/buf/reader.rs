@@ -118,6 +118,11 @@ impl<T: Read> BufReader<T> {
         self.cur_size += len;
         Ok(())
     }
+
+    /// Returns the inner [Read] backend.
+    pub fn into_inner(self) -> T {
+        self.inner
+    }
 }
 
 impl<T: Read> Read for BufReader<T> {
