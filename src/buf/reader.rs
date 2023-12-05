@@ -75,7 +75,7 @@ impl<T: Read> BufReader<T> {
             if size > 0 {
                 let mut buffer = AutoSectionData::new_with_size(size as _, MAX_MEMORY_SIZE as _)?;
                 let mut cur_size = SIZE_MAIN_HEADER;
-                buffer.write(&header.to_bytes())?;
+                buffer.write_all(&header.to_bytes())?;
                 if size <= MAX_IMMEDIATE_MEMORY_SIZE {
                     let mut buf = vec![0; size as usize - SIZE_MAIN_HEADER];
                     cur_size += size as usize - SIZE_MAIN_HEADER;
