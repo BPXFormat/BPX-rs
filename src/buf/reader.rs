@@ -61,7 +61,13 @@ impl<T: Read> BufReader<T> {
     /// # Examples
     ///
     /// ```
+    /// use bpx::buf::BufReader;
+    /// use bpx::package::Package;
     ///
+    /// let broken = [0xFF as u8; 512];
+    /// let reader = BufReader::new(&broken as &[u8] /* type inference in Rust is half broken */).unwrap();
+    /// let res = Package::open(reader);
+    /// assert!(res.is_err()); //This is expected to fail because the BPX signature s broken.
     /// ```
     pub fn new(mut read: T) -> Result<BufReader<T>> {
         if let Some(header) = MainHeader::read(&mut read).map_err(|e| e.into_value()).unwrap_any() {
