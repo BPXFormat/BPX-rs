@@ -18,9 +18,9 @@ dependencies = [
 
 [[package]]
 name = "bytesutil"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f028603bc6194fbcb01bbf64dfaf4dbaff564a3b6b102e43707227da6e266839"
+checksum = "f429aa77b4a63b3ef6e9c9ac028adabcc7d428e9567d2fea683b9931b1269dbb"
 
 [[package]]
 name = "cc"
