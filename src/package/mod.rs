@@ -36,7 +36,7 @@ mod decoder;
 mod encoder;
 mod options;
 mod table;
-pub mod utils;
+pub mod util;
 
 /// Result type for all Package operations.
 pub type Result<T> = std::result::Result<T, error::Error>;
