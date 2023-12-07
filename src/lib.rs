@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -26,14 +26,17 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![warn(missing_docs)]
 
 //! This library is the official implementation for the [BPX](https://gitlab.com/bp3d/bpx/bpx/-/blob/rev2/BPX_Format.pdf) container format.
 
 pub mod core;
 mod garraylen;
+pub mod hash;
 pub mod macros;
-pub mod utils;
+pub mod traits;
+pub mod util;
 
 #[cfg(feature = "table")]
 pub mod table;
@@ -50,30 +53,5 @@ pub mod package;
 #[cfg(feature = "shader")]
 pub mod shader;
 
-/// Represents a pointer to a section.
-///
-/// *Allows indirect access to a given section instead of sharing mutable references in user code.*
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Handle(u32);
-
-impl Handle {
-    /// Constructs a Handle from a raw u32.
-    ///
-    /// # Arguments
-    ///
-    /// * `raw`: the raw key.
-    ///
-    /// returns: Handle
-    ///
-    /// # Safety
-    ///
-    /// You must ensure the raw key is a valid key. Failure to do so could panic bpx::core::Container.
-    pub unsafe fn from_raw(raw: u32) -> Self {
-        Self(raw)
-    }
-
-    /// Extracts the raw key from this Handle.
-    pub fn into_raw(self) -> u32 {
-        self.0
-    }
-}
+#[cfg(feature = "buf")]
+pub mod buf;

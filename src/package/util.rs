@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -34,10 +34,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::package::object::ObjectHeader;
+use crate::package::ObjectTableRef;
 use crate::{
+    core::error::OpenError,
     package::{
-        error::{EosContext, ReadError, WriteError},
-        Package,
+        error::{EosContext, Error},
+        Package, Result,
     },
     strings::{get_name_from_dir_entry, get_name_from_path},
 };
@@ -50,30 +53,33 @@ use crate::{
 ///
 /// # Arguments
 ///
-/// * `package`: the [Package](crate::package::Package) to use.
+/// * `package`: the [Package] to use.
 /// * `vname`: the virtual name for the root source path.
-/// * `source`: the source [Path](std::path::Path) to pack.
+/// * `source`: the source [Path] to pack.
 ///
 /// returns: Result<(), Error>
 ///
 /// # Errors
 ///
-/// A [WriteError](crate::package::error::WriteError) is returned if some objects could not be packed.
+/// An [Error] is returned if some objects could not be packed.
 pub fn pack_file_vname<T: Write + Seek>(
     package: &mut Package<T>,
     vname: &str,
     source: &Path,
-) -> Result<(), WriteError> {
+) -> Result<()> {
     let md = metadata(source)?;
     if md.is_file() {
         #[cfg(feature = "debug-log")]
         println!("Writing file {} with {} byte(s)", vname, md.len());
         let mut fle = File::open(source)?;
-        package.pack(vname, &mut fle)?;
+        let mut objects = package
+            .objects_mut()
+            .ok_or(Error::Open(OpenError::SectionNotLoaded))?;
+        objects.create(vname, &mut fle)?;
     } else {
         let entries = read_dir(source)?;
-        for rentry in entries {
-            let entry = rentry?;
+        for entry in entries {
+            let entry = entry?;
             let mut s = String::from(vname);
             s.push('/');
             s.push_str(&get_name_from_dir_entry(&entry)?);
@@ -92,18 +98,15 @@ pub fn pack_file_vname<T: Write + Seek>(
 ///
 /// # Arguments
 ///
-/// * `package`: the [Package](crate::package::Package) to use.
-/// * `source`: the source [Path](std::path::Path) to pack.
+/// * `package`: the [Package] to use.
+/// * `source`: the source [Path] to pack.
 ///
-/// returns: Result<(), Error>
+/// returns: Result<()>
 ///
 /// # Errors
 ///
-/// A [WriteError](crate::package::error::WriteError) is returned if some objects could not be packed.
-pub fn pack_file<T: Write + Seek>(
-    package: &mut Package<T>,
-    source: &Path,
-) -> Result<(), WriteError> {
+/// An [Error] is returned if some objects could not be packed.
+pub fn pack_file<T: Write + Seek>(package: &mut Package<T>, source: &Path) -> Result<()> {
     let str = get_name_from_path(source)?;
     pack_file_vname(package, str, source)
 }
@@ -116,20 +119,21 @@ pub fn pack_file<T: Write + Seek>(
 ///
 /// # Arguments
 ///
-/// * `package`: the [Package](crate::package::Package) to use.
-/// * `target`: the target [Path](std::path::Path) to extract the content to.
+/// * `package`: the [Package] to use.
+/// * `target`: the target [Path] to extract the content to.
 ///
-/// returns: Result<(), Error>
+/// returns: Result<()>
 ///
 /// # Errors
 ///
-/// An [ReadError](crate::package::error::ReadError) is returned if some objects could not be unpacked.
-pub fn unpack<T: Read + Seek>(package: &mut Package<T>, target: &Path) -> Result<(), ReadError> {
-    for mut v in package.objects()? {
-        let size = v.size();
-        let path = v.load_name()?;
+/// An [Error] is returned if some objects could not be unpacked.
+pub fn unpack<T: Read + Seek>(package: &Package<T>, target: &Path) -> Result<()> {
+    let objects = package.objects()?;
+    for v in &objects {
+        let size = v.size;
+        let path = objects.load_name(v)?;
         if path.is_empty() {
-            return Err(ReadError::BlankString);
+            return Err(Error::BlankString);
         }
         #[cfg(feature = "debug-log")]
         println!("Reading {} with {} byte(s)...", path, size);
@@ -140,10 +144,49 @@ pub fn unpack<T: Read + Seek>(package: &mut Package<T>, target: &Path) -> Result
             std::fs::create_dir_all(v)?;
         }
         let f = File::create(dest)?;
-        let s = v.unpack(f)?;
+        let s = objects.load(v, f)?;
         if size != s {
-            return Err(ReadError::Eos(EosContext::Object));
+            return Err(Error::Eos(EosContext::Object));
         }
     }
     Ok(())
+}
+
+/// Unpacks the given object as a u8 Vec and return the newly allocated vec.
+///
+/// # Arguments
+///
+/// * `objects`: a reference to the object table.
+/// * `object`: the object to unpack.
+///
+/// # Errors
+///
+/// This function may return an [Error] if the object failed to load.
+pub fn unpack_vec<T: Read + Seek>(
+    objects: &ObjectTableRef<T>,
+    object: &ObjectHeader,
+) -> Result<Vec<u8>> {
+    let mut data = Vec::new();
+    objects.load(object, &mut data)?;
+    Ok(data)
+}
+
+/// Unpacks the given object as a string and return a string.
+///
+/// # Arguments
+///
+/// * `objects`: a reference to the object table.
+/// * `object`: the object to unpack.
+///
+/// # Errors
+///
+/// This function may return an [Error] if the object failed to load or a string
+/// [Error](crate::strings::Error) if the object content is not valid UTF-8.
+pub fn unpack_string<T: Read + Seek>(
+    objects: &ObjectTableRef<T>,
+    object: &ObjectHeader,
+) -> Result<String> {
+    let vec = unpack_vec(objects, object)?;
+    let s = std::str::from_utf8(&vec).map_err(|_| Error::Strings(crate::strings::Error::Utf8))?;
+    Ok(s.into())
 }

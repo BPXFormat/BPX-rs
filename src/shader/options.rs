@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -26,11 +26,16 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use crate::shader::{Target, Type};
+use crate::{
+    macros::{create_options, open_options},
+    shader::{Target, Type},
+};
+
+use super::DEFAULT_MAX_DEPTH;
 
 /// The required settings to create a new BPXS.
 ///
-/// *This is intended to be generated with help of [Builder](crate::shader::Builder).*
+/// *This is intended to be generated with help of [CreateOptions](CreateOptions).*
 #[derive(Clone)]
 pub struct Settings {
     /// The assembly hash of the shader package.
@@ -43,29 +48,25 @@ pub struct Settings {
     pub ty: Type,
 }
 
-/// Utility to simplify generation of [Settings](crate::shader::Settings) required when creating a new BPXS.
-pub struct Builder {
-    settings: Settings,
+/// Specific cofniguration options for BPXS.
+pub struct Options {
+    /// Defines the maximum depth of an extended data BPXSD object.
+    pub max_depth: usize,
 }
 
-impl Default for Builder {
-    fn default() -> Self {
-        Self::new()
+create_options! {
+    /// Utility to simplify generation of [Settings](Settings) required when creating a new BPXS.
+    CreateOptions {
+        settings: Settings = Settings {
+            assembly_hash: 0,
+            target: Target::Any,
+            ty: Type::Pipeline,
+        },
+        max_depth: usize = DEFAULT_MAX_DEPTH
     }
 }
 
-impl Builder {
-    /// Creates a new BPX Shader Package builder.
-    pub fn new() -> Builder {
-        Builder {
-            settings: Settings {
-                assembly_hash: 0,
-                target: Target::Any,
-                ty: Type::Pipeline,
-            },
-        }
-    }
-
+impl<T> CreateOptions<T> {
     /// Defines the shader assembly this package is linked against.
     ///
     /// *By default, no shader assembly is linked and the hash is 0.*
@@ -73,8 +74,6 @@ impl Builder {
     /// # Arguments
     ///
     /// * `hash`: the shader assembly hash.
-    ///
-    /// returns: ShaderPackBuilder
     pub fn assembly(mut self, hash: u64) -> Self {
         self.settings.assembly_hash = hash;
         self
@@ -87,8 +86,6 @@ impl Builder {
     /// # Arguments
     ///
     /// * `target`: the shader target.
-    ///
-    /// returns: ShaderPackBuilder
     pub fn target(mut self, target: Target) -> Self {
         self.settings.target = target;
         self
@@ -101,27 +98,51 @@ impl Builder {
     /// # Arguments
     ///
     /// * `ty`: the shader package type (pipeline/program or assembly).
-    ///
-    /// returns: ShaderPackBuilder
     pub fn ty(mut self, ty: Type) -> Self {
         self.settings.ty = ty;
         self
     }
 
-    /// Returns the built settings.
-    pub fn build(&self) -> Settings {
-        self.settings.clone()
+    /// Defines the maximum depth of an extended data BPXSD object.
+    ///
+    /// *By default, the maximum depth is set to [DEFAULT_MAX_DEPTH](DEFAULT_MAX_DEPTH).*
+    ///
+    /// # Arguments
+    ///
+    /// * `max_depth`: the maximum depth of an extended data BPXSD object.
+    pub fn max_depth(mut self, max_depth: usize) -> Self {
+        self.max_depth = max_depth;
+        self
     }
 }
 
-impl From<&mut Builder> for Settings {
-    fn from(builder: &mut Builder) -> Self {
-        builder.build()
+impl<T: std::io::Seek> From<(T, Settings)> for CreateOptions<T> {
+    fn from((backend, settings): (T, Settings)) -> Self {
+        Self {
+            options: crate::core::options::CreateOptions::new(backend),
+            settings,
+            max_depth: DEFAULT_MAX_DEPTH,
+        }
     }
 }
 
-impl From<Builder> for Settings {
-    fn from(builder: Builder) -> Self {
-        builder.build()
+open_options! {
+    /// Utility to allow configuring the underlying BPX container when opening a BPXS.
+    OpenOptions {
+        max_depth: usize = DEFAULT_MAX_DEPTH
+    }
+}
+
+impl<T> OpenOptions<T> {
+    /// Defines the maximum depth of an extended data BPXSD object.
+    ///
+    /// *By default, the maximum depth is set to [DEFAULT_MAX_DEPTH](DEFAULT_MAX_DEPTH).*
+    ///
+    /// # Arguments
+    ///
+    /// * `max_depth`: the maximum depth of an extended data BPXSD object.
+    pub fn max_depth(mut self, max_depth: usize) -> Self {
+        self.max_depth = max_depth;
+        self
     }
 }

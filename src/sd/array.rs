@@ -26,8 +26,10 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use std::vec::IntoIter;
 use std::{
-    ops::{Index, IndexMut},
+    borrow::{Borrow, BorrowMut},
+    ops::{Deref, DerefMut, Index, IndexMut},
     slice::Iter,
     vec::Vec,
 };
@@ -36,9 +38,7 @@ use crate::sd::Value;
 
 /// Represents a BPX Structured Data Array.
 #[derive(PartialEq, Clone)]
-pub struct Array {
-    data: Vec<Value>,
-}
+pub struct Array(Vec<Value>);
 
 impl Default for Array {
     fn default() -> Self {
@@ -46,132 +46,95 @@ impl Default for Array {
     }
 }
 
+impl Deref for Array {
+    type Target = [Value];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Array {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Borrow<Vec<Value>> for Array {
+    fn borrow(&self) -> &Vec<Value> {
+        &self.0
+    }
+}
+
+impl BorrowMut<Vec<Value>> for Array {
+    fn borrow_mut(&mut self) -> &mut Vec<Value> {
+        &mut self.0
+    }
+}
+
+impl AsRef<Vec<Value>> for Array {
+    fn as_ref(&self) -> &Vec<Value> {
+        &self.0
+    }
+}
+
+impl AsMut<Vec<Value>> for Array {
+    fn as_mut(&mut self) -> &mut Vec<Value> {
+        &mut self.0
+    }
+}
+
 impl Array {
     /// Creates a new array.
     pub fn new() -> Array {
-        Array { data: Vec::new() }
+        Array(Vec::new())
     }
 
     /// Allocates a new array with a specified initial capacity
-    pub fn with_capacity(capacity: usize) -> Array {
-        Array {
-            data: Vec::with_capacity(capacity),
-        }
-    }
-
-    /// Adds a value at the end of the array.
-    ///
-    /// # Arguments
-    ///
-    /// * `v`: the [Value](crate::sd::Value) to add.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::sd::Array;
-    ///
-    /// let mut arr = Array::new();
-    /// assert_eq!(arr.len(), 0);
-    /// arr.add("Test".into());
-    /// assert_eq!(arr.len(), 1);
-    /// ```
-    pub fn add(&mut self, v: Value) {
-        self.data.push(v);
+    pub fn with_capacity(capacity: u8) -> Array {
+        Array(Vec::with_capacity(capacity as _))
     }
 
     /// Removes a value from the array.
+    ///
+    /// Returns None if the position is out of bounds.
     ///
     /// # Arguments
     ///
     /// * `pos`: the position of the item in the array to remove.
     ///
-    /// # Panics
-    ///
-    /// Panics if pos is out of bounds.
-    ///
     /// # Examples
     ///
     /// ```
     /// use bpx::sd::Array;
     ///
     /// let mut arr = Array::new();
-    /// arr.add("Test".into());
+    /// arr.as_mut().push("Test".into());
     /// assert_eq!(arr.len(), 1);
-    /// arr.remove_at(0);
+    /// arr.remove(0);
     /// assert_eq!(arr.len(), 0);
     /// ```
-    pub fn remove_at(&mut self, pos: usize) -> Option<Value> {
-        if pos > self.data.len() {
+    pub fn remove(&mut self, pos: usize) -> Option<Value> {
+        if pos > self.0.len() {
             None
         } else {
-            Some(self.data.remove(pos))
+            Some(self.0.remove(pos))
         }
     }
 
-    /// Removes a range of values from the array.
-    ///
-    /// # Arguments
-    ///
-    /// * `item`: the [Value](crate::sd::Value) to remove.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::sd::Array;
-    ///
-    /// let mut arr = Array::new();
-    /// arr.add("Test".into());
-    /// assert_eq!(arr.len(), 1);
-    /// arr.remove("Test".into());
-    /// assert_eq!(arr.len(), 0);
-    /// ```
-    pub fn remove(&mut self, item: Value) {
-        for i in 0..self.data.len() {
-            if self.data[i] == item {
-                self.data.remove(i);
-            }
-        }
-    }
-
-    /// Attempts to get an item at a given position.
-    /// Returns None if no value could be found at the given position.
-    ///
-    /// # Arguments
-    ///
-    /// * `pos`: the position of the item.
-    ///
-    /// returns: Option<&Value>
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::convert::TryInto;
-    /// use bpx::sd::Array;
-    /// use bpx::sd::Value;
-    ///
-    /// let mut arr = Array::new();
-    /// arr.add("Test".into());
-    /// assert_eq!(arr.len(), 1);
-    /// assert!(arr.get(0).is_some());
-    /// assert!(arr.get(0).unwrap() == &Value::from("Test"));
-    /// ```
-    pub fn get(&self, pos: usize) -> Option<&Value> {
-        self.data.get(pos)
-    }
-
-    /// Returns the length of the array.
+    /// Returns the number of properties in the object.
     pub fn len(&self) -> usize {
-        self.data.len()
+        self.0.len()
     }
 
-    /// Returns true if this array is empty.
+    /// Returns whether this object is empty
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.0.is_empty()
     }
 
-    /// Returns an iterator to this array.
+    /// Iterate through the object keys, values and names.
     pub fn iter(&self) -> Iter<Value> {
-        self.data.iter()
+        self.0.iter()
     }
 }
 
@@ -184,16 +147,25 @@ impl<'a> IntoIterator for &'a Array {
     }
 }
 
+impl IntoIterator for Array {
+    type Item = Value;
+    type IntoIter = IntoIter<Value>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 impl Index<usize> for Array {
     type Output = Value;
 
     fn index(&self, i: usize) -> &Value {
-        &self.data[i]
+        &self.0[i]
     }
 }
 
 impl IndexMut<usize> for Array {
     fn index_mut(&mut self, i: usize) -> &mut Value {
-        &mut self.data[i]
+        &mut self.0[i]
     }
 }

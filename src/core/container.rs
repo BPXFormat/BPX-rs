@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -26,147 +26,55 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::{
-    collections::{BTreeMap, Bound},
-    io,
+use std::{cell::RefCell, collections::BTreeMap, io};
+
+use crate::core::encoder::{Encoder, SaveMode};
+use crate::core::{
+    decoder::read_section_header_table,
+    header::{MainHeader, Struct},
+    section::SectionTable,
+    AutoSectionData, Result, SectionData,
 };
 
-use crate::{
-    core::{
-        data::AutoSectionData,
-        decoder::read_section_header_table,
-        encoder::{internal_save, internal_save_last},
-        error::{ReadError, WriteError},
-        header::{MainHeader, SectionHeader, Struct},
-        section::{new_section, new_section_mut, SectionEntry, SectionEntry1},
-        Section, SectionMut,
-    },
-    Handle,
-};
+use super::compression::{Checksum, WeakChecksum};
+use super::error::Error;
+use super::header::GetChecksum;
+use super::options::{CreateOptions, OpenOptions};
 
 /// The default maximum size of uncompressed sections.
 ///
 /// *Used as default compression threshold when a section is marked as compressible.*
 pub const DEFAULT_COMPRESSION_THRESHOLD: u32 = 65536;
 
-/// Mutable iterator over [SectionMut](crate::core::SectionMut) for a [Container](crate::core::Container).
-pub struct IterMut<'a, T> {
-    backend: &'a mut T,
-    sections: std::collections::btree_map::IterMut<'a, u32, SectionEntry>,
-}
-
-impl<'a, T> Iterator for IterMut<'a, T> {
-    type Item = SectionMut<'a, T>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let (h, v) = self.sections.next()?;
-        unsafe {
-            let ptr = self.backend as *mut T;
-            Some(new_section_mut(&mut *ptr, v, Handle(*h)))
-        }
-    }
-}
-
-/// Iterator over [Section](crate::core::Section) for a [Container](crate::core::Container).
-pub struct Iter<'a> {
-    sections: std::collections::btree_map::Iter<'a, u32, SectionEntry>,
-}
-
-impl<'a> Iterator for Iter<'a> {
-    type Item = Section<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let (h, v) = self.sections.next()?;
-        Some(new_section(v, Handle(*h)))
-    }
-}
+/// The default maximum size of a section stored in memory (RAM) in bytes.
+pub const DEFAULT_MEMORY_THRESHOLD: u32 = 100000000;
 
 /// The main BPX container implementation.
 pub struct Container<T> {
-    backend: T,
+    table: SectionTable<T>,
     main_header: MainHeader,
-    sections: BTreeMap<u32, SectionEntry>,
-    next_handle: u32,
-    modified: bool,
+    main_header_modified: bool,
+    revert_on_save_failure: bool,
 }
 
 impl<T> Container<T> {
-    /// Searches for the first section of a given type.
-    /// Returns None if no section could be found.
+    /// Returns a mutable reference to the main header.
     ///
-    /// # Arguments
-    ///
-    /// * `btype`: section type byte.
-    ///
-    /// returns: Option<Handle>
+    /// **NOTE: This function marks the BPX Main Header as changed.**
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
-    /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// assert!(file.find_section_by_type(0).is_none());
+    /// let mut file = Container::create(new_byte_buf(0));
+    /// file.main_header_mut().ty = 1;
+    /// assert_eq!(file.main_header().ty, 1);
     /// ```
-    pub fn find_section_by_type(&self, ty: u8) -> Option<Handle> {
-        for (handle, entry) in &self.sections {
-            if entry.header.ty == ty {
-                return Some(Handle(*handle));
-            }
-        }
-        None
-    }
-
-    /// Locates a section by its index in the file.
-    /// Returns None if the section does not exist.
-    ///
-    /// # Arguments
-    ///
-    /// * `index`: the section index to search for.
-    ///
-    /// returns: Option<Handle>
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
-    /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
-    ///
-    /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// assert!(file.find_section_by_index(0).is_none());
-    /// ```
-    pub fn find_section_by_index(&self, index: u32) -> Option<Handle> {
-        for (idx, handle) in self.sections.keys().enumerate() {
-            if idx as u32 == index {
-                return Some(Handle(*handle));
-            }
-        }
-        None
-    }
-
-    /// Sets the BPX Main Header.
-    ///
-    /// # Arguments
-    ///
-    /// * `main_header`: the new [MainHeader](crate::core::header::MainHeader).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
-    /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
-    ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// file.set_main_header(MainHeaderBuilder::new().ty(1));
-    /// assert_eq!(file.get_main_header().ty, 1);
-    /// ```
-    pub fn set_main_header<H: Into<MainHeader>>(&mut self, main_header: H) {
-        self.main_header = main_header.into();
-        self.modified = true;
+    pub fn main_header_mut(&mut self) -> &mut MainHeader {
+        self.main_header_modified = true;
+        &mut self.main_header
     }
 
     /// Returns a read-only reference to the BPX main header.
@@ -174,196 +82,37 @@ impl<T> Container<T> {
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
-    /// let file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// let header = file.get_main_header();
-    /// //Default BPX variant/type is 'P'
-    /// assert_eq!(header.ty, 'P' as u8);
+    /// let file = Container::create(new_byte_buf(0));
+    /// let header = file.main_header();
+    /// //Default BPX variant/type is 0.
+    /// assert_eq!(header.ty, 0);
     /// ```
+    pub fn main_header(&self) -> &MainHeader {
+        &self.main_header
+    }
+
+    /// Returns a read-only reference to the BPX main header.
+    #[deprecated(note = "use `main_header`")]
     pub fn get_main_header(&self) -> &MainHeader {
         &self.main_header
     }
 
-    /// Obtains read-only access to a given section.
-    ///
-    /// # Arguments
-    ///
-    /// * `handle`: a handle to the wanted section.
-    ///
-    /// returns: Section
-    ///
-    /// # Panics
-    ///
-    /// Panics if the given section handle is invalid.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::core::builder::{MainHeaderBuilder, SectionHeaderBuilder};
-    /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
-    ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// let section = file.create_section(SectionHeaderBuilder::new());
-    /// let section = file.get(section);
-    /// // Default section type is 0x0.
-    /// assert_eq!(section.ty, 0x0);
-    /// ```
-    pub fn get(&self, handle: Handle) -> Section {
-        self.sections
-            .get(&handle.0)
-            .map(|v| new_section(v, handle))
-            .expect("attempt to use invalid handle")
-    }
-
-    /// Obtains mutable access to a given section.
-    ///
-    /// # Arguments
-    ///
-    /// * `handle`: a handle to the wanted section.
-    ///
-    /// returns: SectionMut
-    ///
-    /// # Panics
-    ///
-    /// Panics if the given section handle is invalid.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::core::builder::{MainHeaderBuilder, SectionHeaderBuilder};
-    /// use bpx::core::{Container, SectionData};
-    /// use bpx::utils::new_byte_buf;
-    ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// let section = file.create_section(SectionHeaderBuilder::new());
-    /// let mut section = file.get_mut(section);
-    /// let buf = section.open().unwrap().load_in_memory().unwrap();
-    /// assert_eq!(buf.len(), 0);
-    /// ```
-    pub fn get_mut(&mut self, handle: Handle) -> SectionMut<T> {
-        self.sections
-            .get_mut(&handle.0)
-            .map(|v| new_section_mut(&mut self.backend, v, handle))
-            .expect("attempt to use invalid handle")
-    }
-
-    /// Creates a new section in the BPX
-    ///
-    /// # Arguments
-    ///
-    /// * `header`: the [SectionHeader](crate::core::header::SectionHeader) of the new section.
-    ///
-    /// returns: Handle
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::core::builder::{MainHeaderBuilder, SectionHeaderBuilder};
-    /// use bpx::core::{Container, SectionData};
-    /// use bpx::utils::new_byte_buf;
-    ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// assert_eq!(file.get_main_header().section_num, 0);
-    /// file.create_section(SectionHeaderBuilder::new());
-    /// assert_eq!(file.get_main_header().section_num, 1);
-    /// ```
-    pub fn create_section<H: Into<SectionHeader>>(&mut self, header: H) -> Handle {
-        self.modified = true;
-        self.main_header.section_num += 1;
-        let r = self.next_handle;
-        let section = AutoSectionData::new();
-        let h = header.into();
-        let entry = SectionEntry {
-            header: h,
-            data: Some(section),
-            modified: false,
-            index: self.main_header.section_num - 1,
-            entry1: SectionEntry1 {
-                threshold: h.csize,
-                flags: h.flags,
-            },
-        };
-        self.sections.insert(r, entry);
-        self.next_handle += 1;
-        Handle(r)
-    }
-
-    /// Removes a section from this BPX.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the given section handle is invalid.
-    ///
-    /// # Arguments
-    ///
-    /// * `handle`: a handle to the section.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bpx::core::builder::{MainHeaderBuilder, SectionHeaderBuilder};
-    /// use bpx::core::{Container, SectionData};
-    /// use bpx::utils::new_byte_buf;
-    ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// let section = file.create_section(SectionHeaderBuilder::new());
-    /// file.save();
-    /// assert_eq!(file.get_main_header().section_num, 1);
-    /// file.remove_section(section);
-    /// file.save();
-    /// assert_eq!(file.get_main_header().section_num, 0);
-    /// ```
-    pub fn remove_section(&mut self, handle: Handle) {
-        self.sections.remove(&handle.0);
-        self.main_header.section_num -= 1;
-        self.modified = true;
-        self.sections
-            .range_mut((Bound::Included(handle.0), Bound::Unbounded))
-            .for_each(|(_, v)| {
-                v.index -= 1;
-            });
-    }
-
-    /// Creates an immutable iterator over each [Section](crate::core::Section) in this container.
-    pub fn iter(&self) -> Iter {
-        Iter {
-            sections: self.sections.iter(),
-        }
-    }
-
-    /// Creates a mutable iterator over each [SectionMut](crate::core::SectionMut) in this container.
-    pub fn iter_mut(&mut self) -> IterMut<T> {
-        IterMut {
-            backend: &mut self.backend,
-            sections: self.sections.iter_mut(),
-        }
-    }
-
     /// Consumes this BPX container and returns the inner IO backend.
     pub fn into_inner(self) -> T {
-        self.backend
+        self.table.backend.into_inner()
     }
-}
 
-impl<'a, T> IntoIterator for &'a Container<T> {
-    type Item = Section<'a>;
-    type IntoIter = Iter<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
+    /// Gets immutable access to the section table.
+    pub fn sections(&self) -> &SectionTable<T> {
+        &self.table
     }
-}
 
-impl<'a, T> IntoIterator for &'a mut Container<T> {
-    type Item = SectionMut<'a, T>;
-    type IntoIter = IterMut<'a, T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter_mut()
+    /// Gets mutable access to the section table.
+    pub fn sections_mut(&mut self) -> &mut SectionTable<T> {
+        &mut self.table
     }
 }
 
@@ -372,39 +121,69 @@ impl<T: io::Read + io::Seek> Container<T> {
     ///
     /// # Arguments
     ///
-    /// * `backend`: A [Read](std::io::Read) + [Seek](std::io::Seek) backend to use for reading the BPX container.
+    /// * `backend`: A [Read](io::Read) + [Seek](io::Seek) backend to use for reading the BPX container.
     ///
-    /// returns: Result<Decoder<TBackend>, Error>
+    /// returns: `Result<Decoder<TBackend>>`
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::core::error::ReadError) is returned if some headers
+    /// An [Error](Error) is returned if some headers
     /// could not be read or if the header data is corrupted.
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let mut file = Container::create(new_byte_buf(0));
     /// file.save().unwrap();
     /// let mut buf = file.into_inner();
     /// buf.set_position(0);
     /// let file = Container::open(buf).unwrap();
-    /// //Default BPX variant/type is 'P'
-    /// assert_eq!(file.get_main_header().ty, 'P' as u8);
+    /// //Default BPX variant/type is 0.
+    /// assert_eq!(file.main_header().ty, 0);
     /// ```
-    pub fn open(mut backend: T) -> Result<Container<T>, ReadError> {
-        let (checksum, header) = MainHeader::read(&mut backend)?;
-        let (next_handle, sections) = read_section_header_table(&mut backend, &header, checksum)?;
+    pub fn open(options: impl Into<OpenOptions<T>>) -> Result<Container<T>> {
+        let mut options = options.into();
+        let mut checksum = WeakChecksum::default();
+        let header = match MainHeader::read(&mut options.backend) {
+            Ok(v) => v,
+            Err(e) => match e.error() {
+                Error::BadSignature(_) => match options.skip_signature_check {
+                    true => e.unwrap_value(),
+                    false => return e.into(),
+                },
+                Error::BadVersion(_) => match options.skip_version_check {
+                    true => e.unwrap_value(),
+                    false => return e.into(),
+                },
+                _ => return e.into(),
+            },
+        };
+        header.get_checksum(&mut checksum);
+        let (next_handle, sections) =
+            read_section_header_table(&mut options.backend, &header, &mut checksum)?;
+        let chksum = checksum.finish();
+        if !options.skip_checksum && chksum != header.chksum {
+            return Err(Error::Checksum {
+                actual: chksum,
+                expected: header.chksum,
+            });
+        }
         Ok(Container {
-            backend,
+            table: SectionTable {
+                backend: RefCell::new(options.backend),
+                next_handle,
+                modified: false,
+                sections,
+                count: header.section_num,
+                skip_checksum: options.skip_checksum,
+                memory_threshold: options.memory_threshold,
+            },
             main_header: header,
-            sections,
-            next_handle,
-            modified: false,
+            main_header_modified: false,
+            revert_on_save_failure: options.revert_on_save_fail,
         })
     }
 }
@@ -414,31 +193,138 @@ impl<T: io::Write + io::Seek> Container<T> {
     ///
     /// # Arguments
     ///
-    /// * `backend`: A [Write](std::io::Write) + [Seek](std::io::Seek) backend to use for writing the BPX container.
-    /// * `header`: The [MainHeader](crate::core::header::MainHeader) to initialize the new container.
+    /// * `backend`: A [Write](io::Write) + [Seek](io::Seek) backend to use for writing the BPX container.
+    /// * `header`: The [MainHeader](MainHeader) to initialize the new container.
     ///
-    /// returns: Container<T>
+    /// returns: `Container<T>`
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
-    /// assert_eq!(file.get_main_header().section_num, 0);
-    /// //Default BPX variant/type is 'P'
-    /// assert_eq!(file.get_main_header().ty, 'P' as u8);
+    /// let mut file = Container::create(new_byte_buf(0));
+    /// assert_eq!(file.main_header().section_num, 0);
+    /// //Default BPX variant/type is 0.
+    /// assert_eq!(file.main_header().ty, 0);
     /// ```
-    pub fn create<H: Into<MainHeader>>(backend: T, header: H) -> Container<T> {
+    pub fn create(options: impl Into<CreateOptions<T>>) -> Container<T> {
+        let options = options.into();
         Container {
-            backend,
-            modified: true,
-            main_header: header.into(),
-            next_handle: 0,
-            sections: BTreeMap::new(),
+            table: SectionTable {
+                next_handle: 0,
+                count: 0,
+                modified: true,
+                backend: RefCell::new(options.backend),
+                sections: BTreeMap::new(),
+                skip_checksum: false,
+                memory_threshold: options.memory_threshold,
+            },
+            main_header: options.header,
+            main_header_modified: true,
+            revert_on_save_failure: options.revert_on_save_fail,
         }
+    }
+
+    fn get_save_mode(&self) -> SaveMode {
+        if self.table.modified {
+            return SaveMode::Regenerate;
+        }
+        let count = self
+            .table
+            .sections
+            .values()
+            .filter(|entry| entry.modified.get())
+            .count();
+        if count == 0 {
+            // No sections have changed and the table didn't change; might have nothing to do.
+            return SaveMode::MainHeaderOnly;
+        }
+        let expanded_sections = self
+            .table
+            .sections
+            .values()
+            .filter(|entry| entry.modified.get())
+            .filter(|entry| {
+                entry.data.borrow().as_ref().unwrap().size() != entry.info.header().size as usize
+            })
+            .count();
+        if expanded_sections == 0 {
+            return if count > 1 {
+                // If n sections changed but did not expand -> only write these n sections and patch section header table.
+                SaveMode::PatchMultipleSections
+            } else {
+                // If 1 section changed but did not expand -> only write this section and patch section header table.
+                let section = self
+                    .table
+                    .sections
+                    .iter()
+                    .find(|(_, entry)| entry.modified.get())
+                    .map(|(handle, _)| *handle)
+                    .unwrap();
+
+                SaveMode::PatchSingleSection(section)
+            };
+        }
+        if expanded_sections == 1 {
+            let expanded_section = self
+                .table
+                .sections
+                .iter()
+                .filter(|(_, entry)| entry.modified.get())
+                .find(|(_, entry)| {
+                    entry.data.borrow().as_ref().unwrap().size()
+                        != entry.info.header().size as usize
+                })
+                .map(|(handle, _)| *handle)
+                .unwrap();
+            if expanded_section == self.table.next_handle - 1 {
+                return if count > 1 {
+                    // If n sections changed but did not expand and the last section has expanded
+                    // -> write only these n sections, write the last section and patch section
+                    // header table.
+                    SaveMode::PatchMultipleSections
+                } else {
+                    //If last section expanded -> only write last section and update section header table.
+                    SaveMode::PatchSingleSection(expanded_section)
+                };
+            }
+        }
+        SaveMode::Regenerate
+    }
+
+    fn save_with_mode_direct(&mut self, mode: SaveMode) -> Result<()> {
+        Encoder {
+            mode,
+            main_header: &mut self.main_header,
+            sections: &mut self.table.sections,
+            main_header_modified: &mut self.main_header_modified,
+            table_modified: &mut self.table.modified,
+            table_count: self.table.count,
+        }
+        .run(self.table.backend.get_mut())
+    }
+
+    fn save_with_mode_indirect(&mut self, mode: SaveMode) -> Result<()> {
+        use std::io::Seek;
+        let mut temp = AutoSectionData::new(self.table.memory_threshold as _);
+        let res = Encoder {
+            mode,
+            main_header: &mut self.main_header,
+            sections: &mut self.table.sections,
+            main_header_modified: &mut self.main_header_modified,
+            table_modified: &mut self.table.modified,
+            table_count: self.table.count,
+        }
+        .run(&mut temp);
+        if res.is_ok() {
+            let backend = self.table.backend.get_mut();
+            backend.seek(io::SeekFrom::Start(0))?;
+            temp.seek(io::SeekFrom::Start(0))?;
+            std::io::copy(&mut temp, backend)?;
+        }
+        res
     }
 
     /// Writes all sections to the underlying IO backend.
@@ -449,45 +335,62 @@ impl<T: io::Write + io::Seek> Container<T> {
     ///
     /// # Errors
     ///
-    /// A [WriteError](crate::core::error::WriteError) is returned if some data could
+    /// An [Error](Error) is returned if some data could
     /// not be written.
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::core::builder::MainHeaderBuilder;
     /// use bpx::core::Container;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
-    /// let mut file = Container::create(new_byte_buf(0), MainHeaderBuilder::new());
+    /// let mut file = Container::create(new_byte_buf(0));
     /// file.save().unwrap();
     /// let buf = file.into_inner();
     /// assert!(!buf.into_inner().is_empty());
     /// ```
-    pub fn save(&mut self) -> Result<(), WriteError> {
-        let mut filter = self.sections.iter().filter(|(_, entry)| entry.modified);
-        let count = filter.by_ref().count();
-        if self.modified || count > 1 {
-            self.modified = false;
-            internal_save(&mut self.backend, &mut self.sections, &mut self.main_header)
-        } else if !self.modified && count == 1 {
-            let (handle, _) = filter.last().unwrap();
-            if *handle == self.next_handle - 1 {
-                //Save only the last section (no need to re-write every other section
-                internal_save_last(
-                    &mut self.backend,
-                    &mut self.sections,
-                    &mut self.main_header,
-                    self.next_handle - 1,
-                )
-            } else {
-                //Unfortunately the modified section is not the last one so we can't safely
-                //expand/reduce the file size without corrupting other sections
-                self.modified = false;
-                internal_save(&mut self.backend, &mut self.sections, &mut self.main_header)
+    pub fn save(&mut self) -> Result<()> {
+        match self.revert_on_save_failure {
+            true => self.save_with_mode_indirect(self.get_save_mode()),
+            false => self.save_with_mode_direct(self.get_save_mode()),
+        }
+    }
+}
+
+impl<T: io::Read + io::Write + io::Seek> Container<T> {
+    /// Loads sections on demand and saves all changes to the underlying IO backend.
+    /// This allows saving a BPX container event when all sections have not already been loaded.
+    ///
+    /// **This function prints some information to standard output as a way
+    /// to debug data compression issues unless the `debug-log` feature
+    /// is disabled.**
+    ///
+    /// # Errors
+    ///
+    /// An [Error](Error) is returned if some data could
+    /// not be written.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::Container;
+    /// use bpx::util::new_byte_buf;
+    ///
+    /// let mut file = Container::create(new_byte_buf(0));
+    /// file.load_and_save().unwrap();
+    /// let buf = file.into_inner();
+    /// assert!(!buf.into_inner().is_empty());
+    /// ```
+    pub fn load_and_save(&mut self) -> Result<()> {
+        let mode = self.get_save_mode();
+        if mode == SaveMode::Regenerate {
+            for handle in self.sections() {
+                self.sections().load(handle)?;
             }
-        } else {
-            Ok(())
+        }
+        match self.revert_on_save_failure {
+            true => self.save_with_mode_indirect(mode),
+            false => self.save_with_mode_direct(mode),
         }
     }
 }

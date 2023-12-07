@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -28,7 +28,10 @@
 
 //! This module provides a lookup-table style implementation.
 
-use std::{collections::HashMap, ops::Index, slice::Iter};
+use std::collections::HashMap;
+use std::ops::Index;
+
+use once_cell::unsync::OnceCell;
 
 use crate::{core::Container, strings::StringSection};
 
@@ -38,32 +41,36 @@ pub trait Item {
     fn get_name_address(&self) -> u32;
 }
 
-/// Represents an item table with on demand lookup capability (the lookup function only works after you've built it).
-pub struct ItemTable<T: Item> {
+/// Helper class to work with named items stored as arrays in a BPX container.
+pub struct NamedItemTable<T> {
     list: Vec<T>,
-    map: Option<HashMap<String, T>>,
+    map: OnceCell<HashMap<String, usize>>,
 }
 
-impl<T: Item> ItemTable<T> {
-    /// Constructs a new ItemTable from a list of items.
+impl<T> NamedItemTable<T> {
+    /// Constructs a new NamedItemTable from a list of items.
     ///
     /// # Arguments
     ///
     /// * `list`: the list of items.
-    ///
-    /// returns: ItemTable<T>
-    pub fn new(list: Vec<T>) -> Self {
-        Self { list, map: None }
+    pub fn with_list(list: Vec<T>) -> Self {
+        Self {
+            list,
+            map: OnceCell::new(),
+        }
+    }
+
+    /// Constructs a new empty NamedItemTable.
+    pub fn empty() -> Self {
+        Self {
+            list: Vec::new(),
+            map: OnceCell::from(HashMap::new()),
+        }
     }
 
     /// Gets all items in this table.
-    pub fn iter(&self) -> Iter<T> {
+    pub fn iter(&self) -> std::slice::Iter<T> {
         self.list.iter()
-    }
-
-    /// Returns the number of items in this table.
-    pub fn len(&self) -> usize {
-        self.list.len()
     }
 
     /// Returns true if this table is empty.
@@ -71,69 +78,147 @@ impl<T: Item> ItemTable<T> {
         self.list.is_empty()
     }
 
+    /// Returns the number of items in this table.
+    pub fn len(&self) -> usize {
+        self.list.len()
+    }
+
+    /// Gets immutable access to an item by its index.
+    ///
+    /// Returns None if the index is out of bounds.
+    ///
+    /// # Arguments
+    ///
+    /// * `index`: the index to find.
+    ///
+    /// returns: Option<&T>
+    pub fn get(&self, index: usize) -> Option<&T> {
+        self.list.get(index)
+    }
+
+    /// Gets mutable access to an item by its index.
+    ///
+    /// Returns None if the index is out of bounds.
+    ///
+    /// # Arguments
+    ///
+    /// * `index`: the index to find.
+    ///
+    /// returns: Option<&mut T>
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+        self.list.get_mut(index)
+    }
+
+    /// Removes an item from this table.
+    ///
+    /// # Arguments
+    ///
+    /// * `index`: the index of the item to remove.
+    ///
+    /// returns: ()
+    pub fn remove(&mut self, index: usize) {
+        self.list.remove(index);
+        self.map = OnceCell::new();
+    }
+}
+
+impl<T: Item> NamedItemTable<T> {
+    /// Load the name of an item.
+    ///
+    /// # Arguments
+    ///
+    /// * `container`: the container to load the string from.
+    /// * `strings`: the string section to use for loading the string.
+    /// * `item`: the item to load the string of.
+    ///
+    /// returns: Result<&str, Error>
+    ///
+    /// # Errors
+    ///
+    /// An [Error](crate::strings::Error) is returned if the strings could not be loaded.
+    pub fn load_name<'a, T1>(
+        &self,
+        container: &Container<T1>,
+        strings: &'a StringSection,
+        item: &T,
+    ) -> Result<&'a str, crate::strings::Error> {
+        strings.get(container, item.get_name_address())
+    }
+
+    /// Adds a new item to this table.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: the name of the item to add.
+    /// * `item`: the item to add.
+    ///
+    /// returns: ()
+    pub fn push(&mut self, name: String, item: T) -> usize {
+        if let Some(map) = self.map.get_mut() {
+            self.list.push(item);
+            map.insert(name, self.list.len() - 1);
+        } else {
+            self.list.push(item);
+        }
+        self.len() - 1
+    }
+
+    fn build_lookup_table<T1>(
+        &self,
+        container: &Container<T1>,
+        strings: &StringSection,
+    ) -> Result<HashMap<String, usize>, crate::strings::Error> {
+        let mut map: HashMap<String, usize> = HashMap::new();
+        for (index, v) in self.list.iter().enumerate() {
+            let name = strings.get(container, v.get_name_address())?.into();
+            map.insert(name, index);
+        }
+        Ok(map)
+    }
+
     /// Lookup an item by its name.
     /// Returns None if the item does not exist.
     ///
     /// # Arguments
     ///
-    /// * `name`: the name of the item to search for.
+    /// * `container`: the container to load strings from if needed.
+    /// * `strings`: the string section to use for loading strings if needed.
+    /// * `name`: the name to search for.
     ///
-    /// returns: Option<&Self::Inner>
+    /// returns: Result<Option<&T>, Error>
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if the lookup table is not yet built.
-    pub fn lookup(&self, name: &str) -> Option<&T> {
-        if let Some(map) = &self.map {
-            map.get(name)
-        } else {
-            panic!("Lookup table has not yet been initialized, please call build_lookup_table");
-        }
+    /// A [Error](crate::strings::Error) is returned if the strings could not be loaded.
+    pub fn find_by_name<T1>(
+        &self,
+        container: &Container<T1>,
+        strings: &StringSection,
+        name: &str,
+    ) -> Result<Option<&T>, crate::strings::Error> {
+        let map = self
+            .map
+            .get_or_try_init(|| self.build_lookup_table(container, strings))?;
+        Ok(match map.get(name) {
+            Some(index) => self.list.get(*index),
+            None => None,
+        })
     }
 }
 
-impl<'a, T: Item> IntoIterator for &'a ItemTable<T> {
+impl<'a, T> IntoIterator for &'a NamedItemTable<T> {
     type Item = &'a T;
-    type IntoIter = <&'a Vec<T> as IntoIterator>::IntoIter;
+    type IntoIter = std::slice::Iter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.list.iter()
+        self.iter()
     }
 }
 
-impl<T: Item> Index<usize> for ItemTable<T> {
+impl<T> Index<usize> for NamedItemTable<T> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.list[index]
-    }
-}
-
-impl<T: Item + Clone> ItemTable<T> {
-    /// Builds the item map for easy and efficient lookup of items by name.
-    ///
-    /// **You must call this function before you can use lookup.**
-    ///
-    /// # Arguments
-    ///
-    /// * `names`: the NameTable to load the names from.
-    ///
-    /// returns: Result<(), Error>
-    ///
-    /// # Errors
-    ///
-    /// A [ReadError](crate::strings::ReadError) is returned if the strings could not be loaded.
-    pub fn build_lookup_table<T1>(
-        &mut self,
-        container: &mut Container<T1>,
-        names: &mut StringSection,
-    ) -> Result<(), crate::strings::ReadError> {
-        let mut map: HashMap<String, T> = HashMap::new();
-        for v in &self.list {
-            let name = names.get(container, v.get_name_address())?.into();
-            map.insert(name, v.clone());
-        }
-        self.map = Some(map);
-        Ok(())
     }
 }

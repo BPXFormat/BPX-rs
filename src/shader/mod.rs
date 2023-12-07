@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -28,14 +28,19 @@
 
 //! An implementation of the BPX type S (Shader) specification.
 
-mod builder;
 mod core;
 mod decoder;
 mod encoder;
 pub mod error;
+mod options;
 pub mod symbol;
+mod table;
 
-pub use builder::*;
+/// Result type for all ShaderPack operations.
+pub type Result<T> = std::result::Result<T, error::Error>;
+
+pub use options::*;
+pub use table::{ShaderTableMut, ShaderTableRef, SymbolTableMut, SymbolTableRef};
 
 pub use self::core::*;
 
@@ -50,6 +55,9 @@ pub const SECTION_TYPE_SYMBOL_TABLE: u8 = 0x2;
 
 /// The standard type for an extended data section in a BPX Shader Package (type S).
 pub const SECTION_TYPE_EXTENDED_DATA: u8 = 0x3;
+
+/// The default maximum depth of a symbol extended data BPXSD object.
+pub const DEFAULT_MAX_DEPTH: usize = 4;
 
 /// Represents a shader in a BPXS.
 #[derive(Clone, Debug)]

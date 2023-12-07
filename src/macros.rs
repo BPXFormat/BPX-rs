@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -73,89 +73,168 @@ macro_rules! named_enum {
     };
 }
 
-#[macro_export]
-/// Generates a set of error definitions for a new BPX variant/type.
-macro_rules! variant_error {
-    (
-        $(E { $($(#[$eos_outer:meta])* $eos: ident : $eos_name: expr),* })?
-        $(S { $($(#[$sec_outer:meta])* $sec: ident : $sec_name: expr),* })?
-        $(#[$router:meta])*
-        R { $($(#[$rerr_outer:meta])* $rerr: ident $(($($tr: ty),*))?),* }
-        $(#[$wouter:meta])*
-        W { $($(#[$werr_outer:meta])* $werr: ident $(($($tw: ty),*))?),* }
-    ) => {
-        $(
-            named_enum!(
-                /// Represents the context of an EOS error.
-                EosContext {
-                    $($(#[$eos_outer])* $eos : $eos_name),*
-                }
-            );
-        )?
-
-        $(
-            named_enum!(
-                /// Enumerates possible missing sections.
-                Section {
-                    $($(#[$sec_outer])* $sec : $sec_name),*
-                }
-            );
-        )?
-
-        $(#[$router])*
-        #[derive(Debug)]
-        pub enum ReadError
-        {
-            /// Low-level BPX decoder error.
-            Bpx(crate::core::error::ReadError),
-
-            /// Describes an io error.
-            Io(std::io::Error),
-
-            /// Unsupported BPX version.
-            BadVersion(u32),
-
-            /// Unsupported BPX type code.
-            BadType(u8),
-
+macro_rules! create_options {
+    ($(#[$options_outer:meta])* CreateOptions {
+        $($field_name: ident : $field_type: ty = $field_default: expr),*
+    }) => {
+        $(#[$options_outer])*
+        pub struct CreateOptions<T> {
+            pub(crate) options: crate::core::options::CreateOptions<T>,
             $(
-                $(#[$rerr_outer])*
-                $rerr $(($($tr),*))?
+                pub(crate) $field_name: $field_type
             ),*
         }
 
-        impl_err_conversion!(
-            ReadError {
-                crate::core::error::ReadError => Bpx,
-                std::io::Error => Io
+        impl<T> CreateOptions<T> {
+            /// Creates a new set of options for a BPX container.
+            ///
+            /// # Arguments
+            ///
+            /// * `backend`: the IO backend to be associated with the container.
+            pub fn new(backend: T) -> CreateOptions<T> {
+                CreateOptions {
+                    options: crate::core::options::CreateOptions::new(backend),
+                    $(
+                        $field_name: $field_default
+                    ),*
+                }
             }
-        );
 
-        $(#[$wouter])*
-        #[derive(Debug)]
-        pub enum WriteError
-        {
-            /// Low-level BPX encoder error.
-            Bpx(crate::core::error::WriteError),
+            /// Sets the maximum size of a section allowed to fit in RAM in bytes.
+            ///
+            /// The default is set to [DEFAULT_MEMORY_THRESHOLD](crate::core::DEFAULT_MEMORY_THRESHOLD) bytes.
+            ///
+            /// # Arguments
+            ///
+            /// * `size`: the maximum size of a section in RAM.
+            pub fn memory_threshold(mut self, size: u32) -> Self {
+                self.options = self.options.memory_threshold(size);
+                self
+            }
 
-            /// Describes an io error.
-            Io(std::io::Error),
-
-            $(
-                $(#[$werr_outer])*
-                $werr $(($($tw),*))?
-            ),*
+            /// Reverts the file when a save operation fails to keep the BPX unchanged/unmodified after
+            /// a save failure.
+            ///
+            /// This works by saving the container to a temporary storage before overwriting the original
+            /// IO backend. The default for this option is set to false.
+            ///
+            /// # Arguments
+            ///
+            /// * `flag`: true to revert the file on save failure, false otherwise.
+            pub fn revert_on_save_failure(mut self, flag: bool) -> Self {
+                self.options = self.options.revert_on_save_failure(flag);
+                self
+            }
         }
 
-        impl_err_conversion!(
-            WriteError {
-                crate::core::error::WriteError => Bpx,
-                std::io::Error => Io
+        impl<T: std::io::Seek> From<T> for CreateOptions<T> {
+            fn from(value: T) -> Self {
+                Self::new(value)
             }
-        );
+        }
     };
 }
 
+macro_rules! open_options {
+    ($(#[$options_outer:meta])* OpenOptions {
+        $($field_name: ident : $field_type: ty = $field_default: expr),*
+    }) => {
+        $(#[$options_outer])*
+        pub struct OpenOptions<T> {
+            pub(crate) options: crate::core::options::OpenOptions<T>,
+            $(
+                pub(crate) $field_name: $field_type
+            ),*
+        }
+
+        impl<T> OpenOptions<T> {
+            /// Creates a new set of options for a BPX container.
+            ///
+            /// # Arguments
+            ///
+            /// * `backend`: the IO backend to be associated with the container.
+            pub fn new(backend: T) -> OpenOptions<T> {
+                OpenOptions {
+                    options: crate::core::options::OpenOptions::new(backend),
+                    $(
+                        $field_name: $field_default
+                    ),*
+                }
+            }
+
+            /// Disable signature checks when loading the container.
+            ///
+            /// The default is set to false.
+            ///
+            /// # Arguments
+            ///
+            /// * `flag`: true to skip signature checks, false otherwise.
+            pub fn skip_signature(mut self, flag: bool) -> Self {
+                self.options = self.options.skip_signature(flag);
+                self
+            }
+
+            /// Skip BPX version checks.
+            ///
+            /// The default is set to false.
+            ///
+            /// # Arguments
+            ///
+            /// * `flag`: true to skip version checks, false otherwise.
+            pub fn skip_versions(mut self, flag: bool) -> Self {
+                self.options = self.options.skip_versions(flag);
+                self
+            }
+
+            /// Disable checksum checks when loading the section header/table or a section.
+            ///
+            /// The default is set to false.
+            ///
+            /// # Arguments
+            ///
+            /// * `flag`: true to skip checksum checks on load, false otherwise.
+            pub fn skip_checksum(mut self, flag: bool) -> Self {
+                self.options = self.options.skip_checksum(flag);
+                self
+            }
+
+            /// Sets the maximum size of a section allowed to fit in RAM in bytes.
+            ///
+            /// The default is set to [DEFAULT_MEMORY_THRESHOLD](crate::core::DEFAULT_MEMORY_THRESHOLD) bytes.
+            ///
+            /// # Arguments
+            ///
+            /// * `size`: the maximum size of a section in RAM.
+            pub fn memory_threshold(mut self, size: u32) -> Self {
+                self.options = self.options.memory_threshold(size);
+                self
+            }
+
+            /// Reverts the file when a save operation fails to keep the BPX unchanged/unmodified after
+            /// a save failure.
+            ///
+            /// This works by saving the container to a temporary storage before overwriting the original
+            /// IO backend. The default for this option is set to false.
+            ///
+            /// # Arguments
+            ///
+            /// * `flag`: true to revert the file on save failure, false otherwise.
+            pub fn revert_on_save_failure(mut self, flag: bool) -> Self {
+                self.options = self.options.revert_on_save_failure(flag);
+                self
+            }
+        }
+
+        impl<T: std::io::Seek> From<T> for OpenOptions<T> {
+            fn from(value: T) -> Self {
+                Self::new(value)
+            }
+        }
+    };
+}
+
+pub(crate) use create_options;
+pub(crate) use open_options;
+
 pub use impl_err_conversion;
 pub use named_enum;
-pub use variant_error;

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -30,15 +30,16 @@
 
 use std::io;
 
-use byteorder::{ByteOrder, LittleEndian};
+use bytesutil::{ByteBuf, ReadBytes, StaticByteBuf, WriteBytes};
 
 use crate::{
     core::{
-        builder::{Checksum, CompressionMethod},
-        error::ReadError,
+        error::Error,
+        options::{Checksum, CompressionMethod},
     },
     garraylen::*,
-    utils::ReadFill,
+    traits::ReadFill,
+    util::RecoverableError,
 };
 
 /// Represents a serializable and deserializable byte structure in a BPX.
@@ -51,7 +52,7 @@ pub trait Struct<const S: usize> {
     /// The type of error to return if this structure failed to read.
     ///
     /// *Must be constructable from io::Error to satisfy the Read function*
-    type Error: From<std::io::Error>;
+    type Error: From<io::Error>;
 
     /// Creates a new empty structure.
     fn new() -> Self;
@@ -115,12 +116,11 @@ pub trait Struct<const S: usize> {
     ///
     /// # Errors
     ///
-    /// Returns an [Error](std::io::Error) if the data could not be
+    /// Returns an [Error](io::Error) if the data could not be
     /// written to the IO backend.
     fn write<TWriter: io::Write>(&self, writer: &mut TWriter) -> io::Result<()> {
         let buf = self.to_bytes();
         writer.write_all(&buf)?;
-        writer.flush()?;
         Ok(())
     }
 }
@@ -131,13 +131,9 @@ where
     Self: Struct<D>,
 {
     /// Computes the checksum for this header.
-    fn get_checksum(&self) -> u32 {
-        let mut checksum: u32 = 0;
+    fn get_checksum(&self, checksum: &mut impl super::compression::Checksum) {
         let buf = self.to_bytes();
-        for byte in &buf {
-            checksum += *byte as u32;
-        }
-        checksum
+        checksum.push(&buf);
     }
 }
 
@@ -207,53 +203,49 @@ pub struct MainHeader {
     /// Extended Type Information.
     ///
     /// Offset: +24
-    pub type_ext: [u8; 16],
+    pub type_ext: StaticByteBuf<16>,
 }
 
 impl Struct<SIZE_MAIN_HEADER> for MainHeader {
-    type Output = (u32, MainHeader);
-    type Error = ReadError;
+    type Output = MainHeader;
+    type Error = RecoverableError<Self::Output, Error>;
 
     fn new() -> Self {
         MainHeader {
             signature: *b"BPX",                 //+0
-            ty: b'P',                           //+3
+            ty: 0,                              //+3
             chksum: 0,                          //+4
             file_size: SIZE_MAIN_HEADER as u64, //+8
             section_num: 0,                     //+16
             version: BPX_CURRENT_VERSION,       //+20
-            type_ext: [0; 16],
+            type_ext: ByteBuf::default(),
         }
     }
 
     fn error_buffer_size() -> Option<Self::Error> {
-        None
+        Some(Error::Truncated.into())
     }
 
     fn from_bytes(buffer: [u8; SIZE_MAIN_HEADER]) -> Result<Self::Output, Self::Error> {
-        let mut checksum: u32 = 0;
-
-        for (i, byte) in buffer.iter().enumerate() {
-            if !(4..8).contains(&i) {
-                checksum += *byte as u32;
-            }
-        }
         let head = MainHeader {
             signature: extract_slice(&buffer, 0),
             ty: buffer[3],
-            chksum: LittleEndian::read_u32(&buffer[4..8]),
-            file_size: LittleEndian::read_u64(&buffer[8..16]),
-            section_num: LittleEndian::read_u32(&buffer[16..20]),
-            version: LittleEndian::read_u32(&buffer[20..24]),
-            type_ext: extract_slice(&buffer, 24),
+            chksum: u32::read_bytes_le(&buffer[4..8]),
+            file_size: u64::read_bytes_le(&buffer[8..16]),
+            section_num: u32::read_bytes_le(&buffer[16..20]),
+            version: u32::read_bytes_le(&buffer[20..24]),
+            type_ext: ByteBuf::new(extract_slice(&buffer, 24)),
         };
         if &head.signature != b"BPX" {
-            return Err(ReadError::BadSignature(head.signature));
+            return Err(RecoverableError::new(
+                Error::BadSignature(head.signature),
+                head,
+            ));
         }
         if !KNOWN_VERSIONS.contains(&head.version) {
-            return Err(ReadError::BadVersion(head.version));
+            return Err(RecoverableError::new(Error::BadVersion(head.version), head));
         }
-        Ok((checksum, head))
+        Ok(head)
     }
 
     fn to_bytes(&self) -> [u8; SIZE_MAIN_HEADER] {
@@ -262,16 +254,22 @@ impl Struct<SIZE_MAIN_HEADER> for MainHeader {
         block[1] = self.signature[1];
         block[2] = self.signature[2];
         block[3] = self.ty;
-        LittleEndian::write_u32(&mut block[4..8], self.chksum);
-        LittleEndian::write_u64(&mut block[8..16], self.file_size);
-        LittleEndian::write_u32(&mut block[16..20], self.section_num);
-        LittleEndian::write_u32(&mut block[20..24], self.version);
-        block[24..40].copy_from_slice(&self.type_ext);
+        self.chksum.write_bytes_le(&mut block[4..8]);
+        self.file_size.write_bytes_le(&mut block[8..16]);
+        self.section_num.write_bytes_le(&mut block[16..20]);
+        self.version.write_bytes_le(&mut block[20..24]);
+        block[24..40].copy_from_slice(self.type_ext.as_ref());
         block
     }
 }
 
-impl GetChecksum<SIZE_MAIN_HEADER> for MainHeader {}
+impl GetChecksum<SIZE_MAIN_HEADER> for MainHeader {
+    fn get_checksum(&self, checksum: &mut impl super::compression::Checksum) {
+        let buf = self.to_bytes();
+        checksum.push(&buf[..4]);
+        checksum.push(&buf[8..]);
+    }
+}
 
 /// The BPX Section Header.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -308,8 +306,8 @@ pub struct SectionHeader {
 }
 
 impl Struct<SIZE_SECTION_HEADER> for SectionHeader {
-    type Output = (u32, SectionHeader);
-    type Error = io::Error;
+    type Output = SectionHeader;
+    type Error = Error;
 
     fn new() -> Self {
         SectionHeader {
@@ -323,34 +321,26 @@ impl Struct<SIZE_SECTION_HEADER> for SectionHeader {
     }
 
     fn error_buffer_size() -> Option<Self::Error> {
-        None
+        Some(Error::Truncated)
     }
 
     fn from_bytes(buffer: [u8; SIZE_SECTION_HEADER]) -> Result<Self::Output, Self::Error> {
-        let mut checksum: u32 = 0;
-
-        for byte in &buffer {
-            checksum += *byte as u32;
-        }
-        Ok((
-            checksum,
-            SectionHeader {
-                pointer: LittleEndian::read_u64(&buffer[0..8]),
-                csize: LittleEndian::read_u32(&buffer[8..12]),
-                size: LittleEndian::read_u32(&buffer[12..16]),
-                chksum: LittleEndian::read_u32(&buffer[16..20]),
-                ty: buffer[20],
-                flags: buffer[21],
-            },
-        ))
+        Ok(SectionHeader {
+            pointer: u64::read_bytes_le(&buffer[0..8]),
+            csize: u32::read_bytes_le(&buffer[8..12]),
+            size: u32::read_bytes_le(&buffer[12..16]),
+            chksum: u32::read_bytes_le(&buffer[16..20]),
+            ty: buffer[20],
+            flags: buffer[21],
+        })
     }
 
     fn to_bytes(&self) -> [u8; SIZE_SECTION_HEADER] {
         let mut block: [u8; SIZE_SECTION_HEADER] = [0; SIZE_SECTION_HEADER];
-        LittleEndian::write_u64(&mut block[0..8], self.pointer);
-        LittleEndian::write_u32(&mut block[8..12], self.csize);
-        LittleEndian::write_u32(&mut block[12..16], self.size);
-        LittleEndian::write_u32(&mut block[16..20], self.chksum);
+        self.pointer.write_bytes_le(&mut block[0..8]);
+        self.csize.write_bytes_le(&mut block[8..12]);
+        self.size.write_bytes_le(&mut block[12..16]);
+        self.chksum.write_bytes_le(&mut block[16..20]);
         block[20] = self.ty;
         block[21] = self.flags;
         block

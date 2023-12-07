@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -27,13 +27,16 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use crate::{
+    macros::{create_options, open_options},
     package::{Architecture, Platform},
-    sd::Object,
+    sd::Value,
 };
+
+use super::DEFAULT_MAX_DEPTH;
 
 /// The required settings to create a new BPXP.
 ///
-/// *This is intended to be generated with help of [Builder](crate::package::Builder).*
+/// *This is intended to be generated with help of [CreateOptions](CreateOptions).*
 #[derive(Clone)]
 pub struct Settings {
     /// The package target architecture.
@@ -43,36 +46,32 @@ pub struct Settings {
     pub platform: Platform,
 
     /// The package metadata (stored as a BPXSD [Object](crate::sd::Object)).
-    pub metadata: Option<Object>,
+    pub metadata: Option<Value>,
 
     /// The package type code.
     pub type_code: [u8; 2],
 }
 
-/// Utility to simplify generation of [Settings](crate::package::Settings) required when creating a new BPXP.
-pub struct Builder {
-    settings: Settings,
+/// Specific cofniguration options for BPXP.
+pub struct Options {
+    /// Defines the maximum depth of the metadata BPXSD object.
+    pub max_depth: usize,
 }
 
-impl Default for Builder {
-    fn default() -> Self {
-        Self::new()
+create_options! {
+    /// Utility to simplify generation of [Settings](Settings) required when creating a new BPXP.
+    CreateOptions {
+        settings: Settings = Settings {
+            architecture: Architecture::Any,
+            platform: Platform::Any,
+            metadata: None,
+            type_code: [0x50, 0x48],
+        },
+        max_depth: usize = DEFAULT_MAX_DEPTH
     }
 }
 
-impl Builder {
-    /// Creates a new BPX Package builder.
-    pub fn new() -> Builder {
-        Builder {
-            settings: Settings {
-                architecture: Architecture::Any,
-                platform: Platform::Any,
-                metadata: None,
-                type_code: [0x50, 0x48],
-            },
-        }
-    }
-
+impl<T> CreateOptions<T> {
     /// Defines the CPU architecture that the package is targeting.
     ///
     /// *By default, no CPU architecture is targeted.*
@@ -80,9 +79,7 @@ impl Builder {
     /// # Arguments
     ///
     /// * `arch`: the CPU architecture this package is designed to work on.
-    ///
-    /// returns: PackageBuilder
-    pub fn architecture(&mut self, arch: Architecture) -> &mut Self {
+    pub fn architecture(mut self, arch: Architecture) -> Self {
         self.settings.architecture = arch;
         self
     }
@@ -94,9 +91,7 @@ impl Builder {
     /// # Arguments
     ///
     /// * `platform`: the platform this package is designed to work on.
-    ///
-    /// returns: PackageBuilder
-    pub fn platform(&mut self, platform: Platform) -> &mut Self {
+    pub fn platform(mut self, platform: Platform) -> Self {
         self.settings.platform = platform;
         self
     }
@@ -107,11 +102,9 @@ impl Builder {
     ///
     /// # Arguments
     ///
-    /// * `obj`: the BPXSD metadata object.
-    ///
-    /// returns: PackageBuilder
-    pub fn metadata(&mut self, obj: Object) -> &mut Self {
-        self.settings.metadata = Some(obj);
+    /// * `val`: the BPXSD metadata value.
+    pub fn metadata(mut self, val: Value) -> Self {
+        self.settings.metadata = Some(val);
         self
     }
 
@@ -123,27 +116,51 @@ impl Builder {
     /// # Arguments
     ///
     /// * `type_code`: the type code of this package.
-    ///
-    /// returns: PackageBuilder
-    pub fn type_code(&mut self, type_code: [u8; 2]) -> &mut Self {
+    pub fn type_code(mut self, type_code: [u8; 2]) -> Self {
         self.settings.type_code = type_code;
         self
     }
 
-    /// Returns the built settings.
-    pub fn build(&self) -> Settings {
-        self.settings.clone()
+    /// Defines the maximum depth of the metadata BPXSD object.
+    ///
+    /// *By default, the maximum depth is set to [DEFAULT_MAX_DEPTH](DEFAULT_MAX_DEPTH).*
+    ///
+    /// # Arguments
+    ///
+    /// * `max_depth`: the maximum depth of the metadata BPXSD object.
+    pub fn max_depth(mut self, max_depth: usize) -> Self {
+        self.max_depth = max_depth;
+        self
     }
 }
 
-impl From<&mut Builder> for Settings {
-    fn from(builder: &mut Builder) -> Self {
-        builder.build()
+impl<T: std::io::Seek> From<(T, Settings)> for CreateOptions<T> {
+    fn from((backend, settings): (T, Settings)) -> Self {
+        Self {
+            options: crate::core::options::CreateOptions::new(backend),
+            settings,
+            max_depth: DEFAULT_MAX_DEPTH,
+        }
     }
 }
 
-impl From<Builder> for Settings {
-    fn from(builder: Builder) -> Self {
-        builder.build()
+open_options! {
+    /// Utility to allow configuring the underlying BPX container when opening a BPXP.
+    OpenOptions {
+        max_depth: usize = DEFAULT_MAX_DEPTH
+    }
+}
+
+impl<T> OpenOptions<T> {
+    /// Defines the maximum depth of the metadata BPXSD object.
+    ///
+    /// *By default, the maximum depth is set to [DEFAULT_MAX_DEPTH](DEFAULT_MAX_DEPTH).*
+    ///
+    /// # Arguments
+    ///
+    /// * `max_depth`: the maximum depth of the metadata BPXSD object.
+    pub fn max_depth(mut self, max_depth: usize) -> Self {
+        self.max_depth = max_depth;
+        self
     }
 }

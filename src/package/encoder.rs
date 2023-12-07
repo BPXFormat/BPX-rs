@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -26,16 +26,48 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use std::io::{Read, Write};
+
 use crate::{
     core::{
-        builder::{Checksum, CompressionMethod, SectionHeaderBuilder},
         header::SectionHeader,
+        options::{Checksum, CompressionMethod, SectionOptions},
+        Container, Handle, SectionData,
     },
-    package::{Architecture, Platform, Settings, SECTION_TYPE_DATA},
+    package::{Architecture, Platform, Result, Settings, SECTION_TYPE_DATA},
+    traits::ReadFill,
 };
 
+const DATA_WRITE_BUFFER_SIZE: usize = 8192;
+const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
+pub const MAX_DATA_SECTION_SIZE: usize = 200000000 - MIN_DATA_REMAINING_SIZE; //200MB
+
+pub fn write_object<T, TRead: Read>(
+    container: &Container<T>,
+    source: &mut TRead,
+    data_id: Handle,
+) -> Result<(usize, bool)> {
+    let sections = container.sections();
+    let mut data = sections.open(data_id)?;
+    let mut buf: [u8; DATA_WRITE_BUFFER_SIZE] = [0; DATA_WRITE_BUFFER_SIZE];
+    let mut res = source.read_fill(&mut buf)?;
+    let mut count = res;
+
+    while res > 0 {
+        data.write_all(&buf[0..res])?;
+        if data.size() >= MAX_DATA_SECTION_SIZE
+        //Split sections (this is to avoid reaching the 4Gb max)
+        {
+            return Ok((count, true));
+        }
+        res = source.read_fill(&mut buf)?;
+        count += res;
+    }
+    Ok((count, false))
+}
+
 pub fn create_data_section_header() -> SectionHeader {
-    SectionHeaderBuilder::new()
+    SectionOptions::new()
         .ty(SECTION_TYPE_DATA)
         .compression(CompressionMethod::Xz)
         .checksum(Checksum::Crc32)

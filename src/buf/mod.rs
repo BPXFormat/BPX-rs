@@ -26,36 +26,11 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::num::Wrapping;
+//! A specific implementation of [BufReader](std::io::BufReader) and [BufWriter](std::io::BufWriter)
+//! for use with BPX.
 
-use crate::core::compression::Checksum;
+mod reader;
+mod writer;
 
-pub struct WeakChecksum {
-    current: Wrapping<u32>,
-}
-
-impl Checksum for WeakChecksum {
-    fn push(&mut self, data: &[u8]) {
-        for byte in data {
-            self.current += Wrapping(*byte as u32);
-        }
-    }
-
-    fn finish(self) -> u32 {
-        self.current.0
-    }
-}
-
-impl Default for WeakChecksum {
-    fn default() -> Self {
-        Self::new(0)
-    }
-}
-
-impl WeakChecksum {
-    pub fn new(initial: u32) -> Self {
-        WeakChecksum {
-            current: Wrapping(initial),
-        }
-    }
-}
+pub use reader::BufReader;
+pub use writer::BufWriter;

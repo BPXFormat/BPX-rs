@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -28,13 +28,12 @@
 
 //! Contains utilities to work with the object table section.
 
-use byteorder::{ByteOrder, LittleEndian};
-
 use crate::{
     core::header::Struct,
-    package::error::{EosContext, ReadError},
+    package::error::{EosContext, Error},
     table::Item,
 };
+use bytesutil::{ReadBytes, WriteBytes};
 
 /// Size in bytes of an object header.
 pub const SIZE_OBJECT_HEADER: usize = 20;
@@ -57,7 +56,7 @@ pub struct ObjectHeader {
 
 impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader {
     type Output = ObjectHeader;
-    type Error = ReadError;
+    type Error = Error;
 
     fn new() -> Self {
         ObjectHeader {
@@ -69,14 +68,14 @@ impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader {
     }
 
     fn error_buffer_size() -> Option<Self::Error> {
-        Some(ReadError::Eos(EosContext::ObjectTable))
+        Some(Error::Eos(EosContext::ObjectTable))
     }
 
     fn from_bytes(buffer: [u8; SIZE_OBJECT_HEADER]) -> Result<Self::Output, Self::Error> {
-        let size = LittleEndian::read_u64(&buffer[0..8]);
-        let name_ptr = LittleEndian::read_u32(&buffer[8..12]);
-        let start = LittleEndian::read_u32(&buffer[12..16]);
-        let offset = LittleEndian::read_u32(&buffer[16..20]);
+        let size = u64::read_bytes_le(&buffer[0..8]);
+        let name_ptr = u32::read_bytes_le(&buffer[8..12]);
+        let start = u32::read_bytes_le(&buffer[12..16]);
+        let offset = u32::read_bytes_le(&buffer[16..20]);
         Ok(ObjectHeader {
             size,
             name: name_ptr,
@@ -87,10 +86,10 @@ impl Struct<SIZE_OBJECT_HEADER> for ObjectHeader {
 
     fn to_bytes(&self) -> [u8; SIZE_OBJECT_HEADER] {
         let mut buf: [u8; SIZE_OBJECT_HEADER] = [0; SIZE_OBJECT_HEADER];
-        LittleEndian::write_u64(&mut buf[0..8], self.size as u64);
-        LittleEndian::write_u32(&mut buf[8..12], self.name);
-        LittleEndian::write_u32(&mut buf[12..16], self.start);
-        LittleEndian::write_u32(&mut buf[16..20], self.offset);
+        self.size.write_bytes_le(&mut buf[0..8]);
+        self.name.write_bytes_le(&mut buf[8..12]);
+        self.start.write_bytes_le(&mut buf[12..16]);
+        self.offset.write_bytes_le(&mut buf[16..20]);
         buf
     }
 }

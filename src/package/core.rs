@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -26,99 +26,31 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::{
-    io::{Read, Seek, SeekFrom, Write},
-    slice::Iter,
-};
+use std::io::{Read, Seek, SeekFrom, Write};
 
+use bytesutil::ByteBuf;
+use once_cell::unsync::OnceCell;
+
+use crate::package::{Architecture, Platform};
 use crate::{
     core::{
-        builder::{Checksum, CompressionMethod, MainHeaderBuilder, SectionHeaderBuilder},
         header::{Struct, SECTION_TYPE_SD, SECTION_TYPE_STRING},
-        Container, SectionData,
+        options::{Checksum, CompressionMethod, SectionOptions},
+        Container, Handle,
     },
     package::{
-        decoder::{get_arch_platform_from_code, read_object_table, unpack_object},
-        encoder::{create_data_section_header, get_type_ext},
-        error::{ReadError, Section, WriteError},
-        object::ObjectHeader,
-        Architecture, Platform, Settings, SECTION_TYPE_OBJECT_TABLE, SUPPORTED_VERSION,
+        decoder::{get_arch_platform_from_code, read_object_table},
+        encoder::get_type_ext,
+        error::{Error, Section},
+        table::{ObjectTable, ObjectTableMut, ObjectTableRef},
+        Result, Settings, SECTION_TYPE_OBJECT_TABLE, SUPPORTED_VERSION,
     },
-    strings::{load_string_section, StringSection},
-    table::ItemTable,
-    utils::{OptionExtension, ReadFill},
-    Handle,
+    sd::Value,
+    strings::StringSection,
+    table::NamedItemTable,
 };
 
-const DATA_WRITE_BUFFER_SIZE: usize = 8192;
-const MIN_DATA_REMAINING_SIZE: usize = DATA_WRITE_BUFFER_SIZE;
-const MAX_DATA_SECTION_SIZE: usize = 200000000 - MIN_DATA_REMAINING_SIZE; //200MB
-
-/// Represents an object reference.
-pub struct Object<'a, T> {
-    container: &'a mut Container<T>,
-    strings: &'a mut StringSection,
-    header: &'a ObjectHeader,
-}
-
-impl<'a, T: Read + Seek> Object<'a, T> {
-    /// Unpacks this object to the given `out` io backend.
-    ///
-    /// # Arguments
-    ///
-    /// * `out`: A [Write](std::io::Write) to unpack object data to.
-    ///
-    /// returns: Result<u64, ReadError>
-    ///
-    /// # Errors
-    ///
-    /// Returns a [ReadError](crate::package::error::ReadError) if the section couldn't be loaded
-    /// or an IO error has occured.
-    pub fn unpack<W: Write>(&mut self, out: W) -> Result<u64, ReadError> {
-        unpack_object(self.container, self.header, out)
-    }
-
-    /// Loads the name of this object if it's not already loaded.
-    ///
-    /// # Errors
-    ///
-    /// If the name is not already loaded, returns a [ReadError](crate::package::error::ReadError)
-    /// if the section couldn't be loaded or the string couldn't be loaded.
-    pub fn load_name(&mut self) -> Result<&str, ReadError> {
-        load_string_section(self.container, self.strings)?;
-        let name = self.strings.get(self.container, self.header.name)?;
-        Ok(name)
-    }
-
-    /// Returns the size in bytes of this object.
-    pub fn size(&self) -> u64 {
-        self.header.size
-    }
-}
-
-/// An iterator over [Object](crate::package::Object).
-pub struct ObjectIter<'a, T> {
-    container: &'a mut Container<T>,
-    strings: &'a mut StringSection,
-    iter: Iter<'a, ObjectHeader>,
-}
-
-impl<'a, T> Iterator for ObjectIter<'a, T> {
-    type Item = Object<'a, T>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let header = self.iter.next()?;
-        unsafe {
-            let ptr = self.container as *mut Container<T>;
-            let ptr1 = self.strings as *mut StringSection;
-            Some(Object {
-                header,
-                strings: &mut *ptr1,
-                container: &mut *ptr,
-            })
-        }
-    }
-}
+use super::{CreateOptions, OpenOptions, Options, DEFAULT_MAX_DEPTH};
 
 /// A BPXP (Package).
 ///
@@ -126,30 +58,34 @@ impl<'a, T> Iterator for ObjectIter<'a, T> {
 ///
 /// ```
 /// use std::io::{Seek, SeekFrom};
-/// use bpx::utils::new_byte_buf;
-/// use bpx::package::{Builder, Package};
+/// use bpx::util::new_byte_buf;
+/// use bpx::package::Package;
 ///
-/// let mut bpxp = Package::create(new_byte_buf(128), Builder::new()).unwrap();
-/// bpxp.pack("TestObject", "This is a test 你好".as_bytes());
+/// let mut bpxp = Package::create(new_byte_buf(128)).unwrap();
+/// {
+///     let mut objects = bpxp.objects_mut().unwrap();
+///     objects.create("TestObject", "This is a test 你好".as_bytes()).unwrap();
+/// }
 /// bpxp.save().unwrap();
-/// //Reset our bytebuf pointer to start
+/// //Reset the byte buffer pointer to start.
 /// let mut bytebuf = bpxp.into_inner().into_inner();
 /// bytebuf.seek(SeekFrom::Start(0)).unwrap();
-/// //Attempt decoding our in-memory BPXP
+/// //Attempt decoding the in-memory BPXP.
 /// let mut bpxp = Package::open(bytebuf).unwrap();
-/// let items = bpxp.objects().unwrap().count();
-/// assert_eq!(items, 1);
-/// let mut object = bpxp.objects().unwrap().last().unwrap();
-/// assert_eq!(object.load_name().unwrap(), "TestObject");
+/// let objects = bpxp.objects().unwrap();
+/// assert_eq!(objects.len(), 1);
+/// let last = objects.iter().last().unwrap();
+/// assert_eq!(objects.load_name(last).unwrap(), "TestObject");
 /// {
 ///     let mut data = Vec::new();
-///     object.unpack(&mut data);
+///     objects.load(last, &mut data).unwrap();
 ///     let s = std::str::from_utf8(&data).unwrap();
 ///     assert_eq!(s, "This is a test 你好")
 /// }
 /// {
+///     let wanted = objects.find("TestObject").unwrap().unwrap();
 ///     let mut data = Vec::new();
-///     bpxp.unpack("TestObject", &mut data).unwrap();
+///     objects.load(wanted, &mut data).unwrap();
 ///     let s = std::str::from_utf8(&data).unwrap();
 ///     assert_eq!(s, "This is a test 你好")
 /// }
@@ -158,31 +94,137 @@ pub struct Package<T> {
     settings: Settings,
     container: Container<T>,
     object_table: Handle,
-    strings: StringSection,
-    objects: Vec<ObjectHeader>,
-    table: Option<ItemTable<ObjectHeader>>,
-    last_data_section: Option<Handle>,
+    table: OnceCell<ObjectTable>,
+    metadata: OnceCell<Value>,
+    max_depth: usize,
 }
 
 impl<T> Package<T> {
-    /// Gets the two bytes of BPXP type.
-    pub fn get_type_code(&self) -> [u8; 2] {
-        self.settings.type_code
+    /// Gets the settings of this package.
+    #[deprecated(note = "use `settings` or `settings_mut`")]
+    pub fn get_settings(&self) -> &Settings {
+        &self.settings
     }
 
-    /// Gets the target CPU [Architecture](crate::package::Architecture) for this BPXP.
-    pub fn get_architecture(&self) -> Architecture {
-        self.settings.architecture
+    /// Returns a reference to the settings of this package.
+    pub fn settings(&self) -> &Settings {
+        &self.settings
     }
 
-    /// Gets the target [Platform](crate::package::Platform) for this BPXP.
-    pub fn get_platform(&self) -> Platform {
-        self.settings.platform
+    /// Returns a mutable reference to the settings of this package.
+    pub fn settings_mut(&mut self) -> &mut Settings {
+        &mut self.settings
     }
 
     /// Consumes this Package and returns the inner BPX container.
     pub fn into_inner(self) -> Container<T> {
         self.container
+    }
+
+    /// Returns a guard for mutable access to the object table.
+    ///
+    /// This returns None if the object table is not loaded. To load the object table, call
+    /// the objects() member function.
+    pub fn objects_mut(&mut self) -> Option<ObjectTableMut<T>> {
+        self.table.get_mut().map(|v| ObjectTableMut {
+            table: v,
+            container: &mut self.container,
+        })
+    }
+}
+
+impl<T> TryFrom<Container<T>> for Package<T> {
+    type Error = Error;
+
+    fn try_from(value: Container<T>) -> std::prelude::v1::Result<Self, Self::Error> {
+        Self::try_from((
+            value,
+            Options {
+                max_depth: DEFAULT_MAX_DEPTH,
+            },
+        ))
+    }
+}
+
+impl<T> TryFrom<(Container<T>, Options)> for Package<T> {
+    type Error = Error;
+
+    fn try_from(
+        (mut container, options): (Container<T>, Options),
+    ) -> std::result::Result<Self, Self::Error> {
+        match container.main_header().ty == b'P' {
+            true => {
+                if container.main_header().version != SUPPORTED_VERSION {
+                    return Err(Error::BadVersion {
+                        supported: SUPPORTED_VERSION,
+                        actual: container.main_header().version,
+                    });
+                }
+                let (a, p) = get_arch_platform_from_code(
+                    container.main_header().type_ext[0],
+                    container.main_header().type_ext[1],
+                )?;
+                let object_table =
+                    match container.sections().find_by_type(SECTION_TYPE_OBJECT_TABLE) {
+                        Some(v) => v,
+                        None => return Err(Error::MissingSection(Section::ObjectTable)),
+                    };
+                Ok(Self {
+                    settings: Settings {
+                        metadata: None,
+                        architecture: a,
+                        platform: p,
+                        type_code: [
+                            container.main_header().type_ext[2],
+                            container.main_header().type_ext[3],
+                        ],
+                    },
+                    object_table,
+                    container,
+                    table: OnceCell::new(),
+                    metadata: OnceCell::new(),
+                    max_depth: options.max_depth,
+                })
+            },
+            false => {
+                container.main_header_mut().ty = b'P';
+                container.main_header_mut().version = SUPPORTED_VERSION;
+                let object_table = container.sections_mut().create(
+                    SectionOptions::new()
+                        .checksum(Checksum::Weak)
+                        .compression(CompressionMethod::Zlib)
+                        .ty(SECTION_TYPE_OBJECT_TABLE),
+                );
+                let string_section = container.sections_mut().create(
+                    SectionOptions::new()
+                        .checksum(Checksum::Weak)
+                        .compression(CompressionMethod::Zlib)
+                        .ty(SECTION_TYPE_STRING),
+                );
+                let strings = StringSection::new(string_section);
+                let (a, p) = get_arch_platform_from_code(
+                    container.main_header().type_ext[0],
+                    container.main_header().type_ext[1],
+                )
+                .unwrap_or((Architecture::Any, Platform::Any));
+                Ok(Package {
+                    metadata: OnceCell::new(),
+                    settings: Settings {
+                        metadata: None,
+                        architecture: a,
+                        platform: p,
+                        type_code: [
+                            container.main_header().type_ext[2],
+                            container.main_header().type_ext[3],
+                        ],
+                    },
+                    container,
+                    object_table,
+                    table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings)),
+                    max_depth: options.max_depth,
+                })
+            },
+        }
     }
 }
 
@@ -191,156 +233,121 @@ impl<T: Write + Seek> Package<T> {
     ///
     /// # Arguments
     ///
-    /// * `backend`: A [Write](std::io::Write) + [Seek](std::io::Seek) to use as backend.
+    /// * `backend`: A [Write](Write) + [Seek](Seek) to use as backend.
     /// * `settings`: The package creation settings.
     ///
-    /// returns: Result<Package<T>, WriteError>
+    /// # Errors
+    ///
+    /// Returns an [Error](Error) if the metadata couldn't be created.
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::package::Builder;
+    /// use bpx::core::Container;
     /// use bpx::package::Package;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
-    /// let mut bpxp = Package::create(new_byte_buf(0), Builder::new()).unwrap();
-    /// bpxp.save();
+    /// let mut bpxp = Package::create(new_byte_buf(0)).unwrap();
+    /// bpxp.save().unwrap();
+    /// assert!(!bpxp.into_inner().into_inner().into_inner().is_empty());
+    /// let mut bpxp = Package::try_from(Container::create(new_byte_buf(0))).unwrap();
+    /// bpxp.save().unwrap();
     /// assert!(!bpxp.into_inner().into_inner().into_inner().is_empty());
     /// ```
-    pub fn create<S: Into<Settings>>(backend: T, settings: S) -> Result<Package<T>, WriteError> {
-        let settings = settings.into();
+    pub fn create(options: impl Into<CreateOptions<T>>) -> Result<Package<T>> {
+        let options = options.into();
+        let settings = options.settings;
         let mut container = Container::create(
-            backend,
-            MainHeaderBuilder::new()
+            options
+                .options
                 .ty(b'P')
                 .type_ext(get_type_ext(&settings))
                 .version(SUPPORTED_VERSION),
         );
-        let object_table = container.create_section(
-            SectionHeaderBuilder::new()
+        let object_table = container.sections_mut().create(
+            SectionOptions::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
                 .ty(SECTION_TYPE_OBJECT_TABLE),
         );
-        let string_section = container.create_section(
-            SectionHeaderBuilder::new()
+        let string_section = container.sections_mut().create(
+            SectionOptions::new()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
                 .ty(SECTION_TYPE_STRING),
         );
         let strings = StringSection::new(string_section);
         if let Some(metadata) = &settings.metadata {
-            let metadata_section = container.create_section(
-                SectionHeaderBuilder::new()
-                    .checksum(Checksum::Weak)
-                    .compression(CompressionMethod::Zlib)
-                    .ty(SECTION_TYPE_SD),
-            );
-            let mut section = container.get_mut(metadata_section);
-            metadata.write(section.open().ok_or(WriteError::SectionNotLoaded)?)?;
+            if !metadata.is_null() {
+                let metadata_section = container.sections_mut().create(
+                    SectionOptions::new()
+                        .checksum(Checksum::Weak)
+                        .compression(CompressionMethod::Zlib)
+                        .ty(SECTION_TYPE_SD),
+                );
+                let mut section = container.sections().open(metadata_section)?;
+                metadata.write(&mut *section, options.max_depth)?;
+            }
         }
         Ok(Package {
+            metadata: settings
+                .metadata
+                .clone()
+                .map(OnceCell::from)
+                .unwrap_or(OnceCell::new()),
             settings,
-            strings,
             container,
             object_table,
-            objects: Vec::new(),
-            table: None,
-            last_data_section: None,
+            table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings)),
+            max_depth: options.max_depth,
         })
-    }
-
-    fn write_object<TRead: Read>(
-        &mut self,
-        source: &mut TRead,
-        data_id: Handle,
-    ) -> Result<(usize, bool), WriteError> {
-        let mut section = self.container.get_mut(data_id);
-        let data = section.open().ok_or(WriteError::SectionNotLoaded)?;
-        let mut buf: [u8; DATA_WRITE_BUFFER_SIZE] = [0; DATA_WRITE_BUFFER_SIZE];
-        let mut res = source.read_fill(&mut buf)?;
-        let mut count = res;
-
-        while res > 0 {
-            data.write_all(&buf[0..res])?;
-            if data.size() >= MAX_DATA_SECTION_SIZE
-            //Split sections (this is to avoid reaching the 4Gb max)
-            {
-                return Ok((count, true));
-            }
-            res = source.read_fill(&mut buf)?;
-            count += res;
-        }
-        Ok((count, false))
-    }
-
-    /// Creates a new object in this package.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: The name of the object.
-    /// * `source`: A [Read](std::io::Read) to read object data from.
-    ///
-    /// returns: Result<(), WriteError>
-    ///
-    /// # Errors
-    ///
-    /// Returns a [WriteError](crate::package::error::WriteError) if the object couldn't be saved
-    /// in this package.
-    pub fn pack<R: Read>(&mut self, name: &str, mut source: R) -> Result<(), WriteError> {
-        let mut object_size = 0;
-        let mut data_section = *self
-            .last_data_section
-            .get_or_insert_with(|| self.container.create_section(create_data_section_header()));
-        let start = self.container.get(data_section).index();
-        let offset = {
-            let section = self.container.get(data_section);
-            section.open().ok_or(WriteError::SectionNotLoaded)?.size()
-        } as u32;
-
-        loop {
-            let (count, need_section) = self.write_object(&mut source, data_section)?;
-            object_size += count;
-            if need_section {
-                data_section = self.container.create_section(create_data_section_header());
-            } else {
-                break;
-            }
-        }
-        {
-            // Fill and write the object header
-            let buf = ObjectHeader {
-                size: object_size as u64,
-                name: self.strings.put(&mut self.container, name)?,
-                start,
-                offset,
-            };
-            self.objects.push(buf);
-        }
-        {
-            let section = self.container.get(data_section);
-            if section.open().ok_or(WriteError::SectionNotLoaded)?.size() > MAX_DATA_SECTION_SIZE {
-                self.last_data_section = None;
-            } else {
-                self.last_data_section = Some(data_section);
-            }
-        }
-        Ok(())
     }
 
     /// Saves this package.
     ///
+    /// This function calls **`save`** on the underlying BPX [Container](Container).
+    ///
     /// # Errors
     ///
-    /// Returns a [WriteError](crate::package::error::WriteError) if some parts of this package
+    /// Returns an [Error](Error) if some parts of this package
     /// couldn't be saved.
-    pub fn save(&mut self) -> Result<(), WriteError> {
+    pub fn save(&mut self) -> Result<()> {
+        //Update metadata section if changed
+        if let Some(metadata) = &self.settings.metadata {
+            if !metadata.is_null() {
+                let handle = self
+                    .container
+                    .sections()
+                    .find_by_type(SECTION_TYPE_SD)
+                    .unwrap_or_else(|| {
+                        self.container.sections_mut().create(
+                            SectionOptions::new()
+                                .checksum(Checksum::Weak)
+                                .compression(CompressionMethod::Zlib)
+                                .ty(SECTION_TYPE_SD),
+                        )
+                    });
+                let mut section = self.container.sections().open(handle)?;
+                metadata.write(&mut *section, self.max_depth)?;
+            } else if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_SD) {
+                self.container.sections_mut().remove(handle);
+            }
+            self.metadata = OnceCell::from(metadata.clone());
+        }
         {
-            let mut section = self.container.get_mut(self.object_table);
-            let data = section.open().ok_or(WriteError::SectionNotLoaded)?;
-            data.seek(SeekFrom::Start(0))?;
-            for v in &self.objects {
-                v.write(data)?;
+            //Update type ext if changed
+            let data = get_type_ext(&self.settings);
+            if data != self.container.main_header().type_ext.as_ref() {
+                self.container.main_header_mut().type_ext = ByteBuf::new(data);
+            }
+        }
+        {
+            let mut section = self.container.sections().open(self.object_table)?;
+            section.seek(SeekFrom::Start(0))?;
+            if let Some(val) = self.table.get() {
+                for v in val {
+                    v.write(&mut *section)?;
+                }
             }
         }
         self.container.save()?;
@@ -353,116 +360,69 @@ impl<T: Read + Seek> Package<T> {
     ///
     /// # Arguments
     ///
-    /// * `backend`: A [Read](std::io::Read) + [Seek](std::io::Seek) to use as backend.
-    ///
-    /// returns: Result<PackageDecoder<TBackend>, Error>
+    /// * `backend`: A [Read](Read) + [Seek](Seek) to use as backend.
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::package::error::ReadError) is returned if some
+    /// An [Error](Error) is returned if some
     /// sections/headers could not be loaded.
     ///
     /// # Examples
     ///
     /// ```
-    /// use bpx::package::Builder;
     /// use bpx::package::Package;
-    /// use bpx::utils::new_byte_buf;
+    /// use bpx::util::new_byte_buf;
     ///
-    /// let mut bpxp = Package::create(new_byte_buf(0), Builder::new()).unwrap();
-    /// bpxp.save();
+    /// let mut bpxp = Package::create(new_byte_buf(0)).unwrap();
+    /// bpxp.save().unwrap();
     /// let mut buf = bpxp.into_inner().into_inner();
     /// buf.set_position(0);
     /// let mut bpxp = Package::open(buf).unwrap();
-    /// assert_eq!(bpxp.objects().unwrap().count(), 0);
+    /// let objects = bpxp.objects().unwrap();
+    /// assert_eq!(objects.len(), 0);
     /// ```
-    pub fn open(backend: T) -> Result<Package<T>, ReadError> {
-        let container = Container::open(backend)?;
-        if container.get_main_header().ty != b'P' {
-            return Err(ReadError::BadType(container.get_main_header().ty));
-        }
-        if container.get_main_header().version != SUPPORTED_VERSION {
-            return Err(ReadError::BadVersion(container.get_main_header().version));
-        }
-        let (a, p) = get_arch_platform_from_code(
-            container.get_main_header().type_ext[0],
-            container.get_main_header().type_ext[1],
-        )?;
-        let strings =
-            StringSection::new(match container.find_section_by_type(SECTION_TYPE_STRING) {
-                Some(v) => v,
-                None => return Err(ReadError::MissingSection(Section::Strings)),
+    pub fn open(options: impl Into<OpenOptions<T>>) -> Result<Package<T>> {
+        let options = options.into();
+        let container = Container::open(options.options)?;
+        if container.main_header().ty != b'P' {
+            return Err(Error::BadType {
+                expected: b'P',
+                actual: container.main_header().ty,
             });
-        let object_table = match container.find_section_by_type(SECTION_TYPE_OBJECT_TABLE) {
-            Some(v) => v,
-            None => return Err(ReadError::MissingSection(Section::ObjectTable)),
-        };
-        Ok(Self {
-            settings: Settings {
-                metadata: None,
-                architecture: a,
-                platform: p,
-                type_code: [
-                    container.get_main_header().type_ext[2],
-                    container.get_main_header().type_ext[3],
-                ],
-            },
-            strings,
-            object_table,
+        }
+        Self::try_from((
             container,
-            objects: Vec::new(),
-            table: None,
-            last_data_section: None,
-        })
+            Options {
+                max_depth: options.max_depth,
+            },
+        ))
     }
 
-    /// Gets an iterator over all [Object](crate::package::Object) in this package.
+    fn load_object_table(&self) -> Result<ObjectTable> {
+        let handle = self
+            .container
+            .sections()
+            .find_by_type(SECTION_TYPE_STRING)
+            .ok_or(Error::MissingSection(Section::Strings))?;
+        let strings = StringSection::new(handle);
+        let table = read_object_table(&self.container, self.object_table)?;
+        Ok(ObjectTable::new(table, strings))
+    }
+
+    /// Returns a guard for immutable access to the object table.
+    ///
+    /// This will load the object table if it's not already loaded.
     ///
     /// # Errors
     ///
-    /// Returns a [ReadError](crate::package::error::ReadError) if the section couldn't be loaded
-    /// or if the object table is truncated.
-    pub fn objects(&mut self) -> Result<ObjectIter<T>, ReadError> {
-        let table = self.table.get_or_insert_with_err(|| {
-            read_object_table(&mut self.container, &mut self.objects, self.object_table)
-        })?;
-        let iter = table.iter();
-        Ok(ObjectIter {
-            container: &mut self.container,
-            strings: &mut self.strings,
-            iter,
+    /// An [Error](crate::shader::error::Error) is returned if the object table could not be
+    /// loaded.
+    pub fn objects(&self) -> Result<ObjectTableRef<T>> {
+        let table = self.table.get_or_try_init(|| self.load_object_table())?;
+        Ok(ObjectTableRef {
+            table,
+            container: &self.container,
         })
-    }
-
-    /// Removes an object from this package.
-    ///
-    /// Returns true if the object exists and was removed, false otherwise.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: the name of the object to remove.
-    ///
-    /// returns: Result<bool, ReadError>
-    ///
-    /// # Errors
-    ///
-    /// Returns a [ReadError](crate::package::error::ReadError) if some strings couldn't be loaded
-    /// from the string section.
-    pub fn remove(&mut self, name: &str) -> Result<bool, ReadError> {
-        let mut idx = None;
-        for (i, v) in self.objects.iter().enumerate() {
-            let name1 = self.strings.get(&mut self.container, v.name)?;
-            if name1 == name {
-                idx = Some(i);
-                break;
-            }
-        }
-        if let Some(i) = idx {
-            self.objects.remove(i);
-            Ok(true)
-        } else {
-            Ok(false)
-        }
     }
 
     /// Reads the metadata section of this BPXP if any.
@@ -470,39 +430,327 @@ impl<T: Read + Seek> Package<T> {
     ///
     /// # Errors
     ///
-    /// A [ReadError](crate::package::error::ReadError) is returned in case of corruption or system error.
-    pub fn read_metadata(&mut self) -> Result<Option<crate::sd::Object>, ReadError> {
-        if let Some(obj) = &self.settings.metadata {
-            return Ok(Some(obj.clone()));
+    /// An [Error](Error) is returned in case of corruption or system error.
+    pub fn load_metadata(&self) -> Result<&Value> {
+        if self.metadata.get().is_none() {
+            let res = match self.container.sections().find_by_type(SECTION_TYPE_SD) {
+                Some(v) => {
+                    let mut section = self.container.sections().load(v)?;
+                    let obj = Value::read(&mut *section, self.max_depth)?;
+                    self.metadata.set(obj)
+                },
+                None => self.metadata.set(Value::Null),
+            };
+            //SAFETY: This is safe because we're only running this if the cell is none.
+            unsafe {
+                res.unwrap_unchecked();
+            }
         }
-        if let Some(handle) = self.container.find_section_by_type(SECTION_TYPE_SD) {
-            let mut section = self.container.get_mut(handle);
-            let obj = crate::sd::Object::read(section.load()?)?;
-            self.settings.metadata = Some(obj.clone());
-            return Ok(Some(obj));
+        //SAFETY: There's a check right before this line which inserts the value if it doesn't
+        // exist.
+        unsafe { Ok(self.metadata.get().unwrap_unchecked()) }
+    }
+}
+
+impl<T: Read + Write + Seek> Package<T> {
+    /// Saves this package.
+    ///
+    /// This function calls **`load_and_save`** on the underlying BPX [Container](Container).
+    ///
+    /// # Errors
+    ///
+    /// Returns an [Error](Error) if some parts of this package
+    /// couldn't be saved.
+    pub fn load_and_save(&mut self) -> Result<()> {
+        //Update metadata section if changed
+        if let Some(metadata) = &self.settings.metadata {
+            if !metadata.is_null() {
+                let handle = self
+                    .container
+                    .sections()
+                    .find_by_type(SECTION_TYPE_SD)
+                    .unwrap_or_else(|| {
+                        self.container.sections_mut().create(
+                            SectionOptions::new()
+                                .checksum(Checksum::Weak)
+                                .compression(CompressionMethod::Zlib)
+                                .ty(SECTION_TYPE_SD),
+                        )
+                    });
+                let mut section = self.container.sections().load(handle)?;
+                metadata.write(&mut *section, self.max_depth)?;
+            } else if let Some(handle) = self.container.sections().find_by_type(SECTION_TYPE_SD) {
+                self.container.sections_mut().remove(handle);
+            }
+            self.metadata = OnceCell::from(metadata.clone());
         }
-        Ok(None)
+        {
+            //Update type ext if changed
+            let data = get_type_ext(&self.settings);
+            if data != self.container.main_header().type_ext.as_ref() {
+                self.container.main_header_mut().type_ext = ByteBuf::new(data);
+            }
+        }
+        {
+            let mut section = self.container.sections().load(self.object_table)?;
+            section.seek(SeekFrom::Start(0))?;
+            if let Some(val) = self.table.get() {
+                for v in val {
+                    v.write(&mut *section)?;
+                }
+            }
+        }
+        self.container.load_and_save()?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Seek, SeekFrom};
+
+    use crate::package::util::unpack_string;
+    use crate::package::OpenOptions;
+    use crate::{package::Package, util::new_byte_buf};
+
+    #[test]
+    fn test_re_open_after_create() {
+        let mut bpxp = Package::create(new_byte_buf(128)).unwrap();
+        {
+            let mut objects = bpxp.objects_mut().unwrap();
+            objects
+                .create("TestObject", "This is a test 你好".as_bytes())
+                .unwrap();
+        }
+        bpxp.save().unwrap();
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt decoding the in-memory BPXP.
+        let mut bpxp = Package::open(bytebuf).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 1);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "TestObject");
+        {
+            let wanted = objects.find("TestObject").unwrap().unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
+            assert_eq!(s, "This is a test 你好")
+        }
+        //Attempt to write one more object into the file.
+        bpxp.objects_mut()
+            .unwrap()
+            .create("AdditionalObject", "Another test".as_bytes())
+            .unwrap();
+        bpxp.save().unwrap();
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt to re-decode the in-memory BPXP.
+        let bpxp = Package::open(bytebuf).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 2);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "AdditionalObject");
+        {
+            let wanted = objects.find("TestObject").unwrap().unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
+            assert_eq!(s, "This is a test 你好")
+        }
+        {
+            let wanted = objects.find("AdditionalObject").unwrap().unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
+            assert_eq!(s, "Another test")
+        }
     }
 
-    /// Unpacks an object and returns the size of the unpacked object or None if the object does not exist.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: the name of the object to unpack.
-    /// * `out`: the output Write.
-    ///
-    /// returns: Result<Option<u64>, ReadError>
-    pub fn unpack<W: Write>(&mut self, name: &str, out: W) -> Result<Option<u64>, ReadError> {
-        let table = self.table.get_or_insert_with_err(|| {
-            read_object_table(&mut self.container, &mut self.objects, self.object_table)
-        })?;
-        load_string_section(&mut self.container, &self.strings)?;
-        table.build_lookup_table(&mut self.container, &mut self.strings)?;
-        if let Some(header) = table.lookup(name) {
-            let size = unpack_object(&mut self.container, header, out)?;
-            Ok(Some(size))
-        } else {
-            Ok(None)
+    #[test]
+    fn test_re_open_after_create_bad() {
+        let mut bpxp = Package::create(new_byte_buf(128)).unwrap();
+        {
+            let mut objects = bpxp.objects_mut().unwrap();
+            objects
+                .create("TestObject", "This is a test 你好".as_bytes())
+                .unwrap();
         }
+        bpxp.save().unwrap();
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt decoding the in-memory BPXP.
+        let mut bpxp = Package::open(bytebuf).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 1);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "TestObject");
+        //Do not load any other object to make sure the section is not loaded.
+        //Attempt to write one more object into the file.
+        bpxp.objects_mut()
+            .unwrap()
+            .create("AdditionalObject", "Another test".as_bytes())
+            .unwrap();
+
+        //Using save here is inapropriate because not all sections are loaded.
+        assert!(bpxp.save().is_err());
+        //Unfortunatly, due to the design of bpx-rs, at this point the underlying backend is corrupted because the save operation was interrupted.
+    }
+
+    #[test]
+    fn test_re_open_after_create_bad_recover() {
+        let mut bpxp = Package::create(new_byte_buf(128)).unwrap();
+        {
+            let mut objects = bpxp.objects_mut().unwrap();
+            objects
+                .create("TestObject", "This is a test 你好".as_bytes())
+                .unwrap();
+        }
+        bpxp.save().unwrap();
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt decoding the in-memory BPXP.
+        let mut bpxp =
+            Package::open(OpenOptions::new(bytebuf).revert_on_save_failure(true)).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 1);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "TestObject");
+        //Do not load any other object to make sure the section is not loaded.
+        //Attempt to write one more object into the file.
+        bpxp.objects_mut()
+            .unwrap()
+            .create("AdditionalObject", "Another test".as_bytes())
+            .unwrap();
+
+        //Using save here is inapropriate because not all sections are loaded.
+        assert!(bpxp.save().is_err());
+        //In this case we use load_and_save to load all sections before saving.
+        bpxp.load_and_save().unwrap();
+
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt to re-decode the in-memory BPXP.
+        let bpxp = Package::open(bytebuf).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 2);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "AdditionalObject");
+        {
+            let wanted = objects.find("TestObject").unwrap().unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
+            assert_eq!(s, "This is a test 你好")
+        }
+        {
+            let wanted = objects.find("AdditionalObject").unwrap().unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
+            assert_eq!(s, "Another test")
+        }
+    }
+
+    #[test]
+    fn test_re_open_after_create_good() {
+        let mut bpxp = Package::create(new_byte_buf(128)).unwrap();
+        {
+            let mut objects = bpxp.objects_mut().unwrap();
+            objects
+                .create("TestObject", "This is a test 你好".as_bytes())
+                .unwrap();
+        }
+        bpxp.save().unwrap();
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt decoding the in-memory BPXP.
+        let mut bpxp = Package::open(bytebuf).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 1);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "TestObject");
+        //Do not load any other object to make sure the section is not loaded.
+        //Attempt to write one more object into the file.
+        bpxp.objects_mut()
+            .unwrap()
+            .create("AdditionalObject", "Another test".as_bytes())
+            .unwrap();
+
+        //Using save here is inapropriate because not all sections are loaded.
+        //In this case we use load_and_save to load all sections before saving.
+        bpxp.load_and_save().unwrap();
+
+        //Reset the byte buffer pointer to start.
+        let mut bytebuf = bpxp.into_inner().into_inner();
+        bytebuf.seek(SeekFrom::Start(0)).unwrap();
+        //Attempt to re-decode the in-memory BPXP.
+        let bpxp = Package::open(bytebuf).unwrap();
+        let objects = bpxp.objects().unwrap();
+        assert_eq!(objects.len(), 2);
+        let last = objects.iter().last().unwrap();
+        assert_eq!(objects.load_name(last).unwrap(), "AdditionalObject");
+        {
+            let wanted = objects.find("TestObject").unwrap().unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
+            assert_eq!(s, "This is a test 你好")
+        }
+        {
+            let wanted = objects.find("AdditionalObject").unwrap().unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
+            assert_eq!(s, "Another test")
+        }
+    }
+
+    #[test]
+    fn single_data_section() {
+        let mut package = Package::create(new_byte_buf(4096)).unwrap();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("TestObject", b"This is a test".as_ref())
+            .unwrap();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("TestObject1", b"This is a new test".as_ref())
+            .unwrap();
+        package.save().unwrap();
+        let container = package.into_inner();
+        assert_eq!(container.sections().len(), 3);
+        let mut buffer = container.into_inner();
+        buffer.seek(SeekFrom::Start(0)).unwrap();
+        let package = Package::open(buffer).unwrap();
+        let objects = package.objects().unwrap();
+        assert_eq!(objects.len(), 2);
+        let s = unpack_string(&objects, &objects[0]).unwrap();
+        assert_eq!(s, "This is a test");
+        let s = unpack_string(&objects, &objects[1]).unwrap();
+        assert_eq!(s, "This is a new test");
+    }
+
+    #[test]
+    fn two_data_section() {
+        let mut package = Package::create(new_byte_buf(4096)).unwrap();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("TestObject", b"This is a test".as_ref())
+            .unwrap();
+        package.objects_mut().unwrap().new_data_section();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("TestObject1", b"This is a new test".as_ref())
+            .unwrap();
+        package.save().unwrap();
+        let container = package.into_inner();
+        assert_eq!(container.sections().len(), 4);
+        let mut buffer = container.into_inner();
+        buffer.seek(SeekFrom::Start(0)).unwrap();
+        let package = Package::open(buffer).unwrap();
+        let objects = package.objects().unwrap();
+        assert_eq!(objects.len(), 2);
+        let s = unpack_string(&objects, &objects[0]).unwrap();
+        assert_eq!(s, "This is a test");
+        let s = unpack_string(&objects, &objects[1]).unwrap();
+        assert_eq!(s, "This is a new test");
     }
 }

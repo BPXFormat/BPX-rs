@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2022, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -26,36 +26,55 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::num::Wrapping;
+//! Contains public IO traits to be used by other modules of BPX as well as external codes.
 
-use crate::core::compression::Checksum;
+use std::io::Result;
+use std::io::Write;
 
-pub struct WeakChecksum {
-    current: Wrapping<u32>,
+pub use bytesutil::ReadFill;
+pub use bytesutil::ReadToVec;
+
+/// Shift direction and length for shifting IO streams.
+pub enum ShiftTo {
+    /// Shift to the left.
+    Left(u64),
+
+    /// Shift to the right.
+    Right(u64),
 }
 
-impl Checksum for WeakChecksum {
-    fn push(&mut self, data: &[u8]) {
-        for byte in data {
-            self.current += Wrapping(*byte as u32);
-        }
-    }
+/// Represents IO streams with support for byte shifting.
+pub trait Shift: Write {
+    /// Shifts all bytes after cursor, in the section, to the left or to the right.
+    ///
+    /// If this operation fails the data in the section may appear partially shifted.
+    ///
+    /// # Arguments
+    ///
+    /// * `shift`: the shift direction and length.
+    ///
+    /// returns: Result<(), Error>
+    ///
+    /// # Errors
+    ///
+    /// An [Error](std::io::Error) is returned if a read, write or seek operation has failed.
+    fn shift(&mut self, pos: ShiftTo) -> Result<()>;
 
-    fn finish(self) -> u32 {
-        self.current.0
-    }
-}
-
-impl Default for WeakChecksum {
-    fn default() -> Self {
-        Self::new(0)
-    }
-}
-
-impl WeakChecksum {
-    pub fn new(initial: u32) -> Self {
-        WeakChecksum {
-            current: Wrapping(initial),
-        }
+    /// Appends new bytes at the current cursor position in the IO stream.
+    ///
+    /// Returns the number of bytes written.
+    ///
+    /// # Arguments
+    ///
+    /// * `buf`: the buffer of bytes to write.
+    ///
+    /// returns: Result<usize, Error>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the buffer could not be appended at the current cursor position.
+    fn write_append(&mut self, buf: &[u8]) -> Result<usize> {
+        self.shift(ShiftTo::Right(buf.len() as u64))?;
+        self.write(buf)
     }
 }

@@ -26,36 +26,77 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::num::Wrapping;
+//! Contains an implementation of the BPXSD hashing function.
 
-use crate::core::compression::Checksum;
+use std::{
+    fmt::{Display, Formatter},
+    num::Wrapping,
+};
 
-pub struct WeakChecksum {
-    current: Wrapping<u32>,
-}
+/// Convenient utility to wrap object property name hashes.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct Name(u64);
 
-impl Checksum for WeakChecksum {
-    fn push(&mut self, data: &[u8]) {
-        for byte in data {
-            self.current += Wrapping(*byte as u32);
-        }
-    }
-
-    fn finish(self) -> u32 {
-        self.current.0
+impl Display for Name {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
-impl Default for WeakChecksum {
-    fn default() -> Self {
-        Self::new(0)
+impl Name {
+    /// Returns the underlying hash code.
+    pub fn into_inner(self) -> u64 {
+        self.0
     }
 }
 
-impl WeakChecksum {
-    pub fn new(initial: u32) -> Self {
-        WeakChecksum {
-            current: Wrapping(initial),
-        }
+impl From<u64> for Name {
+    fn from(hash: u64) -> Self {
+        Self(hash)
     }
+}
+
+impl<'a> From<&'a str> for Name {
+    fn from(s: &'a str) -> Self {
+        Self(hash(s))
+    }
+}
+
+impl<'a> From<&'a String> for Name {
+    fn from(s: &'a String) -> Self {
+        Self(hash(s.as_ref()))
+    }
+}
+
+impl From<String> for Name {
+    fn from(s: String) -> Self {
+        Self(hash(s.as_ref()))
+    }
+}
+
+/// Hash text using the hash function defined in the BPX specification for strings.
+///
+/// # Arguments
+///
+/// * `s`: the string to compute the hash of.
+///
+/// returns: u64
+///
+/// # Examples
+///
+/// ```
+/// use bpx::hash::hash;
+///
+/// let s = "MyString";
+/// assert_eq!(hash(s), hash("MyString"));
+/// assert_eq!(hash(s), hash(s));
+/// assert_ne!(hash(s), hash("Wrong"));
+/// ```
+pub fn hash(s: &str) -> u64 {
+    let mut val: Wrapping<u64> = Wrapping(5381);
+
+    for v in s.as_bytes() {
+        val = ((val << 5) + val) + Wrapping(*v as u64);
+    }
+    val.0
 }

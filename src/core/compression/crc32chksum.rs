@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -53,6 +53,12 @@ impl Crc32Checksum {
             table,
             current: 0xFFFFFFFF,
         }
+    }
+}
+
+impl Default for Crc32Checksum {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

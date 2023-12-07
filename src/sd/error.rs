@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -30,81 +30,64 @@
 
 use std::fmt::{Display, Formatter};
 
-use crate::macros::impl_err_conversion;
-
-/// Represents a structured data write error
-#[derive(Debug)]
-pub enum WriteError {
-    /// Describes an io error.
-    Io(std::io::Error),
-
-    /// Describes too large structured data Object or Array (ie exceeds 255).
-    ///
-    /// # Arguments
-    /// * actual number of items.
-    CapacityExceeded(usize),
-}
-
-impl_err_conversion!(WriteError { std::io::Error => Io });
-
-impl Display for WriteError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            WriteError::Io(e) => write!(f, "io error: {}", e),
-            WriteError::CapacityExceeded(count) => {
-                write!(f, "capacity exceeded ({} > 255)", count)
-            },
-        }
-    }
-}
+use crate::{macros::impl_err_conversion, sd::value::Type};
 
 /// Represents a structured data read error
 #[derive(Debug)]
-pub enum ReadError {
+pub enum Error {
     /// Describes an io error.
-    ///
-    /// # Arguments
-    /// * the error that occured.
     Io(std::io::Error),
 
-    /// Describes a data truncation error, this means a section or
+    /// Describes a data truncation error while reading a value type, this means a section or
     /// the file itself has been truncated.
-    ///
-    /// # Arguments
-    /// * failed operation name.
-    Truncation(&'static str),
+    Truncation(Type),
 
     /// Describes a bad type code for a value.
-    ///
-    /// # Arguments
-    /// * the incriminated type code.
     BadTypeCode(u8),
 
     /// Describes an utf8 decoding/encoding error.
     Utf8,
+
+    /// Describes too large structured data Object or Array (ie exceeds 255 entries).
+    CapacityExceeded(usize),
+
+    /// Maximum depth for nested values exceeded.
+    MaxDepthExceeded,
+
+    /// Writing non object values into an io stream is currently not supported by BPXSD.
+    ///
+    /// This is however subject to change.
+    NotAnObject,
 }
 
-impl_err_conversion!(ReadError { std::io::Error => Io });
+impl_err_conversion!(Error { std::io::Error => Io });
 
-impl Display for ReadError {
+impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ReadError::Io(e) => write!(f, "io error: {}", e),
-            ReadError::Truncation(typename) => write!(f, "failed to read {}", typename),
-            ReadError::BadTypeCode(code) => write!(f, "unknown value type code ({})", code),
-            ReadError::Utf8 => f.write_str("utf8 error"),
+            Error::Io(e) => write!(f, "io error: {}", e),
+            Error::Truncation(ty) => write!(f, "failed to read {}", ty.name()),
+            Error::BadTypeCode(code) => write!(f, "unknown value type code ({})", code),
+            Error::Utf8 => f.write_str("utf8 error"),
+            Error::CapacityExceeded(count) => {
+                write!(f, "capacity exceeded ({} > 255)", count)
+            },
+            Error::MaxDepthExceeded => f.write_str("maximum depth for nested values exceeded"),
+            Error::NotAnObject => f.write_str("not an object"),
         }
     }
 }
 
+impl std::error::Error for Error {}
+
 /// Represents a structured data value conversion error
 #[derive(Debug)]
 pub struct TypeError {
-    /// The expected type name
-    pub expected_type_name: &'static str,
+    /// The expected value type.
+    pub expected_type: Type,
 
-    /// The actual type name
-    pub actual_type_name: &'static str,
+    /// The actual value type.
+    pub actual_type: Type,
 }
 
 impl TypeError {
@@ -112,14 +95,14 @@ impl TypeError {
     ///
     /// # Arguments
     ///
-    /// * `expected`: the expected type name.
-    /// * `actual`: the actual type name.
+    /// * `expected`: the expected value type.
+    /// * `actual`: the actual value type.
     ///
     /// returns: TypeError
-    pub fn new(expected: &'static str, actual: &'static str) -> TypeError {
+    pub fn new(expected: Type, actual: Type) -> TypeError {
         TypeError {
-            expected_type_name: expected,
-            actual_type_name: actual,
+            expected_type: expected,
+            actual_type: actual,
         }
     }
 }
@@ -129,7 +112,10 @@ impl Display for TypeError {
         write!(
             f,
             "unsupported type conversion (expected {}, got {})",
-            self.expected_type_name, self.actual_type_name
+            self.expected_type.name(),
+            self.actual_type.name()
         )
     }
 }
+
+impl std::error::Error for TypeError {}

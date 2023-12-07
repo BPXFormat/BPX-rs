@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -28,9 +28,9 @@
 
 use std::io::Write;
 
-use byteorder::{ByteOrder, LittleEndian};
+use bytesutil::WriteBytes;
 
-use crate::sd::{error::WriteError, Array, Object, Value};
+use crate::sd::{error::Error, Array, Object, Result, Value};
 
 fn get_value_type_code(val: &Value) -> u8 {
     match val {
@@ -52,7 +52,7 @@ fn get_value_type_code(val: &Value) -> u8 {
     }
 }
 
-fn write_value(val: &Value) -> Result<Vec<u8>, WriteError> {
+fn write_value(val: &Value, max_depth: &mut usize) -> Result<Vec<u8>> {
     let mut buf = Vec::new();
 
     match val {
@@ -67,85 +67,93 @@ fn write_value(val: &Value) -> Result<Vec<u8>, WriteError> {
         Value::Uint8(v) => buf.push(*v),
         Value::Uint16(v) => {
             let mut b: [u8; 2] = [0; 2];
-            LittleEndian::write_u16(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Uint32(v) => {
             let mut b: [u8; 4] = [0; 4];
-            LittleEndian::write_u32(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Uint64(v) => {
             let mut b: [u8; 8] = [0; 8];
-            LittleEndian::write_u64(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Int8(v) => buf.push(*v as u8),
         Value::Int16(v) => {
             let mut b: [u8; 2] = [0; 2];
-            LittleEndian::write_i16(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Int32(v) => {
             let mut b: [u8; 4] = [0; 4];
-            LittleEndian::write_i32(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Int64(v) => {
             let mut b: [u8; 8] = [0; 8];
-            LittleEndian::write_i64(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Float(v) => {
             let mut b: [u8; 4] = [0; 4];
-            LittleEndian::write_f32(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::Double(v) => {
             let mut b: [u8; 8] = [0; 8];
-            LittleEndian::write_f64(&mut b, *v);
+            (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
         },
         Value::String(s) => {
             buf.extend_from_slice(s.as_bytes());
             buf.push(0x0); //Add null byte terminator
         },
-        Value::Array(arr) => buf.append(&mut write_array(arr)?),
-        Value::Object(obj) => buf.append(&mut write_object(obj)?),
+        Value::Array(arr) => buf.append(&mut write_array(arr, max_depth)?),
+        Value::Object(obj) => buf.append(&mut write_object(obj, max_depth)?),
     }
     Ok(buf)
 }
 
-fn write_object(obj: &Object) -> Result<Vec<u8>, WriteError> {
+fn write_object(obj: &Object, max_depth: &mut usize) -> Result<Vec<u8>> {
     let mut v: Vec<u8> = Vec::new();
     let count = obj.len();
 
+    *max_depth -= 1;
+    if *max_depth == 0 {
+        return Err(Error::MaxDepthExceeded);
+    }
     if count > 255 {
-        return Err(WriteError::CapacityExceeded(count));
+        return Err(Error::CapacityExceeded(count));
     }
     v.push(count as u8);
     for (hash, val) in obj {
         let mut head: [u8; 9] = [0; 9];
-        LittleEndian::write_u64(&mut head[0..8], hash);
+        hash.into_inner().write_bytes_le(&mut head[0..8]);
         head[8] = get_value_type_code(val);
         v.extend_from_slice(&head);
-        v.append(&mut write_value(val)?);
+        v.append(&mut write_value(val, max_depth)?);
     }
     Ok(v)
 }
 
-fn write_array(arr: &Array) -> Result<Vec<u8>, WriteError> {
+fn write_array(arr: &Array, max_depth: &mut usize) -> Result<Vec<u8>> {
     let mut v: Vec<u8> = Vec::new();
     let count = arr.len();
 
+    *max_depth -= 1;
+    if *max_depth == 0 {
+        return Err(Error::MaxDepthExceeded);
+    }
     if count > 255 {
-        return Err(WriteError::CapacityExceeded(count));
+        return Err(Error::CapacityExceeded(count));
     }
     v.push(count as u8);
     for i in 0..count {
         let val = &arr[i];
         v.push(get_value_type_code(val));
-        v.append(&mut write_value(val)?);
+        v.append(&mut write_value(val, max_depth)?);
     }
     Ok(v)
 }
@@ -153,8 +161,9 @@ fn write_array(arr: &Array) -> Result<Vec<u8>, WriteError> {
 pub fn write_structured_data<TWrite: Write>(
     mut dest: TWrite,
     obj: &Object,
-) -> Result<(), WriteError> {
-    let bytes = write_object(obj)?;
+    mut max_depth: usize,
+) -> Result<()> {
+    let bytes = write_object(obj, &mut max_depth)?;
     dest.write_all(&bytes)?;
     Ok(())
 }

@@ -26,7 +26,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::fmt::Display;
+use std::{borrow::Cow, fmt::Display};
 
 use serde::de::{
     DeserializeSeed, EnumAccess, IntoDeserializer, MapAccess, SeqAccess, VariantAccess, Visitor,
@@ -46,20 +46,22 @@ impl serde::de::Error for Error {
     }
 }
 
-struct Seq {
+struct Seq<'a> {
     enum_size: EnumSize,
-    arr: Array,
+    pos: usize,
+    arr: &'a Array,
 }
 
-impl<'de> SeqAccess<'de> for Seq {
+impl<'a, 'de> SeqAccess<'de> for Seq<'a> {
     type Error = Error;
 
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
     where
         T: DeserializeSeed<'de>,
     {
-        if let Some(val) = self.arr.remove_at(0) {
-            seed.deserialize(Deserializer::new(self.enum_size, val))
+        if let Some(val) = self.arr.get(self.pos) {
+            self.pos += 1;
+            seed.deserialize(Deserializer::new_borrowed(self.enum_size, val))
                 .map(Some)
         } else {
             Ok(None)
@@ -67,24 +69,26 @@ impl<'de> SeqAccess<'de> for Seq {
     }
 }
 
-struct Map {
+struct Map<'a> {
     enum_size: EnumSize,
-    arr: Array,
-    value: Option<Object>,
+    arr: &'a Array,
+    pos: usize,
+    value: Option<&'a Object>,
 }
 
-impl<'de> MapAccess<'de> for Map {
+impl<'a, 'de> MapAccess<'de> for Map<'a> {
     type Error = Error;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
     where
         K: DeserializeSeed<'de>,
     {
-        if let Some(obj) = self.arr.remove_at(0) {
-            let obj: Object = obj.try_into()?;
+        if let Some(obj) = self.arr.get(self.pos) {
+            self.pos += 1;
+            let obj: &Object = obj.try_into()?;
             let key = obj.get("__key__").ok_or(Error::MissingMapKey)?;
-            self.value = Some(obj.clone());
-            seed.deserialize(Deserializer::new(self.enum_size, key.clone()))
+            self.value = Some(obj);
+            seed.deserialize(Deserializer::new_borrowed(self.enum_size, key))
                 .map(Some)
         } else {
             Ok(None)
@@ -97,18 +101,18 @@ impl<'de> MapAccess<'de> for Map {
     {
         let obj = self.value.take().ok_or(Error::InvalidMapCall)?;
         let value = obj.get("__value__").ok_or(Error::MissingMapValue)?;
-        seed.deserialize(Deserializer::new(self.enum_size, value.clone()))
+        seed.deserialize(Deserializer::new_borrowed(self.enum_size, value))
     }
 }
 
-struct Struct {
+struct Struct<'a> {
     enum_size: EnumSize,
     cur_field: usize,
     fields: &'static [&'static str],
-    obj: Object,
+    obj: &'a Object,
 }
 
-impl<'de> SeqAccess<'de> for Struct {
+impl<'a, 'de> SeqAccess<'de> for Struct<'a> {
     type Error = Error;
 
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
@@ -119,45 +123,43 @@ impl<'de> SeqAccess<'de> for Struct {
             return Ok(None);
         }
         let name = self.fields[self.cur_field];
-        let val = self
-            .obj
-            .get(name)
-            .ok_or(Error::MissingStructKey(name))?
-            .clone();
-        let val = seed.deserialize(Deserializer::new(self.enum_size, val))?;
+        let val = self.obj.get(name).ok_or(Error::MissingStructKey(name))?;
+        let val = seed.deserialize(Deserializer::new_borrowed(self.enum_size, val))?;
         self.cur_field += 1;
         Ok(Some(val))
     }
 }
 
-struct Enum {
+struct Enum<'a> {
     enum_size: EnumSize,
-    val: Value,
+    val: &'a Value,
 }
 
-impl<'de> VariantAccess<'de> for Enum {
+impl<'a, 'de> VariantAccess<'de> for Enum<'a> {
     type Error = Error;
 
     fn unit_variant(self) -> Result<(), Self::Error> {
-        Err(Error::InvalidEnum) //This case should have been catched prior to calling this, if not then BPXSD enum deserialization in serde cannot be achieved
+        Err(Error::InvalidEnum) //This case should have been caught prior to calling this, if not
+                                // then BPXSD enum deserialization in serde cannot be achieved.
     }
 
     fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
     where
         T: DeserializeSeed<'de>,
     {
-        let mut v: Array = self.val.try_into()?;
-        let val = v.remove_at(0).ok_or(Error::MissingVariantData)?;
-        seed.deserialize(Deserializer::new(self.enum_size, val))
+        let v: &Array = self.val.try_into()?;
+        let val = v.get(1).ok_or(Error::MissingVariantData)?;
+        seed.deserialize(Deserializer::new_borrowed(self.enum_size, val))
     }
 
     fn tuple_variant<V>(self, _: usize, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        let arr: Array = self.val.try_into()?;
+        let arr: &Array = self.val.try_into()?;
         visitor.visit_seq(Seq {
             arr,
+            pos: 1,
             enum_size: self.enum_size,
         })
     }
@@ -170,7 +172,7 @@ impl<'de> VariantAccess<'de> for Enum {
     where
         V: Visitor<'de>,
     {
-        let obj: Object = self.val.try_into()?;
+        let obj: &Object = self.val.try_into()?;
         visitor.visit_seq(Struct {
             fields,
             obj,
@@ -180,7 +182,7 @@ impl<'de> VariantAccess<'de> for Enum {
     }
 }
 
-impl<'de> EnumAccess<'de> for Enum {
+impl<'a, 'de> EnumAccess<'de> for Enum<'a> {
     type Error = Error;
     type Variant = Self;
 
@@ -189,62 +191,79 @@ impl<'de> EnumAccess<'de> for Enum {
         V: DeserializeSeed<'de>,
     {
         let variant_idx = match &mut self.val {
-            Value::Array(arr) => arr.remove_at(0),
-            Value::Object(obj) => obj.get("__variant__").cloned(),
+            Value::Array(arr) => arr.get(0),
+            Value::Object(obj) => obj.get("__variant__"),
             _ => None,
         }
         .ok_or(Error::InvalidEnum)?;
-        let val = seed.deserialize(Deserializer::new(self.enum_size, variant_idx))?;
+        let val = seed.deserialize(Deserializer::new_borrowed(self.enum_size, variant_idx))?;
         Ok((val, self))
     }
 }
 
-/// An implementation of a `serde` deserializer for BPXSD [Value](crate::sd::Value).
-pub struct Deserializer {
+/// An implementation of a `serde` deserializer for BPXSD [Value](Value).
+pub struct Deserializer<'a> {
     enum_size: EnumSize,
-    val: Value,
+    val: Cow<'a, Value>,
 }
 
-impl Deserializer {
-    /// Creates a new BPXSD deserializer for use with `serde`.
+impl<'a> Deserializer<'a> {
+    /// Creates a new BPXSD deserializer from a borrowed value for use with `serde`.
     ///
     /// NOTE: Only available with the `serde` cargo feature.
     ///
     /// # Arguments
     ///
     /// * `enum_size`: The size of a Rust enum.
-    /// * `val`: The BPXSD [Value](crate::sd::Value) to deserialize.
+    /// * `val`: The BPXSD [Value](Value) to deserialize.
     ///
     /// returns: Deserializer
-    pub fn new<T: Into<Value>>(enum_size: EnumSize, val: T) -> Deserializer {
+    pub fn new_borrowed(enum_size: EnumSize, val: &'a Value) -> Deserializer<'a> {
         Deserializer {
             enum_size,
-            val: val.into(),
+            val: Cow::Borrowed(val),
+        }
+    }
+
+    /// Creates a new BPXSD deserializer from an owned value for use with `serde`.
+    ///
+    /// NOTE: Only available with the `serde` cargo feature.
+    ///
+    /// # Arguments
+    ///
+    /// * `enum_size`: The size of a Rust enum.
+    /// * `val`: The BPXSD [Value](Value) to deserialize.
+    ///
+    /// returns: Deserializer
+    pub fn new<T: Into<Value>>(enum_size: EnumSize, val: T) -> Deserializer<'a> {
+        Deserializer {
+            enum_size,
+            val: Cow::Owned(val.into()),
         }
     }
 }
 
-impl<'de> serde::Deserializer<'de> for Deserializer {
+impl<'a, 'de> serde::Deserializer<'de> for Deserializer<'a> {
     type Error = Error;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        match self.val {
+        match &*self.val {
             Value::Null => visitor.visit_none(),
-            Value::Bool(v) => visitor.visit_bool(v),
-            Value::Uint8(v) => visitor.visit_u8(v),
-            Value::Uint16(v) => visitor.visit_u16(v),
-            Value::Uint32(v) => visitor.visit_u32(v),
-            Value::Uint64(v) => visitor.visit_u64(v),
-            Value::Int8(v) => visitor.visit_i8(v),
-            Value::Int16(v) => visitor.visit_i16(v),
-            Value::Int32(v) => visitor.visit_i32(v),
-            Value::Int64(v) => visitor.visit_i64(v),
-            Value::Float(v) => visitor.visit_f32(v),
-            Value::Double(v) => visitor.visit_f64(v),
-            Value::String(v) => visitor.visit_string(v),
+            Value::Bool(v) => visitor.visit_bool(*v),
+            Value::Uint8(v) => visitor.visit_u8(*v),
+            Value::Uint16(v) => visitor.visit_u16(*v),
+            Value::Uint32(v) => visitor.visit_u32(*v),
+            Value::Uint64(v) => visitor.visit_u64(*v),
+            Value::Int8(v) => visitor.visit_i8(*v),
+            Value::Int16(v) => visitor.visit_i16(*v),
+            Value::Int32(v) => visitor.visit_i32(*v),
+            Value::Int64(v) => visitor.visit_i64(*v),
+            Value::Float(v) => visitor.visit_f32(*v),
+            Value::Double(v) => visitor.visit_f64(*v),
+            Value::String(v) => visitor.visit_str(v),
             _ => Err(Error::UnsupportedType),
         }
     }
@@ -253,84 +272,84 @@ impl<'de> serde::Deserializer<'de> for Deserializer {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_bool(self.val.try_into()?)
+        visitor.visit_bool(self.val.as_ref().try_into()?)
     }
 
     fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_i8(self.val.try_into()?)
+        visitor.visit_i8(self.val.as_ref().try_into()?)
     }
 
     fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_i16(self.val.try_into()?)
+        visitor.visit_i16(self.val.as_ref().try_into()?)
     }
 
     fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_i32(self.val.try_into()?)
+        visitor.visit_i32(self.val.as_ref().try_into()?)
     }
 
     fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_i64(self.val.try_into()?)
+        visitor.visit_i64(self.val.as_ref().try_into()?)
     }
 
     fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u8(self.val.try_into()?)
+        visitor.visit_u8(self.val.as_ref().try_into()?)
     }
 
     fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u16(self.val.try_into()?)
+        visitor.visit_u16(self.val.as_ref().try_into()?)
     }
 
     fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u32(self.val.try_into()?)
+        visitor.visit_u32(self.val.as_ref().try_into()?)
     }
 
     fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u64(self.val.try_into()?)
+        visitor.visit_u64(self.val.as_ref().try_into()?)
     }
 
     fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_f32(self.val.try_into()?)
+        visitor.visit_f32(self.val.as_ref().try_into()?)
     }
 
     fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_f64(self.val.try_into()?)
+        visitor.visit_f64(self.val.as_ref().try_into()?)
     }
 
     fn deserialize_char<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        let v: u32 = self.val.try_into()?;
+        let v: u32 = self.val.as_ref().try_into()?;
         let v = char::from_u32(v).ok_or(Error::InvalidUtf32(v))?;
         visitor.visit_char(v)
     }
@@ -339,15 +358,16 @@ impl<'de> serde::Deserializer<'de> for Deserializer {
     where
         V: Visitor<'de>,
     {
-        let v: String = self.val.try_into()?;
-        visitor.visit_str(&v)
+        let v: &str = self.val.as_ref().try_into()?;
+        visitor.visit_str(v)
     }
 
     fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.val.try_into()?)
+        let v: &str = self.val.as_ref().try_into()?;
+        visitor.visit_string(v.into())
     }
 
     fn deserialize_bytes<V>(self, _: V) -> Result<V::Value, Self::Error>
@@ -368,7 +388,7 @@ impl<'de> serde::Deserializer<'de> for Deserializer {
     where
         V: Visitor<'de>,
     {
-        match self.val {
+        match &*self.val {
             Value::Null => visitor.visit_none(),
             _ => visitor.visit_some(self),
         }
@@ -404,7 +424,8 @@ impl<'de> serde::Deserializer<'de> for Deserializer {
         V: Visitor<'de>,
     {
         visitor.visit_seq(Seq {
-            arr: self.val.try_into()?,
+            arr: self.val.as_ref().try_into()?,
+            pos: 0,
             enum_size: self.enum_size,
         })
     }
@@ -433,7 +454,8 @@ impl<'de> serde::Deserializer<'de> for Deserializer {
         V: Visitor<'de>,
     {
         visitor.visit_map(Map {
-            arr: self.val.try_into()?,
+            arr: self.val.as_ref().try_into()?,
+            pos: 0,
             enum_size: self.enum_size,
             value: None,
         })
@@ -448,7 +470,7 @@ impl<'de> serde::Deserializer<'de> for Deserializer {
     where
         V: Visitor<'de>,
     {
-        let obj: Object = self.val.try_into()?;
+        let obj: &Object = self.val.as_ref().try_into()?;
         visitor.visit_seq(Struct {
             fields,
             obj,
@@ -468,28 +490,28 @@ impl<'de> serde::Deserializer<'de> for Deserializer {
     {
         match self.enum_size {
             EnumSize::U8 => {
-                match self.val {
-                    Value::Uint8(v) => visitor.visit_enum((v as u32).into_deserializer()), //We got a standard C enum
+                match &*self.val {
+                    Value::Uint8(v) => visitor.visit_enum((*v as u32).into_deserializer()), //We got a standard C enum
                     _ => visitor.visit_enum(Enum {
-                        val: self.val,
+                        val: self.val.as_ref(),
                         enum_size: self.enum_size,
                     }),
                 }
             },
             EnumSize::U16 => {
-                match self.val {
-                    Value::Uint16(v) => visitor.visit_enum((v as u32).into_deserializer()), //We got a standard C enum
+                match &*self.val {
+                    Value::Uint16(v) => visitor.visit_enum((*v as u32).into_deserializer()), //We got a standard C enum
                     _ => visitor.visit_enum(Enum {
-                        val: self.val,
+                        val: self.val.as_ref(),
                         enum_size: self.enum_size,
                     }),
                 }
             },
             EnumSize::U32 => {
-                match self.val {
+                match &*self.val {
                     Value::Uint32(v) => visitor.visit_enum(v.into_deserializer()), //We got a standard C enum
                     _ => visitor.visit_enum(Enum {
-                        val: self.val,
+                        val: self.val.as_ref(),
                         enum_size: self.enum_size,
                     }),
                 }
@@ -504,15 +526,15 @@ impl<'de> serde::Deserializer<'de> for Deserializer {
         //Assume the identifier is always for an enum, if not well it could throw Err or a broken value
         match self.enum_size {
             EnumSize::U8 => {
-                let val: u8 = self.val.try_into()?;
+                let val: u8 = self.val.as_ref().try_into()?;
                 visitor.visit_u32(val as u32)
             },
             EnumSize::U16 => {
-                let val: u16 = self.val.try_into()?;
+                let val: u16 = self.val.as_ref().try_into()?;
                 visitor.visit_u32(val as u32)
             },
             EnumSize::U32 => {
-                let val: u32 = self.val.try_into()?;
+                let val: u32 = self.val.as_ref().try_into()?;
                 visitor.visit_u32(val)
             },
         }
@@ -564,11 +586,42 @@ mod tests {
             Val2(u8, u8),
         }
         let mut arr = Array::new();
-        arr.add(Value::Uint32(2));
-        arr.add(Value::Uint8(0));
-        arr.add(Value::Uint8(42));
+        arr.as_mut().push(Value::Uint32(2));
+        arr.as_mut().push(Value::Uint8(0));
+        arr.as_mut().push(Value::Uint8(42));
         let e = MyEnum::deserialize(Deserializer::new(EnumSize::U32, arr)).unwrap();
         assert_eq!(e, MyEnum::Val2(0, 42));
+    }
+
+    #[test]
+    fn tuple_enum2() {
+        #[derive(Deserialize, Eq, PartialEq, Debug)]
+        enum MyEnum {
+            Val(u16),
+            Val1,
+            Val2(u8, u8),
+        }
+        let mut arr = Array::new();
+        arr.as_mut().push(Value::Uint8(0));
+        arr.as_mut().push(Value::Uint16(42));
+        let e = MyEnum::deserialize(Deserializer::new(EnumSize::U8, arr)).unwrap();
+        assert_eq!(e, MyEnum::Val(42));
+    }
+
+    #[test]
+    fn struct_enum() {
+        #[derive(Deserialize, Eq, PartialEq, Debug)]
+        enum MyEnum {
+            Val(u8),
+            Val1,
+            Val2 { a: u8, b: u8 },
+        }
+        let mut obj = Object::new();
+        obj.set("__variant__", Value::Uint32(2));
+        obj.set("a", Value::Uint8(0));
+        obj.set("b", Value::Uint8(42));
+        let e = MyEnum::deserialize(Deserializer::new(EnumSize::U32, obj)).unwrap();
+        assert_eq!(e, MyEnum::Val2 { a: 0, b: 42 });
     }
 
     #[test]

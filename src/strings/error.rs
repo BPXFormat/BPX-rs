@@ -28,11 +28,11 @@
 
 use std::fmt::{Display, Formatter};
 
-use crate::macros::impl_err_conversion;
+use crate::{core::error::OpenError, macros::impl_err_conversion};
 
 /// Represents a string section read error.
 #[derive(Debug)]
-pub enum ReadError {
+pub enum Error {
     /// Describes an utf8 decoding/encoding error.
     Utf8,
 
@@ -42,51 +42,30 @@ pub enum ReadError {
     /// Describes an io error.
     Io(std::io::Error),
 
-    /// Indicates the section is not loaded.
-    SectionNotLoaded,
+    /// Indicates an [OpenError](OpenError) has occurred when attempting
+    /// to open the section.
+    Open(OpenError),
 }
 
 impl_err_conversion!(
-    ReadError {
-        std::io::Error => Io
+    Error {
+        std::io::Error => Io,
+        OpenError => Open
     }
 );
 
-impl Display for ReadError {
+impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ReadError::Utf8 => f.write_str("utf8 error"),
-            ReadError::Eos => f.write_str("EOS reached before end of string"),
-            ReadError::SectionNotLoaded => f.write_str("section not loaded"),
-            ReadError::Io(e) => write!(f, "io error: {}", e),
+            Error::Utf8 => f.write_str("utf8 error"),
+            Error::Eos => f.write_str("EOS reached before end of string"),
+            Error::Open(e) => write!(f, "open error ({})", e),
+            Error::Io(e) => write!(f, "io error: {}", e),
         }
     }
 }
 
-/// Represents a string section write error.
-#[derive(Debug)]
-pub enum WriteError {
-    /// Describes an io error.
-    Io(std::io::Error),
-
-    /// Indicates the section is not loaded.
-    SectionNotLoaded,
-}
-
-impl_err_conversion!(
-    WriteError {
-        std::io::Error => Io
-    }
-);
-
-impl Display for WriteError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            WriteError::SectionNotLoaded => f.write_str("section not loaded"),
-            WriteError::Io(e) => write!(f, "io error: {}", e),
-        }
-    }
-}
+impl std::error::Error for Error {}
 
 /// Represents a path conversion error.
 #[derive(Debug)]
@@ -106,3 +85,5 @@ impl Display for PathError {
         }
     }
 }
+
+impl std::error::Error for PathError {}

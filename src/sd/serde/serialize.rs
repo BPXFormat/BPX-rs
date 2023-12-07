@@ -37,39 +37,42 @@ use serde::{
 };
 
 use crate::sd::{
+    debug::{Debugger, ODebugger},
     serde::{EnumSize, Error},
-    Array, Debugger, Object, Value,
+    Array, Object, Value,
 };
 
 enum DebuggerOrObject {
-    Debugger(crate::sd::Debugger),
-    Object(crate::sd::Object),
+    Debugger(ODebugger),
+    Object(Object),
 }
 
 impl DebuggerOrObject {
     pub fn with_capacity(capacity: usize, debug: bool) -> DebuggerOrObject {
         if debug {
-            DebuggerOrObject::Debugger(Debugger::attach(Object::with_capacity(capacity)).unwrap())
+            DebuggerOrObject::Debugger(
+                Debugger::attach(Object::with_capacity(capacity as _)).unwrap(),
+            )
         } else {
-            DebuggerOrObject::Object(Object::with_capacity(capacity))
+            DebuggerOrObject::Object(Object::with_capacity(capacity as _))
         }
     }
 
-    pub fn get(&self, key: &str) -> Option<&crate::sd::Value> {
+    pub fn get(&self, key: &str) -> Option<&Value> {
         match self {
-            DebuggerOrObject::Debugger(v) => v.get(key),
+            DebuggerOrObject::Debugger(v) => v.as_ref().get(key),
             DebuggerOrObject::Object(v) => v.get(key),
         }
     }
 
-    pub fn set(&mut self, key: &str, value: crate::sd::Value) {
+    pub fn set(&mut self, key: &str, value: Value) {
         match self {
             DebuggerOrObject::Debugger(v) => v.set(key, value),
             DebuggerOrObject::Object(v) => v.set(key, value),
         }
     }
 
-    pub fn into(self) -> crate::sd::Value {
+    pub fn into(self) -> Value {
         match self {
             DebuggerOrObject::Debugger(v) => v.detach().into(),
             DebuggerOrObject::Object(v) => v.into(),
@@ -98,7 +101,8 @@ impl Seq {
         T: Serialize,
     {
         self.arr
-            .add(value.serialize(Serializer::new(self.enum_size, self.debug))?);
+            .as_mut()
+            .push(value.serialize(Serializer::new(self.enum_size, self.debug))?);
         Ok(())
     }
 }
@@ -181,7 +185,7 @@ impl Map {
                 &mut self.cur_obj,
                 DebuggerOrObject::with_capacity(2, self.debug),
             );
-            self.arr.add(val.into());
+            self.arr.as_mut().push(val.into());
         }
     }
 }
@@ -278,7 +282,7 @@ impl SerializeStructVariant for Struct {
     }
 }
 
-/// An implementation of a `serde` serializer for BPXSD [Value](crate::sd::Value).
+/// An implementation of a `serde` serializer for BPXSD [Value](Value).
 pub struct Serializer {
     enum_size: EnumSize,
     debug: bool,
@@ -422,18 +426,18 @@ impl serde::Serializer for Serializer {
     {
         let mut arr = Array::with_capacity(2);
         match self.enum_size {
-            EnumSize::U8 => arr.add((variant_index as u8).into()),
-            EnumSize::U16 => arr.add((variant_index as u16).into()),
-            EnumSize::U32 => arr.add(variant_index.into()),
+            EnumSize::U8 => arr.as_mut().push((variant_index as u8).into()),
+            EnumSize::U16 => arr.as_mut().push((variant_index as u16).into()),
+            EnumSize::U32 => arr.as_mut().push(variant_index.into()),
         }
-        arr.add(value.serialize(self)?);
+        arr.as_mut().push(value.serialize(self)?);
         Ok(arr.into())
     }
 
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
         Ok(Seq {
             arr: if let Some(len) = len {
-                Array::with_capacity(len)
+                Array::with_capacity(len as _)
             } else {
                 Array::new()
             },
@@ -444,7 +448,7 @@ impl serde::Serializer for Serializer {
 
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, Self::Error> {
         Ok(Seq {
-            arr: Array::with_capacity(len),
+            arr: Array::with_capacity(len as _),
             enum_size: self.enum_size,
             debug: self.debug,
         })
@@ -456,7 +460,7 @@ impl serde::Serializer for Serializer {
         len: usize,
     ) -> Result<Self::SerializeTupleStruct, Self::Error> {
         Ok(Seq {
-            arr: Array::with_capacity(len),
+            arr: Array::with_capacity(len as _),
             enum_size: self.enum_size,
             debug: self.debug,
         })
@@ -469,11 +473,11 @@ impl serde::Serializer for Serializer {
         _: &'static str,
         len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
-        let mut arr = Array::with_capacity(len + 1);
+        let mut arr = Array::with_capacity(len as u8 + 1);
         match self.enum_size {
-            EnumSize::U8 => arr.add((variant_index as u8).into()),
-            EnumSize::U16 => arr.add((variant_index as u16).into()),
-            EnumSize::U32 => arr.add(variant_index.into()),
+            EnumSize::U8 => arr.as_mut().push((variant_index as u8).into()),
+            EnumSize::U16 => arr.as_mut().push((variant_index as u16).into()),
+            EnumSize::U32 => arr.as_mut().push(variant_index.into()),
         }
         Ok(Seq {
             arr,
@@ -486,7 +490,7 @@ impl serde::Serializer for Serializer {
         Ok(Map {
             cur_obj: DebuggerOrObject::with_capacity(2, self.debug),
             arr: if let Some(len) = len {
-                Array::with_capacity(len)
+                Array::with_capacity(len as _)
             } else {
                 Array::new()
             },

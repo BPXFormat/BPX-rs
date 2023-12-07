@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -30,15 +30,18 @@
 
 mod container;
 
-pub mod builder;
 mod compression;
 mod data;
 mod decoder;
 mod encoder;
 pub mod error;
 pub mod header;
+pub mod options;
 mod section;
+
+/// Result type used in all [Container] operations.
+pub type Result<T> = std::result::Result<T, error::Error>;
 
 pub use container::*;
 pub use data::{AutoSectionData, SectionData};
-pub use section::{Section, SectionMut};
+pub use section::{Handle, Iter, SectionInfo, SectionTable};

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -26,82 +26,127 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use crate::core::data::util::IoReadBuffer;
 use std::{
     fs::File,
     io::{Read, Result, Seek, SeekFrom, Write},
 };
 
 use crate::core::SectionData;
-
-const READ_BLOCK_SIZE: usize = 8192;
+use crate::traits::ReadToVec;
 
 pub struct FileBasedSection {
     data: File,
-    buffer: [u8; READ_BLOCK_SIZE],
-    written: usize,
-    cursor: usize,
+    buffer: IoReadBuffer,
+    stream_pos: u64,
     cur_size: usize,
-    seek_ptr: u64,
 }
 
 impl FileBasedSection {
     pub fn new(data: File) -> FileBasedSection {
         FileBasedSection {
             data,
-            buffer: [0; READ_BLOCK_SIZE],
-            written: 0,
-            cursor: usize::MAX,
+            buffer: IoReadBuffer::new(),
+            stream_pos: 0,
             cur_size: 0,
-            seek_ptr: 0,
         }
     }
 }
 
 impl Read for FileBasedSection {
-    fn read(&mut self, data: &mut [u8]) -> Result<usize> {
-        let mut cnt: usize = 0;
-
-        for byte in data {
-            if self.cursor >= self.written {
-                self.cursor = 0;
-                self.written = self.data.read(&mut self.buffer)?;
-            }
-            if self.cursor < self.written {
-                *byte = self.buffer[self.cursor];
-                self.cursor += 1;
-                cnt += 1;
-            }
-        }
-        Ok(cnt)
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        self.buffer.read(buf, |block| {
+            let max = self.cur_size as u64 - self.stream_pos;
+            let len = match block.len() as u64 > max {
+                true => self.data.read(&mut block[..max as usize]),
+                false => self.data.read(block),
+            }?;
+            self.stream_pos += len as u64;
+            Ok(len)
+        })
     }
 }
 
 impl Write for FileBasedSection {
-    fn write(&mut self, data: &[u8]) -> Result<usize> {
-        let len = self.data.write(data)?;
-        if self.seek_ptr >= self.cur_size as u64 {
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        let real_pos = self.stream_position()?;
+        self.data.seek(SeekFrom::Start(real_pos))?;
+        let len = self.data.write(buf)?;
+        if real_pos >= self.cur_size as u64 {
             self.cur_size += len;
-            self.seek_ptr += len as u64;
         }
+        self.stream_pos = real_pos + len as u64;
+        self.buffer.flush();
         Ok(len)
     }
 
     fn flush(&mut self) -> Result<()> {
-        self.data.seek(SeekFrom::Current(self.cursor as i64))?;
-        self.cursor = usize::MAX;
         self.data.flush()
     }
 }
 
 impl Seek for FileBasedSection {
-    fn seek(&mut self, state: SeekFrom) -> Result<u64> {
-        self.seek_ptr = self.data.seek(state)?;
-        Ok(self.seek_ptr)
+    fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
+        self.stream_pos = self.data.seek(pos)?;
+        self.buffer.flush();
+        Ok(self.stream_pos)
+    }
+
+    fn stream_position(&mut self) -> Result<u64> {
+        Ok(self.stream_pos - self.buffer.inverted_position())
     }
 }
 
+impl ReadToVec for FileBasedSection {}
+
 impl SectionData for FileBasedSection {
+    fn truncate(&mut self, size: usize) -> Result<usize> {
+        if size == 0 {
+            return Ok(0);
+        }
+        //CMP is here to ensure no panic is possible!
+        self.cur_size -= std::cmp::min(self.cur_size, size);
+        let real_pos = self.stream_position()?;
+        if real_pos > self.cur_size as u64 {
+            self.data.seek(SeekFrom::Start(self.cur_size as u64))?;
+            self.buffer.flush();
+        }
+        Ok(self.cur_size)
+    }
+
     fn size(&self) -> usize {
         self.cur_size
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::core::data::file::FileBasedSection;
+    use crate::core::SectionData;
+    use crate::traits::ReadFill;
+    use std::io::{Seek, SeekFrom, Write};
+
+    #[test]
+    fn basic_read_write_seek() {
+        let mut data = FileBasedSection::new(tempfile::tempfile().unwrap());
+        data.write_all(b"test").unwrap();
+        data.seek(SeekFrom::Start(0)).unwrap();
+        let mut buf = [0; 4];
+        let len = data.read_fill(&mut buf).unwrap();
+        assert_eq!(len, 4);
+        assert_eq!(&buf, b"test");
+    }
+
+    #[test]
+    fn basic_truncate() {
+        let mut data = FileBasedSection::new(tempfile::tempfile().unwrap());
+        data.write_all(b"test").unwrap();
+        let new_len = data.truncate(2).unwrap();
+        assert_eq!(new_len, 2);
+        let mut buf = [0; 4];
+        data.seek(SeekFrom::Start(0)).unwrap();
+        let len = data.read_fill(&mut buf).unwrap();
+        assert_eq!(len, 2);
+        assert_eq!(&buf, b"te\0\0");
     }
 }

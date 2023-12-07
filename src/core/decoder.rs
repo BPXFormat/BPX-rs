@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -29,11 +29,13 @@
 //! The BPX decoder.
 
 use std::{
+    cell::{Cell, RefCell},
     collections::BTreeMap,
     io,
     io::{Read, Seek, Write},
 };
 
+use crate::core::SectionInfo;
 use crate::{
     core::{
         compression::{
@@ -41,38 +43,38 @@ use crate::{
             ZlibCompressionMethod,
         },
         data::AutoSectionData,
-        error::ReadError,
+        error::Error,
         header::{
             MainHeader, SectionHeader, Struct, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ,
             FLAG_COMPRESS_ZLIB,
         },
         section::{SectionEntry, SectionEntry1},
-        DEFAULT_COMPRESSION_THRESHOLD,
+        Result, DEFAULT_COMPRESSION_THRESHOLD,
     },
-    utils::ReadFill,
+    traits::ReadFill,
 };
+
+use super::header::GetChecksum;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
 pub fn read_section_header_table<T: Read>(
     mut backend: &mut T,
     main_header: &MainHeader,
-    checksum: u32,
-) -> Result<(u32, BTreeMap<u32, SectionEntry>), ReadError> {
+    checksum: &mut impl Checksum,
+) -> Result<(u32, BTreeMap<u32, SectionEntry>)> {
     let mut sections = BTreeMap::new();
-    let mut final_checksum = checksum;
     let mut hdl: u32 = 0;
 
     for i in 0..main_header.section_num {
-        let (checksum, header) = SectionHeader::read(&mut backend)?;
-        final_checksum += checksum;
+        let header = SectionHeader::read(&mut backend)?;
+        header.get_checksum(checksum);
         sections.insert(
             hdl,
             SectionEntry {
-                header,
-                data: None,
-                modified: false,
-                index: i,
+                info: SectionInfo::new(i, header),
+                data: RefCell::new(None),
+                modified: Cell::new(false),
                 entry1: SectionEntry1 {
                     flags: header.flags,
                     threshold: DEFAULT_COMPRESSION_THRESHOLD,
@@ -81,49 +83,50 @@ pub fn read_section_header_table<T: Read>(
         );
         hdl += 1;
     }
-    if final_checksum != main_header.chksum {
-        return Err(ReadError::Checksum(final_checksum, main_header.chksum));
-    }
     Ok((hdl, sections))
 }
 
-pub fn load_section1<T: io::Read + io::Seek>(
+pub fn load_section1<T: Read + Seek>(
     file: &mut T,
     section: &SectionHeader,
-) -> Result<AutoSectionData, ReadError> {
-    let mut data = AutoSectionData::new_with_size(section.size)?;
+    memory_threshold: u32,
+) -> Result<AutoSectionData> {
+    let mut data = AutoSectionData::new_with_size(section.size as _, memory_threshold as _)?;
     data.seek(io::SeekFrom::Start(0))?;
     if section.flags & FLAG_CHECK_WEAK != 0 {
-        let mut chksum = WeakChecksum::new();
-        //TODO: Check
+        let mut chksum = WeakChecksum::new(0);
         load_section_checked(file, section, &mut data, &mut chksum)?;
         let v = chksum.finish();
         if v != section.chksum {
-            return Err(ReadError::Checksum(v, section.chksum));
+            return Err(Error::Checksum {
+                actual: v,
+                expected: section.chksum,
+            });
         }
     } else if section.flags & FLAG_CHECK_CRC32 != 0 {
         let mut chksum = Crc32Checksum::new();
-        //TODO: Check
         load_section_checked(file, section, &mut data, &mut chksum)?;
         let v = chksum.finish();
         if v != section.chksum {
-            return Err(ReadError::Checksum(v, section.chksum));
+            return Err(Error::Checksum {
+                actual: v,
+                expected: section.chksum,
+            });
         }
     } else {
-        let mut chksum = WeakChecksum::new();
-        //TODO: Check
+        let mut chksum = WeakChecksum::new(0);
         load_section_checked(file, section, &mut data, &mut chksum)?;
     }
     data.seek(io::SeekFrom::Start(0))?;
     Ok(data)
 }
 
-fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
+fn load_section_checked<TBackend: Read + Seek, TWrite: Write, TChecksum: Checksum>(
     file: &mut TBackend,
     section: &SectionHeader,
     out: TWrite,
     chksum: &mut TChecksum,
-) -> Result<(), ReadError> {
+) -> Result<()> {
     if section.flags & FLAG_COMPRESS_XZ != 0 {
         load_section_compressed::<XzCompressionMethod, _, _, _>(file, section, out, chksum)?;
     } else if section.flags & FLAG_COMPRESS_ZLIB != 0 {
@@ -134,7 +137,7 @@ fn load_section_checked<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum:
     Ok(())
 }
 
-fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChecksum: Checksum>(
+fn load_section_uncompressed<TBackend: Read + Seek, TWrite: Write, TChecksum: Checksum>(
     bpx: &mut TBackend,
     header: &SectionHeader,
     mut output: TWrite,
@@ -157,7 +160,7 @@ fn load_section_uncompressed<TBackend: io::Read + io::Seek, TWrite: Write, TChec
 
 fn load_section_compressed<
     TMethod: Inflater,
-    TBackend: io::Read + io::Seek,
+    TBackend: Read + Seek,
     TWrite: Write,
     TChecksum: Checksum,
 >(
@@ -165,7 +168,7 @@ fn load_section_compressed<
     header: &SectionHeader,
     output: TWrite,
     chksum: &mut TChecksum,
-) -> Result<(), ReadError> {
+) -> Result<()> {
     bpx.seek(io::SeekFrom::Start(header.pointer))?;
     XzCompressionMethod::inflate(bpx, output, header.csize as usize, chksum)?;
     Ok(())

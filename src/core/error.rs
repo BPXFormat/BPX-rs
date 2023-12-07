@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -68,6 +68,8 @@ impl Display for DeflateError {
     }
 }
 
+impl std::error::Error for DeflateError {}
+
 /// Represents a generic compression error.
 #[derive(Debug)]
 pub enum InflateError {
@@ -101,96 +103,101 @@ impl Display for InflateError {
     }
 }
 
-/// Represents a BPX read error.
+impl std::error::Error for InflateError {}
+
+/// Represents a BPX error.
 #[derive(Debug)]
-pub enum ReadError {
+pub enum Error {
     /// Describes a checksum error.
-    ///
-    /// # Arguments
-    /// * expected checksum value.
-    /// * actual checksum value.
-    Checksum(u32, u32),
+    Checksum {
+        /// Actual checksum value.
+        actual: u32,
+
+        /// Expected checksum value.
+        expected: u32,
+    },
 
     /// Describes an io error.
     Io(std::io::Error),
 
     /// Describes a bad version error.
-    ///
-    /// # Arguments
-    /// * the incriminated version number.
     BadVersion(u32),
 
-    /// Describes a bad signature error
-    ///
-    /// # Arguments
-    /// * the incriminated signature.
+    /// Describes a bad signature error.
     BadSignature([u8; 3]),
 
     /// Describes a decompression error.
     Inflate(InflateError),
-}
-
-impl_err_conversion!(
-    ReadError {
-        std::io::Error => Io,
-        InflateError => Inflate
-    }
-);
-
-impl Display for ReadError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ReadError::Checksum(expected, actual) => write!(
-                f,
-                "checksum validation failed (expected {}, got {})",
-                expected, actual
-            ),
-            ReadError::Io(e) => write!(f, "io error: {}", e),
-            ReadError::BadVersion(v) => write!(f, "unknown file version ({})", v),
-            ReadError::BadSignature(sig) => {
-                write!(f, "unknown file signature ({}{}{})", sig[0], sig[1], sig[2])
-            },
-            ReadError::Inflate(e) => write!(f, "inflate error: {}", e),
-        }
-    }
-}
-
-/// Represents a BPX write error.
-#[derive(Debug)]
-pub enum WriteError {
-    /// Describes an io error.
-    Io(std::io::Error),
 
     /// Describes a section that is too large to be written
     /// (ie exceeds 2 pow 32 / 4Gb).
-    ///
-    /// # Arguments
-    /// * actual size of section.
     Capacity(usize),
 
     /// Describes a compression error.
     Deflate(DeflateError),
 
-    /// A section has not yet been loaded.
-    SectionNotLoaded,
+    /// A section open error.
+    Open(OpenError),
+
+    /// The BPX container is truncated and does not have enough data to be loaded.
+    Truncated,
 }
 
 impl_err_conversion!(
-    WriteError {
+    Error {
         std::io::Error => Io,
-        DeflateError => Deflate
+        DeflateError => Deflate,
+        InflateError => Inflate,
+        OpenError => Open
     }
 );
 
-impl Display for WriteError {
+impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            WriteError::Io(e) => write!(f, "io error: {}", e),
-            WriteError::Capacity(size) => {
+            Error::Checksum { expected, actual } => write!(
+                f,
+                "checksum validation failed (expected {}, got {})",
+                expected, actual
+            ),
+            Error::Io(e) => write!(f, "io error: {}", e),
+            Error::BadVersion(v) => write!(f, "unknown file version ({})", v),
+            Error::BadSignature(sig) => {
+                write!(f, "unknown file signature ({}{}{})", sig[0], sig[1], sig[2])
+            },
+            Error::Inflate(e) => write!(f, "inflate error: {}", e),
+            Error::Open(e) => write!(f, "section open error ({})", e),
+            Error::Capacity(size) => {
                 write!(f, "maximum section size exceeded ({} > 2^32)", size)
             },
-            WriteError::Deflate(e) => write!(f, "deflate error: {}", e),
-            WriteError::SectionNotLoaded => f.write_str("section not loaded"),
+            Error::Deflate(e) => write!(f, "deflate error: {}", e),
+            Error::Truncated => f.write_str("data is truncated"),
         }
     }
 }
+
+impl std::error::Error for Error {}
+
+/// Represents possible errors when opening a section.
+#[derive(Debug)]
+pub enum OpenError {
+    /// The requested section is already in use.
+    ///
+    /// This usually means the section is referencing itself, this error variant is intended
+    /// to prevent this case.
+    SectionInUse,
+
+    /// The requested section has not been loaded.
+    SectionNotLoaded,
+}
+
+impl Display for OpenError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OpenError::SectionInUse => f.write_str("section in use"),
+            OpenError::SectionNotLoaded => f.write_str("section not loaded"),
+        }
+    }
+}
+
+impl std::error::Error for OpenError {}

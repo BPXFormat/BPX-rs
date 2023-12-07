@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -30,25 +30,26 @@
 
 use std::{
     collections::BTreeMap,
-    io,
     io::{Seek, SeekFrom, Write},
 };
 
+use crate::core::header::SectionHeader;
+use crate::core::SectionInfo;
 use crate::{
     core::{
         compression::{
             Checksum, Crc32Checksum, Deflater, WeakChecksum, XzCompressionMethod,
             ZlibCompressionMethod,
         },
-        error::WriteError,
+        error::{Error, OpenError},
         header::{
             GetChecksum, MainHeader, Struct, FLAG_CHECK_CRC32, FLAG_CHECK_WEAK, FLAG_COMPRESS_XZ,
             FLAG_COMPRESS_ZLIB, SIZE_MAIN_HEADER, SIZE_SECTION_HEADER,
         },
         section::SectionEntry,
-        SectionData,
+        Result, SectionData,
     },
-    utils::ReadFill,
+    traits::ReadFill,
 };
 
 const READ_BLOCK_SIZE: usize = 8192;
@@ -57,121 +58,157 @@ fn write_sections<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
     file_start_offset: usize,
-) -> Result<(u32, usize), WriteError> {
+    chksum_sht: &mut impl Checksum,
+) -> Result<usize> {
     let mut ptr: u64 = file_start_offset as _;
     let mut all_sections_size: usize = 0;
-    let mut chksum_sht: u32 = 0;
 
     for (idx, (_handle, section)) in sections.iter_mut().enumerate() {
         //At this point the handle must be valid otherwise sections_in_order is broken
-        let data = section.data.as_mut().ok_or(WriteError::SectionNotLoaded)?;
+        let data = section
+            .data
+            .get_mut()
+            .as_mut()
+            .ok_or(Error::Open(OpenError::SectionNotLoaded))?;
         if data.size() > u32::MAX as usize {
-            return Err(WriteError::Capacity(data.size()));
+            return Err(Error::Capacity(data.size()));
         }
         let last_section_ptr = data.stream_position()?;
-        data.seek(io::SeekFrom::Start(0))?;
+        data.seek(SeekFrom::Start(0))?;
         let flags = section.entry1.get_flags(data.size() as u32);
         let (csize, chksum) = write_section(flags, data, &mut backend)?;
-        data.seek(io::SeekFrom::Start(last_section_ptr))?;
-        section.header.csize = csize as u32;
-        section.header.size = data.size() as u32;
-        section.header.chksum = chksum;
-        section.header.flags = flags;
-        section.header.pointer = ptr;
-        section.index = idx as _;
+        data.seek(SeekFrom::Start(last_section_ptr))?;
+        section.info = SectionInfo::new(
+            idx as _,
+            SectionHeader {
+                pointer: ptr,
+                csize: csize as _,
+                size: data.size() as _,
+                chksum,
+                ty: section.info.header().ty,
+                flags,
+            },
+        );
         #[cfg(feature = "debug-log")]
         println!(
             "Writing section #{}: Size = {}, Size after compression = {}, Handle = {}",
-            idx, section.header.size, section.header.csize, _handle
+            idx,
+            section.info.header().size,
+            section.info.header().csize,
+            _handle
         );
         ptr += csize as u64;
         {
             //Locate section header offset, then directly write section header
             let header_start_offset = SIZE_MAIN_HEADER + (idx * SIZE_SECTION_HEADER);
             backend.seek(SeekFrom::Start(header_start_offset as _))?;
-            section.header.write(&mut backend)?;
+            section.info.header().write(&mut backend)?;
             //Reset file pointer back to the end of the last written section
             backend.seek(SeekFrom::Start(ptr))?;
         }
-        chksum_sht += section.header.get_checksum();
+        section.info.header().get_checksum(chksum_sht);
         all_sections_size += csize;
     }
-    Ok((chksum_sht, all_sections_size))
+    Ok(all_sections_size)
 }
 
-pub fn internal_save<T: Write + Seek>(
+fn internal_save<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
     main_header: &mut MainHeader,
-) -> Result<(), WriteError> {
+) -> Result<()> {
     let file_start_offset =
         SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * main_header.section_num as usize);
     //Seek to the start of the actual file content
     backend.seek(SeekFrom::Start(file_start_offset as _))?;
     //Write all section data and section headers
-    let (chksum_sht, all_sections_size) =
-        write_sections(&mut backend, sections, file_start_offset)?;
+    let mut chksum_sht = WeakChecksum::default();
+    let all_sections_size =
+        write_sections(&mut backend, sections, file_start_offset, &mut chksum_sht)?;
     main_header.file_size = all_sections_size as u64 + file_start_offset as u64;
-    main_header.chksum = 0;
-    main_header.chksum = chksum_sht + main_header.get_checksum();
+    main_header.get_checksum(&mut chksum_sht);
+    main_header.chksum = chksum_sht.finish();
     //Relocate to the start of the file and write the BPX main header
     backend.seek(SeekFrom::Start(0))?;
     main_header.write(&mut backend)?;
     Ok(())
 }
 
-fn write_last_section<T: Write + Seek>(
+fn write_section_single<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
-    last_handle: u32,
-) -> Result<(bool, i64), WriteError> {
-    let entry = sections.get_mut(&last_handle).unwrap();
-    backend.seek(SeekFrom::Start(entry.header.pointer))?;
-    let data = entry.data.as_mut().ok_or(WriteError::SectionNotLoaded)?;
+    handle: u32,
+) -> Result<(bool, i64)> {
+    let entry = sections.get_mut(&handle).unwrap();
+    backend.seek(SeekFrom::Start(entry.info.header().pointer))?;
+    let data = entry
+        .data
+        .get_mut()
+        .as_mut()
+        .ok_or(Error::Open(OpenError::SectionNotLoaded))?;
     let last_section_ptr = data.stream_position()?;
     let flags = entry.entry1.get_flags(data.size() as u32);
+    data.seek(SeekFrom::Start(0))?;
     let (csize, chksum) = write_section(flags, data, &mut backend)?;
-    data.seek(io::SeekFrom::Start(last_section_ptr))?;
-    let old = entry.header;
-    entry.header.csize = csize as u32;
-    entry.header.size = data.size() as u32;
-    entry.header.chksum = chksum;
-    entry.header.flags = flags;
-    let diff = entry.header.csize as i64 - old.csize as i64;
-    Ok((old == entry.header, diff))
+    data.seek(SeekFrom::Start(last_section_ptr))?;
+    let old = *entry.info.header();
+    entry.info.header_mut().csize = csize as u32;
+    entry.info.header_mut().size = data.size() as u32;
+    entry.info.header_mut().chksum = chksum;
+    entry.info.header_mut().flags = flags;
+    let diff = entry.info.header().csize as i64 - old.csize as i64;
+    Ok((&old != entry.info.header(), diff))
 }
 
-pub fn internal_save_last<T: Write + Seek>(
+pub fn recompute_header_checksum(
+    main_header: &mut MainHeader,
+    sections: &BTreeMap<u32, SectionEntry>,
+) {
+    let mut chksum_sht = WeakChecksum::default();
+    for entry in sections.values() {
+        entry.info.header().get_checksum(&mut chksum_sht);
+    }
+    main_header.get_checksum(&mut chksum_sht);
+    main_header.chksum = chksum_sht.finish();
+}
+
+fn internal_save_single<T: Write + Seek>(
     mut backend: T,
     sections: &mut BTreeMap<u32, SectionEntry>,
     main_header: &mut MainHeader,
-    last_handle: u32,
-) -> Result<(), WriteError> {
+    handle: u32,
+) -> Result<bool> {
     // This function saves only the last section.
-    let (update_sht, diff) = write_last_section(&mut backend, sections, last_handle)?;
+    let mut write_main_header = false;
+    let (update_sht, diff) = write_section_single(&mut backend, sections, handle)?;
     if update_sht {
+        let entry = &sections[&handle];
         let offset_section_header =
-            SIZE_MAIN_HEADER + (SIZE_SECTION_HEADER * (main_header.section_num - 1) as usize);
-        backend.seek(SeekFrom::Start(offset_section_header as _))?;
-        let entry = &sections[&last_handle];
-        entry.header.write(&mut backend)?;
+            SIZE_MAIN_HEADER as u64 + (SIZE_SECTION_HEADER as u64 * entry.info.index() as u64);
+        backend.seek(SeekFrom::Start(offset_section_header))?;
+        entry.info.header().write(&mut backend)?;
+        write_main_header = true;
     }
     if diff != 0 {
-        backend.seek(SeekFrom::Start(0))?;
         main_header.file_size = main_header.file_size.wrapping_add(diff as u64);
+        write_main_header = true;
+    }
+    if write_main_header {
+        recompute_header_checksum(main_header, sections);
+        backend.seek(SeekFrom::Start(0))?;
         main_header.write(&mut backend)?;
     }
-    Ok(())
+    Ok(write_main_header)
 }
 
 fn write_section_uncompressed<TWrite: Write, TChecksum: Checksum>(
     section: &mut dyn SectionData,
     out: &mut TWrite,
     chksum: &mut TChecksum,
-) -> Result<usize, WriteError> {
+) -> Result<usize> {
     let mut idata: [u8; READ_BLOCK_SIZE] = [0; READ_BLOCK_SIZE];
     let mut count: usize = 0;
-    while count < section.size() as usize {
+    while count < section.size() {
         let res = section.read_fill(&mut idata)?;
         out.write_all(&idata[0..res])?;
         chksum.push(&idata[0..res]);
@@ -185,7 +222,7 @@ fn write_section_compressed<TMethod: Deflater, TWrite: Write, TChecksum: Checksu
     mut section: &mut dyn SectionData,
     out: &mut TWrite,
     chksum: &mut TChecksum,
-) -> Result<usize, WriteError> {
+) -> Result<usize> {
     let size = section.size();
     let csize = TMethod::deflate(&mut section, out, size, chksum)?;
     Ok(csize)
@@ -196,7 +233,7 @@ fn write_section_checked<TWrite: Write, TChecksum: Checksum>(
     section: &mut dyn SectionData,
     out: &mut TWrite,
     chksum: &mut TChecksum,
-) -> Result<usize, WriteError> {
+) -> Result<usize> {
     if flags & FLAG_COMPRESS_XZ != 0 {
         write_section_compressed::<XzCompressionMethod, _, _>(section, out, chksum)
     } else if flags & FLAG_COMPRESS_ZLIB != 0 {
@@ -206,22 +243,107 @@ fn write_section_checked<TWrite: Write, TChecksum: Checksum>(
     }
 }
 
-pub fn write_section<TWrite: Write>(
+fn write_section<TWrite: Write>(
     flags: u8,
     section: &mut dyn SectionData,
     out: &mut TWrite,
-) -> Result<(usize, u32), WriteError> {
+) -> Result<(usize, u32)> {
     if flags & FLAG_CHECK_CRC32 != 0 {
         let mut chksum = Crc32Checksum::new();
         let size = write_section_checked(flags, section, out, &mut chksum)?;
         Ok((size, chksum.finish()))
     } else if flags & FLAG_CHECK_WEAK != 0 {
-        let mut chksum = WeakChecksum::new();
+        let mut chksum = WeakChecksum::default();
         let size = write_section_checked(flags, section, out, &mut chksum)?;
         Ok((size, chksum.finish()))
     } else {
-        let mut chksum = WeakChecksum::new();
+        let mut chksum = WeakChecksum::default();
         let size = write_section_checked(flags, section, out, &mut chksum)?;
         Ok((size, 0))
+    }
+}
+
+#[derive(Eq, PartialEq)]
+pub enum SaveMode {
+    Regenerate,
+    MainHeaderOnly,
+    PatchMultipleSections,
+    PatchSingleSection(u32),
+}
+
+pub struct Encoder<'a> {
+    pub main_header: &'a mut MainHeader,
+    pub sections: &'a mut BTreeMap<u32, SectionEntry>,
+    pub main_header_modified: &'a mut bool,
+    pub table_modified: &'a mut bool,
+    pub table_count: u32,
+    pub mode: SaveMode,
+}
+
+impl<'a> Encoder<'a> {
+    fn get_modified_sections(&self) -> Vec<u32> {
+        // Returns a list of modified sections.
+        self.sections
+            .iter()
+            .filter(|(_, entry)| entry.modified.get())
+            .map(|(handle, _)| *handle)
+            .collect()
+    }
+
+    fn patch_main_header_if_needed<B: Write + Seek>(
+        &mut self,
+        mut backend: B,
+        was_written: bool,
+    ) -> Result<()> {
+        if was_written {
+            *self.main_header_modified = false;
+            Ok(())
+        } else if *self.main_header_modified {
+            // If only main header changed -> write only main header.
+            *self.main_header_modified = false;
+            recompute_header_checksum(self.main_header, self.sections);
+            backend.seek(SeekFrom::Start(0))?;
+            self.main_header.write(&mut backend)?;
+            Ok(())
+        } else {
+            Ok(())
+        }
+    }
+
+    fn patch_modified_sections<B: Write + Seek>(&mut self, mut backend: B) -> Result<bool> {
+        let mut main_header = false;
+        for section in self.get_modified_sections() {
+            if internal_save_single(&mut backend, self.sections, self.main_header, section)? {
+                main_header = true;
+            }
+        }
+        Ok(main_header)
+    }
+
+    pub fn run<T: Write + Seek>(mut self, mut backend: T) -> Result<()> {
+        match self.mode {
+            SaveMode::Regenerate => {
+                self.main_header.section_num = self.table_count;
+                internal_save(backend, self.sections, self.main_header)?;
+                *self.main_header_modified = false;
+                *self.table_modified = false;
+                Ok(())
+            },
+            SaveMode::MainHeaderOnly => {
+                // No sections have changed and the table didn't change; might have nothing to do.
+                self.patch_main_header_if_needed(backend, false)
+            },
+            SaveMode::PatchMultipleSections => {
+                //Multiple sections have changed.
+                let flag = self.patch_modified_sections(&mut backend)?;
+                self.patch_main_header_if_needed(backend, flag)
+            },
+            SaveMode::PatchSingleSection(section) => {
+                //A single section has changed.
+                let flag =
+                    internal_save_single(&mut backend, self.sections, self.main_header, section)?;
+                self.patch_main_header_if_needed(backend, flag)
+            },
+        }
     }
 }

@@ -40,7 +40,7 @@ use crate::{
         compression::{Checksum, Deflater, Inflater},
         error::{DeflateError, InflateError},
     },
-    utils::ReadFill,
+    traits::ReadFill,
 };
 
 const THREADS_MAX: u32 = 8;

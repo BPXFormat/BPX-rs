@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -31,19 +31,16 @@
 mod error;
 
 use std::{
-    collections::{hash_map::Entry, HashMap},
     fs::DirEntry,
     io::{Read, Seek, SeekFrom},
     path::Path,
     string::String,
 };
 
-pub use error::{PathError, ReadError, WriteError};
+use elsa::FrozenMap;
+pub use error::{Error, PathError};
 
-use crate::{
-    core::{AutoSectionData, Container, SectionData},
-    Handle,
-};
+use crate::core::{AutoSectionData, Container, Handle, SectionData};
 
 /// Helper class to manage a BPX string section.
 ///
@@ -51,12 +48,12 @@ use crate::{
 ///
 /// ```
 /// use bpx::core::Container;
-/// use bpx::core::header::{MainHeader, SectionHeader, Struct};
+/// use bpx::core::header::{SectionHeader, Struct};
 /// use bpx::strings::StringSection;
-/// use bpx::utils::new_byte_buf;
+/// use bpx::util::new_byte_buf;
 ///
-/// let mut file = Container::create(new_byte_buf(0), MainHeader::new());
-/// let section = file.create_section(SectionHeader::new());
+/// let mut file = Container::create(new_byte_buf(0));
+/// let section = file.sections_mut().create(SectionHeader::new());
 /// let mut strings = StringSection::new(section);
 /// let offset = strings.put(&mut file, "Test").unwrap();
 /// let str = strings.get(&mut file, offset).unwrap();
@@ -64,7 +61,7 @@ use crate::{
 /// ```
 pub struct StringSection {
     section: Handle,
-    cache: HashMap<u32, String>,
+    cache: FrozenMap<u32, String>,
 }
 
 impl StringSection {
@@ -78,7 +75,7 @@ impl StringSection {
     pub fn new(section: Handle) -> StringSection {
         StringSection {
             section,
-            cache: HashMap::new(),
+            cache: FrozenMap::new(),
         }
     }
 
@@ -93,25 +90,15 @@ impl StringSection {
     ///
     /// # Errors
     ///
-    /// Returns a [ReadError](crate::strings::ReadError) if the string could not be read or the
+    /// Returns an [Error] if the string could not be read or the
     /// section is corrupted/truncated.
-    pub fn get<T>(
-        &mut self,
-        container: &mut Container<T>,
-        address: u32,
-    ) -> Result<&str, ReadError> {
-        let res = match self.cache.entry(address) {
-            Entry::Occupied(o) => o.into_mut(),
-            Entry::Vacant(o) => {
-                let mut section = container.get_mut(self.section);
-                let s = low_level_read_string(
-                    address,
-                    section.open().ok_or(ReadError::SectionNotLoaded)?,
-                )?;
-                o.insert(s)
-            },
-        };
-        Ok(res)
+    pub fn get<T>(&self, container: &Container<T>, address: u32) -> Result<&str, Error> {
+        if self.cache.get(&address).is_none() {
+            let mut section = container.sections().open(self.section)?;
+            let s = low_level_read_string(address, &mut section)?;
+            self.cache.insert(address, s);
+        }
+        Ok(unsafe { self.cache.get(&address).unwrap_unchecked() })
     }
 
     /// Writes a new string into the section.
@@ -121,15 +108,12 @@ impl StringSection {
     /// * `container`: the BPX container.
     /// * `s`: the string to write.
     ///
-    /// returns: Result<u32, Error>
-    ///
     /// # Errors
     ///
-    /// Returns a [WriteError](crate::strings::WriteError) if the string could not be written.
-    pub fn put<T>(&mut self, container: &mut Container<T>, s: &str) -> Result<u32, WriteError> {
-        let mut section = container.get_mut(self.section);
-        let address =
-            low_level_write_string(s, section.open().ok_or(WriteError::SectionNotLoaded)?)?;
+    /// Returns an [Error] if the string could not be written.
+    pub fn put<T>(&self, container: &Container<T>, s: &str) -> Result<u32, Error> {
+        let mut section = container.sections().open(self.section)?;
+        let address = low_level_write_string(s, &mut *section)?;
         self.cache.insert(address, String::from(s));
         Ok(address)
     }
@@ -147,36 +131,36 @@ impl StringSection {
 /// * `container`: the container which owns the string section.
 /// * `strings`: a reference to the string section.
 ///
-/// returns: Result<(), ReadError>
+/// returns: Result<(), Error>
+///
+/// # Errors
+///
+/// Returns an [Error](crate::core::error::Error) if the section couldn't be loaded.
 pub fn load_string_section<T: Read + Seek>(
-    container: &mut Container<T>,
+    container: &Container<T>,
     strings: &StringSection,
-) -> Result<(), crate::core::error::ReadError> {
-    let mut section = container.get_mut(strings.handle());
-    section.load()?;
+) -> Result<(), crate::core::error::Error> {
+    container.sections().load(strings.handle())?;
     Ok(())
 }
 
-fn low_level_read_string(
-    ptr: u32,
-    string_section: &mut AutoSectionData,
-) -> Result<String, ReadError> {
+fn low_level_read_string(ptr: u32, string_section: &mut AutoSectionData) -> Result<String, Error> {
     let mut curs: Vec<u8> = Vec::new();
     let mut chr: [u8; 1] = [0; 1]; //read char by char with a buffer
 
     string_section.seek(SeekFrom::Start(ptr as u64))?;
     // Read is enough as Sections are guaranteed to fill the buffer as much as possible
     if string_section.read(&mut chr)? != 1 {
-        return Err(ReadError::Eos);
+        return Err(Error::Eos);
     }
     while chr[0] != 0x0 {
         curs.push(chr[0]);
         if string_section.read(&mut chr)? != 1 {
-            return Err(ReadError::Eos);
+            return Err(Error::Eos);
         }
     }
     match String::from_utf8(curs) {
-        Err(_) => Err(ReadError::Utf8),
+        Err(_) => Err(Error::Utf8),
         Ok(v) => Ok(v),
     }
 }
@@ -195,7 +179,7 @@ fn low_level_write_string(
 ///
 /// # Arguments
 ///
-/// * `path`: the rust [Path](std::path::Path).
+/// * `path`: the rust [Path].
 ///
 /// returns: Result<String, Error>
 ///
