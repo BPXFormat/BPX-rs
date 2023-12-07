@@ -274,7 +274,8 @@ impl<T: io::Write + io::Seek> Container<T> {
                 .iter()
                 .filter(|(_, entry)| entry.modified.get())
                 .find(|(_, entry)| {
-                    entry.data.borrow().as_ref().unwrap().size() != entry.info.header().size as usize
+                    entry.data.borrow().as_ref().unwrap().size()
+                        != entry.info.header().size as usize
                 })
                 .map(|(handle, _)| *handle)
                 .unwrap();

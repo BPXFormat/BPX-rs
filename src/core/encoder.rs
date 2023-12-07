@@ -33,6 +33,8 @@ use std::{
     io::{Seek, SeekFrom, Write},
 };
 
+use crate::core::header::SectionHeader;
+use crate::core::SectionInfo;
 use crate::{
     core::{
         compression::{
@@ -49,8 +51,6 @@ use crate::{
     },
     traits::ReadFill,
 };
-use crate::core::header::SectionHeader;
-use crate::core::SectionInfo;
 
 const READ_BLOCK_SIZE: usize = 8192;
 
@@ -78,18 +78,24 @@ fn write_sections<T: Write + Seek>(
         let flags = section.entry1.get_flags(data.size() as u32);
         let (csize, chksum) = write_section(flags, data, &mut backend)?;
         data.seek(SeekFrom::Start(last_section_ptr))?;
-        section.info = SectionInfo::new(idx as _, SectionHeader {
-            pointer: ptr,
-            csize: csize as _,
-            size: data.size() as _,
-            chksum,
-            ty: section.info.header().ty,
-            flags,
-        });
+        section.info = SectionInfo::new(
+            idx as _,
+            SectionHeader {
+                pointer: ptr,
+                csize: csize as _,
+                size: data.size() as _,
+                chksum,
+                ty: section.info.header().ty,
+                flags,
+            },
+        );
         #[cfg(feature = "debug-log")]
         println!(
             "Writing section #{}: Size = {}, Size after compression = {}, Handle = {}",
-            idx, section.info.header().size, section.info.header().csize, _handle
+            idx,
+            section.info.header().size,
+            section.info.header().csize,
+            _handle
         );
         ptr += csize as u64;
         {

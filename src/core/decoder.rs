@@ -35,6 +35,7 @@ use std::{
     io::{Read, Seek, Write},
 };
 
+use crate::core::SectionInfo;
 use crate::{
     core::{
         compression::{
@@ -52,7 +53,6 @@ use crate::{
     },
     traits::ReadFill,
 };
-use crate::core::SectionInfo;
 
 use super::header::GetChecksum;
 
