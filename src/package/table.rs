@@ -119,6 +119,10 @@ impl ObjectTable {
         Ok(index)
     }
 
+    pub fn new_data_section(&mut self) {
+        self.last_data_section = None;
+    }
+
     pub fn remove(&mut self, index: usize) {
         self.table.remove(index);
     }
@@ -287,5 +291,13 @@ impl<'a, T> ObjectTableMut<'a, T> {
     /// * `index`: the index of the object in the table to remove.
     pub fn remove(&mut self, index: usize) {
         self.table.remove(index);
+    }
+
+    /// Close the current data section and start recording a new one.
+    ///
+    /// This function forces objects created after calling this function to be recorded
+    /// in a new data section.
+    pub fn new_data_section(&mut self) {
+        self.table.new_data_section();
     }
 }

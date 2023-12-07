@@ -511,6 +511,7 @@ mod tests {
 
     use crate::package::OpenOptions;
     use crate::{package::Package, util::new_byte_buf};
+    use crate::package::util::unpack_string;
 
     #[test]
     fn test_re_open_after_create() {
@@ -533,9 +534,7 @@ mod tests {
         assert_eq!(objects.load_name(last).unwrap(), "TestObject");
         {
             let wanted = objects.find("TestObject").unwrap().unwrap();
-            let mut data = Vec::new();
-            objects.load(wanted, &mut data).unwrap();
-            let s = std::str::from_utf8(&data).unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
             assert_eq!(s, "This is a test 你好")
         }
         //Attempt to write one more object into the file.
@@ -555,16 +554,12 @@ mod tests {
         assert_eq!(objects.load_name(last).unwrap(), "AdditionalObject");
         {
             let wanted = objects.find("TestObject").unwrap().unwrap();
-            let mut data = Vec::new();
-            objects.load(wanted, &mut data).unwrap();
-            let s = std::str::from_utf8(&data).unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
             assert_eq!(s, "This is a test 你好")
         }
         {
             let wanted = objects.find("AdditionalObject").unwrap().unwrap();
-            let mut data = Vec::new();
-            objects.load(wanted, &mut data).unwrap();
-            let s = std::str::from_utf8(&data).unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
             assert_eq!(s, "Another test")
         }
     }
@@ -643,16 +638,12 @@ mod tests {
         assert_eq!(objects.load_name(last).unwrap(), "AdditionalObject");
         {
             let wanted = objects.find("TestObject").unwrap().unwrap();
-            let mut data = Vec::new();
-            objects.load(wanted, &mut data).unwrap();
-            let s = std::str::from_utf8(&data).unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
             assert_eq!(s, "This is a test 你好")
         }
         {
             let wanted = objects.find("AdditionalObject").unwrap().unwrap();
-            let mut data = Vec::new();
-            objects.load(wanted, &mut data).unwrap();
-            let s = std::str::from_utf8(&data).unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
             assert_eq!(s, "Another test")
         }
     }
@@ -698,17 +689,52 @@ mod tests {
         assert_eq!(objects.load_name(last).unwrap(), "AdditionalObject");
         {
             let wanted = objects.find("TestObject").unwrap().unwrap();
-            let mut data = Vec::new();
-            objects.load(wanted, &mut data).unwrap();
-            let s = std::str::from_utf8(&data).unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
             assert_eq!(s, "This is a test 你好")
         }
         {
             let wanted = objects.find("AdditionalObject").unwrap().unwrap();
-            let mut data = Vec::new();
-            objects.load(wanted, &mut data).unwrap();
-            let s = std::str::from_utf8(&data).unwrap();
+            let s = unpack_string(&objects, wanted).unwrap();
             assert_eq!(s, "Another test")
         }
+    }
+
+    #[test]
+    fn single_data_section() {
+        let mut package = Package::create(new_byte_buf(4096)).unwrap();
+        package.objects_mut().unwrap().create("TestObject", b"This is a test".as_ref()).unwrap();
+        package.objects_mut().unwrap().create("TestObject1", b"This is a new test".as_ref()).unwrap();
+        package.save().unwrap();
+        let container = package.into_inner();
+        assert_eq!(container.sections().len(), 3);
+        let mut buffer = container.into_inner();
+        buffer.seek(SeekFrom::Start(0)).unwrap();
+        let package = Package::open(buffer).unwrap();
+        let objects = package.objects().unwrap();
+        assert_eq!(objects.len(), 2);
+        let s = unpack_string(&objects, &objects[0]).unwrap();
+        assert_eq!(s, "This is a test");
+        let s = unpack_string(&objects, &objects[1]).unwrap();
+        assert_eq!(s, "This is a new test");
+    }
+
+    #[test]
+    fn two_data_section() {
+        let mut package = Package::create(new_byte_buf(4096)).unwrap();
+        package.objects_mut().unwrap().create("TestObject", b"This is a test".as_ref()).unwrap();
+        package.objects_mut().unwrap().new_data_section();
+        package.objects_mut().unwrap().create("TestObject1", b"This is a new test".as_ref()).unwrap();
+        package.save().unwrap();
+        let container = package.into_inner();
+        assert_eq!(container.sections().len(), 4);
+        let mut buffer = container.into_inner();
+        buffer.seek(SeekFrom::Start(0)).unwrap();
+        let package = Package::open(buffer).unwrap();
+        let objects = package.objects().unwrap();
+        assert_eq!(objects.len(), 2);
+        let s = unpack_string(&objects, &objects[0]).unwrap();
+        assert_eq!(s, "This is a test");
+        let s = unpack_string(&objects, &objects[1]).unwrap();
+        assert_eq!(s, "This is a new test");
     }
 }
