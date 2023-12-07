@@ -94,12 +94,6 @@ impl<T> Container<T> {
         &self.main_header
     }
 
-    /// Returns a read-only reference to the BPX main header.
-    #[deprecated(note = "use `main_header`")]
-    pub fn get_main_header(&self) -> &MainHeader {
-        &self.main_header
-    }
-
     /// Consumes this BPX container and returns the inner IO backend.
     pub fn into_inner(self) -> T {
         self.table.backend.into_inner()

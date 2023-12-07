@@ -102,12 +102,6 @@ pub struct ShaderPack<T> {
 }
 
 impl<T> ShaderPack<T> {
-    /// Returns the shader package settings.
-    #[deprecated(note = "use `settings` or `settings_mut`")]
-    pub fn get_settings(&self) -> &Settings {
-        &self.settings
-    }
-
     /// Returns a reference to the settings of this package.
     pub fn settings(&self) -> &Settings {
         &self.settings
@@ -121,12 +115,6 @@ impl<T> ShaderPack<T> {
     /// Consumes this ShaderPack and returns the BPX container.
     pub fn into_inner(self) -> Container<T> {
         self.container
-    }
-
-    /// Sets the assembly hash of this shader package.
-    #[deprecated(note = "use `settings_mut` and set the `assembly_hash` field")]
-    pub fn set_assembly(&mut self, hash: u64) {
-        self.settings.assembly_hash = hash;
     }
 
     /// Returns a guard for mutable access to the symbol table.

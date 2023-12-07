@@ -60,6 +60,7 @@ use super::{CreateOptions, OpenOptions, Options, DEFAULT_MAX_DEPTH};
 /// use std::io::{Seek, SeekFrom};
 /// use bpx::util::new_byte_buf;
 /// use bpx::package::Package;
+/// use bpx::package::util::unpack_string;
 ///
 /// let mut bpxp = Package::create(new_byte_buf(128)).unwrap();
 /// {
@@ -77,16 +78,12 @@ use super::{CreateOptions, OpenOptions, Options, DEFAULT_MAX_DEPTH};
 /// let last = objects.iter().last().unwrap();
 /// assert_eq!(objects.load_name(last).unwrap(), "TestObject");
 /// {
-///     let mut data = Vec::new();
-///     objects.load(last, &mut data).unwrap();
-///     let s = std::str::from_utf8(&data).unwrap();
+///     let s = unpack_string(&objects, last).unwrap();
 ///     assert_eq!(s, "This is a test 你好")
 /// }
 /// {
 ///     let wanted = objects.find("TestObject").unwrap().unwrap();
-///     let mut data = Vec::new();
-///     objects.load(wanted, &mut data).unwrap();
-///     let s = std::str::from_utf8(&data).unwrap();
+///     let s = unpack_string(&objects, wanted).unwrap();
 ///     assert_eq!(s, "This is a test 你好")
 /// }
 /// ```
@@ -100,12 +97,6 @@ pub struct Package<T> {
 }
 
 impl<T> Package<T> {
-    /// Gets the settings of this package.
-    #[deprecated(note = "use `settings` or `settings_mut`")]
-    pub fn get_settings(&self) -> &Settings {
-        &self.settings
-    }
-
     /// Returns a reference to the settings of this package.
     pub fn settings(&self) -> &Settings {
         &self.settings
