@@ -509,9 +509,9 @@ impl<T: Read + Write + Seek> Package<T> {
 mod tests {
     use std::io::{Seek, SeekFrom};
 
+    use crate::package::util::unpack_string;
     use crate::package::OpenOptions;
     use crate::{package::Package, util::new_byte_buf};
-    use crate::package::util::unpack_string;
 
     #[test]
     fn test_re_open_after_create() {
@@ -702,8 +702,16 @@ mod tests {
     #[test]
     fn single_data_section() {
         let mut package = Package::create(new_byte_buf(4096)).unwrap();
-        package.objects_mut().unwrap().create("TestObject", b"This is a test".as_ref()).unwrap();
-        package.objects_mut().unwrap().create("TestObject1", b"This is a new test".as_ref()).unwrap();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("TestObject", b"This is a test".as_ref())
+            .unwrap();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("TestObject1", b"This is a new test".as_ref())
+            .unwrap();
         package.save().unwrap();
         let container = package.into_inner();
         assert_eq!(container.sections().len(), 3);
@@ -721,9 +729,17 @@ mod tests {
     #[test]
     fn two_data_section() {
         let mut package = Package::create(new_byte_buf(4096)).unwrap();
-        package.objects_mut().unwrap().create("TestObject", b"This is a test".as_ref()).unwrap();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("TestObject", b"This is a test".as_ref())
+            .unwrap();
         package.objects_mut().unwrap().new_data_section();
-        package.objects_mut().unwrap().create("TestObject1", b"This is a new test".as_ref()).unwrap();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("TestObject1", b"This is a new test".as_ref())
+            .unwrap();
         package.save().unwrap();
         let container = package.into_inner();
         assert_eq!(container.sections().len(), 4);

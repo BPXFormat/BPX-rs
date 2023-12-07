@@ -34,6 +34,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::package::object::ObjectHeader;
+use crate::package::ObjectTableRef;
 use crate::{
     core::error::OpenError,
     package::{
@@ -42,8 +44,6 @@ use crate::{
     },
     strings::{get_name_from_dir_entry, get_name_from_path},
 };
-use crate::package::object::ObjectHeader;
-use crate::package::ObjectTableRef;
 
 /// Packs a file or folder in a BPXP with the given virtual name.
 ///
@@ -162,7 +162,10 @@ pub fn unpack<T: Read + Seek>(package: &Package<T>, target: &Path) -> Result<()>
 /// # Errors
 ///
 /// This function may return an [Error] if the object failed to load.
-pub fn unpack_vec<T: Read + Seek>(objects: &ObjectTableRef<T>, object: &ObjectHeader) -> Result<Vec<u8>> {
+pub fn unpack_vec<T: Read + Seek>(
+    objects: &ObjectTableRef<T>,
+    object: &ObjectHeader,
+) -> Result<Vec<u8>> {
     let mut data = Vec::new();
     objects.load(object, &mut data)?;
     Ok(data)
@@ -179,7 +182,10 @@ pub fn unpack_vec<T: Read + Seek>(objects: &ObjectTableRef<T>, object: &ObjectHe
 ///
 /// This function may return an [Error] if the object failed to load or a string
 /// [Error](crate::strings::Error) if the object content is not valid UTF-8.
-pub fn unpack_string<T: Read + Seek>(objects: &ObjectTableRef<T>, object: &ObjectHeader) -> Result<String> {
+pub fn unpack_string<T: Read + Seek>(
+    objects: &ObjectTableRef<T>,
+    object: &ObjectHeader,
+) -> Result<String> {
     let vec = unpack_vec(objects, object)?;
     let s = std::str::from_utf8(&vec).map_err(|_| Error::Strings(crate::strings::Error::Utf8))?;
     Ok(s.into())
