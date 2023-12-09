@@ -55,7 +55,7 @@ pub struct Container<T> {
     main_header: MainHeader,
     main_header_modified: bool,
     revert_on_save_failure: bool,
-    buffer: Option<AutoSectionData>
+    buffer: Option<AutoSectionData>,
 }
 
 impl<T> Container<T> {
@@ -179,7 +179,7 @@ impl<T: io::Read + io::Seek> Container<T> {
             main_header: header,
             main_header_modified: false,
             revert_on_save_failure: options.revert_on_save_fail,
-            buffer: None
+            buffer: None,
         })
     }
 }
@@ -220,7 +220,7 @@ impl<T: io::Write + io::Seek> Container<T> {
             main_header: options.header,
             main_header_modified: true,
             revert_on_save_failure: options.revert_on_save_fail,
-            buffer: None
+            buffer: None,
         }
     }
 

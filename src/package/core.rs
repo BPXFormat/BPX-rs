@@ -859,7 +859,8 @@ mod tests {
         buffer.seek(SeekFrom::Start(0)).unwrap();
 
         //Re-open the package and remove an object
-        let mut package = Package::open(OpenOptions::new(buffer).revert_on_save_failure(true)).unwrap();
+        let mut package =
+            Package::open(OpenOptions::new(buffer).revert_on_save_failure(true)).unwrap();
         let objects = package.objects().unwrap();
         for (i, obj) in objects.iter().enumerate() {
             let name1 = objects.load_name(obj).unwrap();
