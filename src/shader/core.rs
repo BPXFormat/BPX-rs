@@ -349,6 +349,7 @@ impl<T: Write + Seek> ShaderPack<T> {
                 .set_le(8, syms.len() as u16);
             let mut section = self.container.sections().open(self.symbol_table)?;
             section.seek(SeekFrom::Start(0))?;
+            section.clear();
             for v in syms {
                 v.write(&mut *section)?;
             }
@@ -459,6 +460,7 @@ impl<T: Read + Write + Seek> ShaderPack<T> {
                 .set_le(8, syms.len() as u16);
             let mut section = self.container.sections().load(self.symbol_table)?;
             section.seek(SeekFrom::Start(0))?;
+            section.clear();
             for v in syms {
                 v.write(&mut *section)?;
             }

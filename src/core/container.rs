@@ -55,6 +55,7 @@ pub struct Container<T> {
     main_header: MainHeader,
     main_header_modified: bool,
     revert_on_save_failure: bool,
+    buffer: Option<AutoSectionData>
 }
 
 impl<T> Container<T> {
@@ -178,6 +179,7 @@ impl<T: io::Read + io::Seek> Container<T> {
             main_header: header,
             main_header_modified: false,
             revert_on_save_failure: options.revert_on_save_fail,
+            buffer: None
         })
     }
 }
@@ -218,6 +220,7 @@ impl<T: io::Write + io::Seek> Container<T> {
             main_header: options.header,
             main_header_modified: true,
             revert_on_save_failure: options.revert_on_save_fail,
+            buffer: None
         }
     }
 
@@ -302,7 +305,10 @@ impl<T: io::Write + io::Seek> Container<T> {
 
     fn save_with_mode_indirect(&mut self, mode: SaveMode) -> Result<()> {
         use std::io::Seek;
-        let mut temp = AutoSectionData::new(self.table.memory_threshold as _);
+        let mut temp = self.buffer.get_or_insert_with(|| {
+            self.table.modified = true;
+            AutoSectionData::new(self.table.memory_threshold as _)
+        });
         let res = Encoder {
             mode,
             main_header: &mut self.main_header,
