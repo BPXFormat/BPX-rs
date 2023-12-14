@@ -170,6 +170,7 @@ fn low_level_write_string(
     string_section: &mut dyn SectionData,
 ) -> Result<u32, std::io::Error> {
     let ptr = string_section.size() as u32;
+    string_section.seek(SeekFrom::End(0))?;
     string_section.write_all(s.as_bytes())?;
     string_section.write_all(&[0x0])?;
     Ok(ptr)

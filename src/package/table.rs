@@ -123,8 +123,14 @@ impl ObjectTable {
         self.last_data_section = None;
     }
 
-    pub fn remove(&mut self, index: usize) {
+    pub fn remove_at(&mut self, index: usize) {
         self.table.remove(index);
+    }
+
+    pub fn remove(&mut self, header: &ObjectHeader) {
+        let (i, _) = self.table.iter().enumerate().find(|(_, v)| v == &header)
+            .expect("attempt to remove a non-existent object header");
+        self.remove_at(i);
     }
 
     pub fn load<T: Read + Seek, O: Write>(
@@ -289,8 +295,25 @@ impl<'a, T> ObjectTableMut<'a, T> {
     /// # Arguments
     ///
     /// * `index`: the index of the object in the table to remove.
-    pub fn remove(&mut self, index: usize) {
-        self.table.remove(index);
+    ///
+    /// # Panics
+    ///
+    /// This function may panic if the index is not in the table.
+    pub fn remove_at(&mut self, index: usize) {
+        self.table.remove_at(index);
+    }
+
+    /// Removes an object from this package.
+    ///
+    /// # Arguments
+    ///
+    /// * `header`: the object header identifying the object to remove.
+    ///
+    /// # Panics
+    ///
+    /// This function may panic if the given object header is not found in this package.
+    pub fn remove(&mut self, header: &ObjectHeader) {
+        self.table.remove(header);
     }
 
     /// Close the current data section and start recording a new one.

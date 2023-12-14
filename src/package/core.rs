@@ -503,8 +503,9 @@ mod tests {
     use std::io::{Seek, SeekFrom};
 
     use crate::package::util::unpack_string;
-    use crate::package::OpenOptions;
+    use crate::package::{CreateOptions, OpenOptions};
     use crate::{package::Package, util::new_byte_buf};
+    use crate::sd::Object;
 
     #[test]
     fn test_re_open_after_create() {
@@ -769,17 +770,12 @@ mod tests {
         //Re-open the package and remove an object
         let mut package = Package::open(buffer).unwrap();
         let objects = package.objects().unwrap();
-        for (i, obj) in objects.iter().enumerate() {
-            let name1 = objects.load_name(obj).unwrap();
-            if name1 == "TestObject" {
-                assert_eq!(objects.len(), 2);
-                package.objects_mut().unwrap().remove(i);
-                let objects = package.objects().unwrap();
-                assert_eq!(objects.len(), 1);
-                package.load_and_save().unwrap();
-                break;
-            }
-        }
+        assert_eq!(objects.len(), 2);
+        let obj = *objects.find("TestObject").unwrap().unwrap();
+        package.objects_mut().unwrap().remove(&obj);
+        let objects = package.objects().unwrap();
+        assert_eq!(objects.len(), 1);
+        package.load_and_save().unwrap();
 
         let mut buffer = package.into_inner().into_inner();
         buffer.seek(SeekFrom::Start(0)).unwrap();
@@ -815,17 +811,12 @@ mod tests {
         //Re-open the package and remove an object
         let mut package = Package::open(buffer).unwrap();
         let objects = package.objects().unwrap();
-        for (i, obj) in objects.iter().enumerate() {
-            let name1 = objects.load_name(obj).unwrap();
-            if name1 == "TestObject1" {
-                assert_eq!(objects.len(), 2);
-                package.objects_mut().unwrap().remove(i);
-                let objects = package.objects().unwrap();
-                assert_eq!(objects.len(), 1);
-                package.load_and_save().unwrap();
-                break;
-            }
-        }
+        assert_eq!(objects.len(), 2);
+        let obj = *objects.find("TestObject1").unwrap().unwrap();
+        package.objects_mut().unwrap().remove(&obj);
+        let objects = package.objects().unwrap();
+        assert_eq!(objects.len(), 1);
+        package.load_and_save().unwrap();
 
         let mut buffer = package.into_inner().into_inner();
         buffer.seek(SeekFrom::Start(0)).unwrap();
@@ -861,17 +852,12 @@ mod tests {
         //Re-open the package and remove an object
         let mut package = Package::open(OpenOptions::new(buffer).revert_on_save_failure(true)).unwrap();
         let objects = package.objects().unwrap();
-        for (i, obj) in objects.iter().enumerate() {
-            let name1 = objects.load_name(obj).unwrap();
-            if name1 == "TestObject" {
-                assert_eq!(objects.len(), 2);
-                package.objects_mut().unwrap().remove(i);
-                let objects = package.objects().unwrap();
-                assert_eq!(objects.len(), 1);
-                package.load_and_save().unwrap();
-                break;
-            }
-        }
+        assert_eq!(objects.len(), 2);
+        let obj = *objects.find("TestObject").unwrap().unwrap();
+        package.objects_mut().unwrap().remove(&obj);
+        let objects = package.objects().unwrap();
+        assert_eq!(objects.len(), 1);
+        package.load_and_save().unwrap();
 
         let mut buffer = package.into_inner().into_inner();
         buffer.seek(SeekFrom::Start(0)).unwrap();
@@ -881,6 +867,88 @@ mod tests {
         let objects = package.objects().unwrap();
         assert_eq!(objects.len(), 1);
         let s = unpack_string(&objects, &objects[0]).unwrap();
+        assert_eq!(s, "This is a new test");
+    }
+
+    #[test]
+    fn add_remove_test() {
+        //Create the package with 1 object
+        let mut package = Package::create(new_byte_buf(4096)).unwrap();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("TestObject", b"This is a test".as_ref())
+            .unwrap();
+        package.save().unwrap();
+
+        let mut buffer = package.into_inner().into_inner();
+        buffer.seek(SeekFrom::Start(0)).unwrap();
+
+        //Re-open the package and remove an object
+        let mut package = Package::open(OpenOptions::new(buffer).revert_on_save_failure(true)).unwrap();
+        package.objects().unwrap();
+        package.objects_mut().unwrap().remove_at(0);
+        package.load_and_save().unwrap();
+        package.objects_mut().unwrap().create("TestObject", b"This is a new test".as_ref()).unwrap();
+        package.load_and_save().unwrap();
+
+        let mut buffer = package.into_inner().into_inner();
+        buffer.seek(SeekFrom::Start(0)).unwrap();
+
+        //Final integrity check
+        let package = Package::open(buffer).unwrap();
+        let objects = package.objects().unwrap();
+        assert_eq!(objects.len(), 1);
+        let s = unpack_string(&objects, &objects[0]).unwrap();
+        assert_eq!(s, "This is a new test");
+    }
+
+    #[test]
+    fn add_remove_test_2() {
+        //Create the package with 1 object
+        let mut package = Package::create(CreateOptions::new(new_byte_buf(4096)).metadata(Object::new().into())).unwrap();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("TestObject", b"This is a test".as_ref())
+            .unwrap();
+        package.save().unwrap();
+
+        let mut buffer = package.into_inner().into_inner();
+        buffer.seek(SeekFrom::Start(0)).unwrap();
+
+        //Re-open the package and remove an object
+        let mut package = Package::open(OpenOptions::new(buffer).revert_on_save_failure(true)).unwrap();
+        package.load_metadata().unwrap();
+        {
+            let objects = package.objects().unwrap();
+            let level = objects.find("BadName").unwrap();
+            assert!(level.is_none());
+        }
+        package.objects().unwrap();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("BadName", b"This is a test".as_ref())
+            .unwrap();
+        package.load_and_save().unwrap();
+        package.objects_mut().unwrap().create("TestObject1", b"This is a new test".as_ref()).unwrap();
+        package.load_and_save().unwrap();
+        package.objects_mut().unwrap().remove_at(1);
+        package.load_and_save().unwrap();
+
+        let mut buffer = package.into_inner().into_inner();
+        buffer.seek(SeekFrom::Start(0)).unwrap();
+
+        //Final integrity check
+        let package = Package::open(buffer).unwrap();
+        let objects = package.objects().unwrap();
+        assert_eq!(objects.len(), 2);
+        assert_eq!(objects.load_name(&objects[0]).unwrap(), "TestObject");
+        assert_eq!(objects.load_name(&objects[1]).unwrap(), "TestObject1");
+        let s = unpack_string(&objects, &objects[0]).unwrap();
+        assert_eq!(s, "This is a test");
+        let s = unpack_string(&objects, &objects[1]).unwrap();
         assert_eq!(s, "This is a new test");
     }
 }

@@ -123,8 +123,14 @@ impl SymbolTable {
         Ok(self.table.push(settings.name, buf))
     }
 
-    pub fn remove(&mut self, index: usize) {
+    pub fn remove_at(&mut self, index: usize) {
         self.table.remove(index);
+    }
+
+    pub fn remove(&mut self, symbol: &Symbol) {
+        let (i, _) = self.table.iter().enumerate().find(|(_, v)| v == &symbol)
+            .expect("attempt to remove a non-existent object header");
+        self.remove_at(i);
     }
 
     pub fn load_name<T: Read + Seek>(
@@ -166,14 +172,11 @@ impl SymbolTable {
             let mut section = container.sections().load(section)?;
             section.seek(SeekFrom::Start(sym.extended_data as _))?;
             let obj = crate::sd::Value::read(&mut *section, self.max_depth)?;
-            self.extended_data_objs
-                .insert(sym.extended_data, Box::new(obj));
+            self.extended_data_objs.insert(sym.extended_data, Box::new(obj));
         }
         //SAFETY: We already have an if block to ensure extended data is loaded.
         Ok(unsafe {
-            self.extended_data_objs
-                .get(&sym.extended_data)
-                .unwrap_unchecked()
+            self.extended_data_objs.get(&sym.extended_data).unwrap_unchecked()
         })
     }
 
@@ -323,19 +326,38 @@ impl<'a, T> SymbolTableMut<'a, T> {
     /// # Arguments
     ///
     /// * `index`: the index of the symbol in the table to remove.
-    pub fn remove(&mut self, index: usize) {
-        self.table.remove(index)
+    ///
+    /// # Panics
+    ///
+    /// This function may panic if the index is not in the table.
+    pub fn remove_at(&mut self, index: usize) {
+        self.table.remove_at(index)
+    }
+
+    /// Removes a symbol from this shader pack.
+    ///
+    /// # Arguments
+    ///
+    /// * `symbol`: a reference to the symbol to remove.
+    ///
+    /// # Panics
+    ///
+    /// This function may panic if the given symbol is not found in this shader pack.
+    pub fn remove(&mut self, symbol: &Symbol) {
+        self.table.remove(symbol)
     }
 
     /// Gets mutable access to a symbol by its index.
     ///
+    /// This function will return None if the index is out of bounds.
+    ///
     /// # Safety
     ///
-    /// This function may cause corrupted and/or non BPX compliant data to be written in the end
+    /// This function may cause corrupted and/or non BPXS compliant data to be written in the end
     /// BPX Container if the following is not respected:
     /// - When patching the extended data pointer or string pointer, it must still point to a valid
-    ///   offset in the corresponding section otherwise this implementation may panic or error
-    ///   when attempting to read back the container.
+    ///   offset in the corresponding section otherwise this implementation will error when
+    ///   attempting to read back the container.
     /// - When patching the register number, all shaders in the package referencing this symbol
     ///   must all be re-built according to the new register number or UB may occur on some GPU
     ///   driver implementation(s).
