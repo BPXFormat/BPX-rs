@@ -220,7 +220,7 @@ impl<T> TryFrom<(Container<T>, Options)> for ShaderPack<T> {
                     shaders: OnceCell::new(),
                     max_depth: options.max_depth,
                 })
-            },
+            }
             false => {
                 container.main_header_mut().ty = b'S';
                 container.main_header_mut().version = SUPPORTED_VERSION;
@@ -260,7 +260,7 @@ impl<T> TryFrom<(Container<T>, Options)> for ShaderPack<T> {
                     extended_data: None,
                     max_depth: options.max_depth,
                 })
-            },
+            }
         }
     }
 }

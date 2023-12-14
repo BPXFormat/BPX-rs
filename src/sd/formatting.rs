@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -58,7 +58,7 @@ impl FormatImpl {
                 } else {
                     f.write_str("false")
                 }
-            },
+            }
             Value::Uint8(v) => write!(f, "{}u8", v),
             Value::Uint16(v) => write!(f, "{}u16", v),
             Value::Uint32(v) => write!(f, "{}u32", v),
@@ -77,7 +77,7 @@ impl FormatImpl {
                     initial_indent_size: self.initial_indent_size,
                 };
                 ff.fmt_array(v, f)
-            },
+            }
             Value::Object(v) => {
                 let ff = FormatImpl {
                     indent_type: self.indent_type,
@@ -85,7 +85,7 @@ impl FormatImpl {
                     initial_indent_size: self.initial_indent_size,
                 };
                 ff.fmt_object(v, f)
-            },
+            }
         }
     }
 

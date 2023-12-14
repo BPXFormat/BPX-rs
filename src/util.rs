@@ -86,7 +86,7 @@ impl<T, E: Error> RecoverableError<T, E> {
             Some(v) => v,
             None => {
                 panic!("attempt to unwrap the value of a recoverable error with no recovery option")
-            },
+            }
         }
     }
 

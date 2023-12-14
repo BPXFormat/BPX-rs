@@ -164,12 +164,12 @@ impl Display for Error {
             Error::BadVersion(v) => write!(f, "unknown file version ({})", v),
             Error::BadSignature(sig) => {
                 write!(f, "unknown file signature ({}{}{})", sig[0], sig[1], sig[2])
-            },
+            }
             Error::Inflate(e) => write!(f, "inflate error: {}", e),
             Error::Open(e) => write!(f, "section open error ({})", e),
             Error::Capacity(size) => {
                 write!(f, "maximum section size exceeded ({} > 2^32)", size)
-            },
+            }
             Error::Deflate(e) => write!(f, "deflate error: {}", e),
             Error::Truncated => f.write_str("data is truncated"),
         }

@@ -123,7 +123,7 @@ pub fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture
                 context: InvalidCodeContext::Arch,
                 code: acode,
             })
-        },
+        }
     }
     match pcode {
         0x0 => platform = Platform::Linux,
@@ -136,7 +136,7 @@ pub fn get_arch_platform_from_code(acode: u8, pcode: u8) -> Result<(Architecture
                 context: InvalidCodeContext::Platform,
                 code: pcode,
             })
-        },
+        }
     }
     Ok((arch, platform))
 }

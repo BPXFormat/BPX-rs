@@ -185,7 +185,7 @@ impl<T: Read + Seek> SectionTable<T> {
                     header.flags &= !FLAG_CHECK_WEAK;
                     header.flags &= !FLAG_CHECK_CRC32;
                     load_section1(&mut *backend, &header, self.memory_threshold)?
-                },
+                }
             };
             *data = Some(loaded);
         }

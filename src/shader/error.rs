@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -153,7 +153,7 @@ impl Display for Error {
             ),
             Error::InvalidCode { context, code } => {
                 write!(f, "invalid code {} for context '{}'", code, context.name())
-            },
+            }
             Error::MissingSection(s) => write!(f, "missing {} section", s.name()),
             Error::Eos(ctx) => write!(f, "got EOS while reading {}", ctx.name()),
             Error::Sd(e) => write!(f, "BPXSD error: {}", e),

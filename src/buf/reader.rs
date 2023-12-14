@@ -157,7 +157,7 @@ impl<T: Read> Seek for BufReader<T> {
                     ));
                 }
                 self.maximum_size as u64 - ((-v) as u64)
-            },
+            }
             SeekFrom::Current(v) => {
                 let cur = self.buffer.stream_position()?;
                 if v > 0 {
@@ -165,7 +165,7 @@ impl<T: Read> Seek for BufReader<T> {
                 } else {
                     cur - ((-v) as u64)
                 }
-            },
+            }
         };
         if self.maximum_size != 0 && pos1 > self.maximum_size as _ {
             return Err(Error::new(

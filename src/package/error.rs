@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -151,12 +151,12 @@ impl Display for Error {
             ),
             Error::InvalidCode { context, code } => {
                 write!(f, "invalid code {} for context '{}'", code, context.name())
-            },
+            }
             Error::MissingSection(s) => write!(f, "missing {} section", s.name()),
             Error::Eos(ctx) => write!(f, "got EOS while reading {}", ctx.name()),
             Error::BlankString => {
                 f.write_str("blank strings are not supported when unpacking to file system")
-            },
+            }
             Error::Sd(e) => write!(f, "BPXSD error: {}", e),
             Error::Strings(e) => write!(f, "strings error: {}", e),
             Error::Path(e) => write!(f, "path error: {}", e),

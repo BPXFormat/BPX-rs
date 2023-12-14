@@ -74,7 +74,7 @@ impl<T: SectionData> Shift for T {
             ShiftTo::Right(length) => {
                 let fuckingrust = self.size();
                 util::shift_right(self, fuckingrust as u64, length as u32)
-            },
+            }
         }
     }
 }

@@ -154,7 +154,7 @@ impl Write for AutoSectionData {
                     }
                 }
                 Ok(size)
-            },
+            }
         }
     }
 

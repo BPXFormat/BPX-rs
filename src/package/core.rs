@@ -176,7 +176,7 @@ impl<T> TryFrom<(Container<T>, Options)> for Package<T> {
                     metadata: OnceCell::new(),
                     max_depth: options.max_depth,
                 })
-            },
+            }
             false => {
                 container.main_header_mut().ty = b'P';
                 container.main_header_mut().version = SUPPORTED_VERSION;
@@ -214,7 +214,7 @@ impl<T> TryFrom<(Container<T>, Options)> for Package<T> {
                     table: OnceCell::from(ObjectTable::new(NamedItemTable::empty(), strings)),
                     max_depth: options.max_depth,
                 })
-            },
+            }
         }
     }
 }
@@ -430,7 +430,7 @@ impl<T: Read + Seek> Package<T> {
                     let mut section = self.container.sections().load(v)?;
                     let obj = Value::read(&mut *section, self.max_depth)?;
                     self.metadata.set(obj)
-                },
+                }
                 None => self.metadata.set(Value::Null),
             };
             //SAFETY: This is safe because we're only running this if the cell is none.

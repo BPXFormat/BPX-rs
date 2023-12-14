@@ -1,4 +1,4 @@
-// Copyright (c) 2021, BlockProject 3D
+// Copyright (c) 2023, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -497,7 +497,7 @@ impl<'a, 'de> serde::Deserializer<'de> for Deserializer<'a> {
                         enum_size: self.enum_size,
                     }),
                 }
-            },
+            }
             EnumSize::U16 => {
                 match &*self.val {
                     Value::Uint16(v) => visitor.visit_enum((*v as u32).into_deserializer()), //We got a standard C enum
@@ -506,7 +506,7 @@ impl<'a, 'de> serde::Deserializer<'de> for Deserializer<'a> {
                         enum_size: self.enum_size,
                     }),
                 }
-            },
+            }
             EnumSize::U32 => {
                 match &*self.val {
                     Value::Uint32(v) => visitor.visit_enum(v.into_deserializer()), //We got a standard C enum
@@ -515,7 +515,7 @@ impl<'a, 'de> serde::Deserializer<'de> for Deserializer<'a> {
                         enum_size: self.enum_size,
                     }),
                 }
-            },
+            }
         }
     }
 
@@ -528,15 +528,15 @@ impl<'a, 'de> serde::Deserializer<'de> for Deserializer<'a> {
             EnumSize::U8 => {
                 let val: u8 = self.val.as_ref().try_into()?;
                 visitor.visit_u32(val as u32)
-            },
+            }
             EnumSize::U16 => {
                 let val: u16 = self.val.as_ref().try_into()?;
                 visitor.visit_u32(val as u32)
-            },
+            }
             EnumSize::U32 => {
                 let val: u32 = self.val.as_ref().try_into()?;
                 visitor.visit_u32(val)
-            },
+            }
         }
     }
 

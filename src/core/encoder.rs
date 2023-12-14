@@ -328,22 +328,22 @@ impl<'a> Encoder<'a> {
                 *self.main_header_modified = false;
                 *self.table_modified = false;
                 Ok(())
-            },
+            }
             SaveMode::MainHeaderOnly => {
                 // No sections have changed and the table didn't change; might have nothing to do.
                 self.patch_main_header_if_needed(backend, false)
-            },
+            }
             SaveMode::PatchMultipleSections => {
                 //Multiple sections have changed.
                 let flag = self.patch_modified_sections(&mut backend)?;
                 self.patch_main_header_if_needed(backend, flag)
-            },
+            }
             SaveMode::PatchSingleSection(section) => {
                 //A single section has changed.
                 let flag =
                     internal_save_single(&mut backend, self.sections, self.main_header, section)?;
                 self.patch_main_header_if_needed(backend, flag)
-            },
+            }
         }
     }
 }

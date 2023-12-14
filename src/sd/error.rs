@@ -71,7 +71,7 @@ impl Display for Error {
             Error::Utf8 => f.write_str("utf8 error"),
             Error::CapacityExceeded(count) => {
                 write!(f, "capacity exceeded ({} > 255)", count)
-            },
+            }
             Error::MaxDepthExceeded => f.write_str("maximum depth for nested values exceeded"),
             Error::NotAnObject => f.write_str("not an object"),
         }

@@ -63,53 +63,53 @@ fn write_value(val: &Value, max_depth: &mut usize) -> Result<Vec<u8>> {
             } else {
                 buf.push(0);
             }
-        },
+        }
         Value::Uint8(v) => buf.push(*v),
         Value::Uint16(v) => {
             let mut b: [u8; 2] = [0; 2];
             (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
-        },
+        }
         Value::Uint32(v) => {
             let mut b: [u8; 4] = [0; 4];
             (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
-        },
+        }
         Value::Uint64(v) => {
             let mut b: [u8; 8] = [0; 8];
             (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
-        },
+        }
         Value::Int8(v) => buf.push(*v as u8),
         Value::Int16(v) => {
             let mut b: [u8; 2] = [0; 2];
             (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
-        },
+        }
         Value::Int32(v) => {
             let mut b: [u8; 4] = [0; 4];
             (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
-        },
+        }
         Value::Int64(v) => {
             let mut b: [u8; 8] = [0; 8];
             (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
-        },
+        }
         Value::Float(v) => {
             let mut b: [u8; 4] = [0; 4];
             (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
-        },
+        }
         Value::Double(v) => {
             let mut b: [u8; 8] = [0; 8];
             (*v).write_bytes_le(&mut b);
             buf.extend_from_slice(&b);
-        },
+        }
         Value::String(s) => {
             buf.extend_from_slice(s.as_bytes());
             buf.push(0x0); //Add null byte terminator
-        },
+        }
         Value::Array(arr) => buf.append(&mut write_array(arr, max_depth)?),
         Value::Object(obj) => buf.append(&mut write_object(obj, max_depth)?),
     }

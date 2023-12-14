@@ -66,7 +66,7 @@ pub fn get_target_type_from_code(acode: u8, tcode: u8) -> Result<(Target, Type)>
                 context: InvalidCodeContext::Target,
                 code: acode,
             })
-        },
+        }
     }
     if tcode == b'A' {
         //Rust refuses to parse match properly so use if/else-if blocks
