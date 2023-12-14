@@ -504,8 +504,8 @@ mod tests {
 
     use crate::package::util::unpack_string;
     use crate::package::{CreateOptions, OpenOptions};
-    use crate::{package::Package, util::new_byte_buf};
     use crate::sd::Object;
+    use crate::{package::Package, util::new_byte_buf};
 
     #[test]
     fn test_re_open_after_create() {
@@ -886,11 +886,16 @@ mod tests {
         buffer.seek(SeekFrom::Start(0)).unwrap();
 
         //Re-open the package and remove an object
-        let mut package = Package::open(OpenOptions::new(buffer).revert_on_save_failure(true)).unwrap();
+        let mut package =
+            Package::open(OpenOptions::new(buffer).revert_on_save_failure(true)).unwrap();
         package.objects().unwrap();
         package.objects_mut().unwrap().remove_at(0);
         package.load_and_save().unwrap();
-        package.objects_mut().unwrap().create("TestObject", b"This is a new test".as_ref()).unwrap();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("TestObject", b"This is a new test".as_ref())
+            .unwrap();
         package.load_and_save().unwrap();
 
         let mut buffer = package.into_inner().into_inner();
@@ -907,7 +912,9 @@ mod tests {
     #[test]
     fn add_remove_test_2() {
         //Create the package with 1 object
-        let mut package = Package::create(CreateOptions::new(new_byte_buf(4096)).metadata(Object::new().into())).unwrap();
+        let mut package =
+            Package::create(CreateOptions::new(new_byte_buf(4096)).metadata(Object::new().into()))
+                .unwrap();
         package
             .objects_mut()
             .unwrap()
@@ -919,7 +926,8 @@ mod tests {
         buffer.seek(SeekFrom::Start(0)).unwrap();
 
         //Re-open the package and remove an object
-        let mut package = Package::open(OpenOptions::new(buffer).revert_on_save_failure(true)).unwrap();
+        let mut package =
+            Package::open(OpenOptions::new(buffer).revert_on_save_failure(true)).unwrap();
         package.load_metadata().unwrap();
         {
             let objects = package.objects().unwrap();
@@ -933,7 +941,11 @@ mod tests {
             .create("BadName", b"This is a test".as_ref())
             .unwrap();
         package.load_and_save().unwrap();
-        package.objects_mut().unwrap().create("TestObject1", b"This is a new test".as_ref()).unwrap();
+        package
+            .objects_mut()
+            .unwrap()
+            .create("TestObject1", b"This is a new test".as_ref())
+            .unwrap();
         package.load_and_save().unwrap();
         package.objects_mut().unwrap().remove_at(1);
         package.load_and_save().unwrap();

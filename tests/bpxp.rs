@@ -26,9 +26,9 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::io::{Cursor, Seek, SeekFrom};
-use bpx::package::{OpenOptions, Package};
 use bpx::package::util::unpack_string;
+use bpx::package::{OpenOptions, Package};
+use std::io::{Cursor, Seek, SeekFrom};
 
 #[test]
 #[cfg(feature = "package")]
@@ -46,7 +46,11 @@ fn test_bpxp_string_corruption_1() {
         assert!(object.is_none());
     }
     package.objects().unwrap();
-    package.objects_mut().unwrap().create("BadName", b"This is a test".as_ref()).unwrap();
+    package
+        .objects_mut()
+        .unwrap()
+        .create("BadName", b"This is a test".as_ref())
+        .unwrap();
     package.load_and_save().unwrap();
 
     let mut buffer = package.into_inner().into_inner();
@@ -61,7 +65,11 @@ fn test_bpxp_string_corruption_1() {
         assert!(object.is_none());
     }
     package.objects().unwrap();
-    package.objects_mut().unwrap().create("TestObject1", b"This is a new test".as_ref()).unwrap();
+    package
+        .objects_mut()
+        .unwrap()
+        .create("TestObject1", b"This is a new test".as_ref())
+        .unwrap();
     package.load_and_save().unwrap();
 
     let mut buffer = package.into_inner().into_inner();
@@ -104,7 +112,11 @@ fn test_bpxp_string_corruption_2() {
         assert!(object.is_none());
     }
     package.objects().unwrap();
-    package.objects_mut().unwrap().create("BadName", b"This is a test".as_ref()).unwrap();
+    package
+        .objects_mut()
+        .unwrap()
+        .create("BadName", b"This is a test".as_ref())
+        .unwrap();
     package.load_and_save().unwrap();
 
     let mut buffer = package.into_inner().into_inner();
@@ -129,7 +141,11 @@ fn test_bpxp_string_corruption_2() {
         assert!(object.is_none());
     }
     package.objects().unwrap();
-    package.objects_mut().unwrap().create("TestObject1", b"This is a new test".as_ref()).unwrap();
+    package
+        .objects_mut()
+        .unwrap()
+        .create("TestObject1", b"This is a new test".as_ref())
+        .unwrap();
     package.load_and_save().unwrap();
 
     let mut buffer = package.into_inner().into_inner();
@@ -162,7 +178,11 @@ fn test_bpxp_string_corruption_3() {
         assert!(object.is_none());
     }
     package.objects().unwrap();
-    package.objects_mut().unwrap().create("bod", b"This is a test".as_ref()).unwrap();
+    package
+        .objects_mut()
+        .unwrap()
+        .create("bod", b"This is a test".as_ref())
+        .unwrap();
     package.load_and_save().unwrap();
 
     let mut buffer = package.into_inner().into_inner();
@@ -171,7 +191,11 @@ fn test_bpxp_string_corruption_3() {
     //Re-load the buffer and perform the second request: remove the object named "bod".
     let mut package = Package::open(OpenOptions::new(buffer).revert_on_save_failure(true)).unwrap();
     let objects = package.objects().unwrap();
-    let (i, _) = objects.iter().enumerate().find(|(_, obj)| objects.load_name(obj).unwrap() == "bod").unwrap();
+    let (i, _) = objects
+        .iter()
+        .enumerate()
+        .find(|(_, obj)| objects.load_name(obj).unwrap() == "bod")
+        .unwrap();
     package.objects_mut().unwrap().remove_at(i);
     package.load_and_save().unwrap();
 
@@ -187,7 +211,11 @@ fn test_bpxp_string_corruption_3() {
         assert!(object.is_none());
     }
     package.objects().unwrap();
-    package.objects_mut().unwrap().create("bad", b"This is a new test".as_ref()).unwrap();
+    package
+        .objects_mut()
+        .unwrap()
+        .create("bad", b"This is a new test".as_ref())
+        .unwrap();
     package.load_and_save().unwrap();
 
     let mut buffer = package.into_inner().into_inner();

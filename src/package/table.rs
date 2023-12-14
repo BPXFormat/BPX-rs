@@ -128,7 +128,11 @@ impl ObjectTable {
     }
 
     pub fn remove(&mut self, header: &ObjectHeader) {
-        let (i, _) = self.table.iter().enumerate().find(|(_, v)| v == &header)
+        let (i, _) = self
+            .table
+            .iter()
+            .enumerate()
+            .find(|(_, v)| v == &header)
             .expect("attempt to remove a non-existent object header");
         self.remove_at(i);
     }

@@ -128,7 +128,11 @@ impl SymbolTable {
     }
 
     pub fn remove(&mut self, symbol: &Symbol) {
-        let (i, _) = self.table.iter().enumerate().find(|(_, v)| v == &symbol)
+        let (i, _) = self
+            .table
+            .iter()
+            .enumerate()
+            .find(|(_, v)| v == &symbol)
             .expect("attempt to remove a non-existent object header");
         self.remove_at(i);
     }
@@ -172,11 +176,14 @@ impl SymbolTable {
             let mut section = container.sections().load(section)?;
             section.seek(SeekFrom::Start(sym.extended_data as _))?;
             let obj = crate::sd::Value::read(&mut *section, self.max_depth)?;
-            self.extended_data_objs.insert(sym.extended_data, Box::new(obj));
+            self.extended_data_objs
+                .insert(sym.extended_data, Box::new(obj));
         }
         //SAFETY: We already have an if block to ensure extended data is loaded.
         Ok(unsafe {
-            self.extended_data_objs.get(&sym.extended_data).unwrap_unchecked()
+            self.extended_data_objs
+                .get(&sym.extended_data)
+                .unwrap_unchecked()
         })
     }
 
