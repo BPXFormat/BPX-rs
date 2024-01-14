@@ -35,15 +35,15 @@ mod data;
 mod decoder;
 mod encoder;
 pub mod error;
+mod handle;
 pub mod header;
 pub mod options;
 mod section;
-mod handle;
 
 /// Result type used in all [Container] operations.
 pub type Result<T> = std::result::Result<T, error::Error>;
 
 pub use container::*;
 pub use data::{AutoSectionData, SectionData};
-pub use section::{Iter, SectionInfo, SectionTable};
 pub use handle::Handle;
+pub use section::{Iter, SectionInfo, SectionTable};

@@ -28,14 +28,15 @@
 
 //! The BPX decoder.
 
+use std::num::NonZeroU32;
 use std::{
     cell::{Cell, RefCell},
     collections::BTreeMap,
     io,
     io::{Read, Seek, Write},
 };
-use std::num::NonZeroU32;
 
+use crate::core::handle::HandleGenerator;
 use crate::core::SectionInfo;
 use crate::{
     core::{
@@ -54,7 +55,6 @@ use crate::{
     },
     traits::ReadFill,
 };
-use crate::core::handle::HandleGenerator;
 
 use super::header::GetChecksum;
 

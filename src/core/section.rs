@@ -26,15 +26,16 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use super::Handle;
+use std::num::NonZeroU32;
 use std::ops::Index;
 use std::{
     cell::{Cell, RefCell, RefMut},
     collections::{btree_map::Keys, BTreeMap, Bound},
     io::{Read, Seek},
 };
-use std::num::NonZeroU32;
-use super::Handle;
 
+use crate::core::handle::HandleGenerator;
 use crate::core::{
     data::AutoSectionData,
     decoder::load_section1,
@@ -44,7 +45,6 @@ use crate::core::{
     },
     Result,
 };
-use crate::core::handle::HandleGenerator;
 
 pub struct SectionEntry1 {
     pub threshold: u32,

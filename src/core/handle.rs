@@ -68,9 +68,7 @@ impl HandleGenerator {
         if self.0 == 0 {
             None
         } else {
-            unsafe {
-                Some(Handle::from_raw(self.0))
-            }
+            unsafe { Some(Handle::from_raw(self.0)) }
         }
     }
 
@@ -79,8 +77,6 @@ impl HandleGenerator {
         // self.0 starts at 0 so add 1 before returning the handle so the first Handle always
         // starts at 1
         self.0 += 1;
-        unsafe {
-            Handle::from_raw(self.0)
-        }
+        unsafe { Handle::from_raw(self.0) }
     }
 }
