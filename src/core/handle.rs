@@ -26,24 +26,61 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//! The core BPX container implementation.
+use std::num::NonZeroU32;
 
-mod container;
+/// Represents a pointer to a section.
+///
+/// *Allows indirect access to a given section instead of sharing mutable references in user code.*
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Handle(pub(crate) NonZeroU32);
 
-mod compression;
-mod data;
-mod decoder;
-mod encoder;
-pub mod error;
-pub mod header;
-pub mod options;
-mod section;
-mod handle;
+impl Handle {
+    /// Constructs a Handle from a raw u32.
+    ///
+    /// # Arguments
+    ///
+    /// * `raw`: the raw key.
+    ///
+    /// returns: Handle
+    ///
+    /// # Safety
+    ///
+    /// You must ensure the raw key is a valid key and MUST be greater than 0. Failure to do so
+    /// could panic [Container](bpx::core::Container) or even cause UB in [Handle] itself.
+    pub unsafe fn from_raw(raw: u32) -> Self {
+        Self(NonZeroU32::new_unchecked(raw))
+    }
 
-/// Result type used in all [Container] operations.
-pub type Result<T> = std::result::Result<T, error::Error>;
+    /// Extracts the raw key from this Handle.
+    pub fn into_raw(self) -> u32 {
+        self.0.get()
+    }
+}
 
-pub use container::*;
-pub use data::{AutoSectionData, SectionData};
-pub use section::{Iter, SectionInfo, SectionTable};
-pub use handle::Handle;
+pub struct HandleGenerator(u32);
+
+impl HandleGenerator {
+    pub fn new() -> HandleGenerator {
+        HandleGenerator(0)
+    }
+
+    pub fn last(&self) -> Option<Handle> {
+        if self.0 == 0 {
+            None
+        } else {
+            unsafe {
+                Some(Handle::from_raw(self.0))
+            }
+        }
+    }
+
+    pub fn next(&mut self) -> Handle {
+        // SAFETY
+        // self.0 starts at 0 so add 1 before returning the handle so the first Handle always
+        // starts at 1
+        self.0 += 1;
+        unsafe {
+            Handle::from_raw(self.0)
+        }
+    }
+}

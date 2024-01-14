@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2024, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -35,6 +35,7 @@ use crate::core::{
     section::SectionTable,
     AutoSectionData, Result, SectionData,
 };
+use crate::core::handle::HandleGenerator;
 
 use super::compression::{Checksum, WeakChecksum};
 use super::error::Error;
@@ -209,7 +210,7 @@ impl<T: io::Write + io::Seek> Container<T> {
         let options = options.into();
         Container {
             table: SectionTable {
-                next_handle: 0,
+                next_handle: HandleGenerator::new(),
                 count: 0,
                 modified: true,
                 backend: RefCell::new(options.backend),
@@ -276,7 +277,7 @@ impl<T: io::Write + io::Seek> Container<T> {
                 })
                 .map(|(handle, _)| *handle)
                 .unwrap();
-            if expanded_section == self.table.next_handle - 1 {
+            if expanded_section == self.table.next_handle.last().unwrap().0 {
                 return if count > 1 {
                     // If n sections changed but did not expand and the last section has expanded
                     // -> write only these n sections, write the last section and patch section

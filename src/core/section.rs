@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2024, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -32,6 +32,8 @@ use std::{
     collections::{btree_map::Keys, BTreeMap, Bound},
     io::{Read, Seek},
 };
+use std::num::NonZeroU32;
+use super::Handle;
 
 use crate::core::{
     data::AutoSectionData,
@@ -42,34 +44,7 @@ use crate::core::{
     },
     Result,
 };
-
-/// Represents a pointer to a section.
-///
-/// *Allows indirect access to a given section instead of sharing mutable references in user code.*
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Handle(u32);
-
-impl Handle {
-    /// Constructs a Handle from a raw u32.
-    ///
-    /// # Arguments
-    ///
-    /// * `raw`: the raw key.
-    ///
-    /// returns: Handle
-    ///
-    /// # Safety
-    ///
-    /// You must ensure the raw key is a valid key. Failure to do so could panic bpx::core::Container.
-    pub unsafe fn from_raw(raw: u32) -> Self {
-        Self(raw)
-    }
-
-    /// Extracts the raw key from this Handle.
-    pub fn into_raw(self) -> u32 {
-        self.0
-    }
-}
+use crate::core::handle::HandleGenerator;
 
 pub struct SectionEntry1 {
     pub threshold: u32,
@@ -136,7 +111,7 @@ pub struct SectionEntry {
 
 /// An iterator over section handles.
 pub struct Iter<'a> {
-    iter: Keys<'a, u32, SectionEntry>,
+    iter: Keys<'a, NonZeroU32, SectionEntry>,
 }
 
 impl<'a> Iterator for Iter<'a> {
@@ -150,10 +125,10 @@ impl<'a> Iterator for Iter<'a> {
 /// Represents the table of all sections in a BPX [Container](crate::core::Container).
 pub struct SectionTable<T> {
     pub(crate) backend: RefCell<T>,
-    pub(crate) sections: BTreeMap<u32, SectionEntry>,
+    pub(crate) sections: BTreeMap<NonZeroU32, SectionEntry>,
     pub(crate) count: u32,
     pub(crate) modified: bool,
-    pub(crate) next_handle: u32,
+    pub(crate) next_handle: HandleGenerator,
     pub(crate) skip_checksum: bool,
     pub(crate) memory_threshold: u32,
 }
@@ -268,7 +243,7 @@ impl<T> SectionTable<T> {
     pub fn create<H: Into<SectionHeader>>(&mut self, header: H) -> Handle {
         self.modified = true;
         self.count += 1;
-        let r = self.next_handle;
+        let r = self.next_handle.next();
         let section = AutoSectionData::new(self.memory_threshold as _);
         let h = header.into();
         let entry = SectionEntry {
@@ -280,9 +255,8 @@ impl<T> SectionTable<T> {
                 flags: h.flags,
             },
         };
-        self.sections.insert(r, entry);
-        self.next_handle += 1;
-        Handle(r)
+        self.sections.insert(r.0, entry);
+        r
     }
 
     /// Removes a section from this section table.

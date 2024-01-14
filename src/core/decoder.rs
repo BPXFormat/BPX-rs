@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2024, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -34,6 +34,7 @@ use std::{
     io,
     io::{Read, Seek, Write},
 };
+use std::num::NonZeroU32;
 
 use crate::core::SectionInfo;
 use crate::{
@@ -53,6 +54,7 @@ use crate::{
     },
     traits::ReadFill,
 };
+use crate::core::handle::HandleGenerator;
 
 use super::header::GetChecksum;
 
@@ -62,15 +64,16 @@ pub fn read_section_header_table<T: Read>(
     mut backend: &mut T,
     main_header: &MainHeader,
     checksum: &mut impl Checksum,
-) -> Result<(u32, BTreeMap<u32, SectionEntry>)> {
+) -> Result<(HandleGenerator, BTreeMap<NonZeroU32, SectionEntry>)> {
     let mut sections = BTreeMap::new();
-    let mut hdl: u32 = 0;
+    let mut hdl = HandleGenerator::new();
 
     for i in 0..main_header.section_num {
+        let hdl = hdl.next();
         let header = SectionHeader::read(&mut backend)?;
         header.get_checksum(checksum);
         sections.insert(
-            hdl,
+            hdl.0,
             SectionEntry {
                 info: SectionInfo::new(i, header),
                 data: RefCell::new(None),
@@ -81,7 +84,6 @@ pub fn read_section_header_table<T: Read>(
                 },
             },
         );
-        hdl += 1;
     }
     Ok((hdl, sections))
 }

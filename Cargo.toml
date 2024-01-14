@@ -1,6 +1,6 @@
 [package]
 name = "bpx"
-version = "4.0.0-rc.11.0.0"
+version = "4.0.0-rc.11.0.1"
 authors = ["Yuri Edward <yuri6037@outlook.com>"]
 edition = "2021"
 description = "BPX official rust implementation"
@@ -14,7 +14,7 @@ categories = ["encoding", "rendering::data-formats", "parser-implementations"]
 
 [dependencies]
 bytesutil = "0.7.0"
-tempfile = "3.8.1"
+tempfile = "3.9.0"
 
 # The reason why we lock lzma-sys to static feature is because the library is unfortunatly unable to understand that
 # macOS does not come with a proper lzma by defaut and as such should auto build as static to avoid linking against

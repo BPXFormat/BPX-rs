@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2024, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -32,6 +32,7 @@ use std::{
     collections::BTreeMap,
     io::{Seek, SeekFrom, Write},
 };
+use std::num::NonZeroU32;
 
 use crate::core::header::SectionHeader;
 use crate::core::SectionInfo;
@@ -56,7 +57,7 @@ const READ_BLOCK_SIZE: usize = 8192;
 
 fn write_sections<T: Write + Seek>(
     mut backend: T,
-    sections: &mut BTreeMap<u32, SectionEntry>,
+    sections: &mut BTreeMap<NonZeroU32, SectionEntry>,
     file_start_offset: usize,
     chksum_sht: &mut impl Checksum,
 ) -> Result<usize> {
@@ -114,7 +115,7 @@ fn write_sections<T: Write + Seek>(
 
 fn internal_save<T: Write + Seek>(
     mut backend: T,
-    sections: &mut BTreeMap<u32, SectionEntry>,
+    sections: &mut BTreeMap<NonZeroU32, SectionEntry>,
     main_header: &mut MainHeader,
 ) -> Result<()> {
     let file_start_offset =
@@ -136,8 +137,8 @@ fn internal_save<T: Write + Seek>(
 
 fn write_section_single<T: Write + Seek>(
     mut backend: T,
-    sections: &mut BTreeMap<u32, SectionEntry>,
-    handle: u32,
+    sections: &mut BTreeMap<NonZeroU32, SectionEntry>,
+    handle: NonZeroU32,
 ) -> Result<(bool, i64)> {
     let entry = sections.get_mut(&handle).unwrap();
     backend.seek(SeekFrom::Start(entry.info.header().pointer))?;
@@ -162,7 +163,7 @@ fn write_section_single<T: Write + Seek>(
 
 pub fn recompute_header_checksum(
     main_header: &mut MainHeader,
-    sections: &BTreeMap<u32, SectionEntry>,
+    sections: &BTreeMap<NonZeroU32, SectionEntry>,
 ) {
     let mut chksum_sht = WeakChecksum::default();
     for entry in sections.values() {
@@ -174,9 +175,9 @@ pub fn recompute_header_checksum(
 
 fn internal_save_single<T: Write + Seek>(
     mut backend: T,
-    sections: &mut BTreeMap<u32, SectionEntry>,
+    sections: &mut BTreeMap<NonZeroU32, SectionEntry>,
     main_header: &mut MainHeader,
-    handle: u32,
+    handle: NonZeroU32,
 ) -> Result<bool> {
     // This function saves only the last section.
     let mut write_main_header = false;
@@ -268,12 +269,12 @@ pub enum SaveMode {
     Regenerate,
     MainHeaderOnly,
     PatchMultipleSections,
-    PatchSingleSection(u32),
+    PatchSingleSection(NonZeroU32),
 }
 
 pub struct Encoder<'a> {
     pub main_header: &'a mut MainHeader,
-    pub sections: &'a mut BTreeMap<u32, SectionEntry>,
+    pub sections: &'a mut BTreeMap<NonZeroU32, SectionEntry>,
     pub main_header_modified: &'a mut bool,
     pub table_modified: &'a mut bool,
     pub table_count: u32,
@@ -281,7 +282,7 @@ pub struct Encoder<'a> {
 }
 
 impl<'a> Encoder<'a> {
-    fn get_modified_sections(&self) -> Vec<u32> {
+    fn get_modified_sections(&self) -> Vec<NonZeroU32> {
         // Returns a list of modified sections.
         self.sections
             .iter()
