@@ -158,8 +158,12 @@ impl<T: io::Read + io::Seek> Container<T> {
             },
         };
         header.get_checksum(&mut checksum);
-        let (next_handle, sections) =
-            read_section_header_table(&mut options.backend, &header, &mut checksum, options.compression_threshold)?;
+        let (next_handle, sections) = read_section_header_table(
+            &mut options.backend,
+            &header,
+            &mut checksum,
+            options.compression_threshold,
+        )?;
         let chksum = checksum.finish();
         if !options.skip_checksum && chksum != header.chksum {
             return Err(Error::Checksum {
@@ -176,7 +180,7 @@ impl<T: io::Read + io::Seek> Container<T> {
                 count: header.section_num,
                 skip_checksum: options.skip_checksum,
                 memory_threshold: options.memory_threshold,
-                compression_threshold: options.compression_threshold
+                compression_threshold: options.compression_threshold,
             },
             main_header: header,
             main_header_modified: false,
@@ -218,7 +222,7 @@ impl<T: io::Write + io::Seek> Container<T> {
                 sections: BTreeMap::new(),
                 skip_checksum: false,
                 memory_threshold: options.memory_threshold,
-                compression_threshold: options.compression_threshold
+                compression_threshold: options.compression_threshold,
             },
             main_header: options.header,
             main_header_modified: true,
