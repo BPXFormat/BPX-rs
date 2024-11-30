@@ -29,13 +29,13 @@
 use std::{cell::RefCell, collections::BTreeMap, io};
 
 use crate::core::encoder::{Encoder, SaveMode};
+use crate::core::handle::HandleGenerator;
 use crate::core::{
     decoder::read_section_header_table,
     header::{MainHeader, Struct},
     section::SectionTable,
     AutoSectionData, Result, SectionData,
 };
-use crate::core::handle::HandleGenerator;
 
 use super::compression::{Checksum, WeakChecksum};
 use super::error::Error;

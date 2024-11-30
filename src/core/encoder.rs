@@ -28,11 +28,11 @@
 
 //! The BPX encoder.
 
+use std::num::NonZeroU32;
 use std::{
     collections::BTreeMap,
     io::{Seek, SeekFrom, Write},
 };
-use std::num::NonZeroU32;
 
 use crate::core::header::SectionHeader;
 use crate::core::SectionInfo;
