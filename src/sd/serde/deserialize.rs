@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2024, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -191,7 +191,7 @@ impl<'a, 'de> EnumAccess<'de> for Enum<'a> {
         V: DeserializeSeed<'de>,
     {
         let variant_idx = match &mut self.val {
-            Value::Array(arr) => arr.get(0),
+            Value::Array(arr) => arr.first(),
             Value::Object(obj) => obj.get("__variant__"),
             _ => None,
         }
