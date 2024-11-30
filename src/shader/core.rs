@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2024, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -225,13 +225,13 @@ impl<T> TryFrom<(Container<T>, Options)> for ShaderPack<T> {
                 container.main_header_mut().ty = b'S';
                 container.main_header_mut().version = SUPPORTED_VERSION;
                 let string_section = container.sections_mut().create(
-                    SectionOptions::new()
+                    SectionOptions::default()
                         .checksum(Checksum::Weak)
                         .compression(CompressionMethod::Zlib)
                         .ty(SECTION_TYPE_STRING),
                 );
                 let symbol_table = container.sections_mut().create(
-                    SectionOptions::new()
+                    SectionOptions::default()
                         .checksum(Checksum::Weak)
                         .compression(CompressionMethod::Zlib)
                         .ty(SECTION_TYPE_SYMBOL_TABLE),
@@ -298,13 +298,13 @@ impl<T: Write + Seek> ShaderPack<T> {
                 .version(SUPPORTED_VERSION),
         );
         let string_section = container.sections_mut().create(
-            SectionOptions::new()
+            SectionOptions::default()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
                 .ty(SECTION_TYPE_STRING),
         );
         let symbol_table = container.sections_mut().create(
-            SectionOptions::new()
+            SectionOptions::default()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
                 .ty(SECTION_TYPE_SYMBOL_TABLE),

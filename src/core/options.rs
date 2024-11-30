@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2024, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -70,19 +70,21 @@ pub enum Checksum {
 /// Utility to easily generate a [SectionHeader].
 pub struct SectionOptions {
     header: SectionHeader,
+    threashold: Option<u32>
 }
 
 impl Default for SectionOptions {
     fn default() -> Self {
-        Self::new()
+        Self::new(SectionHeader::new())
     }
 }
 
 impl SectionOptions {
     /// Creates a new set of options for a BPX section.
-    pub fn new() -> SectionOptions {
+    pub fn new(header: SectionHeader) -> SectionOptions {
         SectionOptions {
-            header: SectionHeader::new(),
+            header,
+            threashold: None
         }
     }
 
@@ -102,9 +104,9 @@ impl SectionOptions {
     /// ```
     /// use bpx::core::options::SectionOptions;
     ///
-    /// let header = SectionOptions::new()
+    /// let header = SectionOptions::default()
     ///     .size(128)
-    ///     .build();
+    ///     .get_header();
     /// assert_eq!(header.size, 128);
     /// ```
     pub fn size(&mut self, size: u32) -> &mut Self {
@@ -127,9 +129,9 @@ impl SectionOptions {
     /// ```
     /// use bpx::core::options::SectionOptions;
     ///
-    /// let header = SectionOptions::new()
+    /// let header = SectionOptions::default()
     ///     .ty(1)
-    ///     .build();
+    ///     .get_header();
     /// assert_eq!(header.ty, 1);
     /// ```
     pub fn ty(&mut self, ty: u8) -> &mut Self {
@@ -153,9 +155,9 @@ impl SectionOptions {
     /// use bpx::core::options::{CompressionMethod, SectionOptions};
     /// use bpx::core::header::FLAG_COMPRESS_ZLIB;
     ///
-    /// let header = SectionOptions::new()
+    /// let header = SectionOptions::default()
     ///     .compression(CompressionMethod::Zlib)
-    ///     .build();
+    ///     .get_header();
     /// assert_ne!(header.flags & FLAG_COMPRESS_ZLIB, 0);
     /// ```
     pub fn compression(&mut self, method: CompressionMethod) -> &mut Self {
@@ -184,15 +186,15 @@ impl SectionOptions {
     /// ```
     /// use bpx::core::options::{CompressionMethod, SectionOptions};
     ///
-    /// let header = SectionOptions::new()
+    /// let threshold = SectionOptions::default()
     ///     .compression(CompressionMethod::Zlib)
-    ///     .threshold(0)
-    ///     .build();
+    ///     .threshold(16)
+    ///     .get_threshold();
     /// // The compression threshold value is stored in csize.
-    /// assert_eq!(header.csize, 0);
+    /// assert_eq!(threshold.unwrap(), 16);
     /// ```
     pub fn threshold(&mut self, threshold: u32) -> &mut Self {
-        self.header.csize = threshold;
+        self.threashold = Some(threshold);
         self
     }
 
@@ -214,9 +216,9 @@ impl SectionOptions {
     /// use bpx::core::options::{Checksum, SectionOptions};
     /// use bpx::core::header::FLAG_CHECK_CRC32;
     ///
-    /// let header = SectionOptions::new()
+    /// let header = SectionOptions::default()
     ///     .checksum(Checksum::Crc32)
-    ///     .build();
+    ///     .get_header();
     /// assert_ne!(header.flags & FLAG_CHECK_CRC32, 0);
     /// ```
     pub fn checksum(&mut self, chksum: Checksum) -> &mut Self {
@@ -235,21 +237,42 @@ impl SectionOptions {
     /// use bpx::core::options::{Checksum, CompressionMethod, SectionOptions};
     /// use bpx::core::header::{FLAG_CHECK_CRC32, FLAG_COMPRESS_ZLIB};
     ///
-    /// let header = SectionOptions::new()
-    ///     .size(128)
+    /// let mut options = SectionOptions::default();
+    /// options.size(128)
     ///     .ty(1)
     ///     .compression(CompressionMethod::Zlib)
     ///     .threshold(0)
-    ///     .checksum(Checksum::Crc32)
-    ///     .build();
+    ///     .checksum(Checksum::Crc32);
+    /// let header = options.get_header();
+    /// let threshold = options.get_threshold();
     /// assert_eq!(header.size, 128);
     /// assert_eq!(header.ty, 1);
     /// assert_ne!(header.flags & FLAG_COMPRESS_ZLIB, 0);
-    /// assert_eq!(header.csize, 0);
+    /// assert_eq!(threshold.unwrap(), 0);
     /// assert_ne!(header.flags & FLAG_CHECK_CRC32, 0);
     /// ```
-    pub fn build(&self) -> SectionHeader {
+    pub fn get_header(&self) -> SectionHeader {
         self.header
+    }
+
+    /// Returns the compression threshold to apply to this section.
+    pub fn get_threshold(&self) -> Option<u32> {
+        self.threashold
+    }
+}
+
+impl From<SectionHeader> for SectionOptions {
+    fn from(value: SectionHeader) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<&mut SectionOptions> for SectionOptions {
+    fn from(value: &mut SectionOptions) -> Self {
+        SectionOptions {
+            header: value.header,
+            threashold: value.threashold
+        }
     }
 }
 
@@ -261,6 +284,7 @@ pub struct OpenOptions<T> {
     pub(crate) skip_version_check: bool,
     pub(crate) memory_threshold: u32,
     pub(crate) revert_on_save_fail: bool,
+    pub(crate) compression_threshold: u32
 }
 
 impl<T> OpenOptions<T> {
@@ -276,6 +300,7 @@ impl<T> OpenOptions<T> {
             skip_signature_check: false,
             skip_version_check: false,
             memory_threshold: DEFAULT_MEMORY_THRESHOLD,
+            compression_threshold: DEFAULT_COMPRESSION_THRESHOLD,
             revert_on_save_fail: false,
         }
     }
@@ -364,6 +389,28 @@ impl<T> OpenOptions<T> {
         self
     }
 
+    /// Sets the default maximum size of a section to be left uncompressed when a section is marked as
+    /// compressible.
+    ///
+    /// The default is set to [DEFAULT_COMPRESSION_THRESHOLD] bytes.
+    ///
+    /// # Arguments
+    ///
+    /// * `size`: the maximum size of a section (in bytes) to be left uncompressed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::options::OpenOptions;
+    ///
+    /// let header = OpenOptions::new(())
+    ///     .compression_threshold(4096); //Set compression threshold to 4Kb.
+    /// ```
+    pub fn compression_threshold(mut self, size: u32) -> Self {
+        self.compression_threshold = size;
+        self
+    }
+
     /// Reverts the file when a save operation fails to keep the BPX unchanged/unmodified after
     /// a save failure.
     ///
@@ -400,6 +447,7 @@ pub struct CreateOptions<T> {
     pub(crate) backend: T,
     pub(crate) memory_threshold: u32,
     pub(crate) revert_on_save_fail: bool,
+    pub(crate) compression_threshold: u32
 }
 
 impl<T> CreateOptions<T> {
@@ -414,6 +462,7 @@ impl<T> CreateOptions<T> {
             backend,
             memory_threshold: DEFAULT_MEMORY_THRESHOLD,
             revert_on_save_fail: false,
+            compression_threshold: DEFAULT_COMPRESSION_THRESHOLD
         }
     }
 
@@ -432,7 +481,7 @@ impl<T> CreateOptions<T> {
     ///
     /// let header = CreateOptions::new(())
     ///     .ty('M' as u8)
-    ///     .main_header();
+    ///     .get_header();
     /// assert_eq!(header.ty, 'M' as u8);
     /// ```
     pub fn ty(mut self, ty: u8) -> Self {
@@ -455,7 +504,7 @@ impl<T> CreateOptions<T> {
     ///
     /// let header = CreateOptions::new(())
     ///     .type_ext([1; 16])
-    ///     .main_header();
+    ///     .get_header();
     /// assert_eq!(header.type_ext.into_inner(), [1; 16]);
     /// ```
     pub fn type_ext(mut self, type_ext: impl Into<StaticByteBuf<16>>) -> Self {
@@ -483,7 +532,7 @@ impl<T> CreateOptions<T> {
     ///
     /// let header = CreateOptions::new(())
     ///     .version(1)
-    ///     .main_header();
+    ///     .get_header();
     /// assert_eq!(header.version, 1);
     /// ```
     pub fn version(mut self, version: u32) -> Self {
@@ -506,11 +555,33 @@ impl<T> CreateOptions<T> {
     ///
     /// let header = CreateOptions::new(())
     ///     .memory_threshold(4096) //Set memory threshold to 4Kb.
-    ///     .main_header();
+    ///     .get_header();
     /// assert_eq!(header.version, 2);
     /// ```
     pub fn memory_threshold(mut self, size: u32) -> Self {
         self.memory_threshold = size;
+        self
+    }
+
+    /// Sets the default maximum size of a section to be left uncompressed when a section is marked as
+    /// compressible.
+    ///
+    /// The default is set to [DEFAULT_COMPRESSION_THRESHOLD] bytes.
+    ///
+    /// # Arguments
+    ///
+    /// * `size`: the maximum size of a section (in bytes) to be left uncompressed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bpx::core::options::CreateOptions;
+    ///
+    /// let header = CreateOptions::new(())
+    ///     .compression_threshold(4096); //Set compression threshold to 4Kb.
+    /// ```
+    pub fn compression_threshold(mut self, size: u32) -> Self {
+        self.compression_threshold = size;
         self
     }
 
@@ -549,12 +620,12 @@ impl<T> CreateOptions<T> {
     ///     .ty('M' as u8)
     ///     .type_ext([1; 16])
     ///     .version(1)
-    ///     .main_header();
+    ///     .get_header();
     /// assert_eq!(header.ty, 'M' as u8);
     /// assert_eq!(header.type_ext.into_inner(), [1; 16]);
     /// assert_eq!(header.version, 1);
     /// ```
-    pub fn main_header(&self) -> MainHeader {
+    pub fn get_header(&self) -> MainHeader {
         self.header
     }
 }
@@ -572,18 +643,7 @@ impl<T: std::io::Seek> From<(T, MainHeader)> for CreateOptions<T> {
             backend,
             memory_threshold: DEFAULT_MEMORY_THRESHOLD,
             revert_on_save_fail: false,
+            compression_threshold: DEFAULT_COMPRESSION_THRESHOLD
         }
-    }
-}
-
-impl From<&mut SectionOptions> for SectionHeader {
-    fn from(options: &mut SectionOptions) -> Self {
-        options.build()
-    }
-}
-
-impl From<SectionOptions> for SectionHeader {
-    fn from(options: SectionOptions) -> Self {
-        options.build()
     }
 }

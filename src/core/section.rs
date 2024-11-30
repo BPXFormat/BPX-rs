@@ -45,6 +45,7 @@ use crate::core::{
     Result,
 };
 use crate::core::handle::HandleGenerator;
+use crate::core::options::SectionOptions;
 
 pub struct SectionEntry1 {
     pub threshold: u32,
@@ -131,6 +132,8 @@ pub struct SectionTable<T> {
     pub(crate) next_handle: HandleGenerator,
     pub(crate) skip_checksum: bool,
     pub(crate) memory_threshold: u32,
+    // This represents the default compression threshold to apply when a section is created.
+    pub(crate) compression_threshold: u32,
 }
 
 impl<T: Read + Seek> SectionTable<T> {
@@ -237,21 +240,22 @@ impl<T> SectionTable<T> {
     ///
     /// let mut file = Container::create(new_byte_buf(0));
     /// assert_eq!(file.sections().len(), 0);
-    /// file.sections_mut().create(SectionOptions::new());
+    /// file.sections_mut().create(SectionOptions::default());
     /// assert_eq!(file.sections().len(), 1);
     /// ```
-    pub fn create<H: Into<SectionHeader>>(&mut self, header: H) -> Handle {
+    pub fn create(&mut self, options: impl Into<SectionOptions>) -> Handle {
+        let options = options.into();
         self.modified = true;
         self.count += 1;
         let r = self.next_handle.next();
         let section = AutoSectionData::new(self.memory_threshold as _);
-        let h = header.into();
+        let h = options.get_header();
         let entry = SectionEntry {
             info: SectionInfo::new(self.count - 1, h),
             data: RefCell::new(Some(section)),
             modified: Cell::new(false),
             entry1: SectionEntry1 {
-                threshold: h.csize,
+                threshold: options.get_threshold().unwrap_or(self.compression_threshold),
                 flags: h.flags,
             },
         };
@@ -277,7 +281,7 @@ impl<T> SectionTable<T> {
     /// use bpx::util::new_byte_buf;
     ///
     /// let mut file = Container::create(new_byte_buf(0));
-    /// let section = file.sections_mut().create(SectionOptions::new());
+    /// let section = file.sections_mut().create(SectionOptions::default());
     /// file.save().unwrap();
     /// assert_eq!(file.main_header().section_num, 1);
     /// file.sections_mut().remove(section);

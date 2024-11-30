@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2024, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -67,11 +67,11 @@ pub fn write_object<T, TRead: Read>(
 }
 
 pub fn create_data_section_header() -> SectionHeader {
-    SectionOptions::new()
+    SectionOptions::default()
         .ty(SECTION_TYPE_DATA)
         .compression(CompressionMethod::Xz)
         .checksum(Checksum::Crc32)
-        .build()
+        .get_header()
 }
 
 pub fn get_type_ext(settings: &Settings) -> [u8; 16] {

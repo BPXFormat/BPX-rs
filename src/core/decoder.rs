@@ -50,9 +50,9 @@ use crate::{
             FLAG_COMPRESS_ZLIB,
         },
         section::{SectionEntry, SectionEntry1},
-        Result, DEFAULT_COMPRESSION_THRESHOLD,
+        Result
     },
-    traits::ReadFill,
+    traits::ReadFill
 };
 use crate::core::handle::HandleGenerator;
 
@@ -64,6 +64,7 @@ pub fn read_section_header_table<T: Read>(
     mut backend: &mut T,
     main_header: &MainHeader,
     checksum: &mut impl Checksum,
+    default_compression_threshold: u32
 ) -> Result<(HandleGenerator, BTreeMap<NonZeroU32, SectionEntry>)> {
     let mut sections = BTreeMap::new();
     let mut hdl = HandleGenerator::new();
@@ -80,7 +81,7 @@ pub fn read_section_header_table<T: Read>(
                 modified: Cell::new(false),
                 entry1: SectionEntry1 {
                     flags: header.flags,
-                    threshold: DEFAULT_COMPRESSION_THRESHOLD,
+                    threshold: default_compression_threshold,
                 },
             },
         );

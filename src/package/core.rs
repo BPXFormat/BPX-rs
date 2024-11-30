@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2024, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -181,13 +181,13 @@ impl<T> TryFrom<(Container<T>, Options)> for Package<T> {
                 container.main_header_mut().ty = b'P';
                 container.main_header_mut().version = SUPPORTED_VERSION;
                 let object_table = container.sections_mut().create(
-                    SectionOptions::new()
+                    SectionOptions::default()
                         .checksum(Checksum::Weak)
                         .compression(CompressionMethod::Zlib)
                         .ty(SECTION_TYPE_OBJECT_TABLE),
                 );
                 let string_section = container.sections_mut().create(
-                    SectionOptions::new()
+                    SectionOptions::default()
                         .checksum(Checksum::Weak)
                         .compression(CompressionMethod::Zlib)
                         .ty(SECTION_TYPE_STRING),
@@ -256,13 +256,13 @@ impl<T: Write + Seek> Package<T> {
                 .version(SUPPORTED_VERSION),
         );
         let object_table = container.sections_mut().create(
-            SectionOptions::new()
+            SectionOptions::default()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
                 .ty(SECTION_TYPE_OBJECT_TABLE),
         );
         let string_section = container.sections_mut().create(
-            SectionOptions::new()
+            SectionOptions::default()
                 .checksum(Checksum::Weak)
                 .compression(CompressionMethod::Zlib)
                 .ty(SECTION_TYPE_STRING),
@@ -271,7 +271,7 @@ impl<T: Write + Seek> Package<T> {
         if let Some(metadata) = &settings.metadata {
             if !metadata.is_null() {
                 let metadata_section = container.sections_mut().create(
-                    SectionOptions::new()
+                    SectionOptions::default()
                         .checksum(Checksum::Weak)
                         .compression(CompressionMethod::Zlib)
                         .ty(SECTION_TYPE_SD),
@@ -312,7 +312,7 @@ impl<T: Write + Seek> Package<T> {
                     .find_by_type(SECTION_TYPE_SD)
                     .unwrap_or_else(|| {
                         self.container.sections_mut().create(
-                            SectionOptions::new()
+                            SectionOptions::default()
                                 .checksum(Checksum::Weak)
                                 .compression(CompressionMethod::Zlib)
                                 .ty(SECTION_TYPE_SD),
@@ -463,7 +463,7 @@ impl<T: Read + Write + Seek> Package<T> {
                     .find_by_type(SECTION_TYPE_SD)
                     .unwrap_or_else(|| {
                         self.container.sections_mut().create(
-                            SectionOptions::new()
+                            SectionOptions::default()
                                 .checksum(Checksum::Weak)
                                 .compression(CompressionMethod::Zlib)
                                 .ty(SECTION_TYPE_SD),

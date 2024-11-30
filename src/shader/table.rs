@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2024, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -91,7 +91,7 @@ impl SymbolTable {
         if !extended_data.is_null() {
             let handle = *self.extended_data.get_or_insert_with(|| {
                 container.sections_mut().create(
-                    SectionOptions::new()
+                    SectionOptions::default()
                         .ty(SECTION_TYPE_EXTENDED_DATA)
                         .checksum(Checksum::Crc32)
                         .compression(CompressionMethod::Zlib),
@@ -416,7 +416,7 @@ impl ShaderTable {
 
     pub fn create<T>(&mut self, container: &mut Container<T>, shader: Shader) -> Result<Handle> {
         let handle = container.sections_mut().create(
-            SectionOptions::new()
+            SectionOptions::default()
                 .ty(SECTION_TYPE_SHADER)
                 .checksum(Checksum::Crc32)
                 .compression(CompressionMethod::Xz)
