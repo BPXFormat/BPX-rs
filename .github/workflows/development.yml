@@ -13,7 +13,7 @@ jobs:
     needs: Test
 
   Coverage:
-    uses: BlockProject3D/workflows/.github/workflows/Coverage.yml@main
+    uses: BPXFormat/workflows/.github/workflows/Coverage.yml@main
 
   Release:
     uses: BPXFormat/workflows/.github/workflows/Release.yml@main
