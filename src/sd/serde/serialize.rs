@@ -246,11 +246,7 @@ impl SerializeStruct for Struct {
     type Ok = Value;
     type Error = Error;
 
-    fn serialize_field<T>(
-        &mut self,
-        key: &'static str,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
     where
         T: Serialize + ?Sized,
     {
@@ -266,11 +262,7 @@ impl SerializeStructVariant for Struct {
     type Ok = Value;
     type Error = Error;
 
-    fn serialize_field<T>(
-        &mut self,
-        key: &'static str,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
     where
         T: Serialize + ?Sized,
     {
