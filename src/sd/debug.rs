@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2024, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -66,7 +66,7 @@ pub struct Debugger<'a> {
     symbols_list: Vec<String>,
 }
 
-impl<'a> AsRef<Object> for Debugger<'a> {
+impl AsRef<Object> for Debugger<'_> {
     fn as_ref(&self) -> &Object {
         &self.inner
     }
@@ -78,7 +78,7 @@ impl<'a> From<&'a Object> for Cow<'a, Object> {
     }
 }
 
-impl<'a> From<Object> for Cow<'a, Object> {
+impl From<Object> for Cow<'_, Object> {
     fn from(v: Object) -> Self {
         Self::Owned(v)
     }

@@ -52,7 +52,7 @@ struct Seq<'a> {
     arr: &'a Array,
 }
 
-impl<'a, 'de> SeqAccess<'de> for Seq<'a> {
+impl<'de> SeqAccess<'de> for Seq<'_> {
     type Error = Error;
 
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
@@ -76,7 +76,7 @@ struct Map<'a> {
     value: Option<&'a Object>,
 }
 
-impl<'a, 'de> MapAccess<'de> for Map<'a> {
+impl<'de> MapAccess<'de> for Map<'_> {
     type Error = Error;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
@@ -112,7 +112,7 @@ struct Struct<'a> {
     obj: &'a Object,
 }
 
-impl<'a, 'de> SeqAccess<'de> for Struct<'a> {
+impl<'de> SeqAccess<'de> for Struct<'_> {
     type Error = Error;
 
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
@@ -135,7 +135,7 @@ struct Enum<'a> {
     val: &'a Value,
 }
 
-impl<'a, 'de> VariantAccess<'de> for Enum<'a> {
+impl<'de> VariantAccess<'de> for Enum<'_> {
     type Error = Error;
 
     fn unit_variant(self) -> Result<(), Self::Error> {
@@ -182,7 +182,7 @@ impl<'a, 'de> VariantAccess<'de> for Enum<'a> {
     }
 }
 
-impl<'a, 'de> EnumAccess<'de> for Enum<'a> {
+impl<'de> EnumAccess<'de> for Enum<'_> {
     type Error = Error;
     type Variant = Self;
 
@@ -243,7 +243,7 @@ impl<'a> Deserializer<'a> {
     }
 }
 
-impl<'a, 'de> serde::Deserializer<'de> for Deserializer<'a> {
+impl<'de> serde::Deserializer<'de> for Deserializer<'_> {
     type Error = Error;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>

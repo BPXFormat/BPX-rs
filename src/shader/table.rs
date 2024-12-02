@@ -215,7 +215,7 @@ pub struct SymbolTableRef<'a, T> {
     pub(crate) table: &'a SymbolTable,
 }
 
-impl<'a, T> SymbolTableRef<'a, T> {
+impl<T> SymbolTableRef<'_, T> {
     /// Gets all symbols in this table.
     pub fn iter(&self) -> std::slice::Iter<Symbol> {
         self.table.iter()
@@ -243,7 +243,7 @@ impl<'a, T> SymbolTableRef<'a, T> {
     }
 }
 
-impl<'a, 'b, T> IntoIterator for &'a SymbolTableRef<'b, T> {
+impl<'a, T> IntoIterator for &'a SymbolTableRef<'_, T> {
     type Item = &'a Symbol;
     type IntoIter = std::slice::Iter<'a, Symbol>;
 
@@ -252,7 +252,7 @@ impl<'a, 'b, T> IntoIterator for &'a SymbolTableRef<'b, T> {
     }
 }
 
-impl<'a, T> Index<usize> for SymbolTableRef<'a, T> {
+impl<T> Index<usize> for SymbolTableRef<'_, T> {
     type Output = Symbol;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -260,7 +260,7 @@ impl<'a, T> Index<usize> for SymbolTableRef<'a, T> {
     }
 }
 
-impl<'a, T: Read + Seek> SymbolTableRef<'a, T> {
+impl<T: Read + Seek> SymbolTableRef<'_, T> {
     /// Loads the name of a symbol if it's not already loaded.
     ///
     /// # Errors
@@ -311,7 +311,7 @@ pub struct SymbolTableMut<'a, T> {
     pub(crate) table: &'a mut SymbolTable,
 }
 
-impl<'a, T> SymbolTableMut<'a, T> {
+impl<T> SymbolTableMut<'_, T> {
     /// Creates a symbol into this BPXS.
     ///
     /// # Arguments
@@ -475,7 +475,7 @@ pub struct ShaderTableRef<'a, T> {
     pub(crate) table: &'a ShaderTable,
 }
 
-impl<'a, T> ShaderTableRef<'a, T> {
+impl<T> ShaderTableRef<'_, T> {
     /// Gets all shaders in this table.
     pub fn iter(&self) -> std::slice::Iter<Handle> {
         self.table.iter()
@@ -492,7 +492,7 @@ impl<'a, T> ShaderTableRef<'a, T> {
     }
 }
 
-impl<'a, 'b, T> IntoIterator for &'a ShaderTableRef<'b, T> {
+impl<'a, T> IntoIterator for &'a ShaderTableRef<'_, T> {
     type Item = &'a Handle;
     type IntoIter = std::slice::Iter<'a, Handle>;
 
@@ -501,7 +501,7 @@ impl<'a, 'b, T> IntoIterator for &'a ShaderTableRef<'b, T> {
     }
 }
 
-impl<'a, T: Read + Seek> ShaderTableRef<'a, T> {
+impl<T: Read + Seek> ShaderTableRef<'_, T> {
     /// Loads a shader into memory.
     ///
     /// # Arguments
@@ -522,7 +522,7 @@ pub struct ShaderTableMut<'a, T> {
     pub(crate) table: &'a mut ShaderTable,
 }
 
-impl<'a, T> ShaderTableMut<'a, T> {
+impl<T> ShaderTableMut<'_, T> {
     /// Creates a shader into this BPXS.
     ///
     /// # Arguments

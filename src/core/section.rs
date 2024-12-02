@@ -115,7 +115,7 @@ pub struct Iter<'a> {
     iter: Keys<'a, NonZeroU32, SectionEntry>,
 }
 
-impl<'a> Iterator for Iter<'a> {
+impl Iterator for Iter<'_> {
     type Item = Handle;
 
     fn next(&mut self) -> Option<Self::Item> {

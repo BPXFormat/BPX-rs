@@ -281,7 +281,7 @@ pub struct Encoder<'a> {
     pub mode: SaveMode,
 }
 
-impl<'a> Encoder<'a> {
+impl Encoder<'_> {
     fn get_modified_sections(&self) -> Vec<NonZeroU32> {
         // Returns a list of modified sections.
         self.sections

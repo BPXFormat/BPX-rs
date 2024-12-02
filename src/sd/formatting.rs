@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2024, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -160,7 +160,7 @@ pub struct FormatContext<'a> {
     object: &'a Object,
 }
 
-impl<'a> Display for FormatContext<'a> {
+impl Display for FormatContext<'_> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let ff = FormatImpl {
             indent_type: self.indent_type,

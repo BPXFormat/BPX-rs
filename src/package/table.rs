@@ -1,4 +1,4 @@
-// Copyright (c) 2023, BlockProject 3D
+// Copyright (c) 2024, BlockProject 3D
 //
 // All rights reserved.
 //
@@ -190,7 +190,7 @@ pub struct ObjectTableRef<'a, T> {
     pub(crate) table: &'a ObjectTable,
 }
 
-impl<'a, T> ObjectTableRef<'a, T> {
+impl<T> ObjectTableRef<'_, T> {
     /// Gets all objects in this table.
     pub fn iter(&self) -> std::slice::Iter<ObjectHeader> {
         self.table.iter()
@@ -207,7 +207,7 @@ impl<'a, T> ObjectTableRef<'a, T> {
     }
 }
 
-impl<'a, 'b, T> IntoIterator for &'a ObjectTableRef<'b, T> {
+impl<'a, T> IntoIterator for &'a ObjectTableRef<'_, T> {
     type Item = &'a ObjectHeader;
     type IntoIter = std::slice::Iter<'a, ObjectHeader>;
 
@@ -216,7 +216,7 @@ impl<'a, 'b, T> IntoIterator for &'a ObjectTableRef<'b, T> {
     }
 }
 
-impl<'a, T> Index<usize> for ObjectTableRef<'a, T> {
+impl<T> Index<usize> for ObjectTableRef<'_, T> {
     type Output = ObjectHeader;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -224,7 +224,7 @@ impl<'a, T> Index<usize> for ObjectTableRef<'a, T> {
     }
 }
 
-impl<'a, T: Read + Seek> ObjectTableRef<'a, T> {
+impl<T: Read + Seek> ObjectTableRef<'_, T> {
     /// Loads an object to the given `out` io backend.
     ///
     /// # Arguments
@@ -274,7 +274,7 @@ pub struct ObjectTableMut<'a, T> {
     pub(crate) table: &'a mut ObjectTable,
 }
 
-impl<'a, T> ObjectTableMut<'a, T> {
+impl<T> ObjectTableMut<'_, T> {
     /// Creates a new object in this package.
     ///
     /// Returns the index of the newly created object.
