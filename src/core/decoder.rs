@@ -51,9 +51,9 @@ use crate::{
             FLAG_COMPRESS_ZLIB,
         },
         section::{SectionEntry, SectionEntry1},
-        Result
+        Result,
     },
-    traits::ReadFill
+    traits::ReadFill,
 };
 
 use super::header::GetChecksum;
@@ -64,7 +64,7 @@ pub fn read_section_header_table<T: Read>(
     mut backend: &mut T,
     main_header: &MainHeader,
     checksum: &mut impl Checksum,
-    default_compression_threshold: u32
+    default_compression_threshold: u32,
 ) -> Result<(HandleGenerator, BTreeMap<NonZeroU32, SectionEntry>)> {
     let mut sections = BTreeMap::new();
     let mut hdl = HandleGenerator::new();

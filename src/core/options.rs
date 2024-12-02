@@ -70,7 +70,7 @@ pub enum Checksum {
 /// Utility to easily generate a [SectionHeader].
 pub struct SectionOptions {
     header: SectionHeader,
-    threashold: Option<u32>
+    threashold: Option<u32>,
 }
 
 impl Default for SectionOptions {
@@ -84,7 +84,7 @@ impl SectionOptions {
     pub fn new(header: SectionHeader) -> SectionOptions {
         SectionOptions {
             header,
-            threashold: None
+            threashold: None,
         }
     }
 
@@ -271,7 +271,7 @@ impl From<&mut SectionOptions> for SectionOptions {
     fn from(value: &mut SectionOptions) -> Self {
         SectionOptions {
             header: value.header,
-            threashold: value.threashold
+            threashold: value.threashold,
         }
     }
 }
@@ -284,7 +284,7 @@ pub struct OpenOptions<T> {
     pub(crate) skip_version_check: bool,
     pub(crate) memory_threshold: u32,
     pub(crate) revert_on_save_fail: bool,
-    pub(crate) compression_threshold: u32
+    pub(crate) compression_threshold: u32,
 }
 
 impl<T> OpenOptions<T> {
@@ -447,7 +447,7 @@ pub struct CreateOptions<T> {
     pub(crate) backend: T,
     pub(crate) memory_threshold: u32,
     pub(crate) revert_on_save_fail: bool,
-    pub(crate) compression_threshold: u32
+    pub(crate) compression_threshold: u32,
 }
 
 impl<T> CreateOptions<T> {
@@ -462,7 +462,7 @@ impl<T> CreateOptions<T> {
             backend,
             memory_threshold: DEFAULT_MEMORY_THRESHOLD,
             revert_on_save_fail: false,
-            compression_threshold: DEFAULT_COMPRESSION_THRESHOLD
+            compression_threshold: DEFAULT_COMPRESSION_THRESHOLD,
         }
     }
 
@@ -643,7 +643,7 @@ impl<T: std::io::Seek> From<(T, MainHeader)> for CreateOptions<T> {
             backend,
             memory_threshold: DEFAULT_MEMORY_THRESHOLD,
             revert_on_save_fail: false,
-            compression_threshold: DEFAULT_COMPRESSION_THRESHOLD
+            compression_threshold: DEFAULT_COMPRESSION_THRESHOLD,
         }
     }
 }
